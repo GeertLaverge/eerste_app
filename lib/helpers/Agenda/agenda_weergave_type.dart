@@ -1,0 +1,4 @@
+enum AgendaWeergaveType {
+  symbolen,
+  details,
+}
