@@ -246,7 +246,7 @@ class AgendaDagCel extends StatelessWidget {
     required AgendaItem item,
     required Color kleur,
   }) {
-    final tijd = item.tijdTekst.isEmpty ? '--:--' : item.tijdTekst;
+    final tijd = item.tijdTekst.isEmpty ? '' : item.tijdTekst;
 
     return LayoutBuilder(
       builder: (context, constraints) {

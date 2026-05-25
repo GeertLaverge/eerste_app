@@ -1,26 +1,31 @@
 import 'package:flutter/material.dart';
 
-import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_bewerk_service.dart';
 import '../helpers/Agenda/agenda_dag_detail.dart';
+import '../helpers/Agenda/agenda_dagtaak_popup.dart';
 import '../helpers/Agenda/agenda_datum_helper.dart';
 import '../helpers/Agenda/agenda_filter_helper.dart';
 import '../helpers/Agenda/agenda_filter_popup.dart';
 import '../helpers/Agenda/agenda_filter_state.dart';
 import '../helpers/Agenda/agenda_in_te_plannen_knop.dart';
 import '../helpers/Agenda/agenda_item.dart';
+import '../helpers/Agenda/agenda_item_open_helper.dart';
 import '../helpers/Agenda/agenda_maand_blok.dart';
+import '../helpers/Agenda/agenda_onderbalk_knoppen.dart';
 import '../helpers/Agenda/agenda_repository.dart';
 import '../helpers/Agenda/agenda_selectie_state.dart';
 import '../helpers/Agenda/agenda_sleep_afhandeling.dart';
 import '../helpers/Agenda/agenda_toevoeg_popup.dart';
 import '../helpers/Agenda/agenda_toevoeg_service.dart';
 import '../helpers/Agenda/agenda_top_balk.dart';
+import '../helpers/Agenda/agenda_type_keuze_popup.dart';
+import '../helpers/Agenda/agenda_verlof_popup.dart';
 import '../helpers/Agenda/agenda_verplaats_balk.dart';
 import '../helpers/Agenda/agenda_verplaats_service.dart';
 import '../helpers/Agenda/agenda_verplaats_state.dart';
 import '../helpers/Agenda/agenda_weekdag_balk.dart';
 import '../helpers/Agenda/agenda_weergave_type.dart';
+import '../helpers/app_storage.dart';
 import 'jaar_planning_pagina_nieuw.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
@@ -40,7 +45,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   final ScrollController agendaScroll = ScrollController();
 
-  AgendaWeergaveType agendaWeergave = AgendaWeergaveType.symbolen;
+  AgendaWeergaveType agendaWeergave = AgendaWeergaveType.details;
 
   @override
   void initState() {
@@ -278,16 +283,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       selectie = selectie.kiesDag(dag);
     });
 
-    final resultaat = await showDialog<Object>(
+    final resultaat = await AgendaItemOpenHelper.open(
       context: context,
-      builder: (context) {
-        return AgendaToevoegPopup(
-          bestaandItem: item,
-          geplandeItems: itemsVanGeselecteerdeDag(
-            agendaItems,
-          ),
-        );
-      },
+      item: item,
+      geplandeItems: itemsVanGeselecteerdeDag(
+        agendaItems,
+      ),
     );
 
     if (resultaat == null) return;
@@ -369,10 +370,79 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
+    final gekozenType = await AgendaTypeKeuzePopup.open(
+      context,
+    );
+    if (gekozenType == null) return;
+
+    if (gekozenType == 'verlof') {
+      final nieuwItem = await showDialog<AgendaItem>(
+        context: context,
+        builder: (context) {
+          return const AgendaVerlofPopup();
+        },
+      );
+
+      if (nieuwItem == null) return;
+
+      final nieuweItems = await AgendaRepository.voegToe(
+        dag: selectie.geselecteerdeDag,
+        item: nieuwItem,
+        itemsPerDag: agendaItems,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        agendaItems = nieuweItems;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Verlof toegevoegd.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      return;
+    }
+
+    if (gekozenType == 'dagtaak') {
+      final nieuwItem = await showDialog<AgendaItem>(
+        context: context,
+        builder: (context) {
+          return const AgendaDagtaakPopup();
+        },
+      );
+
+      if (nieuwItem == null) return;
+
+      final nieuweItems = await AgendaRepository.voegToe(
+        dag: selectie.geselecteerdeDag,
+        item: nieuwItem,
+        itemsPerDag: agendaItems,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        agendaItems = nieuweItems;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dagtaak toegevoegd.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      return;
+    }
     final nieuwItem = await showDialog<AgendaItem>(
       context: context,
       builder: (context) {
         return AgendaToevoegPopup(
+          vastType: gekozenType,
           geplandeItems: itemsVanGeselecteerdeDag(
             agendaItems,
           ),
@@ -436,62 +506,6 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     });
 
     await bewaarFilters();
-  }
-
-  Widget _weergaveKnop({
-    required String tekst,
-    required bool actief,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(13),
-      child: Container(
-        width: 86,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: actief ? const Color(0xFF0B7A3B) : Colors.transparent,
-          borderRadius: BorderRadius.circular(13),
-        ),
-        child: Text(
-          tekst,
-          style: TextStyle(
-            color: actief ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w700,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget groeneActieKnop({
-    required IconData icoon,
-    required VoidCallback onTap,
-    required bool actief,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(
-        99,
-      ),
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: const BoxDecoration(
-          color: Color(
-            0xFF0B7A3B,
-          ),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icoon,
-          color: Colors.white,
-          size: 18,
-        ),
-      ),
-    );
   }
 
   @override
@@ -615,6 +629,26 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                   item,
                 );
               },
+              onItemVerwijder: (item) async {
+                final nieuweItems = await AgendaRepository.verwijder(
+                  dag: selectie.geselecteerdeDag,
+                  item: item,
+                  itemsPerDag: agendaItems,
+                );
+
+                if (!mounted) return;
+
+                setState(() {
+                  agendaItems = nieuweItems;
+                });
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Item verwijderd.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
             ),
           const SizedBox(height: 6),
           SafeArea(
@@ -629,17 +663,15 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
               ),
               child: Row(
                 children: [
-                  groeneActieKnop(
+                  AgendaOnderbalkKnoppen.actie(
                     icoon: Icons.filter_alt,
-                    actief: false,
                     onTap: openFilterMenu,
                   ),
                   const SizedBox(width: 8),
                   Stack(
                     children: [
-                      groeneActieKnop(
+                      AgendaOnderbalkKnoppen.actie(
                         icoon: Icons.schedule,
-                        actief: false,
                         onTap: () {
                           AgendaInTePlannenKnop(
                             items: agendaItems.values.expand((e) => e).toList(),
@@ -660,25 +692,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       ),
                     ],
                   ),
-                  const SizedBox(width: 8),
-                  groeneActieKnop(
-                    icoon: Icons.calendar_month,
-                    actief: false,
-                    onTap: () async {
-                      final aangepast = await Navigator.push<bool>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const JaarPlanningPaginaNieuw(),
-                        ),
-                      );
-
-                      if (aangepast == true) {
-                        await laadAgendaItems();
-                      }
-                    },
-                  ),
                   const Spacer(),
-                  _weergaveKnop(
+                  AgendaOnderbalkKnoppen.weergave(
                     tekst: 'Symbolen',
                     actief: agendaWeergave == AgendaWeergaveType.symbolen,
                     onTap: () {
@@ -688,7 +703,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       });
                     },
                   ),
-                  _weergaveKnop(
+                  AgendaOnderbalkKnoppen.weergave(
                     tekst: 'Details',
                     actief: agendaWeergave == AgendaWeergaveType.details,
                     onTap: () {
@@ -696,6 +711,38 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                         agendaWeergave = AgendaWeergaveType.details;
                         scrollNaarVandaagNaLayout();
                       });
+                    },
+                  ),
+                  AgendaOnderbalkKnoppen.weergave(
+                    tekst: 'Jaaragenda',
+                    actief: false,
+                    onTap: () async {
+                      final resultaat = await Navigator.push<Object>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const JaarPlanningPaginaNieuw(),
+                        ),
+                      );
+
+                      await laadAgendaItems();
+
+                      if (!mounted) return;
+
+                      setState(() {
+                        agendaWeergave = AgendaWeergaveType.details;
+                      });
+
+                      if (resultaat == 'symbolen') {
+                        setState(() {
+                          agendaWeergave = AgendaWeergaveType.symbolen;
+                        });
+                      }
+
+                      if (resultaat == 'details') {
+                        setState(() {
+                          agendaWeergave = AgendaWeergaveType.details;
+                        });
+                      }
                     },
                   ),
                 ],

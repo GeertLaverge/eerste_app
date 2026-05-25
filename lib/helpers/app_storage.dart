@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Agenda/agenda_item.dart';
+import 'Agenda/agenda_dagtaak_template.dart';
 
 import '../modellen/agenda_actie.dart';
 import '../modellen/agenda_actie_template.dart';
@@ -21,9 +22,40 @@ class AppStorage {
   static const String _notitieActiesKey = 'notitie_acties_bureau';
   static const String _afsprakenKey = 'afspraken_klanten';
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
+  static const String _dagtaakTemplatesKey = 'dagtaak_templates';
 
   static Future<SharedPreferences> openBox() async {
     return SharedPreferences.getInstance();
+  }
+
+  static Future<List<AgendaDagtaakTemplate>> laadDagtaakTemplates() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_dagtaakTemplatesKey);
+
+    if (jsonString == null || jsonString.isEmpty) return [];
+
+    final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+    return lijst
+        .map(
+          (item) => AgendaDagtaakTemplate.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  static Future<void> bewaarDagtaakTemplates(
+    List<AgendaDagtaakTemplate> templates,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _dagtaakTemplatesKey,
+      jsonEncode(
+        templates.map((template) => template.toJson()).toList(),
+      ),
+    );
   }
 
   static Future<List<Klant>> laadKlanten() async {

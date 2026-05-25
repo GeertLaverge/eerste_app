@@ -29,6 +29,12 @@ class AgendaItem {
   final bool volledigeDag;
   final bool heeftOverlap;
 
+  final String homeWeergaveType;
+
+  final int dagenVooraf;
+
+  final String homeDatum;
+
   const AgendaItem({
     required this.titel,
     required this.type,
@@ -48,6 +54,9 @@ class AgendaItem {
     this.eindMinuut,
     this.volledigeDag = false,
     this.heeftOverlap = false,
+    this.homeWeergaveType = '',
+    this.dagenVooraf = 0,
+    this.homeDatum = '',
   });
 
   bool get heeftTijd {
@@ -69,7 +78,7 @@ class AgendaItem {
 
   String get tijdTekst {
     if (volledigeDag) {
-      return 'Hele dag';
+      return '';
     }
 
     if (!heeftTijd) {
@@ -91,6 +100,9 @@ class AgendaItem {
 
   AgendaItem copyWith({
     bool? heeftOverlap,
+    String? homeWeergaveType,
+    int? dagenVooraf,
+    String? homeDatum,
   }) {
     return AgendaItem(
       titel: titel,
@@ -111,6 +123,9 @@ class AgendaItem {
       eindMinuut: eindMinuut,
       volledigeDag: volledigeDag,
       heeftOverlap: heeftOverlap ?? this.heeftOverlap,
+      homeWeergaveType: homeWeergaveType ?? this.homeWeergaveType,
+      dagenVooraf: dagenVooraf ?? this.dagenVooraf,
+      homeDatum: homeDatum ?? this.homeDatum,
     );
   }
 
@@ -133,6 +148,9 @@ class AgendaItem {
       'eindUur': eindUur,
       'eindMinuut': eindMinuut,
       'volledigeDag': volledigeDag,
+      'homeWeergaveType': homeWeergaveType,
+      'dagenVooraf': dagenVooraf,
+      'homeDatum': homeDatum,
     };
   }
 
@@ -157,6 +175,10 @@ class AgendaItem {
       eindUur: json['eindUur'],
       eindMinuut: json['eindMinuut'],
       volledigeDag: json['volledigeDag'] ?? false,
+      heeftOverlap: json['heeftOverlap'] ?? false,
+      homeWeergaveType: json['homeWeergaveType'] ?? '',
+      dagenVooraf: json['dagenVooraf'] ?? 0,
+      homeDatum: json['homeDatum'] ?? '',
     );
   }
 }

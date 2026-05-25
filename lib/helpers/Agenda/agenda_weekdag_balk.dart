@@ -16,7 +16,7 @@ class AgendaWeekdagBalk extends StatelessWidget {
     ];
 
     return Container(
-      color: Colors.white,
+      color: const Color(0xFFE7F6EC),
       padding: const EdgeInsets.symmetric(
         vertical: 8,
       ),
@@ -29,7 +29,7 @@ class AgendaWeekdagBalk extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
-                  color: Colors.black54,
+                  color: Color(0xFF0B7A3B),
                 ),
               ),
             ),

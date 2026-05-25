@@ -8,11 +8,13 @@ import 'agenda_tijd_picker.dart';
 class AgendaToevoegPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
   final List<AgendaItem> geplandeItems;
+  final String? vastType;
 
   const AgendaToevoegPopup({
     super.key,
     this.bestaandItem,
     this.geplandeItems = const [],
+    this.vastType,
   });
 
   @override
@@ -55,6 +57,9 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     super.initState();
 
     final item = widget.bestaandItem;
+    if (widget.vastType != null) {
+      type = widget.vastType!;
+    }
 
     if (item != null) {
       titelController.text = item.titel;
@@ -593,40 +598,41 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                   emailController,
                   'Email',
                 ),
-                DropdownButtonFormField<String>(
-                  value: type,
-                  decoration: InputDecoration(
-                    labelText: 'Type',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
+                if (widget.vastType == null)
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    decoration: InputDecoration(
+                      labelText: 'Type',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
+                    items: [
+                      itemType('afspraak', 'Afspraak'),
+                      itemType('dagtaak', 'Dagtaak'),
+                      itemType('verlof', 'Verlof'),
+                    ],
+                    onChanged: (waarde) {
+                      if (waarde == null) {
+                        return;
+                      }
+
+                      setState(() {
+                        type = waarde;
+
+                        if (waarde == 'verlof') {
+                          volledigeDag = true;
+                          naamController.text = 'Verlof';
+                        }
+
+                        if (waarde == 'afspraak' ||
+                            waarde == 'dagtaak' ||
+                            waarde == 'kraan') {
+                          volledigeDag = false;
+                        }
+                      });
+                    },
                   ),
-                  items: [
-                    itemType('afspraak', 'Afspraak'),
-                    itemType('dagtaak', 'Dagtaak'),
-                    itemType('verlof', 'Verlof'),
-                  ],
-                  onChanged: (waarde) {
-                    if (waarde == null) {
-                      return;
-                    }
-
-                    setState(() {
-                      type = waarde;
-
-                      if (waarde == 'verlof') {
-                        volledigeDag = true;
-                        naamController.text = 'Verlof';
-                      }
-
-                      if (waarde == 'afspraak' ||
-                          waarde == 'dagtaak' ||
-                          waarde == 'kraan') {
-                        volledigeDag = false;
-                      }
-                    });
-                  },
-                ),
                 const SizedBox(height: 10),
                 SwitchListTile(
                   value: volledigeDag,
@@ -658,6 +664,25 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 ],
                 geplandeTakenBlok(),
                 const SizedBox(height: 8),
+                if (isBewerken) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: verwijderen,
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.red,
+                      ),
+                      label: const Text(
+                        'Planning verwijderen',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -667,28 +692,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                       backgroundColor: const Color(0xFF0B7A3B),
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(isBewerken ? 'Opslaan' : 'Toevoegen'),
-                  ),
-                ),
-                if (isBewerken) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: opslaan,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(0, 50),
-                        backgroundColor: const Color(
-                          0xFF0B7A3B,
-                        ),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(
-                        isBewerken ? 'Opslaan' : 'Toevoegen',
-                      ),
+                    child: Text(
+                      isBewerken ? 'Opslaan' : 'Toevoegen',
                     ),
                   ),
-                ],
+                ),
               ],
             ),
           ),
