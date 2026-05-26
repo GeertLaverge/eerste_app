@@ -4,21 +4,18 @@ import '../helpers/homepagina/home_boven_balk.dart';
 import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
-import '../helpers/sync/onedrive_auth_service.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 
 class HomePaginaNieuw extends StatelessWidget {
   const HomePaginaNieuw({
     super.key,
   });
 
-  static const achtergrond = Color(
-    0xFFF7F8FA,
-  );
+  static const achtergrond = Color(0xFFF7F8FA);
 
   @override
   Widget build(BuildContext context) {
     final planningVandaag = HomePlanningHelper.planningVandaag();
-
     final dagTakenVandaag = HomePlanningHelper.dagTakenVandaag();
 
     return Scaffold(
@@ -31,24 +28,21 @@ class HomePaginaNieuw extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: ElevatedButton(
                 onPressed: () async {
-                  final token = await OneDriveAuthService().login();
+                  final gelukt =
+                      await OneDriveSyncService().uploadTestbestand();
 
                   if (context.mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(
+                    ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          token != null
-                              ? 'OneDrive login gelukt'
-                              : 'Login mislukt',
+                          gelukt ? 'OneDrive upload gelukt' : 'Upload mislukt',
                         ),
                       ),
                     );
                   }
                 },
                 child: const Text(
-                  'OneDrive login testen',
+                  'OneDrive upload testen',
                 ),
               ),
             ),
@@ -56,29 +50,18 @@ class HomePaginaNieuw extends StatelessWidget {
               child: Row(
                 children: [
                   HomeZijMenu(
-                    compact: MediaQuery.of(
-                          context,
-                        ).size.width <
-                        700,
+                    compact: MediaQuery.of(context).size.width < 700,
                   ),
                   Expanded(
                     child: ListView(
-                      padding: const EdgeInsets.fromLTRB(
-                        6,
-                        6,
-                        6,
-                        6,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                       children: [
                         FutureBuilder<List<List<dynamic>>>(
                           future: Future.wait([
                             planningVandaag,
                             dagTakenVandaag,
                           ]),
-                          builder: (
-                            context,
-                            snapshot,
-                          ) {
+                          builder: (context, snapshot) {
                             if (!snapshot.hasData) {
                               return const SizedBox();
                             }
