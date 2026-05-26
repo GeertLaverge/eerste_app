@@ -4,6 +4,7 @@ import '../helpers/homepagina/home_boven_balk.dart';
 import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
+import '../helpers/sync/onedrive_auth_service.dart';
 
 class HomePaginaNieuw extends StatelessWidget {
   const HomePaginaNieuw({
@@ -19,12 +20,38 @@ class HomePaginaNieuw extends StatelessWidget {
     final planningVandaag = HomePlanningHelper.planningVandaag();
 
     final dagTakenVandaag = HomePlanningHelper.dagTakenVandaag();
+
     return Scaffold(
       backgroundColor: achtergrond,
       body: SafeArea(
         child: Column(
           children: [
             const HomeBovenBalk(),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: ElevatedButton(
+                onPressed: () async {
+                  final token = await OneDriveAuthService().login();
+
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          token != null
+                              ? 'OneDrive login gelukt'
+                              : 'Login mislukt',
+                        ),
+                      ),
+                    );
+                  }
+                },
+                child: const Text(
+                  'OneDrive login testen',
+                ),
+              ),
+            ),
             Expanded(
               child: Row(
                 children: [
