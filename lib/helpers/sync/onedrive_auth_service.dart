@@ -1,7 +1,7 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 
 class OneDriveAuthService {
-  static const String clientId = '3224b91e-bff0-4b46-8b8e-f3db21987a2';
+  static const String clientId = '3224b91e-bff0-4b46-8b8e-f3db21987a2a';
 
   static const String redirectUrl = 'msauth.be.thimaco.app://auth';
 
