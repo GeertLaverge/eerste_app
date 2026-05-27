@@ -21,7 +21,7 @@ class OneDriveSyncService {
       });
 
       final url =
-          'https://graph.microsoft.com/v1.0/me/drive/root:/ThimacoApp/$naam:/content';
+          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$naam:/content';
 
       final response = await http.put(
         Uri.parse(url),
@@ -32,7 +32,11 @@ class OneDriveSyncService {
         body: inhoud,
       );
 
-      return 'STATUS ${response.statusCode}';
+      return '''
+STATUS ${response.statusCode}
+
+${response.body}
+''';
     } catch (e) {
       return 'UPLOAD_FOUT: $e';
     }
