@@ -19,6 +19,14 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
   static const achtergrond = Color(0xFFF7F8FA);
 
   String syncMelding = 'Nog geen OneDrive test uitgevoerd';
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      testOneDriveUpload();
+    });
+  }
 
   Future<void> testOneDriveUpload() async {
     setState(() {
