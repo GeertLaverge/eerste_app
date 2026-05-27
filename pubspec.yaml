@@ -2,7 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+21
+version: 1.0.0+22
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -16,8 +16,8 @@ dependencies:
   intl: ^0.20.2
   google_fonts: ^6.2.1
 
-  # OneDrive login + API
-  flutter_appauth: ^8.0.3
+  # OneDrive login + API (MSAL i.p.v. flutter_appauth)
+  msal_auth: ^3.1.0
   http: ^1.3.0
 
   # PDF generatie

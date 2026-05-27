@@ -1,9 +1,7 @@
-import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:msal_auth/msal_auth.dart';
 
 class OneDriveAuthService {
   static const String clientId = '3224b91e-bff0-4b46-8b8e-f3db21987a2a';
-
-  static const String redirectUrl = 'msauth.be.thimaco.app://auth';
 
   static const String tenantId = 'cf489dc4-f99d-4365-8204-926a654d871b';
 
@@ -13,27 +11,31 @@ class OneDriveAuthService {
     'offline_access',
   ];
 
-  final FlutterAppAuth _appAuth = FlutterAppAuth();
+  SingleAccountPca? _pca;
+
+  Future<SingleAccountPca> _getPca() async {
+    _pca ??= await SingleAccountPca.create(
+      clientId: clientId,
+      appleConfig: AppleConfig(
+        authority: 'https://login.microsoftonline.com/$tenantId',
+        authorityType: AuthorityType.aad,
+      ),
+    );
+
+    return _pca!;
+  }
 
   Future<String> login() async {
     try {
-      final result = await _appAuth.authorizeAndExchangeCode(
-        AuthorizationTokenRequest(
-          clientId,
-          redirectUrl,
-          serviceConfiguration: const AuthorizationServiceConfiguration(
-            authorizationEndpoint:
-                'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/authorize',
-            tokenEndpoint:
-                'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/token',
-          ),
-          scopes: scopes,
-        ),
+      final pca = await _getPca();
+
+      final result = await pca.acquireToken(
+        scopes: scopes,
       );
 
-      final token = result?.accessToken;
+      final token = result.accessToken;
 
-      if (token == null || token.isEmpty) {
+      if (token.isEmpty) {
         return 'FOUT_GEEN_TOKEN';
       }
 

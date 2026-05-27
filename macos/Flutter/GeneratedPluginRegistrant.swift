@@ -5,10 +5,10 @@
 import FlutterMacOS
 import Foundation
 
-import flutter_appauth
+import msal_auth
 import shared_preferences_foundation
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
-  FlutterAppauthPlugin.register(with: registry.registrar(forPlugin: "FlutterAppauthPlugin"))
+  MsalAuthPlugin.register(with: registry.registrar(forPlugin: "MsalAuthPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
 }
