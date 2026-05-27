@@ -8,7 +8,6 @@ class OneDriveAuthService {
   static const List<String> scopes = [
     'User.Read',
     'Files.ReadWrite.AppFolder',
-    'offline_access',
   ];
 
   SingleAccountPca? _pca;
@@ -34,7 +33,6 @@ class OneDriveAuthService {
       );
 
       final token = result.accessToken;
-
       if (token.isEmpty) {
         return 'FOUT_GEEN_TOKEN';
       }
