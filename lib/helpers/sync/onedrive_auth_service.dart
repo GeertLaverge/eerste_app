@@ -28,11 +28,26 @@ class OneDriveAuthService {
     try {
       final pca = await _getPca();
 
+      try {
+        final silentResult = await pca.acquireTokenSilent(
+          scopes: scopes,
+        );
+
+        final silentToken = silentResult.accessToken;
+
+        if (silentToken.isNotEmpty) {
+          return silentToken;
+        }
+      } catch (_) {
+        // Geen geldig token in cache: dan pas interactieve login.
+      }
+
       final result = await pca.acquireToken(
         scopes: scopes,
       );
 
       final token = result.accessToken;
+
       if (token.isEmpty) {
         return 'FOUT_GEEN_TOKEN';
       }
