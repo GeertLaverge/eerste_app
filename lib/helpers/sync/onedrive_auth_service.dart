@@ -38,8 +38,8 @@ class OneDriveAuthService {
         if (silentToken.isNotEmpty) {
           return silentToken;
         }
-      } catch (_) {
-        // Geen geldig token in cache: dan pas interactieve login.
+      } catch (e) {
+        return 'SILENT_FOUT: $e';
       }
 
       final result = await pca.acquireToken(
