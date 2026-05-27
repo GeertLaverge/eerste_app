@@ -37,10 +37,15 @@
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>msauth.be.thimaco.app</string>
 			</array>
+
 		</dict>
 	</array>
 
@@ -52,14 +57,18 @@
 
 	<key>UIApplicationSceneManifest</key>
 	<dict>
+
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 
 		<key>UISceneConfigurations</key>
 		<dict>
+
 			<key>UIWindowSceneSessionRoleApplication</key>
+
 			<array>
 				<dict>
+
 					<key>UISceneClassName</key>
 					<string>UIWindowScene</string>
 
@@ -71,9 +80,12 @@
 
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
+
 				</dict>
 			</array>
+
 		</dict>
+
 	</dict>
 
 	<key>UIApplicationSupportsIndirectInputEvents</key>

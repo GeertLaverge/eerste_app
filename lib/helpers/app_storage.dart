@@ -38,9 +38,8 @@ class AppStorage {
 
     return lijst
         .map(
-          (item) => AgendaDagtaakTemplate.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) =>
+              AgendaDagtaakTemplate.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
   }
@@ -52,9 +51,7 @@ class AppStorage {
 
     await prefs.setString(
       _dagtaakTemplatesKey,
-      jsonEncode(
-        templates.map((template) => template.toJson()).toList(),
-      ),
+      jsonEncode(templates.map((template) => template.toJson()).toList()),
     );
   }
 
@@ -150,8 +147,9 @@ class AppStorage {
       id: map['id'] ?? '',
       titel: map['titel'] ?? '',
       typeActie: map['typeActie'] ?? '',
-      datum:
-          map['datum'] == null ? DateTime.now() : DateTime.parse(map['datum']),
+      datum: map['datum'] == null
+          ? DateTime.now()
+          : DateTime.parse(map['datum']),
       toonOpDagtaak: map['toonOpDagtaak'] ?? false,
       dagenVoorafTonen: map['dagenVoorafTonen'] ?? 0,
       weergaveType: map['weergaveType'] ?? 'symbool',
@@ -291,16 +289,11 @@ class AppStorage {
     );
   }
 
-  static Future<void> bewaarAgendaFilters(
-    Map<String, bool> waarden,
-  ) async {
+  static Future<void> bewaarAgendaFilters(Map<String, bool> waarden) async {
     final prefs = await SharedPreferences.getInstance();
 
     for (final entry in waarden.entries) {
-      await prefs.setBool(
-        'agenda_zicht_${entry.key}',
-        entry.value,
-      );
+      await prefs.setBool('agenda_zicht_${entry.key}', entry.value);
     }
   }
 
@@ -330,11 +323,7 @@ class AppStorage {
 
     return data.map((datumKey, lijst) {
       final items = (lijst as List<dynamic>)
-          .map(
-            (item) => AgendaItem.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
+          .map((item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)))
           .toList();
 
       return MapEntry(datumKey, items);
@@ -347,16 +336,10 @@ class AppStorage {
     final prefs = await openBox();
 
     final data = itemsPerDag.map((datumKey, items) {
-      return MapEntry(
-        datumKey,
-        items.map((item) => item.toJson()).toList(),
-      );
+      return MapEntry(datumKey, items.map((item) => item.toJson()).toList());
     });
 
-    await prefs.setString(
-      _agendaItemsNieuwKey,
-      jsonEncode(data),
-    );
+    await prefs.setString(_agendaItemsNieuwKey, jsonEncode(data));
   }
 
   static Future<void> bewaarAlles({
