@@ -30,7 +30,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
     if (!mounted) return;
 
     setState(() {
-      syncMelding = melding;
+      if (melding.contains('STATUS 201') || melding.contains('"id"')) {
+        syncMelding = '✅ OneDrive upload gelukt';
+      } else {
+        syncMelding = melding;
+      }
     });
   }
 
