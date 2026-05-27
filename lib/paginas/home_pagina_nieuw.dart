@@ -28,15 +28,14 @@ class HomePaginaNieuw extends StatelessWidget {
               padding: const EdgeInsets.all(8),
               child: ElevatedButton(
                 onPressed: () async {
-                  final gelukt =
+                  final melding =
                       await OneDriveSyncService().uploadTestbestand();
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                          gelukt ? 'OneDrive upload gelukt' : 'Upload mislukt',
-                        ),
+                        duration: const Duration(seconds: 8),
+                        content: Text(melding),
                       ),
                     );
                   }

@@ -4,12 +4,12 @@ import 'package:http/http.dart' as http;
 import 'onedrive_auth_service.dart';
 
 class OneDriveSyncService {
-  Future<bool> uploadTestbestand() async {
+  Future<String> uploadTestbestand() async {
     try {
       final token = await OneDriveAuthService().login();
 
-      if (token == null) {
-        return false;
+      if (token == null || token.isEmpty) {
+        return 'Geen token ontvangen van Microsoft';
       }
 
       final naam = 'test_${DateTime.now().year}.json';
@@ -31,9 +31,9 @@ class OneDriveSyncService {
         body: inhoud,
       );
 
-      return response.statusCode == 201 || response.statusCode == 200;
-    } catch (_) {
-      return false;
+      return 'Upload response: ${response.statusCode} - ${response.body}';
+    } catch (e) {
+      return 'Fout: $e';
     }
   }
 }
