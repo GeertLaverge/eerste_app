@@ -9,7 +9,7 @@ class OneDriveSyncService {
     try {
       final token = await OneDriveAuthService().login();
 
-      if (token.startsWith('FOUT')) {
+      if (token.startsWith('FOUT') || token.startsWith('SILENT_FOUT')) {
         return token;
       }
 
