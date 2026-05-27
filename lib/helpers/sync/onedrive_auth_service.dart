@@ -14,21 +14,32 @@ class OneDriveAuthService {
   ];
 
   final FlutterAppAuth _appAuth = FlutterAppAuth();
-  Future<String?> login() async {
-    final result = await _appAuth.authorizeAndExchangeCode(
-      AuthorizationTokenRequest(
-        clientId,
-        redirectUrl,
-        serviceConfiguration: const AuthorizationServiceConfiguration(
-          authorizationEndpoint:
-              'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/authorize',
-          tokenEndpoint:
-              'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/token',
-        ),
-        scopes: scopes,
-      ),
-    );
 
-    return result?.accessToken;
+  Future<String> login() async {
+    try {
+      final result = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          clientId,
+          redirectUrl,
+          serviceConfiguration: const AuthorizationServiceConfiguration(
+            authorizationEndpoint:
+                'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/authorize',
+            tokenEndpoint:
+                'https://login.microsoftonline.com/cf489dc4-f99d-4365-8204-926a654d871b/oauth2/v2.0/token',
+          ),
+          scopes: scopes,
+        ),
+      );
+
+      final token = result?.accessToken;
+
+      if (token == null || token.isEmpty) {
+        return 'FOUT_GEEN_TOKEN';
+      }
+
+      return token;
+    } catch (e) {
+      return 'FOUT_LOGIN: $e';
+    }
   }
 }
