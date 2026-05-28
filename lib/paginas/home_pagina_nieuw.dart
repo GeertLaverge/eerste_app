@@ -25,13 +25,13 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
       syncMelding = 'OneDrive test gestart...';
     });
 
-    final melding = await OneDriveSyncService().uploadTestbestand();
+    final melding = await OneDriveSyncService().uploadBackup();
 
     if (!mounted) return;
 
     setState(() {
-      if (melding.contains('STATUS 201') || melding.contains('"id"')) {
-        syncMelding = '✅ OneDrive upload gelukt';
+      if (melding == 'BACKUP_OK') {
+        syncMelding = '✅ OneDrive backup gelukt';
       } else {
         syncMelding = melding;
       }
