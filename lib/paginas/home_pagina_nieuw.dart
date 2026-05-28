@@ -30,6 +30,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
     final datum = await OneDriveSyncService().lokaleBackupDatum();
 
     print('LOKALE BACKUP DATUM: $datum');
+    final oneDriveDatum = await OneDriveSyncService().oneDriveBackupDatum();
+
+    print('ONEDRIVE BACKUP DATUM: $oneDriveDatum');
 
     if (!mounted) return;
 

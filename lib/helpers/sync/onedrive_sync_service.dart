@@ -139,4 +139,34 @@ class OneDriveSyncService {
 
     return prefs.getString(_backupDatumKey);
   }
+
+  Future<String?> oneDriveBackupDatum() async {
+    try {
+      final token = await OneDriveAuthService().login();
+
+      if (token.startsWith('FOUT')) {
+        return null;
+      }
+
+      final url =
+          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final data = jsonDecode(response.body);
+
+      return data['backupDatum'];
+    } catch (_) {
+      return null;
+    }
+  }
 }
