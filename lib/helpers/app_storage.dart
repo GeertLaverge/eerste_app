@@ -11,6 +11,7 @@ import '../modellen/leverancier.dart';
 import '../modellen/notitie.dart';
 import '../modellen/notitie_actie.dart';
 import '../modellen/afspraak_klant.dart';
+import 'sync/onedrive_sync_service.dart';
 
 class AppStorage {
   static const String _klantenKey = 'klanten';
@@ -75,6 +76,8 @@ class AppStorage {
       _klantenKey,
       jsonEncode(klanten.map((klant) => klant.toMap()).toList()),
     );
+
+    await OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   static Future<List<Leverancier>> laadLeveranciers() async {
@@ -147,9 +150,8 @@ class AppStorage {
       id: map['id'] ?? '',
       titel: map['titel'] ?? '',
       typeActie: map['typeActie'] ?? '',
-      datum: map['datum'] == null
-          ? DateTime.now()
-          : DateTime.parse(map['datum']),
+      datum:
+          map['datum'] == null ? DateTime.now() : DateTime.parse(map['datum']),
       toonOpDagtaak: map['toonOpDagtaak'] ?? false,
       dagenVoorafTonen: map['dagenVoorafTonen'] ?? 0,
       weergaveType: map['weergaveType'] ?? 'symbool',
