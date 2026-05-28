@@ -38,6 +38,24 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
     });
   }
 
+  Future<void> laadOneDriveBackup() async {
+    setState(() {
+      syncMelding = 'OneDrive backup laden...';
+    });
+
+    final melding = await OneDriveSyncService().downloadBackup();
+
+    if (!mounted) return;
+
+    setState(() {
+      if (melding == 'IMPORT_OK') {
+        syncMelding = '✅ OneDrive backup geladen';
+      } else {
+        syncMelding = melding;
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final planningVandaag = HomePlanningHelper.planningVandaag();
@@ -61,6 +79,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
                     ),
                   ),
                   const SizedBox(height: 6),
+                  ElevatedButton(
+                    onPressed: laadOneDriveBackup,
+                    child: const Text(
+                      'OneDrive backup laden',
+                    ),
+                  ),
                   Text(
                     syncMelding,
                     textAlign: TextAlign.center,
