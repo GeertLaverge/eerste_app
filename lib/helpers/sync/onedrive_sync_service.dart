@@ -169,4 +169,34 @@ class OneDriveSyncService {
       return null;
     }
   }
+
+  Future<String> slimmeSync() async {
+    final lokaleDatumString = await lokaleBackupDatum();
+    final oneDriveDatumString = await oneDriveBackupDatum();
+
+    if (oneDriveDatumString == null) {
+      return await uploadBackup();
+    }
+
+    if (lokaleDatumString == null) {
+      return await downloadBackup();
+    }
+
+    final lokaleDatum = DateTime.tryParse(lokaleDatumString);
+    final oneDriveDatum = DateTime.tryParse(oneDriveDatumString);
+
+    if (lokaleDatum == null || oneDriveDatum == null) {
+      return 'SYNC_DATUM_FOUT';
+    }
+
+    if (oneDriveDatum.isAfter(lokaleDatum)) {
+      return await downloadBackup();
+    }
+
+    if (lokaleDatum.isAfter(oneDriveDatum)) {
+      return await uploadBackup();
+    }
+
+    return 'SYNC_OK_GEEN_WIJZIGING';
+  }
 }

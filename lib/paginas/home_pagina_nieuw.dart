@@ -63,6 +63,20 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
     });
   }
 
+  Future<void> slimmeSyncTest() async {
+    setState(() {
+      syncMelding = 'Slimme sync gestart...';
+    });
+
+    final melding = await OneDriveSyncService().slimmeSync();
+
+    if (!mounted) return;
+
+    setState(() {
+      syncMelding = melding;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final planningVandaag = HomePlanningHelper.planningVandaag();
