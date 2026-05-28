@@ -38,7 +38,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
 
     setState(() {
       if (melding == 'BACKUP_OK') {
-        syncMelding = '✅ OneDrive backup gelukt';
+        syncMelding = 'LOKAAL:\n$datum\n\nONEDRIVE:\n$oneDriveDatum';
       } else {
         syncMelding = melding;
       }
