@@ -54,4 +54,12 @@ class OneDriveSyncService {
       return 'BACKUP_EXCEPTION: $e';
     }
   }
+
+  Future<void> uploadBackupOpAchtergrond() async {
+    try {
+      await uploadBackup();
+    } catch (_) {
+      // Geen crash veroorzaken bij achtergrondsync.
+    }
+  }
 }
