@@ -338,10 +338,18 @@ class AppStorage {
     final prefs = await openBox();
 
     final data = itemsPerDag.map((datumKey, items) {
-      return MapEntry(datumKey, items.map((item) => item.toJson()).toList());
+      return MapEntry(
+        datumKey,
+        items.map((item) => item.toJson()).toList(),
+      );
     });
 
-    await prefs.setString(_agendaItemsNieuwKey, jsonEncode(data));
+    await prefs.setString(
+      _agendaItemsNieuwKey,
+      jsonEncode(data),
+    );
+
+    await OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   static Future<void> bewaarAlles({
