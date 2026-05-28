@@ -55,11 +55,28 @@ class OneDriveSyncService {
     }
   }
 
+  static bool _backupBezig = false;
+  static bool _backupOpnieuwNodig = false;
+
   Future<void> uploadBackupOpAchtergrond() async {
+    if (_backupBezig) {
+      _backupOpnieuwNodig = true;
+      return;
+    }
+
+    _backupBezig = true;
+
     try {
       await uploadBackup();
     } catch (_) {
       // Geen crash veroorzaken bij achtergrondsync.
+    } finally {
+      _backupBezig = false;
+    }
+
+    if (_backupOpnieuwNodig) {
+      _backupOpnieuwNodig = false;
+      await uploadBackupOpAchtergrond();
     }
   }
 }
