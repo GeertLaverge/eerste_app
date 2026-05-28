@@ -15,10 +15,36 @@ class HomePaginaNieuw extends StatefulWidget {
   State<HomePaginaNieuw> createState() => _HomePaginaNieuwState();
 }
 
-class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
+class _HomePaginaNieuwState extends State<HomePaginaNieuw>
+    with WidgetsBindingObserver {
   static const achtergrond = Color(0xFFF7F8FA);
 
   String syncMelding = 'Nog geen OneDrive test uitgevoerd';
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      OneDriveSyncService().slimmeSync();
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      OneDriveSyncService().uploadBackupOpAchtergrond();
+    }
+  }
 
   Future<void> testOneDriveUpload() async {
     setState(() {
@@ -104,6 +130,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
                     onPressed: laadOneDriveBackup,
                     child: const Text(
                       'OneDrive backup laden',
+                    ),
+                  ),
+                  ElevatedButton(
+                    onPressed: slimmeSyncTest,
+                    child: const Text(
+                      'Slimme sync testen',
                     ),
                   ),
                   Text(
