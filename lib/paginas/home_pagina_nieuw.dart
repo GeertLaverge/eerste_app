@@ -27,6 +27,10 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw> {
 
     final melding = await OneDriveSyncService().uploadBackup();
 
+    final datum = await OneDriveSyncService().lokaleBackupDatum();
+
+    print('LOKALE BACKUP DATUM: $datum');
+
     if (!mounted) return;
 
     setState(() {

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'onedrive_auth_service.dart';
 
 class OneDriveSyncService {
+  static const String _backupDatumKey = 'laatste_backup_datum';
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
 
@@ -19,8 +20,10 @@ class OneDriveSyncService {
 
       final prefs = await SharedPreferences.getInstance();
 
+      final backupDatum = DateTime.now().toIso8601String();
+
       final backup = {
-        'backupDatum': DateTime.now().toIso8601String(),
+        'backupDatum': backupDatum,
         'agendaItems': prefs.getString('agenda_items_nieuw'),
         'dagtaakTemplates': prefs.getString('dagtaak_templates'),
       };
@@ -40,6 +43,11 @@ class OneDriveSyncService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        await prefs.setString(
+          _backupDatumKey,
+          backupDatum,
+        );
+
         return 'BACKUP_OK';
       }
 
@@ -99,6 +107,7 @@ class OneDriveSyncService {
 
       final agendaItems = data['agendaItems'];
       final dagtaakTemplates = data['dagtaakTemplates'];
+      final backupDatum = data['backupDatum'];
 
       if (agendaItems is String) {
         await prefs.setString('agenda_items_nieuw', agendaItems);
@@ -108,9 +117,26 @@ class OneDriveSyncService {
         await prefs.setString('dagtaak_templates', dagtaakTemplates);
       }
 
+      if (backupDatum is String) {
+        await prefs.setString(_backupDatumKey, backupDatum);
+      }
+
+      if (backupDatum is String) {
+        await prefs.setString(
+          _backupDatumKey,
+          backupDatum,
+        );
+      }
+
       return 'IMPORT_OK';
     } catch (e) {
       return 'IMPORT_EXCEPTION: $e';
     }
+  }
+
+  Future<String?> lokaleBackupDatum() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getString(_backupDatumKey);
   }
 }
