@@ -73,10 +73,10 @@ class AgendaDagCel extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             child: Container(
               constraints: BoxConstraints(
-                minHeight: weergave == AgendaWeergaveType.symbolen ? 74 : 118,
+                minHeight: weergave == AgendaWeergaveType.symbolen ? 70 : 102,
               ),
-              margin: const EdgeInsets.all(2),
-              padding: const EdgeInsets.all(6),
+              margin: const EdgeInsets.all(1),
+              padding: const EdgeInsets.fromLTRB(3, 3, 3, 2),
               decoration: BoxDecoration(
                 color: isDoel
                     ? const Color(
@@ -137,7 +137,7 @@ class AgendaDagCel extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 2),
                       if (weergave == AgendaWeergaveType.symbolen)
                         Center(
                           child: AgendaItemSymbolenRij(
@@ -149,7 +149,7 @@ class AgendaDagCel extends StatelessWidget {
                           final kleur = AgendaKleurService.kleur(item.type);
 
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 3),
+                            padding: const EdgeInsets.only(bottom: 1),
                             child: LongPressDraggable<AgendaSleepData>(
                               data: AgendaSleepData(
                                 oudeDag: dag,
@@ -339,8 +339,8 @@ class AgendaDagCel extends StatelessWidget {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
-            horizontal: 5,
-            vertical: 4,
+            horizontal: 3,
+            vertical: 2,
           ),
           decoration: BoxDecoration(
             color: AgendaKleurService.achtergrond(item.type),

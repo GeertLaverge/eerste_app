@@ -12,43 +12,51 @@ class AgendaTypeKeuzePopup {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Wat wil je toevoegen?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 460,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                18,
+                18,
+                18,
+                14,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Wat wil je toevoegen?',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(
-                  height: 16,
-                ),
-                _rij(
-                  context,
-                  'Afspraak',
-                  Colors.blue,
-                  Icons.event,
-                  'afspraak',
-                ),
-                _rij(
-                  context,
-                  'Dagtaak',
-                  Colors.orange,
-                  Icons.task_alt,
-                  'dagtaak',
-                ),
-                _rij(
-                  context,
-                  'Verlof',
-                  Colors.red,
-                  Icons.beach_access,
-                  'verlof',
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  _rij(
+                    context,
+                    'Afspraak',
+                    Colors.blue,
+                    Icons.event,
+                    'afspraak',
+                  ),
+                  _rij(
+                    context,
+                    'Dagtaak',
+                    Colors.orange,
+                    Icons.task_alt,
+                    'dagtaak',
+                  ),
+                  _rij(
+                    context,
+                    'Verlof',
+                    Colors.red,
+                    Icons.beach_access,
+                    'verlof',
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -63,46 +71,44 @@ class AgendaTypeKeuzePopup {
     IconData icoon,
     String waarde,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 10,
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.pop(
-            context,
-            waarde,
-          );
-        },
-        child: Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-          ),
-          decoration: BoxDecoration(
-            color: kleur.withValues(
-              alpha: 0.08,
-            ),
-            borderRadius: BorderRadius.circular(
-              14,
+    return InkWell(
+      onTap: () {
+        Navigator.pop(
+          context,
+          waarde,
+        );
+      },
+      child: Container(
+        height: 54,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: Colors.grey.shade300,
             ),
           ),
-          child: Row(
-            children: [
-              Icon(
-                icoon,
-                color: kleur,
-              ),
-              const SizedBox(
-                width: 12,
-              ),
-              Expanded(
-                child: Text(
-                  titel,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icoon,
+              color: kleur,
+              size: 21,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                titel,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ],
-          ),
+            ),
+            const Icon(
+              Icons.chevron_right,
+              color: Colors.black38,
+            ),
+          ],
         ),
       ),
     );

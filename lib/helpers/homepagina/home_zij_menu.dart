@@ -16,7 +16,7 @@ class HomeZijMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: compact ? 108 : 205,
+      width: compact ? 68 : 125,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -28,7 +28,7 @@ class HomeZijMenu extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: compact ? 18 : 24,
+            height: compact ? 8 : 14,
           ),
           _menuKnop(
             context,
@@ -68,7 +68,7 @@ class HomeZijMenu extends StatelessWidget {
             Icons.logout,
           ),
           SizedBox(
-            height: compact ? 14 : 20,
+            height: compact ? 8 : 12,
           ),
         ],
       ),
@@ -81,94 +81,83 @@ class HomeZijMenu extends StatelessWidget {
     IconData icoon, {
     bool actief = false,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 14,
-        vertical: compact ? 4 : 5,
-      ),
-      child: InkWell(
-        onTap: () {
-          if (titel == 'Agenda') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AgendaPaginaNieuw(),
-              ),
-            );
-          }
-        },
-        borderRadius: BorderRadius.circular(
-          14,
-        ),
-        child: Container(
-          height: compact ? 84 : 50,
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 4 : 14,
-          ),
-          decoration: BoxDecoration(
-            color: actief
-                ? groen.withValues(
-                    alpha: 0.06,
-                  )
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(
-              14,
+    return InkWell(
+      onTap: () {
+        if (titel == 'Agenda') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const AgendaPaginaNieuw(),
             ),
-            border: actief
-                ? const Border(
-                    left: BorderSide(
-                      color: groen,
-                      width: 3,
-                    ),
-                  )
-                : null,
+          );
+        }
+      },
+      child: Container(
+        height: compact ? 78 : 52,
+        decoration: BoxDecoration(
+          border: Border(
+            left: BorderSide(
+              color: actief ? groen : Colors.transparent,
+              width: 3,
+            ),
+            bottom: const BorderSide(
+              color: rand,
+              width: 0.7,
+            ),
           ),
-          child: compact
-              ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      icoon,
-                      size: 23,
+        ),
+        child: compact
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icoon,
+                    size: 21,
+                    color: actief ? groen : Colors.black87,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    titel,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 10,
+                      height: 1.0,
+                      fontWeight: actief ? FontWeight.w700 : FontWeight.w500,
                       color: actief ? groen : Colors.black87,
                     ),
-                    const SizedBox(
-                      height: 7,
-                    ),
-                    Text(
-                      titel,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        height: 1.12,
-                        fontWeight: actief ? FontWeight.w700 : FontWeight.w600,
-                        color: actief ? groen : Colors.black87,
-                      ),
-                    ),
-                  ],
-                )
-              : Row(
+                  ),
+                ],
+              )
+            : Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                ),
+                child: Row(
                   children: [
                     Icon(
                       icoon,
-                      size: 22,
+                      size: 20,
+                      color: actief ? groen : Colors.black87,
                     ),
-                    const SizedBox(
-                      width: 12,
-                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         titel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight:
-                              actief ? FontWeight.w800 : FontWeight.w700,
+                              actief ? FontWeight.w700 : FontWeight.w500,
+                          color: actief ? groen : Colors.black87,
                         ),
                       ),
                     ),
                   ],
                 ),
-        ),
+              ),
       ),
     );
   }

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'paginas/home_pagina_nieuw.dart';
+import 'helpers/agenda/agenda_melding_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await AgendaMeldingService.initialiseren();
   runApp(
     const ThimacoApp(),
   );

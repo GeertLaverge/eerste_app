@@ -5,6 +5,7 @@ import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
+import '../helpers/agenda/agenda_melding_service.dart';
 
 class HomePaginaNieuw extends StatefulWidget {
   const HomePaginaNieuw({
@@ -130,6 +131,15 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                     onPressed: laadOneDriveBackup,
                     child: const Text(
                       'OneDrive backup laden',
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await AgendaMeldingService.toonTestMelding();
+                    },
+                    child: const Text(
+                      'Test melding',
                     ),
                   ),
                   ElevatedButton(

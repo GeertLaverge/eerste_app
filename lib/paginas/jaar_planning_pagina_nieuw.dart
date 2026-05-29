@@ -30,7 +30,11 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   int jaar = DateTime.now().year;
   DateTime geselecteerdeDag = DateTime.now();
 
-  final ScrollController horizontaleScroll = ScrollController();
+  final ScrollController maandBalkScroll = ScrollController();
+  final ScrollController kalenderScroll = ScrollController();
+
+  bool _scrollKoppelingActief = false;
+
   final ScrollController verticaleScroll = ScrollController();
 
   Map<String, List<AgendaItem>> agendaItems = {};
@@ -55,6 +59,25 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   @override
   void initState() {
     super.initState();
+
+    maandBalkScroll.addListener(() {
+      if (_scrollKoppelingActief) return;
+      if (!kalenderScroll.hasClients) return;
+
+      _scrollKoppelingActief = true;
+      kalenderScroll.jumpTo(maandBalkScroll.offset);
+      _scrollKoppelingActief = false;
+    });
+
+    kalenderScroll.addListener(() {
+      if (_scrollKoppelingActief) return;
+      if (!maandBalkScroll.hasClients) return;
+
+      _scrollKoppelingActief = true;
+      maandBalkScroll.jumpTo(kalenderScroll.offset);
+      _scrollKoppelingActief = false;
+    });
+
     laadAlles();
   }
 
@@ -120,7 +143,8 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
 
   @override
   void dispose() {
-    horizontaleScroll.dispose();
+    maandBalkScroll.dispose();
+    kalenderScroll.dispose();
     verticaleScroll.dispose();
     super.dispose();
   }
@@ -403,7 +427,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                   height: 38,
                   color: const Color(0xFFE7F6EC),
                   child: SingleChildScrollView(
-                    controller: horizontaleScroll,
+                    controller: maandBalkScroll,
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: List.generate(
@@ -440,10 +464,10 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                       12,
                     ),
                     child: Scrollbar(
-                      controller: horizontaleScroll,
+                      controller: kalenderScroll,
                       thumbVisibility: true,
                       child: SingleChildScrollView(
-                        controller: horizontaleScroll,
+                        controller: kalenderScroll,
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,

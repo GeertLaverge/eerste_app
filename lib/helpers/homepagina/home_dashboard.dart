@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../agenda/agenda_route_helper.dart';
 
 class HomeDashboard extends StatelessWidget {
   final List<dynamic> planningVandaag;
@@ -38,6 +39,10 @@ class HomeDashboard extends StatelessWidget {
                     : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
                 kleur: planning.type == 'verlof' ? Colors.red : Colors.blue,
                 titel: planning.titel,
+                straat: planning.straatnaam,
+                huisNr: planning.huisNr,
+                postcode: planning.postcode,
+                gemeente: planning.gemeente,
               );
             }).toList(),
           ),
@@ -56,6 +61,10 @@ class HomeDashboard extends StatelessWidget {
                     : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
                 kleur: Colors.orange,
                 titel: planning.titel,
+                straat: planning.straatnaam,
+                huisNr: planning.huisNr,
+                postcode: planning.postcode,
+                gemeente: planning.gemeente,
               );
             }).toList(),
           ),
@@ -139,13 +148,27 @@ class _TaakRij extends StatelessWidget {
   final String eind;
   final Color kleur;
   final String titel;
+  final String straat;
+  final String huisNr;
+  final String postcode;
+  final String gemeente;
 
   const _TaakRij({
     required this.start,
     required this.eind,
     required this.kleur,
     required this.titel,
+    required this.straat,
+    required this.huisNr,
+    required this.postcode,
+    required this.gemeente,
   });
+
+  bool get heeftAdres {
+    return straat.trim().isNotEmpty ||
+        postcode.trim().isNotEmpty ||
+        gemeente.trim().isNotEmpty;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +205,7 @@ class _TaakRij extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Container(
             width: 8,
             height: 8,
@@ -191,7 +214,7 @@ class _TaakRij extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               titel,
@@ -200,6 +223,27 @@ class _TaakRij extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 13.2,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: heeftAdres
+                ? () async {
+                    await AgendaRouteHelper.openRoute(
+                      straat: straat,
+                      huisNr: huisNr,
+                      postcode: postcode,
+                      gemeente: gemeente,
+                    );
+                  }
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Icon(
+                Icons.navigation_outlined,
+                size: 18,
+                color:
+                    heeftAdres ? const Color(0xFF0B7A3B) : Colors.grey.shade300,
               ),
             ),
           ),

@@ -2,7 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+49
+version: 1.0.0+50
 
 
 environment:
@@ -29,6 +29,10 @@ dependencies:
 
   # PDF openen
   open_filex: ^4.5.0
+  # Routeplanner openen
+  url_launcher: ^6.3.0
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:
