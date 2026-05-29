@@ -194,7 +194,7 @@ class OneDriveSyncService {
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
-      return await uploadBackup();
+      return 'SYNC_LOKAAL_NIEUWER_GEEN_AUTO_UPLOAD';
     }
 
     return 'SYNC_OK_GEEN_WIJZIGING';

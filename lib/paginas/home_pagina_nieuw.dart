@@ -38,15 +38,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
-      OneDriveSyncService().uploadBackupOpAchtergrond();
-    }
-  }
-
   Future<void> testOneDriveUpload() async {
     setState(() {
       syncMelding = 'OneDrive test gestart...';
