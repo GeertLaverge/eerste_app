@@ -95,7 +95,7 @@ class AgendaItem {
       minuut: eindMinuut!,
     );
 
-    return '$start - $einde';
+    return '$start\n$einde';
   }
 
   AgendaItem copyWith({

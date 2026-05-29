@@ -17,7 +17,7 @@ class AgendaRouteHelper {
 
     if (Platform.isIOS) {
       uri = Uri.parse(
-        'http://maps.apple.com/?q=$encodedAdres',
+        'http://maps.apple.com/?daddr=$encodedAdres&dirflg=d',
       );
     } else {
       uri = Uri.parse(

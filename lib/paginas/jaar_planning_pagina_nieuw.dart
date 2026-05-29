@@ -84,6 +84,8 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   Future<void> laadAlles() async {
     await laadFilters();
     await laadAgendaItems();
+
+    scrollNaarVandaag();
   }
 
   Future<void> laadFilters() async {
@@ -351,6 +353,41 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       agendaItemsData: agendaItemsData,
       actieveFilters: actieveFilters,
     );
+  }
+
+  void scrollNaarVandaag() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!kalenderScroll.hasClients || !maandBalkScroll.hasClients) {
+        return;
+      }
+
+      final vandaag = DateTime.now();
+
+      if (vandaag.year != jaar) return;
+
+      double offset = 0;
+
+      for (int maand = 1; maand < vandaag.month; maand++) {
+        offset += maandBreedte(
+          maand,
+          agendaItems,
+          filters,
+        );
+        offset += 8;
+      }
+
+      final schermBreedte = MediaQuery.of(context).size.width;
+
+      final doelOffset = offset - (schermBreedte / 2) + 120;
+
+      final veiligeOffset = doelOffset.clamp(
+        0.0,
+        kalenderScroll.position.maxScrollExtent,
+      );
+
+      kalenderScroll.jumpTo(veiligeOffset);
+      maandBalkScroll.jumpTo(veiligeOffset);
+    });
   }
 
   @override

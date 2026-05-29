@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../paginas/agenda_pagina_nieuw.dart';
+import '../../helpers/sync/onedrive_sync_service.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -82,8 +83,12 @@ class HomeZijMenu extends StatelessWidget {
     bool actief = false,
   }) {
     return InkWell(
-      onTap: () {
+      onTap: () async {
         if (titel == 'Agenda') {
+          await OneDriveSyncService().slimmeSync();
+
+          if (!context.mounted) return;
+
           Navigator.push(
             context,
             MaterialPageRoute(

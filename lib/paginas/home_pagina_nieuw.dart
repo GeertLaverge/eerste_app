@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../helpers/homepagina/home_boven_balk.dart';
@@ -18,6 +19,7 @@ class HomePaginaNieuw extends StatefulWidget {
 
 class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     with WidgetsBindingObserver {
+  Timer? _syncTimer;
   static const achtergrond = Color(0xFFF7F8FA);
 
   String syncMelding = 'Nog geen OneDrive test uitgevoerd';
@@ -30,10 +32,23 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       OneDriveSyncService().slimmeSync();
     });
+
+    _syncTimer = Timer.periodic(
+      const Duration(minutes: 3),
+      (_) async {
+        await OneDriveSyncService().slimmeSync();
+
+        if (mounted) {
+          setState(() {});
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
+
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -110,45 +125,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
             Padding(
               padding: const EdgeInsets.all(8),
               child: Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: testOneDriveUpload,
-                    child: const Text(
-                      'OneDrive upload testen',
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ElevatedButton(
-                    onPressed: laadOneDriveBackup,
-                    child: const Text(
-                      'OneDrive backup laden',
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  ElevatedButton(
-                    onPressed: () async {
-                      await AgendaMeldingService.toonTestMelding();
-                    },
-                    child: const Text(
-                      'Test melding',
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: slimmeSyncTest,
-                    child: const Text(
-                      'Slimme sync testen',
-                    ),
-                  ),
-                  Text(
-                    syncMelding,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
+                children: [],
               ),
             ),
             Expanded(

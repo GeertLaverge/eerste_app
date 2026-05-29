@@ -75,7 +75,10 @@ class AgendaDagCel extends StatelessWidget {
               constraints: BoxConstraints(
                 minHeight: weergave == AgendaWeergaveType.symbolen ? 70 : 102,
               ),
-              margin: const EdgeInsets.all(1),
+              margin: const EdgeInsets.symmetric(
+                horizontal: 0.3,
+                vertical: 1,
+              ),
               padding: const EdgeInsets.fromLTRB(3, 3, 3, 2),
               decoration: BoxDecoration(
                 color: isDoel
@@ -339,7 +342,7 @@ class AgendaDagCel extends StatelessWidget {
         return Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(
-            horizontal: 3,
+            horizontal: 1,
             vertical: 2,
           ),
           decoration: BoxDecoration(
