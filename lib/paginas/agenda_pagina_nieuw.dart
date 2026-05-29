@@ -25,6 +25,7 @@ import '../helpers/Agenda/agenda_verplaats_service.dart';
 import '../helpers/Agenda/agenda_verplaats_state.dart';
 import '../helpers/Agenda/agenda_weekdag_balk.dart';
 import '../helpers/Agenda/agenda_weergave_type.dart';
+import '../helpers/Agenda/agenda_melding_service.dart';
 import '../helpers/app_storage.dart';
 import 'jaar_planning_pagina_nieuw.dart';
 
@@ -257,6 +258,16 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       itemsPerDag: agendaItems,
     );
 
+    await AgendaMeldingService.verwijderMelding(
+      dag: oudeDag,
+      item: item,
+    );
+
+    await AgendaMeldingService.planMelding(
+      dag: nieuweDag,
+      item: item,
+    );
+
     if (!mounted) return;
 
     setState(() {
@@ -302,6 +313,11 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     }
 
     if (resultaat == 'verwijderen') {
+      await AgendaMeldingService.verwijderMelding(
+        dag: dag,
+        item: item,
+      );
+
       final nieuweItems = await AgendaRepository.verwijder(
         dag: dag,
         item: item,
@@ -342,11 +358,21 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         return;
       }
 
+      await AgendaMeldingService.verwijderMelding(
+        dag: dag,
+        item: item,
+      );
+
       final nieuweItems = await AgendaRepository.bewerk(
         dag: dag,
         oudItem: item,
         nieuwItem: resultaat,
         itemsPerDag: agendaItems,
+      );
+
+      await AgendaMeldingService.planMelding(
+        dag: dag,
+        item: resultaat,
       );
 
       if (!mounted) return;
@@ -373,6 +399,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     final gekozenType = await AgendaTypeKeuzePopup.open(
       context,
     );
+
     if (gekozenType == null) return;
 
     if (gekozenType == 'verlof') {
@@ -438,6 +465,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
       return;
     }
+
     final nieuwItem = await showDialog<AgendaItem>(
       context: context,
       builder: (context) {
@@ -472,6 +500,11 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       dag: selectie.geselecteerdeDag,
       item: nieuwItem,
       itemsPerDag: agendaItems,
+    );
+
+    await AgendaMeldingService.planMelding(
+      dag: selectie.geselecteerdeDag,
+      item: nieuwItem,
     );
 
     if (!mounted) return;
@@ -555,12 +588,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           Flexible(
             fit: FlexFit.tight,
             child: Padding(
-              padding: EdgeInsets.only(
+              padding: const EdgeInsets.only(
                 bottom: 0,
               ),
               child: ListView(
                 controller: agendaScroll,
-                padding: EdgeInsets.fromLTRB(
+                padding: const EdgeInsets.fromLTRB(
                   8,
                   8,
                   8,
@@ -595,6 +628,17 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       );
 
                       if (nieuweItems == null) return;
+
+                      await AgendaMeldingService.verwijderMelding(
+                        dag: oudeDag,
+                        item: item,
+                      );
+
+                      await AgendaMeldingService.planMelding(
+                        dag: nieuweDag,
+                        item: item,
+                      );
+
                       if (!mounted) return;
 
                       setState(() {
@@ -630,6 +674,11 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                 );
               },
               onItemVerwijder: (item) async {
+                await AgendaMeldingService.verwijderMelding(
+                  dag: selectie.geselecteerdeDag,
+                  item: item,
+                );
+
                 final nieuweItems = await AgendaRepository.verwijder(
                   dag: selectie.geselecteerdeDag,
                   item: item,

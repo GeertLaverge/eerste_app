@@ -60,8 +60,6 @@ class AppStorage {
     for (final entry in waarden.entries) {
       await prefs.setBool('agenda_zicht_${entry.key}', entry.value);
     }
-
-    await _syncBackup();
   }
 
   static Future<Map<String, bool>> laadAgendaFilters() async {

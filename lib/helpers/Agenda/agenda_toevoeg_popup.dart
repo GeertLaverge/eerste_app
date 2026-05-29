@@ -90,6 +90,23 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
           minute: item.eindMinuut!,
         );
       }
+      switch (item.meldingVoorafMinuten) {
+        case 0:
+          meldingVooraf = 'Geen';
+          break;
+        case 15:
+          meldingVooraf = '15 min';
+          break;
+        case 30:
+          meldingVooraf = '30 min';
+          break;
+        case 60:
+          meldingVooraf = '1 uur';
+          break;
+        case 120:
+          meldingVooraf = '2 uur';
+          break;
+      }
     }
   }
 
@@ -182,6 +199,14 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       AgendaItem(
         titel: titel,
         type: type,
+        meldingVoorafMinuten: switch (meldingVooraf) {
+          'Geen' => 0,
+          '15 min' => 15,
+          '30 min' => 30,
+          '1 uur' => 60,
+          '2 uur' => 120,
+          _ => 60,
+        },
         klantNr: klantNrController.text.trim(),
         naamKlant: naamController.text.trim(),
         straatnaam: straatController.text.trim(),

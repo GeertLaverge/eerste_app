@@ -355,26 +355,21 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
   }
 
   void kiesTemplate(AgendaDagtaakTemplate template) {
-    setState(() {
-      naamController.text = template.naam;
-      heeftTijd = template.heeftTijd;
-
-      if (template.startUur != null && template.startMinuut != null) {
-        startTijd = TimeOfDay(
-          hour: template.startUur!,
-          minute: template.startMinuut!,
-        );
-      }
-
-      if (template.eindUur != null && template.eindMinuut != null) {
-        eindTijd = TimeOfDay(
-          hour: template.eindUur!,
-          minute: template.eindMinuut!,
-        );
-      }
-
-      nieuweDagtaak = true;
-    });
+    Navigator.pop(
+      context,
+      AgendaItem(
+        titel: template.naam,
+        type: 'dagtaak',
+        volledigeDag: !template.heeftTijd,
+        startUur: template.heeftTijd ? template.startUur : null,
+        startMinuut: template.heeftTijd ? template.startMinuut : null,
+        eindUur: template.heeftTijd ? template.eindUur : null,
+        eindMinuut: template.heeftTijd ? template.eindMinuut : null,
+        homeWeergaveType: 'zelfdeDag',
+        dagenVooraf: 0,
+        homeDatum: '',
+      ),
+    );
   }
 
   Future<void> verwijderTemplate(AgendaDagtaakTemplate template) async {

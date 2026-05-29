@@ -35,6 +35,8 @@ class AgendaItem {
 
   final String homeDatum;
 
+  final int meldingVoorafMinuten;
+
   const AgendaItem({
     required this.titel,
     required this.type,
@@ -57,6 +59,7 @@ class AgendaItem {
     this.homeWeergaveType = '',
     this.dagenVooraf = 0,
     this.homeDatum = '',
+    this.meldingVoorafMinuten = 60,
   });
 
   bool get heeftTijd {
@@ -103,6 +106,7 @@ class AgendaItem {
     String? homeWeergaveType,
     int? dagenVooraf,
     String? homeDatum,
+    int? meldingVoorafMinuten,
   }) {
     return AgendaItem(
       titel: titel,
@@ -126,6 +130,7 @@ class AgendaItem {
       homeWeergaveType: homeWeergaveType ?? this.homeWeergaveType,
       dagenVooraf: dagenVooraf ?? this.dagenVooraf,
       homeDatum: homeDatum ?? this.homeDatum,
+      meldingVoorafMinuten: meldingVoorafMinuten ?? this.meldingVoorafMinuten,
     );
   }
 
@@ -151,6 +156,7 @@ class AgendaItem {
       'homeWeergaveType': homeWeergaveType,
       'dagenVooraf': dagenVooraf,
       'homeDatum': homeDatum,
+      'meldingVoorafMinuten': meldingVoorafMinuten,
     };
   }
 
@@ -179,6 +185,7 @@ class AgendaItem {
       homeWeergaveType: json['homeWeergaveType'] ?? '',
       dagenVooraf: json['dagenVooraf'] ?? 0,
       homeDatum: json['homeDatum'] ?? '',
+      meldingVoorafMinuten: json['meldingVoorafMinuten'] ?? 60,
     );
   }
 }

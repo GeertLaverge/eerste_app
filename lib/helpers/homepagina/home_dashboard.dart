@@ -15,6 +15,8 @@ class HomeDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.of(context).size.width < 700;
+
     if (planningVandaag.isEmpty && dagTakenVandaag.isEmpty) {
       return const _TaakSectie(
         titel: 'Vandaag',
@@ -31,6 +33,7 @@ class HomeDashboard extends StatelessWidget {
             titel: 'Planning vandaag',
             taken: planningVandaag.map((planning) {
               return _TaakRij(
+                compact: compact,
                 start: planning.volledigeDag || planning.startUur == null
                     ? ''
                     : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
@@ -43,6 +46,7 @@ class HomeDashboard extends StatelessWidget {
                 huisNr: planning.huisNr,
                 postcode: planning.postcode,
                 gemeente: planning.gemeente,
+                meldingVoorafMinuten: planning.meldingVoorafMinuten,
               );
             }).toList(),
           ),
@@ -53,6 +57,7 @@ class HomeDashboard extends StatelessWidget {
             titel: 'Dagtaak opvolging',
             taken: dagTakenVandaag.map((planning) {
               return _TaakRij(
+                compact: compact,
                 start: planning.volledigeDag || planning.startUur == null
                     ? ''
                     : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
@@ -65,6 +70,7 @@ class HomeDashboard extends StatelessWidget {
                 huisNr: planning.huisNr,
                 postcode: planning.postcode,
                 gemeente: planning.gemeente,
+                meldingVoorafMinuten: planning.meldingVoorafMinuten,
               );
             }).toList(),
           ),
@@ -144,6 +150,7 @@ class _LegeTaakRij extends StatelessWidget {
 }
 
 class _TaakRij extends StatelessWidget {
+  final bool compact;
   final String start;
   final String eind;
   final Color kleur;
@@ -152,8 +159,10 @@ class _TaakRij extends StatelessWidget {
   final String huisNr;
   final String postcode;
   final String gemeente;
+  final int meldingVoorafMinuten;
 
   const _TaakRij({
+    required this.compact,
     required this.start,
     required this.eind,
     required this.kleur,
@@ -162,6 +171,7 @@ class _TaakRij extends StatelessWidget {
     required this.huisNr,
     required this.postcode,
     required this.gemeente,
+    required this.meldingVoorafMinuten,
   });
 
   bool get heeftAdres {
@@ -170,14 +180,32 @@ class _TaakRij extends StatelessWidget {
         gemeente.trim().isNotEmpty;
   }
 
+  bool get heeftMelding {
+    return meldingVoorafMinuten > 0;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final tijdBreedte = compact ? 39.0 : 46.0;
+    final streepBreedte = compact ? 8.0 : 18.0;
+    final bolRuimte = compact ? 4.0 : 10.0;
+    final naamRuimte = compact ? 4.0 : 10.0;
+
     return SizedBox(
       height: 34,
       child: Row(
         children: [
+          if (heeftMelding)
+            const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(
+                Icons.notifications_none,
+                size: 15,
+                color: Color(0xFF0B7A3B),
+              ),
+            ),
           SizedBox(
-            width: 46,
+            width: tijdBreedte,
             child: Text(
               start,
               style: const TextStyle(
@@ -186,9 +214,9 @@ class _TaakRij extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(
-            width: 18,
-            child: Center(
+          SizedBox(
+            width: streepBreedte,
+            child: const Center(
               child: Text(
                 '-',
                 style: TextStyle(color: Colors.black45),
@@ -196,7 +224,7 @@ class _TaakRij extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 46,
+            width: tijdBreedte,
             child: Text(
               eind,
               style: const TextStyle(
@@ -205,7 +233,7 @@ class _TaakRij extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: bolRuimte),
           Container(
             width: 8,
             height: 8,
@@ -214,7 +242,7 @@ class _TaakRij extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: naamRuimte),
           Expanded(
             child: Text(
               titel,
@@ -238,7 +266,7 @@ class _TaakRij extends StatelessWidget {
                   }
                 : null,
             child: Padding(
-              padding: const EdgeInsets.only(left: 10),
+              padding: EdgeInsets.only(left: compact ? 4 : 10),
               child: Icon(
                 Icons.navigation_outlined,
                 size: 18,
