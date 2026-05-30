@@ -6,9 +6,6 @@ import 'agenda_tijd_helper.dart';
 import 'agenda_tijd_picker.dart';
 import '../adres/postcode_helper.dart';
 
-final gemeenteFocusNode = FocusNode();
-final postcodeFocusNode = FocusNode();
-
 class AgendaToevoegPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
   final List<AgendaItem> geplandeItems;
@@ -37,6 +34,8 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   final emailController = TextEditingController();
   final opmerkingenController = TextEditingController();
   final titelController = TextEditingController();
+  final gemeenteFocusNode = FocusNode();
+  final postcodeFocusNode = FocusNode();
 
   String type = 'afspraak';
   String meldingVooraf = '1 uur';
@@ -365,12 +364,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
 
           _bezigMetInvullen = false;
         },
-        fieldViewBuilder: (
-          context,
-          controller,
-          focusNode,
-          onFieldSubmitted,
-        ) {
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
           return TextField(
             controller: controller,
             focusNode: focusNode,
@@ -439,12 +433,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
 
           _bezigMetInvullen = false;
         },
-        fieldViewBuilder: (
-          context,
-          controller,
-          focusNode,
-          onFieldSubmitted,
-        ) {
+        fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
           return TextField(
             controller: controller,
             focusNode: focusNode,
@@ -895,39 +884,6 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 veld(gsmController, 'GSM'),
                 veld(gsm2Controller, 'GSM 2'),
                 veld(emailController, 'Email'),
-                if (widget.vastType == null)
-                  DropdownButtonFormField<String>(
-                    value: type,
-                    decoration: InputDecoration(
-                      labelText: 'Type',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    items: [
-                      itemType('afspraak', 'Afspraak'),
-                      itemType('dagtaak', 'Dagtaak'),
-                      itemType('verlof', 'Verlof'),
-                    ],
-                    onChanged: (waarde) {
-                      if (waarde == null) return;
-
-                      setState(() {
-                        type = waarde;
-
-                        if (waarde == 'verlof') {
-                          volledigeDag = true;
-                          naamController.text = 'Verlof';
-                        }
-
-                        if (waarde == 'afspraak' ||
-                            waarde == 'dagtaak' ||
-                            waarde == 'kraan') {
-                          volledigeDag = false;
-                        }
-                      });
-                    },
-                  ),
                 const SizedBox(height: 10),
                 SwitchListTile(
                   value: volledigeDag,

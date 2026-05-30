@@ -186,45 +186,26 @@ class _TaakRij extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tijdBreedte = compact ? 39.0 : 46.0;
-    final streepBreedte = compact ? 8.0 : 18.0;
-    final bolRuimte = compact ? 4.0 : 10.0;
-    final naamRuimte = compact ? 4.0 : 10.0;
+    final tijdTekst = start.isEmpty || eind.isEmpty ? '' : '$start - $eind';
 
     return SizedBox(
       height: 34,
       child: Row(
         children: [
           SizedBox(
-            width: tijdBreedte,
+            width: compact ? 88 : 112,
             child: Text(
-              start,
+              tijdTekst,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
               style: const TextStyle(
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          SizedBox(
-            width: streepBreedte,
-            child: const Center(
-              child: Text(
-                '-',
-                style: TextStyle(color: Colors.black45),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: tijdBreedte,
-            child: Text(
-              eind,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          SizedBox(width: bolRuimte),
+          const SizedBox(width: 8),
           Container(
             width: 8,
             height: 8,
@@ -233,7 +214,7 @@ class _TaakRij extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          SizedBox(width: naamRuimte),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               titel,
