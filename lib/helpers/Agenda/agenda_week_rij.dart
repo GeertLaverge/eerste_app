@@ -45,8 +45,8 @@ class AgendaWeekRij extends StatelessWidget {
     );
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(6),
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),

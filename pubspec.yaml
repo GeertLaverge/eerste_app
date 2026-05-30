@@ -2,9 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+53
-
-
+version: 1.0.0+55
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -30,8 +28,10 @@ dependencies:
 
   # PDF openen
   open_filex: ^4.5.0
+
   # Routeplanner openen
   url_launcher: ^6.3.0
+
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
 
@@ -46,3 +46,4 @@ flutter:
 
   assets:
     - assets/images/thimaco_logo_icon.png
+    - assets/data/zipcodes_num_nl_2025 (1).csv

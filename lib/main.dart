@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'paginas/home_pagina_nieuw.dart';
 import 'helpers/agenda/agenda_melding_service.dart';
+import 'helpers/adres/postcode_helper.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await AgendaMeldingService.initialiseren();
+  await PostcodeHelper.initialiseren();
+
   runApp(
     const ThimacoApp(),
   );

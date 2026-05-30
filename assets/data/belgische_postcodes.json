@@ -1,0 +1,23 @@
+import pandas as pd
+import json
+
+excel_pad = "assets/data/postcodes_bpost.xls"
+json_pad = "assets/data/belgische_postcodes.json"
+
+df = pd.read_excel(excel_pad)
+
+records = []
+
+for _, row in df.iterrows():
+    records.append({
+        "postcode": str(row.iloc[0]).zfill(4),
+        "plaatsnaam": str(row.iloc[1]).strip(),
+        "deelgemeente": str(row.iloc[2]).strip(),
+        "hoofdgemeente": str(row.iloc[3]).strip(),
+        "provincie": str(row.iloc[4]).strip(),
+    })
+
+with open(json_pad, "w", encoding="utf-8") as f:
+    json.dump(records, f, ensure_ascii=False, indent=2)
+
+print(f"Klaar: {len(records)} postcodes opgeslagen.")

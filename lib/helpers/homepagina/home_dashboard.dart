@@ -195,15 +195,6 @@ class _TaakRij extends StatelessWidget {
       height: 34,
       child: Row(
         children: [
-          if (heeftMelding)
-            const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: Icon(
-                Icons.notifications_none,
-                size: 15,
-                color: Color(0xFF0B7A3B),
-              ),
-            ),
           SizedBox(
             width: tijdBreedte,
             child: Text(
@@ -254,6 +245,15 @@ class _TaakRij extends StatelessWidget {
               ),
             ),
           ),
+          if (heeftMelding)
+            const Padding(
+              padding: EdgeInsets.only(right: 6),
+              child: Icon(
+                Icons.notifications_none,
+                size: 15,
+                color: Color(0xFF0B7A3B),
+              ),
+            ),
           InkWell(
             onTap: heeftAdres
                 ? () async {

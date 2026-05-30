@@ -185,7 +185,7 @@ class AgendaItem {
       homeWeergaveType: json['homeWeergaveType'] ?? '',
       dagenVooraf: json['dagenVooraf'] ?? 0,
       homeDatum: json['homeDatum'] ?? '',
-      meldingVoorafMinuten: json['meldingVoorafMinuten'] ?? 60,
+      meldingVoorafMinuten: json['meldingVoorafMinuten'] ?? 0,
     );
   }
 }

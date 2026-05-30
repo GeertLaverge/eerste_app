@@ -4,6 +4,10 @@ import 'agenda_item.dart';
 import 'agenda_kleur_service.dart';
 import 'agenda_tijd_helper.dart';
 import 'agenda_tijd_picker.dart';
+import '../adres/postcode_helper.dart';
+
+final gemeenteFocusNode = FocusNode();
+final postcodeFocusNode = FocusNode();
 
 class AgendaToevoegPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
@@ -108,6 +112,8 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
           break;
       }
     }
+    postcodeController.addListener(_postcodeGewijzigd);
+    gemeenteController.addListener(_gemeenteGewijzigd);
   }
 
   @override
@@ -124,10 +130,48 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     opmerkingenController.dispose();
     titelController.dispose();
     super.dispose();
+    gemeenteFocusNode.dispose();
+    postcodeFocusNode.dispose();
   }
 
   int minuten(TimeOfDay tijd) {
     return tijd.hour * 60 + tijd.minute;
+  }
+
+  bool _bezigMetInvullen = false;
+
+  void _postcodeGewijzigd() {
+    if (_bezigMetInvullen) return;
+
+    if (postcodeController.text.trim().length != 4) return;
+
+    final gemeente = PostcodeHelper.eersteGemeenteVanPostcode(
+      postcodeController.text,
+    );
+
+    if (gemeente == null) return;
+
+    _bezigMetInvullen = true;
+
+    gemeenteController.text = gemeente;
+
+    _bezigMetInvullen = false;
+  }
+
+  void _gemeenteGewijzigd() {
+    if (_bezigMetInvullen) return;
+
+    final postcode = PostcodeHelper.postcodeVanGemeente(
+      gemeenteController.text,
+    );
+
+    if (postcode == null) return;
+
+    _bezigMetInvullen = true;
+
+    postcodeController.text = postcode;
+
+    _bezigMetInvullen = false;
   }
 
   Future<void> kiesStartTijd() async {
@@ -139,12 +183,17 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
 
     if (gekozen == null) return;
 
+    final startMinuten = gekozen.hour * 60 + gekozen.minute;
+    final eindMinuten = startMinuten + 60;
+
     setState(() {
       startTijd = gekozen;
-      eindTijd = gekozen;
-    });
 
-    await kiesEindTijd();
+      eindTijd = TimeOfDay(
+        hour: (eindMinuten ~/ 60) % 24,
+        minute: eindMinuten % 60,
+      );
+    });
   }
 
   Future<void> kiesEindTijd() async {
@@ -288,6 +337,153 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget gemeenteVeld() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: RawAutocomplete<String>(
+        textEditingController: gemeenteController,
+        focusNode: gemeenteFocusNode,
+        optionsBuilder: (waarde) {
+          if (waarde.text.trim().isEmpty) {
+            return const Iterable<String>.empty();
+          }
+
+          return PostcodeHelper.zoekGemeenten(waarde.text).take(8);
+        },
+        onSelected: (selectie) {
+          _bezigMetInvullen = true;
+          gemeenteController.text = selectie;
+
+          final postcode = PostcodeHelper.postcodeVanGemeente(selectie);
+          if (postcode != null) {
+            postcodeController.text = postcode;
+          }
+
+          _bezigMetInvullen = false;
+        },
+        fieldViewBuilder: (
+          context,
+          controller,
+          focusNode,
+          onFieldSubmitted,
+        ) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            decoration: InputDecoration(
+              hintText: 'Gemeente',
+              isDense: true,
+              contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade400),
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade400),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: Color(0xFF0B7A3B),
+                  width: 1.6,
+                ),
+              ),
+            ),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, opties) {
+          return Material(
+            elevation: 4,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              children: opties.map((optie) {
+                return ListTile(
+                  dense: true,
+                  title: Text(optie),
+                  onTap: () => onSelected(optie),
+                );
+              }).toList(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget postcodeVeld() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: RawAutocomplete<String>(
+        textEditingController: postcodeController,
+        focusNode: postcodeFocusNode,
+        optionsBuilder: (waarde) {
+          if (waarde.text.trim().isEmpty) {
+            return const Iterable<String>.empty();
+          }
+
+          return PostcodeHelper.zoekPostcodes(waarde.text).take(8);
+        },
+        onSelected: (selectie) {
+          final postcode = PostcodeHelper.postcodeUitSuggestie(selectie);
+
+          _bezigMetInvullen = true;
+          postcodeController.text = postcode;
+
+          final gemeente = PostcodeHelper.eersteGemeenteVanPostcode(postcode);
+          if (gemeente != null) {
+            gemeenteController.text = gemeente;
+          }
+
+          _bezigMetInvullen = false;
+        },
+        fieldViewBuilder: (
+          context,
+          controller,
+          focusNode,
+          onFieldSubmitted,
+        ) {
+          return TextField(
+            controller: controller,
+            focusNode: focusNode,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              hintText: 'Postcode',
+              isDense: true,
+              contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade400),
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Colors.grey.shade400),
+              ),
+              focusedBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: Color(0xFF0B7A3B),
+                  width: 1.6,
+                ),
+              ),
+            ),
+          );
+        },
+        optionsViewBuilder: (context, onSelected, opties) {
+          return Material(
+            elevation: 4,
+            child: ListView(
+              padding: EdgeInsets.zero,
+              shrinkWrap: true,
+              children: opties.map((optie) {
+                return ListTile(
+                  dense: true,
+                  title: Text(optie),
+                  onTap: () => onSelected(optie),
+                );
+              }).toList(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -688,11 +884,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: veld(gemeenteController, 'Gemeente'),
+                      child: gemeenteVeld(),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: veld(postcodeController, 'Postcode'),
+                      child: postcodeVeld(),
                     ),
                   ],
                 ),
