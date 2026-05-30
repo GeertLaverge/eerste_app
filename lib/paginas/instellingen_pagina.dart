@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'leveranciers_pagina.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 
 class InstellingenPagina extends StatelessWidget {
   const InstellingenPagina({super.key});
@@ -22,7 +23,11 @@ class InstellingenPagina extends StatelessWidget {
         child: SizedBox(
           width: 260,
           child: ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
+              await OneDriveSyncService().slimmeSync();
+
+              if (!context.mounted) return;
+
               Navigator.push(
                 context,
                 MaterialPageRoute(

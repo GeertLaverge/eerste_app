@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 
 class LeveranciersPagina extends StatefulWidget {
   const LeveranciersPagina({super.key});
@@ -51,6 +52,8 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
         leveranciers.map((e) => e.toJson()).toList(),
       ),
     );
+
+    await OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   List<Leverancier> get gefilterdeLeveranciers {
