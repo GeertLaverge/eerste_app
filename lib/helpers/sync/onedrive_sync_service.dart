@@ -26,6 +26,7 @@ class OneDriveSyncService {
         'backupDatum': backupDatum,
         'agendaItems': prefs.getString('agenda_items_nieuw'),
         'dagtaakTemplates': prefs.getString('dagtaak_templates'),
+        'leveranciers': prefs.getString('leveranciers_lijst'),
       };
 
       final inhoud = jsonEncode(backup);
@@ -107,6 +108,7 @@ class OneDriveSyncService {
 
       final agendaItems = data['agendaItems'];
       final dagtaakTemplates = data['dagtaakTemplates'];
+      final leveranciers = data['leveranciers'];
       final backupDatum = data['backupDatum'];
 
       if (agendaItems is String) {
@@ -125,6 +127,12 @@ class OneDriveSyncService {
         await prefs.setString(
           _backupDatumKey,
           backupDatum,
+        );
+      }
+      if (leveranciers is String) {
+        await prefs.setString(
+          'leveranciers_lijst',
+          leveranciers,
         );
       }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../paginas/instellingen_pagina.dart';
 
 class HomeBovenBalk extends StatelessWidget {
   const HomeBovenBalk({
@@ -28,7 +29,7 @@ class HomeBovenBalk extends StatelessWidget {
           ),
         ),
       ),
-      child: const Row(
+      child: Row(
         children: [
           CircleAvatar(
             radius: 19,
@@ -62,9 +63,19 @@ class HomeBovenBalk extends StatelessWidget {
           SizedBox(
             width: 16,
           ),
-          Icon(
-            Icons.settings_outlined,
-            size: 24,
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const InstellingenPagina(),
+                ),
+              );
+            },
+            child: const Icon(
+              Icons.settings_outlined,
+              size: 24,
+            ),
           ),
         ],
       ),
