@@ -78,13 +78,20 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
     return true;
   }
 
-  Future<void> leverancierToevoegen() async {
-    final naam = TextEditingController();
-    final telefoon = TextEditingController();
-    final gsm = TextEditingController();
-    final email = TextEditingController();
+  Future<Leverancier?> _openLeverancierDialog({
+    required String titel,
+    Leverancier? bestaand,
+  }) async {
+    final naam = TextEditingController(text: bestaand?.naam ?? '');
+    final straat = TextEditingController(text: bestaand?.straat ?? '');
+    final huisNr = TextEditingController(text: bestaand?.huisNr ?? '');
+    final postcode = TextEditingController(text: bestaand?.postcode ?? '');
+    final gemeente = TextEditingController(text: bestaand?.gemeente ?? '');
+    final telefoon = TextEditingController(text: bestaand?.telefoon ?? '');
+    final gsm = TextEditingController(text: bestaand?.gsm ?? '');
+    final email = TextEditingController(text: bestaand?.email ?? '');
 
-    final resultaat = await showDialog<Leverancier>(
+    return showDialog<Leverancier>(
       context: context,
       builder: (context) {
         return Dialog(
@@ -94,58 +101,118 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Leverancier toevoegen',
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _veld(naam, 'Naam leverancier'),
-                _veld(telefoon, 'Vaste telefoon'),
-                _veld(gsm, 'GSM'),
-                _veld(email, 'Email'),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (naam.text.trim().isEmpty) return;
-
-                      Navigator.pop(
-                        context,
-                        Leverancier(
-                          naam: naam.text.trim(),
-                          telefoon: telefoon.text.trim(),
-                          gsm: gsm.text.trim(),
-                          email: email.text.trim(),
-                          artikelen: [],
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: groen,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 50),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    titel,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
                     ),
-                    child: const Text('Toevoegen'),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _veld(naam, 'Naam leverancier'),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _veld(straat, 'Straat'),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _veld(huisNr, 'Nr'),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: _veld(postcode, 'Postcode'),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 3,
+                        child: _veld(gemeente, 'Gemeente'),
+                      ),
+                    ],
+                  ),
+                  _veld(telefoon, 'Vaste telefoon'),
+                  _veld(gsm, 'GSM'),
+                  _veld(email, 'Email'),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (naam.text.trim().isEmpty) return;
+
+                        Navigator.pop(
+                          context,
+                          Leverancier(
+                            naam: naam.text.trim(),
+                            straat: straat.text.trim(),
+                            huisNr: huisNr.text.trim(),
+                            postcode: postcode.text.trim(),
+                            gemeente: gemeente.text.trim(),
+                            telefoon: telefoon.text.trim(),
+                            gsm: gsm.text.trim(),
+                            email: email.text.trim(),
+                            artikelen: bestaand?.artikelen ?? [],
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: groen,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(0, 50),
+                      ),
+                      child: Text(bestaand == null ? 'Toevoegen' : 'Opslaan'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  Future<void> leverancierToevoegen() async {
+    final resultaat = await _openLeverancierDialog(
+      titel: 'Leverancier toevoegen',
     );
 
     if (resultaat == null) return;
 
     setState(() {
       leveranciers.add(resultaat);
+      leveranciers.sort((a, b) => a.naam.compareTo(b.naam));
+    });
+
+    await bewaarLeveranciers();
+  }
+
+  Future<void> leverancierWijzigen(Leverancier leverancier) async {
+    final resultaat = await _openLeverancierDialog(
+      titel: 'Leverancier wijzigen',
+      bestaand: leverancier,
+    );
+
+    if (resultaat == null) return;
+
+    setState(() {
+      leverancier.naam = resultaat.naam;
+      leverancier.straat = resultaat.straat;
+      leverancier.huisNr = resultaat.huisNr;
+      leverancier.postcode = resultaat.postcode;
+      leverancier.gemeente = resultaat.gemeente;
+      leverancier.telefoon = resultaat.telefoon;
+      leverancier.gsm = resultaat.gsm;
+      leverancier.email = resultaat.email;
       leveranciers.sort((a, b) => a.naam.compareTo(b.naam));
     });
 
@@ -296,6 +363,9 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
 
                         return _LeverancierKaart(
                           leverancier: leverancier,
+                          onLeverancierWijzigen: () {
+                            leverancierWijzigen(leverancier);
+                          },
                           onArtikelToevoegen: () {
                             artikelToevoegen(leverancier);
                           },
@@ -403,6 +473,7 @@ class _ArtikelDialog extends StatelessWidget {
 
 class _LeverancierKaart extends StatefulWidget {
   final Leverancier leverancier;
+  final VoidCallback onLeverancierWijzigen;
   final VoidCallback onArtikelToevoegen;
   final Function(String artikel) onArtikelWijzigen;
   final Function(String artikel) onArtikelVerwijderen;
@@ -410,6 +481,7 @@ class _LeverancierKaart extends StatefulWidget {
 
   const _LeverancierKaart({
     required this.leverancier,
+    required this.onLeverancierWijzigen,
     required this.onArtikelToevoegen,
     required this.onArtikelWijzigen,
     required this.onArtikelVerwijderen,
@@ -442,7 +514,7 @@ class _LeverancierKaartState extends State<_LeverancierKaart> {
             },
             borderRadius: BorderRadius.circular(18),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
               child: Row(
                 children: [
                   Icon(
@@ -461,6 +533,14 @@ class _LeverancierKaartState extends State<_LeverancierKaart> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    onPressed: widget.onLeverancierWijzigen,
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: _LeveranciersKleuren.groen,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -472,6 +552,10 @@ class _LeverancierKaartState extends State<_LeverancierKaart> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Divider(),
+                  _info(
+                    Icons.location_on_outlined,
+                    widget.leverancier.adresTekst,
+                  ),
                   _info(Icons.phone_outlined, widget.leverancier.telefoon),
                   _info(Icons.smartphone_outlined, widget.leverancier.gsm),
                   _info(Icons.email_outlined, widget.leverancier.email),
@@ -588,23 +672,45 @@ class _LeveranciersKleuren {
 }
 
 class Leverancier {
-  final String naam;
-  final String telefoon;
-  final String gsm;
-  final String email;
+  String naam;
+  String straat;
+  String huisNr;
+  String postcode;
+  String gemeente;
+  String telefoon;
+  String gsm;
+  String email;
   final List<String> artikelen;
 
   Leverancier({
     required this.naam,
+    this.straat = '',
+    this.huisNr = '',
+    this.postcode = '',
+    this.gemeente = '',
     required this.telefoon,
     required this.gsm,
     required this.email,
     required this.artikelen,
   });
 
+  String get adresTekst {
+    final straatRegel = '$straat $huisNr'.trim();
+    final gemeenteRegel = '$postcode $gemeente'.trim();
+
+    return [
+      if (straatRegel.isNotEmpty) straatRegel,
+      if (gemeenteRegel.isNotEmpty) gemeenteRegel,
+    ].join(', ');
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'naam': naam,
+      'straat': straat,
+      'huisNr': huisNr,
+      'postcode': postcode,
+      'gemeente': gemeente,
       'telefoon': telefoon,
       'gsm': gsm,
       'email': email,
@@ -615,6 +721,10 @@ class Leverancier {
   factory Leverancier.fromJson(Map<String, dynamic> json) {
     return Leverancier(
       naam: json['naam'] ?? '',
+      straat: json['straat'] ?? '',
+      huisNr: json['huisNr'] ?? '',
+      postcode: json['postcode'] ?? '',
+      gemeente: json['gemeente'] ?? '',
       telefoon: json['telefoon'] ?? '',
       gsm: json['gsm'] ?? '',
       email: json['email'] ?? '',
