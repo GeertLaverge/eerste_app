@@ -54,12 +54,22 @@ class AgendaWeekRij extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: dagen.map<Widget>((dag) {
+          final andereMaand =
+              dag.month != maand.month || dag.year != maand.year;
+
+          if (andereMaand) {
+            return Expanded(
+              child: SizedBox(
+                height: weergave == AgendaWeergaveType.symbolen ? 70 : 102,
+              ),
+            );
+          }
+
           final geselecteerd = AgendaDatumHelper.zelfdeDag(
             dag,
             geselecteerdeDag,
           );
 
-          final andereMaand = dag.month != maand.month;
           final isVandaag = AgendaDatumHelper.isVandaag(dag);
           final isWeekend = dag.weekday == 6 || dag.weekday == 7;
 
@@ -69,7 +79,7 @@ class AgendaWeekRij extends StatelessWidget {
           return AgendaDagCel(
             dag: dag,
             geselecteerd: geselecteerd,
-            andereMaand: andereMaand,
+            andereMaand: false,
             isVandaag: isVandaag,
             isWeekend: isWeekend,
             items: items,

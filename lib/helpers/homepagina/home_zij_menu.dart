@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../helpers/sync/onedrive_sync_service.dart';
+import '../../paginas/klanten_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -93,6 +94,17 @@ class HomeZijMenu extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (_) => const AgendaPaginaNieuw(),
+            ),
+          );
+        }
+
+        if (titel == 'Klanten') {
+          if (!context.mounted) return;
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => KlantenPagina(),
             ),
           );
         }
