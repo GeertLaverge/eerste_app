@@ -44,9 +44,9 @@ class KlantenficheKlantkiezer {
                       return ListTile(
                         title: Text(
                           klant.naamKlant,
-                        ),
-                        subtitle: Text(
-                          '${klant.gemeente} (${klant.postcode})',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         onTap: () {
                           Navigator.pop(

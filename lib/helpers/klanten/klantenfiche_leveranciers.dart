@@ -220,6 +220,26 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                       ),
                     ),
                     Checkbox(
+                      value: regel.besteld,
+                      activeColor: const Color(0xFF0B7A3B),
+                      onChanged: (waarde) {
+                        setState(() {
+                          regel.besteld = waarde ?? false;
+
+                          if (!regel.besteld) {
+                            regel.geleverd = false;
+                          }
+                        });
+                      },
+                    ),
+                    const SizedBox(width: 20),
+                    const Text(
+                      'Geleverd',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Checkbox(
                       value: regel.geleverd,
                       activeColor: const Color(0xFF0B7A3B),
                       onChanged: regel.besteld
@@ -230,44 +250,9 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                             }
                           : null,
                     ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Geleverd',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Checkbox(
-                      value: regel.geleverd,
-                      onChanged: (waarde) {
-                        setState(() {
-                          regel.geleverd = waarde ?? false;
-
-                          if (regel.geleverd) {
-                            regel.besteld = true;
-                          }
-                        });
-                      },
-                    ),
                     const Spacer(),
                     IconButton(
                       onPressed: () {
-                        final bestaatAl = geselecteerdeArtikelen.any(
-                          (regel) =>
-                              regel.leverancier == geselecteerdeLeverancier &&
-                              regel.artikel == geselecteerdArtikel,
-                        );
-
-                        if (bestaatAl) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Artikel staat reeds in de lijst',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
                         setState(() {
                           geselecteerdeArtikelen.remove(regel);
                         });
@@ -278,7 +263,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                       ),
                     ),
                   ],
-                ),
+                )
               ],
             ),
           );
