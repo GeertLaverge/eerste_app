@@ -34,6 +34,77 @@ class _KlantenPaginaState extends State<KlantenPagina> {
     'Geen artikels',
   ];
 
+  void openNieuweKlantenfiche() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const KlantenFichePagina(),
+      ),
+    ).then((_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  void openNieuwMenu() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(24),
+          child: Container(
+            width: 260,
+            padding: const EdgeInsets.symmetric(
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFE5E7EB),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _popupKeuze(
+                  context,
+                  icoon: Icons.person_add_alt_1_outlined,
+                  tekst: 'Nieuwe klantenfiche',
+                  onTap: () {
+                    Navigator.pop(context);
+                    openNieuweKlantenfiche();
+                  },
+                ),
+                const Divider(
+                  height: 1,
+                  color: Color(0xFFE5E7EB),
+                ),
+                _popupKeuze(
+                  context,
+                  icoon: Icons.build_circle_outlined,
+                  tekst: 'Nadienst',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Later: nadienst openen
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,74 +114,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
           children: [
             KlantenBovenBalk(
               onTerug: () => Navigator.pop(context),
-              onNieuw: () {
-                showDialog(
-                  context: context,
-                  builder: (context) {
-                    return Dialog(
-                      backgroundColor: Colors.transparent,
-                      insetPadding: const EdgeInsets.all(24),
-                      child: Container(
-                        width: 260,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFE5E7EB),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.12),
-                              blurRadius: 18,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _popupKeuze(
-                              context,
-                              icoon: Icons.person_add_alt_1_outlined,
-                              tekst: 'Nieuwe klantenfiche',
-                              onTap: () async {
-                                Navigator.pop(context);
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const KlantenFichePagina(),
-                                  ),
-                                );
-
-                                if (!mounted) return;
-
-                                setState(() {});
-                              },
-                            ),
-                            const Divider(
-                              height: 1,
-                              color: Color(0xFFE5E7EB),
-                            ),
-                            _popupKeuze(
-                              context,
-                              icoon: Icons.build_circle_outlined,
-                              tekst: 'Nadienst',
-                              onTap: () {
-                                Navigator.pop(context);
-                                // Later: nadienst openen
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+              onNieuw: openNieuwMenu,
             ),
             KlantenZoekbalk(
               onChanged: (waarde) {

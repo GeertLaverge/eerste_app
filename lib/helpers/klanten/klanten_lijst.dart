@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../paginas/klanten_fiche_pagina.dart';
 import 'fiche/klantenfiche_model.dart';
 import 'fiche/klantenfiche_repository.dart';
 
-class KlantenLijst extends StatelessWidget {
+class KlantenLijst extends StatefulWidget {
   final String klantStatus;
   final String bestelStatus;
   final String zoekterm;
@@ -16,6 +17,11 @@ class KlantenLijst extends StatelessWidget {
   });
 
   @override
+  State<KlantenLijst> createState() => _KlantenLijstState();
+}
+
+class _KlantenLijstState extends State<KlantenLijst> {
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<KlantenficheModel>>(
       future: KlantenficheRepository.laadKlantenFiches(),
@@ -25,13 +31,13 @@ class KlantenLijst extends StatelessWidget {
         }
 
         final klanten = snapshot.data!.where((klant) {
-          final matchKlantStatus =
-              klantStatus == 'Alle' || klant.klantStatus == klantStatus;
+          final matchKlantStatus = widget.klantStatus == 'Alle' ||
+              klant.klantStatus == widget.klantStatus;
 
-          final matchBestelStatus =
-              bestelStatus == 'Alle' || klant.bestelStatus == bestelStatus;
+          final matchBestelStatus = widget.bestelStatus == 'Alle' ||
+              klant.bestelStatus == widget.bestelStatus;
 
-          final zoek = zoekterm.trim().toLowerCase();
+          final zoek = widget.zoekterm.trim().toLowerCase();
 
           final matchZoek = zoek.isEmpty ||
               klant.naam.toLowerCase().contains(zoek) ||
@@ -54,44 +60,61 @@ class KlantenLijst extends StatelessWidget {
           itemBuilder: (context, index) {
             final klant = klanten[index];
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
+            return InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => KlantenFichePagina(
+                      bestaandeFiche: klant,
+                    ),
+                  ),
+                );
+
+                if (!mounted) return;
+
+                setState(() {});
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFFE5E7EB),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    klant.naam.isEmpty ? 'Naamloos' : klant.naam,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1F2937),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      klant.naam.isEmpty ? 'Naamloos' : klant.naam,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1F2937),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '${klant.klantStatus} · ${klant.bestelStatus}',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6B7280),
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(height: 6),
+                    Text(
+                      '${klant.klantStatus} · ${klant.bestelStatus}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

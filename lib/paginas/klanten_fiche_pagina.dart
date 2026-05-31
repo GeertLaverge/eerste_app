@@ -8,9 +8,15 @@ import '../helpers/klanten/fiche/klantenfiche_klantkiezer.dart';
 import '../helpers/klanten/klantenfiche_taakveld.dart';
 import '../helpers/klanten/klantenfiche_leveranciers.dart';
 import '../helpers/klanten/fiche/klantenfiche_service.dart';
+import '../helpers/klanten/fiche/klantenfiche_model.dart';
 
 class KlantenFichePagina extends StatefulWidget {
-  const KlantenFichePagina({super.key});
+  final KlantenficheModel? bestaandeFiche;
+
+  const KlantenFichePagina({
+    super.key,
+    this.bestaandeFiche,
+  });
 
   @override
   State<KlantenFichePagina> createState() => _KlantenFichePaginaState();
@@ -18,7 +24,7 @@ class KlantenFichePagina extends StatefulWidget {
 
 class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   String klantStatus = 'Actief';
-  late final String ficheId = DateTime.now().millisecondsSinceEpoch.toString();
+  late final String ficheId;
 
   final naamController = TextEditingController();
   final straatController = TextEditingController();
@@ -29,6 +35,28 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final gsm2Controller = TextEditingController();
   final emailController = TextEditingController();
   final taakController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    ficheId = widget.bestaandeFiche?.id ??
+        DateTime.now().millisecondsSinceEpoch.toString();
+
+    final fiche = widget.bestaandeFiche;
+
+    if (fiche == null) return;
+
+    klantStatus = fiche.klantStatus;
+
+    naamController.text = fiche.naam;
+    straatController.text = fiche.straatnaam;
+    nrController.text = fiche.huisNr;
+    gemeenteController.text = fiche.gemeente;
+    postcodeController.text = fiche.postcode;
+    gsmController.text = fiche.gsm;
+    gsm2Controller.text = fiche.gsm2;
+    emailController.text = fiche.email;
+    taakController.text = fiche.taakVoorKlant;
+  }
 
   @override
   void dispose() {
