@@ -1,3 +1,35 @@
+class KlantenficheArtikel {
+  final String leverancier;
+  final String artikel;
+  final bool besteld;
+  final bool geleverd;
+
+  const KlantenficheArtikel({
+    required this.leverancier,
+    required this.artikel,
+    this.besteld = false,
+    this.geleverd = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'leverancier': leverancier,
+      'artikel': artikel,
+      'besteld': besteld,
+      'geleverd': geleverd,
+    };
+  }
+
+  factory KlantenficheArtikel.fromJson(Map<String, dynamic> json) {
+    return KlantenficheArtikel(
+      leverancier: json['leverancier'] ?? '',
+      artikel: json['artikel'] ?? '',
+      besteld: json['besteld'] ?? false,
+      geleverd: json['geleverd'] ?? false,
+    );
+  }
+}
+
 class KlantenficheModel {
   final String id;
 
@@ -18,6 +50,8 @@ class KlantenficheModel {
 
   final String taakVoorKlant;
 
+  final List<KlantenficheArtikel> artikelen;
+
   const KlantenficheModel({
     required this.id,
     required this.naam,
@@ -30,8 +64,9 @@ class KlantenficheModel {
     this.gsm2 = '',
     this.email = '',
     this.klantStatus = 'Actief',
-    this.bestelStatus = 'Geen artikels',
+    this.bestelStatus = 'Geen artikelen',
     this.taakVoorKlant = '',
+    this.artikelen = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -49,6 +84,7 @@ class KlantenficheModel {
       'klantStatus': klantStatus,
       'bestelStatus': bestelStatus,
       'taakVoorKlant': taakVoorKlant,
+      'artikelen': artikelen.map((artikel) => artikel.toJson()).toList(),
     };
   }
 
@@ -65,8 +101,15 @@ class KlantenficheModel {
       gsm2: json['gsm2'] ?? '',
       email: json['email'] ?? '',
       klantStatus: json['klantStatus'] ?? 'Actief',
-      bestelStatus: json['bestelStatus'] ?? 'Geen artikels',
+      bestelStatus: json['bestelStatus'] ?? 'Geen artikelen',
       taakVoorKlant: json['taakVoorKlant'] ?? '',
+      artikelen: (json['artikelen'] as List<dynamic>? ?? [])
+          .map(
+            (item) => KlantenficheArtikel.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
     );
   }
 }

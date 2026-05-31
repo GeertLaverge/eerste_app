@@ -35,6 +35,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final gsm2Controller = TextEditingController();
   final emailController = TextEditingController();
   final taakController = TextEditingController();
+
+  List<KlantenficheArtikel> artikelen = [];
   @override
   void initState() {
     super.initState();
@@ -44,6 +46,9 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     final fiche = widget.bestaandeFiche;
 
     if (fiche == null) return;
+    artikelen = List<KlantenficheArtikel>.from(
+      fiche.artikelen,
+    );
 
     klantStatus = fiche.klantStatus;
 
@@ -90,8 +95,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       gsm2: gsm2Controller.text,
       email: emailController.text,
       klantStatus: klantStatus,
-      bestelStatus: 'Geen artikels',
       taakVoorKlant: taakController.text,
+      artikelen: artikelen,
     );
   }
 
@@ -104,7 +109,13 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
           children: [
             KlantenficheBovenBalk(
               titel: titelNaam,
-              onTerug: () => Navigator.pop(context),
+              onTerug: () async {
+                await automatischBewaren();
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+              },
             ),
             KlantenficheStatusBalk(
               geselecteerd: klantStatus,
@@ -141,18 +152,16 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
 
                             setState(() {
                               naamController.text = klant.naamKlant;
-
                               straatController.text = klant.straatnaam;
                               nrController.text = klant.huisNr;
-
                               gemeenteController.text = klant.gemeente;
                               postcodeController.text = klant.postcode;
-
                               gsmController.text = klant.gsm;
                               gsm2Controller.text = klant.gsm2;
-
                               emailController.text = klant.email;
                             });
+
+                            await automatischBewaren();
                           },
                         ),
                         Row(
@@ -230,7 +239,16 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                   KlantenficheUitvalBlok(
                     titel: 'Leveranciers en artikelen',
                     standaardOpen: false,
-                    child: const KlantenficheLeveranciers(),
+                    child: KlantenficheLeveranciers(
+                      artikelen: artikelen,
+                      onChanged: (nieuweArtikelen) async {
+                        setState(() {
+                          artikelen = nieuweArtikelen;
+                        });
+
+                        await automatischBewaren();
+                      },
+                    ),
                   ),
                   KlantenficheUitvalBlok(
                     titel: naamController.text.trim().isEmpty

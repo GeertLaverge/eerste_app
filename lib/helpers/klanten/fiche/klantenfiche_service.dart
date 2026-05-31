@@ -2,6 +2,32 @@ import 'klantenfiche_model.dart';
 import 'klantenfiche_repository.dart';
 
 class KlantenficheService {
+  static String berekenBestelStatus(
+    List<KlantenficheArtikel> artikelen,
+  ) {
+    if (artikelen.isEmpty) {
+      return 'Geen artikelen';
+    }
+
+    final allesGeleverd = artikelen.every(
+      (artikel) => artikel.geleverd,
+    );
+
+    final allesBesteld = artikelen.every(
+      (artikel) => artikel.besteld,
+    );
+
+    if (allesGeleverd) {
+      return 'Geleverd';
+    }
+
+    if (allesBesteld) {
+      return 'Besteld';
+    }
+
+    return 'Te bestellen';
+  }
+
   static Future<void> automatischBewaren({
     required String ficheId,
     required String naam,
@@ -14,15 +40,20 @@ class KlantenficheService {
     required String gsm2,
     required String email,
     required String klantStatus,
-    required String bestelStatus,
     required String taakVoorKlant,
+    required List<KlantenficheArtikel> artikelen,
   }) async {
     if (naam.trim().isEmpty &&
         straatnaam.trim().isEmpty &&
         gsm.trim().isEmpty &&
-        email.trim().isEmpty) {
+        email.trim().isEmpty &&
+        artikelen.isEmpty) {
       return;
     }
+
+    final bestelStatus = berekenBestelStatus(
+      artikelen,
+    );
 
     final fiche = KlantenficheModel(
       id: ficheId,
@@ -38,6 +69,7 @@ class KlantenficheService {
       klantStatus: klantStatus,
       bestelStatus: bestelStatus,
       taakVoorKlant: taakVoorKlant,
+      artikelen: artikelen,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

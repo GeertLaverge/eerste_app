@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 
 import 'klanten_leverancier_service.dart';
+import 'fiche/klantenfiche_model.dart';
 
 class KlantenficheLeveranciers extends StatefulWidget {
+  final List<KlantenficheArtikel> artikelen;
+  final Function(List<KlantenficheArtikel>) onChanged;
+
   const KlantenficheLeveranciers({
     super.key,
+    required this.artikelen,
+    required this.onChanged,
   });
 
   @override
@@ -17,11 +23,19 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
 
   String? geselecteerdeLeverancier;
   String? geselecteerdArtikel;
-  final geselecteerdeArtikelen = <KlantenArtikelRegel>[];
+  late List<KlantenArtikelRegel> geselecteerdeArtikelen;
 
   @override
   void initState() {
     super.initState();
+    geselecteerdeArtikelen = widget.artikelen.map((artikel) {
+      return KlantenArtikelRegel(
+        leverancier: artikel.leverancier,
+        artikel: artikel.artikel,
+        besteld: artikel.besteld,
+        geleverd: artikel.geleverd,
+      );
+    }).toList();
     laadLeveranciers();
   }
 
@@ -82,6 +96,19 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
     }
 
     return Colors.red;
+  }
+
+  void geefWijzigingDoor() {
+    final lijst = geselecteerdeArtikelen.map((regel) {
+      return KlantenficheArtikel(
+        leverancier: regel.leverancier,
+        artikel: regel.artikel,
+        besteld: regel.besteld,
+        geleverd: regel.geleverd,
+      );
+    }).toList();
+
+    widget.onChanged(lijst);
   }
 
   @override
@@ -146,6 +173,23 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                 return;
               }
 
+              final bestaatAl = geselecteerdeArtikelen.any(
+                (regel) =>
+                    regel.leverancier == geselecteerdeLeverancier &&
+                    regel.artikel == geselecteerdArtikel,
+              );
+
+              if (bestaatAl) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Artikel staat reeds in de lijst',
+                    ),
+                  ),
+                );
+                return;
+              }
+
               setState(() {
                 geselecteerdeArtikelen.add(
                   KlantenArtikelRegel(
@@ -154,6 +198,8 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                   ),
                 );
               });
+
+              geefWijzigingDoor();
             },
             icon: const Icon(Icons.add),
             label: const Text('Toevoegen'),
@@ -230,6 +276,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                             regel.geleverd = false;
                           }
                         });
+                        geefWijzigingDoor();
                       },
                     ),
                     const SizedBox(width: 20),
@@ -247,6 +294,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                               setState(() {
                                 regel.geleverd = waarde ?? false;
                               });
+                              geefWijzigingDoor();
                             }
                           : null,
                     ),
@@ -256,6 +304,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                         setState(() {
                           geselecteerdeArtikelen.remove(regel);
                         });
+                        geefWijzigingDoor();
                       },
                       icon: const Icon(
                         Icons.delete_outline,
