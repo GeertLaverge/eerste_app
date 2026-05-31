@@ -5,6 +5,7 @@ import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/klanten/klanten_filter_balk.dart';
 import '../helpers/klanten/klanten_lijst.dart';
 import 'klanten_fiche_pagina.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 
 class KlantenPagina extends StatefulWidget {
   const KlantenPagina({super.key});
@@ -113,7 +114,17 @@ class _KlantenPaginaState extends State<KlantenPagina> {
         child: Column(
           children: [
             KlantenBovenBalk(
-              onTerug: () => Navigator.pop(context),
+              onTerug: () async {
+                await OneDriveSyncService().uploadBackup();
+
+                if (!mounted) return;
+
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                  (route) => false,
+                );
+              },
               onNieuw: openNieuwMenu,
             ),
             KlantenZoekbalk(

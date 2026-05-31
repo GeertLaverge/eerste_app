@@ -99,12 +99,14 @@ class HomeZijMenu extends StatelessWidget {
         }
 
         if (titel == 'Klanten') {
+          await OneDriveSyncService().slimmeSync();
+
           if (!context.mounted) return;
 
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => KlantenPagina(),
+              builder: (_) => const KlantenPagina(),
             ),
           );
         }

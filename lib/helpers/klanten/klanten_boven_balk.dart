@@ -15,13 +15,13 @@ class KlantenBovenBalk extends StatelessWidget {
     return Container(
       height: 58,
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      color: const Color(0xFFF7F8FA),
+      color: const Color(0xFF0B7A3B),
       child: Row(
         children: [
           IconButton(
             onPressed: onTerug,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            color: const Color(0xFF1F2937),
+            icon: const Icon(Icons.home_rounded),
+            color: Colors.white,
           ),
           const Expanded(
             child: Text(
@@ -30,14 +30,14 @@ class KlantenBovenBalk extends StatelessWidget {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
+                color: Colors.white,
               ),
             ),
           ),
           IconButton(
             onPressed: onNieuw,
             icon: const Icon(Icons.add_rounded),
-            color: const Color(0xFF1F2937),
+            color: Colors.white,
           ),
         ],
       ),
