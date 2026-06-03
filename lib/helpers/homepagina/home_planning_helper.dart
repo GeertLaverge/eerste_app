@@ -43,9 +43,32 @@ class HomePlanningHelper {
       }).toList();
 
       if (fiche.isEmpty) continue;
-      if (fiche.first.klantTaken.isEmpty) continue;
 
-      resultaat.add(fiche.first);
+      final klantenFiche = fiche.first;
+
+      if (klantenFiche.klantTaken.isEmpty) continue;
+
+      if (klantenFiche.klantTakenAfgewerktOp.isNotEmpty) {
+        final afwerkDatum = DateTime.tryParse(
+          klantenFiche.klantTakenAfgewerktOp,
+        );
+
+        if (afwerkDatum != null) {
+          final vandaag = DateTime.now();
+
+          final enkelVandaag = DateTime(
+            vandaag.year,
+            vandaag.month,
+            vandaag.day,
+          );
+
+          if (afwerkDatum.isBefore(enkelVandaag)) {
+            continue;
+          }
+        }
+      }
+
+      resultaat.add(klantenFiche);
     }
 
     return resultaat;

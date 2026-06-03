@@ -22,9 +22,27 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  Future<void> taakAanpassen(dynamic klant, dynamic taak) async {
+  Future<void> taakAanpassen(
+    dynamic klant,
+    dynamic taak,
+  ) async {
     setState(() {
       taak.isAfgewerkt = !taak.isAfgewerkt;
+
+      final allesAfgewerkt = klant.klantTaken.every(
+        (t) => t.isAfgewerkt,
+      );
+
+      if (allesAfgewerkt) {
+        final vandaag = DateTime.now();
+
+        klant.klantTakenAfgewerktOp =
+            '${vandaag.year.toString().padLeft(4, '0')}-'
+            '${vandaag.month.toString().padLeft(2, '0')}-'
+            '${vandaag.day.toString().padLeft(2, '0')}';
+      } else {
+        klant.klantTakenAfgewerktOp = '';
+      }
     });
 
     await KlantenficheRepository.bewaarKlantenFiche(
@@ -75,34 +93,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 huisNr: planning.huisNr,
                 postcode: planning.postcode,
                 gemeente: planning.gemeente,
-                meldingVoorafMinuten: planning.meldingVoorafMinuten,
+                meldingVoorafMinuten: 0,
               );
             }).toList(),
           ),
         if (planningPlaatsers.isNotEmpty && planningBureau.isNotEmpty)
           const SizedBox(height: 6),
-        if (planningBureau.isNotEmpty)
-          _TaakSectie(
-            titel: 'Planning bureau',
-            taken: planningBureau.map((planning) {
-              return _TaakRij(
-                compact: compact,
-                start: planning.volledigeDag || planning.startUur == null
-                    ? ''
-                    : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
-                eind: planning.volledigeDag || planning.eindUur == null
-                    ? ''
-                    : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
-                kleur: planning.type == 'verlof' ? Colors.red : Colors.blue,
-                titel: planning.titel,
-                straat: planning.straatnaam,
-                huisNr: planning.huisNr,
-                postcode: planning.postcode,
-                gemeente: planning.gemeente,
-                meldingVoorafMinuten: planning.meldingVoorafMinuten,
-              );
-            }).toList(),
-          ),
         if (widget.klantTakenVandaag.isNotEmpty) const SizedBox(height: 6),
         ...widget.klantTakenVandaag.map((klant) {
           final taken = List.from(klant.klantTaken);
@@ -125,6 +121,28 @@ class _HomeDashboardState extends State<HomeDashboard> {
             }).toList(),
           );
         }),
+        if (planningBureau.isNotEmpty)
+          _TaakSectie(
+            titel: 'Planning bureau',
+            taken: planningBureau.map((planning) {
+              return _TaakRij(
+                compact: compact,
+                start: planning.volledigeDag || planning.startUur == null
+                    ? ''
+                    : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
+                eind: planning.volledigeDag || planning.eindUur == null
+                    ? ''
+                    : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
+                kleur: planning.type == 'verlof' ? Colors.red : Colors.blue,
+                titel: planning.titel,
+                straat: planning.straatnaam,
+                huisNr: planning.huisNr,
+                postcode: planning.postcode,
+                gemeente: planning.gemeente,
+                meldingVoorafMinuten: planning.meldingVoorafMinuten,
+              );
+            }).toList(),
+          ),
         if ((planningPlaatsers.isNotEmpty || planningBureau.isNotEmpty) &&
             widget.dagTakenVandaag.isNotEmpty)
           const SizedBox(height: 6),

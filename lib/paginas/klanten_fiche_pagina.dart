@@ -9,6 +9,7 @@ import '../helpers/klanten/klantenfiche_taakveld.dart';
 import '../helpers/klanten/klantenfiche_leveranciers.dart';
 import '../helpers/klanten/fiche/klantenfiche_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
+import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -39,6 +40,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
+  List<KlantenficheExtraWerk> extraWerken = [];
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +68,9 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     emailController.text = fiche.email;
     taakController.text = fiche.taakVoorKlant;
     klantTaken = List<KlantTaakItem>.from(fiche.klantTaken);
+    extraWerken = List<KlantenficheExtraWerk>.from(
+      fiche.extraWerken,
+    );
   }
 
   @override
@@ -102,6 +108,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       klantStatus: klantStatus,
       taakVoorKlant: '',
       klantTaken: klantTaken,
+      extraWerken: extraWerken,
       artikelen: artikelen,
     );
   }
@@ -272,6 +279,17 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                     standaardOpen: false,
                     child: KlantenficheTaakveld(
                       taken: klantTaken,
+                      onChanged: () async {
+                        setState(() {});
+                        await automatischBewaren();
+                      },
+                    ),
+                  ),
+                  KlantenficheUitvalBlok(
+                    titel: 'Extra werk',
+                    standaardOpen: false,
+                    child: KlantenficheExtraWerkVeld(
+                      extraWerken: extraWerken,
                       onChanged: () async {
                         setState(() {});
                         await automatischBewaren();
