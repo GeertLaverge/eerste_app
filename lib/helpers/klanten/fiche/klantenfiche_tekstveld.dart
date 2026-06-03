@@ -20,7 +20,7 @@ class KlantenficheTekstveld extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 4),
       child: TextField(
         controller: controller,
         onChanged: onChanged,
@@ -37,7 +37,7 @@ class KlantenficheTekstveld extends StatelessWidget {
           floatingLabelBehavior: FloatingLabelBehavior.never,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 0,
-            vertical: 12,
+            vertical: 6,
           ),
           enabledBorder: const UnderlineInputBorder(
             borderSide: BorderSide(

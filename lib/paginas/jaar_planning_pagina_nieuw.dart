@@ -17,6 +17,10 @@ import '../helpers/Agenda/agenda_verplaats_state.dart';
 import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_jaar_maand_kolom.dart';
 import '../helpers/Agenda/agenda_jaar_maand_breedte.dart';
+import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
+import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
+import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 
 class JaarPlanningPaginaNieuw extends StatefulWidget {
   const JaarPlanningPaginaNieuw({super.key});
@@ -162,6 +166,20 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     setState(() {
       geselecteerdeDag = dag;
     });
+    final geopend = await AgendaKlantFicheOpenHelper.openAlsKlantPlanning(
+      context: context,
+      item: item,
+    );
+
+    if (geopend) {
+      await laadAgendaItems();
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      return;
+    }
 
     final resultaat = await AgendaItemOpenHelper.open(
       context: context,
@@ -310,6 +328,36 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     required AgendaItem item,
     required DateTime oudeDag,
   }) async {
+    if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
+      oudeDag,
+    )) {
+      final nieuweItems = await AgendaKlantPlanningDropService.verwerk(
+        context: context,
+        nieuweDag: nieuweDag,
+        item: item,
+        itemsPerDag: agendaItems,
+      );
+
+      if (nieuweItems == null) return;
+
+      if (!mounted) return;
+
+      setState(() {
+        agendaItems = nieuweItems;
+        geselecteerdeDag = nieuweDag;
+        heeftWijzigingen = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Klant ingepland.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      return;
+    }
+
     final nieuweItems = await AgendaSleepAfhandeling.verwerkDrop(
       context: context,
       oudeDag: oudeDag,
@@ -406,11 +454,9 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                 children: [
                   AgendaOnderbalkKnoppen.actie(
                     icoon: Icons.home,
-                    onTap: () {
-                      Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        '/',
-                        (route) => false,
+                    onTap: () async {
+                      await SyncNavigatieHelper.terugNaarHomeMetUpload(
+                        context: context,
                       );
                     },
                   ),
@@ -548,13 +594,8 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                     onTap: openFilterMenu,
                   ),
                   const SizedBox(width: 8),
-                  AgendaOnderbalkKnoppen.actie(
-                    icoon: Icons.schedule,
-                    onTap: () {
-                      AgendaInTePlannenKnop(
-                        items: agendaItems.values.expand((e) => e).toList(),
-                      ).openMenu(context);
-                    },
+                  AgendaInTePlannenKnop(
+                    items: agendaItems.values.expand((e) => e).toList(),
                   ),
                   const Spacer(),
                   AgendaOnderbalkKnoppen.weergave(

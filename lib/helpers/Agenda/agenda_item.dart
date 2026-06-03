@@ -134,6 +134,38 @@ class AgendaItem {
     );
   }
 
+  AgendaItem copyWithTijd({
+    required int startUur,
+    required int startMinuut,
+    required int eindUur,
+    required int eindMinuut,
+  }) {
+    return AgendaItem(
+      titel: titel,
+      type: type,
+      klantNr: klantNr,
+      naamKlant: naamKlant,
+      straatnaam: straatnaam,
+      huisNr: huisNr,
+      gemeente: gemeente,
+      postcode: postcode,
+      gsm: gsm,
+      gsm2: gsm2,
+      email: email,
+      opmerkingen: opmerkingen,
+      startUur: startUur,
+      startMinuut: startMinuut,
+      eindUur: eindUur,
+      eindMinuut: eindMinuut,
+      volledigeDag: false,
+      heeftOverlap: heeftOverlap,
+      homeWeergaveType: homeWeergaveType,
+      dagenVooraf: dagenVooraf,
+      homeDatum: homeDatum,
+      meldingVoorafMinuten: meldingVoorafMinuten,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'titel': titel,

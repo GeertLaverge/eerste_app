@@ -13,14 +13,11 @@ class AgendaSleepAfhandeling {
     required TimeOfDay start,
     required TimeOfDay eind,
   }) {
-    return AgendaItem(
-      titel: item.titel,
-      type: item.type,
+    return item.copyWithTijd(
       startUur: start.hour,
       startMinuut: start.minute,
       eindUur: eind.hour,
       eindMinuut: eind.minute,
-      volledigeDag: false,
     );
   }
 
@@ -35,6 +32,48 @@ class AgendaSleepAfhandeling {
 
     if (actie == null) return null;
 
+    AgendaItem nieuwItem = item;
+    if (actie.actie == AgendaSleepActie.verwijderen) {
+      return AgendaRepository.verwijder(
+        dag: oudeDag,
+        item: item,
+        itemsPerDag: itemsPerDag,
+      );
+    }
+
+    if (actie.actie == AgendaSleepActie.tijdAanpassen) {
+      final tijd = await AgendaSleepTijdPopup.toon(
+        context,
+        huidigeStart: TimeOfDay(
+          hour: item.startUur ?? 7,
+          minute: item.startMinuut ?? 0,
+        ),
+        huidigeEind: TimeOfDay(
+          hour: item.eindUur ?? 15,
+          minute: item.eindMinuut ?? 30,
+        ),
+      );
+
+      if (tijd == null) return null;
+
+      if (!tijd.tijdenBehouden &&
+          tijd.startTijd != null &&
+          tijd.eindTijd != null) {
+        nieuwItem = itemMetNieuweTijden(
+          item: item,
+          start: tijd.startTijd!,
+          eind: tijd.eindTijd!,
+        );
+      }
+
+      return AgendaRepository.bewerk(
+        dag: oudeDag,
+        oudItem: item,
+        nieuwItem: nieuwItem,
+        itemsPerDag: itemsPerDag,
+      );
+    }
+
     final tijd = await AgendaSleepTijdPopup.toon(
       context,
       huidigeStart: TimeOfDay(
@@ -48,8 +87,6 @@ class AgendaSleepAfhandeling {
     );
 
     if (tijd == null) return null;
-
-    AgendaItem nieuwItem = item;
 
     if (!tijd.tijdenBehouden &&
         tijd.startTijd != null &&

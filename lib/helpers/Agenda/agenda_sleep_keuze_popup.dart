@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 enum AgendaSleepActie {
   verplaatsen,
   kopieren,
+  tijdAanpassen,
+  verwijderen,
 }
 
 class AgendaSleepKeuzeResultaat {
@@ -138,6 +140,74 @@ class AgendaSleepKeuzePopup {
                           color: Color(
                             0xFF0B7A3B,
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          const AgendaSleepKeuzeResultaat(
+                            actie: AgendaSleepActie.tijdAanpassen,
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.access_time,
+                      ),
+                      label: const Text(
+                        'Tijd aanpassen',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(
+                          0,
+                          52,
+                        ),
+                        foregroundColor: const Color(
+                          0xFF0B7A3B,
+                        ),
+                        side: const BorderSide(
+                          color: Color(
+                            0xFF0B7A3B,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          const AgendaSleepKeuzeResultaat(
+                            actie: AgendaSleepActie.verwijderen,
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline,
+                      ),
+                      label: const Text(
+                        'Verwijderen',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(
+                          0,
+                          52,
+                        ),
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(
+                          color: Colors.red,
                         ),
                       ),
                     ),

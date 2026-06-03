@@ -141,6 +141,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                           future: Future.wait([
                             planningVandaag,
                             dagTakenVandaag,
+                            HomePlanningHelper.klantTakenVandaag(),
                           ]),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
@@ -150,6 +151,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                             return HomeDashboard(
                               planningVandaag: snapshot.data![0],
                               dagTakenVandaag: snapshot.data![1],
+                              klantTakenVandaag: snapshot.data![2],
                             );
                           },
                         ),

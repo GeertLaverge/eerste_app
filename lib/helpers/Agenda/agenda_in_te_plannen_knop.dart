@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'agenda_item.dart';
 import 'agenda_kleur_service.dart';
+import 'agenda_sleep_data.dart';
+import '../klanten/fiche/klantenfiche_model.dart';
+import '../klanten/fiche/klantenfiche_repository.dart';
 
 class AgendaInTePlannenKnop extends StatelessWidget {
   final List<AgendaItem> items;
@@ -11,43 +14,66 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     required this.items,
   });
 
-  List<AgendaItem> get inTePlannenItems {
-    return items.where((item) {
-      return item.type == 'planning' ||
-          item.type == 'opvolging' ||
-          item.type == 'nadienst';
-    }).toList();
+  bool klantStaatAlOpAgenda(KlantenficheModel klant) {
+    final klantNaam = klant.naam.trim().toLowerCase();
+
+    if (klantNaam.isEmpty) return true;
+
+    return items.any((item) {
+      final itemNaam = item.naamKlant.trim().toLowerCase();
+      final itemTitel = item.titel.trim().toLowerCase();
+
+      return item.type == 'planning' &&
+          (itemNaam == klantNaam || itemTitel == klantNaam);
+    });
   }
 
-  String labelVoorType(String type) {
-    if (type == 'planning') return 'Planning';
-    if (type == 'opvolging') return 'Opvolging';
-    if (type == 'nadienst') return 'Nadienst';
-    return type;
+  AgendaItem maakAgendaItemVanKlant(KlantenficheModel klant) {
+    return AgendaItem(
+      titel: klant.naam,
+      type: 'planning',
+      klantNr: klant.klantNr,
+      naamKlant: klant.naam,
+      straatnaam: klant.straatnaam,
+      huisNr: klant.huisNr,
+      gemeente: klant.gemeente,
+      postcode: klant.postcode,
+      gsm: klant.gsm,
+      gsm2: klant.gsm2,
+      email: klant.email,
+      opmerkingen: klant.taakVoorKlant,
+    );
+  }
+
+  Future<List<AgendaItem>> laadActieveKlantenNogInTePlannen() async {
+    final klanten = await KlantenficheRepository.laadKlantenFiches();
+
+    final actieveKlanten = klanten.where((klant) {
+      return klant.klantStatus == 'Actief' &&
+          klant.naam.trim().isNotEmpty &&
+          !klantStaatAlOpAgenda(klant);
+    }).toList();
+
+    actieveKlanten.sort(
+      (a, b) => a.naam.toLowerCase().compareTo(
+            b.naam.toLowerCase(),
+          ),
+    );
+
+    return actieveKlanten
+        .map(
+          maakAgendaItemVanKlant,
+        )
+        .toList();
   }
 
   void openMenu(BuildContext context) {
-    final lijst = inTePlannenItems.isEmpty
-        ? [
-            AgendaItem(
-              titel: 'Klant Janssens',
-              type: 'planning',
-            ),
-            AgendaItem(
-              titel: 'Onderhoud Willems',
-              type: 'opvolging',
-            ),
-            AgendaItem(
-              titel: 'Interventie Depot',
-              type: 'nadienst',
-            ),
-          ]
-        : inTePlannenItems;
-
     late OverlayEntry overlayEntry;
 
     double links = 18;
     double boven = 120;
+
+    List<AgendaItem>? openLijst;
 
     overlayEntry = OverlayEntry(
       builder: (context) {
@@ -120,84 +146,114 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Flexible(
-                            child: lijst.isEmpty
-                                ? const Padding(
+                            child: FutureBuilder<List<AgendaItem>>(
+                              future: laadActieveKlantenNogInTePlannen(),
+                              builder: (context, snapshot) {
+                                if (!snapshot.hasData) {
+                                  return const Padding(
+                                    padding: EdgeInsets.all(20),
+                                    child: CircularProgressIndicator(),
+                                  );
+                                }
+
+                                openLijst ??= List<AgendaItem>.from(
+                                  snapshot.data!,
+                                );
+
+                                final lijst = openLijst!;
+
+                                if (lijst.isEmpty) {
+                                  return const Padding(
                                     padding: EdgeInsets.all(20),
                                     child: Text(
-                                      'Geen klanten in wachtrij',
+                                      'Geen actieve klanten in wachtrij',
                                       style: TextStyle(
                                         color: Colors.black54,
                                       ),
                                     ),
-                                  )
-                                : ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: lijst.length,
-                                    itemBuilder: (context, index) {
-                                      final item = lijst[index];
-                                      final kleur =
-                                          AgendaKleurService.kleur(item.type);
+                                  );
+                                }
 
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 8,
+                                return ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: lijst.length,
+                                  itemBuilder: (context, index) {
+                                    final item = lijst[index];
+                                    final kleur =
+                                        AgendaKleurService.kleur(item.type);
+
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 8,
+                                      ),
+                                      child: Draggable<AgendaSleepData>(
+                                        data: AgendaSleepData(
+                                          oudeDag: DateTime(1900, 1, 1),
+                                          item: item,
                                         ),
-                                        child: Draggable<AgendaItem>(
-                                          data: item,
-                                          feedback: Material(
-                                            color: Colors.transparent,
-                                            child: Container(
-                                              width: 260,
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 8,
+                                        onDragCompleted: () {
+                                          openLijst!.removeWhere(
+                                            (x) =>
+                                                x.naamKlant == item.naamKlant,
+                                          );
+
+                                          setOverlayState(() {});
+                                        },
+                                        feedback: Material(
+                                          color: Colors.transparent,
+                                          child: Container(
+                                            width: 260,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 8,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: AgendaKleurService
+                                                  .achtergrond(
+                                                item.type,
                                               ),
-                                              decoration: BoxDecoration(
-                                                color: AgendaKleurService
-                                                    .achtergrond(
-                                                  item.type,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                                border: Border.all(
-                                                  color: kleur,
-                                                ),
-                                                boxShadow: const [
-                                                  BoxShadow(
-                                                    color: Colors.black26,
-                                                    blurRadius: 8,
-                                                    offset: Offset(0, 3),
-                                                  ),
-                                                ],
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: kleur,
                                               ),
-                                              child: Text(
-                                                item.titel,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: kleur,
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w800,
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black26,
+                                                  blurRadius: 8,
+                                                  offset: Offset(0, 3),
                                                 ),
+                                              ],
+                                            ),
+                                            child: Text(
+                                              item.titel,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: kleur,
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w800,
                                               ),
                                             ),
                                           ),
-                                          childWhenDragging: Opacity(
-                                            opacity: 0.35,
-                                            child: inTePlannenRij(
-                                              item: item,
-                                              kleur: kleur,
-                                            ),
-                                          ),
+                                        ),
+                                        childWhenDragging: Opacity(
+                                          opacity: 0.35,
                                           child: inTePlannenRij(
                                             item: item,
                                             kleur: kleur,
                                           ),
                                         ),
-                                      );
-                                    },
-                                  ),
+                                        child: inTePlannenRij(
+                                          item: item,
+                                          kleur: kleur,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
@@ -261,7 +317,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            labelVoorType(item.type),
+            'Actieve klant',
             style: TextStyle(
               color: kleur,
               fontSize: 11,
@@ -275,48 +331,61 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final aantal = inTePlannenItems.length;
+    return FutureBuilder<List<AgendaItem>>(
+      future: laadActieveKlantenNogInTePlannen(),
+      builder: (context, snapshot) {
+        final aantal = snapshot.data?.length ?? 0;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        IconButton(
-          onPressed: () => openMenu(context),
-          icon: const Icon(
-            Icons.playlist_add_check,
-            color: Colors.black87,
-          ),
-        ),
-        if (aantal > 0)
-          Positioned(
-            right: 2,
-            top: 2,
-            child: Container(
-              constraints: const BoxConstraints(
-                minWidth: 20,
-                minHeight: 20,
-              ),
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 5),
-              decoration: BoxDecoration(
-                color: Colors.red,
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0B7A3B),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white,
-                  width: 2,
-                ),
               ),
-              child: Text(
-                aantal > 99 ? '99+' : aantal.toString(),
-                style: const TextStyle(
+              child: IconButton(
+                onPressed: () => openMenu(context),
+                icon: const Icon(
+                  Icons.playlist_add_check,
                   color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  size: 22,
                 ),
               ),
             ),
-          ),
-      ],
+            Positioned(
+              right: -2,
+              top: -2,
+              child: Container(
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                ),
+                child: Text(
+                  aantal > 99 ? '99+' : aantal.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

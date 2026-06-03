@@ -63,7 +63,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
 
   String get bestelStatusTekst {
     if (geselecteerdeArtikelen.isEmpty) {
-      return 'Geen artikels';
+      return 'Geen artikelen';
     }
 
     final allesGeleverd =

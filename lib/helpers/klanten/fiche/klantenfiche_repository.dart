@@ -5,8 +5,6 @@ class KlantenficheRepository {
   static Future<List<KlantenficheModel>> laadKlantenFiches() async {
     final lijst = await AppStorage.laadKlantenFiches();
 
-    print('REPOSITORY LAADT AANTAL: ${lijst.length}');
-
     return lijst
         .map(
           (item) => KlantenficheModel.fromJson(item),
@@ -17,8 +15,6 @@ class KlantenficheRepository {
   static Future<void> bewaarKlantenFiche(
     KlantenficheModel fiche,
   ) async {
-    print('KLANT BEWAARD: ${fiche.naam}');
-
     final fiches = await laadKlantenFiches();
 
     final index = fiches.indexWhere(
@@ -33,14 +29,7 @@ class KlantenficheRepository {
 
     final data = fiches.map((f) => f.toJson()).toList();
 
-    print('REPOSITORY BEWAART AANTAL: ${data.length}');
-    print('REPOSITORY DATA: $data');
-
     await AppStorage.bewaarKlantenFiches(data);
-
-    final controle = await AppStorage.laadKlantenFiches();
-
-    print('NA OPSLAG IN APPSTORAGE: ${controle.length}');
   }
 
   static Future<void> verwijderKlantenFiche(

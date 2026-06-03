@@ -76,45 +76,48 @@ class _KlantenLijstState extends State<KlantenLijst> {
 
                 setState(() {});
               },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          klant.naam.isEmpty ? 'Naamloos' : klant.naam,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${klant.klantStatus} · ${klant.bestelStatus}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                  IconButton(
+                    onPressed: () async {
+                      await KlantenficheRepository.verwijderKlantenFiche(
+                        klant.id,
+                      );
+
+                      if (!mounted) return;
+
+                      setState(() {});
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Colors.red,
                     ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      klant.naam.isEmpty ? 'Naamloos' : klant.naam,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF1F2937),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${klant.klantStatus} · ${klant.bestelStatus}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },

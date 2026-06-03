@@ -5,7 +5,7 @@ import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/klanten/klanten_filter_balk.dart';
 import '../helpers/klanten/klanten_lijst.dart';
 import 'klanten_fiche_pagina.dart';
-import '../helpers/sync/onedrive_sync_service.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 
 class KlantenPagina extends StatefulWidget {
   const KlantenPagina({super.key});
@@ -32,7 +32,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
     'Te bestellen',
     'Besteld',
     'Geleverd',
-    'Geen artikels',
+    'Geen artikelen',
   ];
 
   void openNieuweKlantenfiche() {
@@ -115,14 +115,8 @@ class _KlantenPaginaState extends State<KlantenPagina> {
           children: [
             KlantenBovenBalk(
               onTerug: () async {
-                await OneDriveSyncService().uploadBackup();
-
-                if (!mounted) return;
-
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/',
-                  (route) => false,
+                await SyncNavigatieHelper.terugNaarHomeMetUpload(
+                  context: context,
                 );
               },
               onNieuw: openNieuwMenu,

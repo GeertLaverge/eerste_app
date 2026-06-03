@@ -35,8 +35,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final gsm2Controller = TextEditingController();
   final emailController = TextEditingController();
   final taakController = TextEditingController();
+  final klantNrController = TextEditingController();
 
   List<KlantenficheArtikel> artikelen = [];
+  List<KlantTaakItem> klantTaken = [];
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     klantStatus = fiche.klantStatus;
 
     naamController.text = fiche.naam;
+    klantNrController.text = fiche.klantNr;
     straatController.text = fiche.straatnaam;
     nrController.text = fiche.huisNr;
     gemeenteController.text = fiche.gemeente;
@@ -61,11 +64,13 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     gsm2Controller.text = fiche.gsm2;
     emailController.text = fiche.email;
     taakController.text = fiche.taakVoorKlant;
+    klantTaken = List<KlantTaakItem>.from(fiche.klantTaken);
   }
 
   @override
   void dispose() {
     naamController.dispose();
+    klantNrController.dispose();
     straatController.dispose();
     nrController.dispose();
     gemeenteController.dispose();
@@ -73,7 +78,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     gsmController.dispose();
     gsm2Controller.dispose();
     emailController.dispose();
-    taakController.dispose();
+
     super.dispose();
   }
 
@@ -86,7 +91,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     await KlantenficheService.automatischBewaren(
       ficheId: ficheId,
       naam: naamController.text,
-      klantNr: '',
+      klantNr: klantNrController.text,
       straatnaam: straatController.text,
       huisNr: nrController.text,
       gemeente: gemeenteController.text,
@@ -95,7 +100,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       gsm2: gsm2Controller.text,
       email: emailController.text,
       klantStatus: klantStatus,
-      taakVoorKlant: taakController.text,
+      taakVoorKlant: '',
+      klantTaken: klantTaken,
       artikelen: artikelen,
     );
   }
@@ -136,6 +142,13 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                     standaardOpen: false,
                     child: Column(
                       children: [
+                        KlantenficheTekstveld(
+                          label: 'Klantnr',
+                          controller: klantNrController,
+                          onChanged: (_) {
+                            automatischBewaren();
+                          },
+                        ),
                         KlantenficheTekstveld(
                           label: 'Naam klant',
                           controller: naamController,
@@ -238,6 +251,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                   ),
                   KlantenficheUitvalBlok(
                     titel: 'Leveranciers en artikelen',
+                    rechterTekst:
+                        KlantenficheService.berekenBestelStatus(artikelen),
                     standaardOpen: false,
                     child: KlantenficheLeveranciers(
                       artikelen: artikelen,
@@ -256,8 +271,11 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                         : 'Taak voor klant ${naamController.text}',
                     standaardOpen: false,
                     child: KlantenficheTaakveld(
-                      controller: taakController,
-                      onChanged: automatischBewaren,
+                      taken: klantTaken,
+                      onChanged: () async {
+                        setState(() {});
+                        await automatischBewaren();
+                      },
                     ),
                   ),
                 ],

@@ -42,12 +42,14 @@ class KlantenficheService {
     required String klantStatus,
     required String taakVoorKlant,
     required List<KlantenficheArtikel> artikelen,
+    required List<KlantTaakItem> klantTaken,
   }) async {
     if (naam.trim().isEmpty &&
         straatnaam.trim().isEmpty &&
         gsm.trim().isEmpty &&
         email.trim().isEmpty &&
-        artikelen.isEmpty) {
+        artikelen.isEmpty &&
+        klantTaken.isEmpty) {
       return;
     }
 
@@ -70,6 +72,7 @@ class KlantenficheService {
       bestelStatus: bestelStatus,
       taakVoorKlant: taakVoorKlant,
       artikelen: artikelen,
+      klantTaken: klantTaken,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

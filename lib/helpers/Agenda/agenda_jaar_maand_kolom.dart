@@ -126,6 +126,7 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                     onWillAcceptWithDetails: (details) {
                       return datum != null;
                     },
+                    onMove: (details) {},
                     onAcceptWithDetails: (details) async {
                       if (datum == null) return;
 

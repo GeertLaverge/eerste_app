@@ -4,12 +4,14 @@ class KlantenficheUitvalBlok extends StatefulWidget {
   final String titel;
   final Widget child;
   final bool standaardOpen;
+  final String? rechterTekst;
 
   const KlantenficheUitvalBlok({
     super.key,
     required this.titel,
     required this.child,
     this.standaardOpen = false,
+    this.rechterTekst,
   });
 
   @override
@@ -76,6 +78,16 @@ class _KlantenficheUitvalBlokState extends State<KlantenficheUitvalBlok> {
                       color: Color(0xFF1F2937),
                     ),
                   ),
+                  const Spacer(),
+                  if (widget.rechterTekst != null)
+                    Text(
+                      widget.rechterTekst!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6B7280),
+                      ),
+                    ),
                 ],
               ),
             ),

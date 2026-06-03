@@ -1,3 +1,29 @@
+class KlantTaakItem {
+  String tekst;
+  bool isAfgewerkt;
+
+  KlantTaakItem({
+    this.tekst = '',
+    this.isAfgewerkt = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'tekst': tekst,
+      'isAfgewerkt': isAfgewerkt,
+    };
+  }
+
+  factory KlantTaakItem.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return KlantTaakItem(
+      tekst: json['tekst'] ?? '',
+      isAfgewerkt: json['isAfgewerkt'] ?? false,
+    );
+  }
+}
+
 class KlantenficheArtikel {
   final String leverancier;
   final String artikel;
@@ -51,6 +77,7 @@ class KlantenficheModel {
   final String taakVoorKlant;
 
   final List<KlantenficheArtikel> artikelen;
+  final List<KlantTaakItem> klantTaken;
 
   const KlantenficheModel({
     required this.id,
@@ -66,6 +93,7 @@ class KlantenficheModel {
     this.klantStatus = 'Actief',
     this.bestelStatus = 'Geen artikelen',
     this.taakVoorKlant = '',
+    this.klantTaken = const [],
     this.artikelen = const [],
   });
 
@@ -85,6 +113,7 @@ class KlantenficheModel {
       'bestelStatus': bestelStatus,
       'taakVoorKlant': taakVoorKlant,
       'artikelen': artikelen.map((artikel) => artikel.toJson()).toList(),
+      'klantTaken': klantTaken.map((taak) => taak.toJson()).toList(),
     };
   }
 
@@ -103,6 +132,13 @@ class KlantenficheModel {
       klantStatus: json['klantStatus'] ?? 'Actief',
       bestelStatus: json['bestelStatus'] ?? 'Geen artikelen',
       taakVoorKlant: json['taakVoorKlant'] ?? '',
+      klantTaken: (json['klantTaken'] as List<dynamic>? ?? [])
+          .map(
+            (item) => KlantTaakItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
       artikelen: (json['artikelen'] as List<dynamic>? ?? [])
           .map(
             (item) => KlantenficheArtikel.fromJson(

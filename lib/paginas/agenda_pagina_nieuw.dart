@@ -28,6 +28,13 @@ import '../helpers/Agenda/agenda_weergave_type.dart';
 import '../helpers/Agenda/agenda_melding_service.dart';
 import '../helpers/app_storage.dart';
 import 'jaar_planning_pagina_nieuw.dart';
+import '../paginas/klanten_fiche_pagina.dart';
+import '../helpers/klanten/fiche/klantenfiche_repository.dart';
+import '../helpers/Agenda/agenda_tijd_picker.dart';
+import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
+import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
+import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
   const AgendaPaginaNieuw({super.key});
@@ -190,8 +197,24 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
+    final oudeScrollPositie =
+        agendaScroll.hasClients ? agendaScroll.offset : 0.0;
+
     setState(() {
       selectie = selectie.kiesDag(dag);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!agendaScroll.hasClients) return;
+
+      final veiligePositie = oudeScrollPositie.clamp(
+        agendaScroll.position.minScrollExtent,
+        agendaScroll.position.maxScrollExtent,
+      );
+
+      agendaScroll.jumpTo(
+        veiligePositie,
+      );
     });
   }
 
@@ -289,6 +312,21 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     AgendaItem item,
   ) async {
     if (verplaatsState.actief) return;
+
+    final geopend = await AgendaKlantFicheOpenHelper.openAlsKlantPlanning(
+      context: context,
+      item: item,
+    );
+
+    if (geopend) {
+      await laadAgendaItems();
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      return;
+    }
 
     setState(() {
       selectie = selectie.kiesDag(dag);
@@ -564,11 +602,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
             ),
           AgendaTopBalk(
             focusMaand: selectie.focusMaand,
-            onTerug: () {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/',
-                (route) => false,
+            onTerug: () async {
+              await SyncNavigatieHelper.terugNaarHomeMetUpload(
+                context: context,
               );
             },
             onVorigeMaand: () {
@@ -618,6 +654,35 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       item,
                       oudeDag,
                     ) async {
+                      if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
+                        oudeDag,
+                      )) {
+                        final nieuweItems =
+                            await AgendaKlantPlanningDropService.verwerk(
+                          context: context,
+                          nieuweDag: nieuweDag,
+                          item: item,
+                          itemsPerDag: agendaItems,
+                        );
+
+                        if (nieuweItems == null) return;
+
+                        if (!mounted) return;
+
+                        setState(() {
+                          agendaItems = nieuweItems;
+                          selectie = selectie.kiesDag(nieuweDag);
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Klant ingepland.'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+
+                        return;
+                      }
                       final nieuweItems =
                           await AgendaSleepAfhandeling.verwerkDrop(
                         context: context,
@@ -717,29 +782,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     onTap: openFilterMenu,
                   ),
                   const SizedBox(width: 8),
-                  Stack(
-                    children: [
-                      AgendaOnderbalkKnoppen.actie(
-                        icoon: Icons.schedule,
-                        onTap: () {
-                          AgendaInTePlannenKnop(
-                            items: agendaItems.values.expand((e) => e).toList(),
-                          ).openMenu(context);
-                        },
-                      ),
-                      Positioned(
-                        right: 2,
-                        top: 2,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ],
+                  AgendaInTePlannenKnop(
+                    items: agendaItems.values.expand((e) => e).toList(),
                   ),
                   const Spacer(),
                   AgendaOnderbalkKnoppen.weergave(

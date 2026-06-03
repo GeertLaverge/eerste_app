@@ -1,23 +1,52 @@
 import 'package:flutter/material.dart';
-import '../agenda/agenda_route_helper.dart';
 
-class HomeDashboard extends StatelessWidget {
+import '../agenda/agenda_route_helper.dart';
+import '../klanten/fiche/klantenfiche_repository.dart';
+
+class HomeDashboard extends StatefulWidget {
   final List<dynamic> planningVandaag;
   final List<dynamic> dagTakenVandaag;
+  final List<dynamic> klantTakenVandaag;
 
   const HomeDashboard({
     super.key,
     required this.planningVandaag,
     required this.dagTakenVandaag,
+    required this.klantTakenVandaag,
   });
 
   static const rand = Color(0xFFE5E7EB);
 
   @override
+  State<HomeDashboard> createState() => _HomeDashboardState();
+}
+
+class _HomeDashboardState extends State<HomeDashboard> {
+  Future<void> taakAanpassen(dynamic klant, dynamic taak) async {
+    setState(() {
+      taak.isAfgewerkt = !taak.isAfgewerkt;
+    });
+
+    await KlantenficheRepository.bewaarKlantenFiche(
+      klant,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.of(context).size.width < 700;
 
-    if (planningVandaag.isEmpty && dagTakenVandaag.isEmpty) {
+    final planningPlaatsers = widget.planningVandaag.where((item) {
+      return item.type == 'planning';
+    }).toList();
+
+    final planningBureau = widget.planningVandaag.where((item) {
+      return item.type != 'planning';
+    }).toList();
+
+    if (widget.planningVandaag.isEmpty &&
+        widget.dagTakenVandaag.isEmpty &&
+        widget.klantTakenVandaag.isEmpty) {
       return const _TaakSectie(
         titel: 'Vandaag',
         taken: [
@@ -28,10 +57,34 @@ class HomeDashboard extends StatelessWidget {
 
     return Column(
       children: [
-        if (planningVandaag.isNotEmpty)
+        if (planningPlaatsers.isNotEmpty)
           _TaakSectie(
-            titel: 'Planning vandaag',
-            taken: planningVandaag.map((planning) {
+            titel: 'Planning plaatsers',
+            taken: planningPlaatsers.map((planning) {
+              return _TaakRij(
+                compact: compact,
+                start: planning.volledigeDag || planning.startUur == null
+                    ? ''
+                    : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
+                eind: planning.volledigeDag || planning.eindUur == null
+                    ? ''
+                    : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
+                kleur: const Color(0xFF0B7A3B),
+                titel: planning.titel,
+                straat: planning.straatnaam,
+                huisNr: planning.huisNr,
+                postcode: planning.postcode,
+                gemeente: planning.gemeente,
+                meldingVoorafMinuten: planning.meldingVoorafMinuten,
+              );
+            }).toList(),
+          ),
+        if (planningPlaatsers.isNotEmpty && planningBureau.isNotEmpty)
+          const SizedBox(height: 6),
+        if (planningBureau.isNotEmpty)
+          _TaakSectie(
+            titel: 'Planning bureau',
+            taken: planningBureau.map((planning) {
               return _TaakRij(
                 compact: compact,
                 start: planning.volledigeDag || planning.startUur == null
@@ -50,12 +103,35 @@ class HomeDashboard extends StatelessWidget {
               );
             }).toList(),
           ),
-        if (planningVandaag.isNotEmpty && dagTakenVandaag.isNotEmpty)
+        if (widget.klantTakenVandaag.isNotEmpty) const SizedBox(height: 6),
+        ...widget.klantTakenVandaag.map((klant) {
+          final taken = List.from(klant.klantTaken);
+
+          taken.sort((a, b) {
+            if (a.isAfgewerkt == b.isAfgewerkt) return 0;
+            return a.isAfgewerkt ? 1 : -1;
+          });
+
+          return _TaakSectie(
+            titel: 'Taak voor ${klant.naam}',
+            taken: taken.map<Widget>((taak) {
+              return _KlantTaakRij(
+                tekst: taak.tekst,
+                isAfgewerkt: taak.isAfgewerkt,
+                onTap: () {
+                  taakAanpassen(klant, taak);
+                },
+              );
+            }).toList(),
+          );
+        }),
+        if ((planningPlaatsers.isNotEmpty || planningBureau.isNotEmpty) &&
+            widget.dagTakenVandaag.isNotEmpty)
           const SizedBox(height: 6),
-        if (dagTakenVandaag.isNotEmpty)
+        if (widget.dagTakenVandaag.isNotEmpty)
           _TaakSectie(
             titel: 'Dagtaak opvolging',
-            taken: dagTakenVandaag.map((planning) {
+            taken: widget.dagTakenVandaag.map((planning) {
               return _TaakRij(
                 compact: compact,
                 start: planning.volledigeDag || planning.startUur == null
@@ -75,6 +151,53 @@ class HomeDashboard extends StatelessWidget {
             }).toList(),
           ),
       ],
+    );
+  }
+}
+
+class _KlantTaakRij extends StatelessWidget {
+  final String tekst;
+  final bool isAfgewerkt;
+  final VoidCallback onTap;
+
+  const _KlantTaakRij({
+    required this.tekst,
+    required this.isAfgewerkt,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 30,
+        child: Row(
+          children: [
+            Icon(
+              isAfgewerkt ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 18,
+              color: isAfgewerkt ? Colors.grey : const Color(0xFF0B7A3B),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                tekst,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13.2,
+                  fontWeight: FontWeight.w600,
+                  color: isAfgewerkt ? Colors.grey : Colors.black87,
+                  decoration: isAfgewerkt
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import '../app_storage.dart';
+import '../klanten/fiche/klantenfiche_repository.dart';
 
 class HomePlanningHelper {
   static Future<List<dynamic>> planningVandaag() async {
@@ -7,9 +8,47 @@ class HomePlanningHelper {
 
     final items = data[sleutel] ?? [];
 
-    return items.where((item) {
-      return item.type == 'afspraak' || item.type == 'verlof';
+    final planning = items.where((item) {
+      return item.type == 'planning' ||
+          item.type == 'afspraak' ||
+          item.type == 'verlof';
     }).toList();
+
+    planning.sort((a, b) {
+      if (a.type == 'planning' && b.type != 'planning') return -1;
+      if (a.type != 'planning' && b.type == 'planning') return 1;
+
+      return a.startMinuten.compareTo(b.startMinuten);
+    });
+
+    return planning;
+  }
+
+  static Future<List<dynamic>> klantTakenVandaag() async {
+    final planning = await planningVandaag();
+    final fiches = await KlantenficheRepository.laadKlantenFiches();
+
+    final klantenOpPlanning = planning.where((item) {
+      return item.type == 'planning' &&
+          item.naamKlant.toString().trim().isNotEmpty;
+    }).toList();
+
+    final resultaat = <dynamic>[];
+
+    for (final item in klantenOpPlanning) {
+      final naam = item.naamKlant.toString().trim().toLowerCase();
+
+      final fiche = fiches.where((f) {
+        return f.naam.trim().toLowerCase() == naam;
+      }).toList();
+
+      if (fiche.isEmpty) continue;
+      if (fiche.first.klantTaken.isEmpty) continue;
+
+      resultaat.add(fiche.first);
+    }
+
+    return resultaat;
   }
 
   static Future<List<dynamic>> dagTakenVandaag() async {
