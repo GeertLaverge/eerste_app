@@ -64,23 +64,30 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         ],
       ),
       body: GestureDetector(
+        onTapDown: (details) {
+          setState(() {
+            controller.selecteerLijnOpPunt(
+              details.localPosition,
+            );
+          });
+        },
         onPanStart: (details) {
           setState(() {
-            controller.tekenPunten.add(
+            controller.startNieuweLijn(
               details.localPosition,
             );
           });
         },
         onPanUpdate: (details) {
           setState(() {
-            controller.tekenPunten.add(
+            controller.voegPuntToe(
               details.localPosition,
             );
           });
         },
         onPanEnd: (_) {
           setState(() {
-            controller.tekenPunten.add(null);
+            controller.eindigLijn();
           });
         },
         child: Center(
@@ -93,8 +100,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               CustomPaint(
                 size: Size.infinite,
                 painter: KlantenficheFotoTekeningPainter(
-                  punten: controller.tekenPunten,
-                  kleur: controller.actieveKleur,
+                  lijnen: controller.lijnen,
                 ),
               ),
             ],

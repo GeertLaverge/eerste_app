@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'klantenfiche_foto_editor_controller.dart';
+
 class KlantenficheFotoTekeningPainter extends CustomPainter {
-  final List<Offset?> punten;
-  final Color kleur;
+  final List<TekenLijn> lijnen;
 
   const KlantenficheFotoTekeningPainter({
-    required this.punten,
-    required this.kleur,
+    required this.lijnen,
   });
 
   @override
@@ -14,20 +14,19 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
     Canvas canvas,
     Size size,
   ) {
-    final paintLijn = Paint()
-      ..color = kleur
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    for (final lijn in lijnen) {
+      if (lijn.punten.length < 2) continue;
 
-    for (int i = 0; i < punten.length - 1; i++) {
-      final huidig = punten[i];
-      final volgend = punten[i + 1];
+      final paintLijn = Paint()
+        ..color = lijn.geselecteerd ? Colors.yellow : lijn.kleur
+        ..strokeWidth = lijn.geselecteerd ? 6 : 4
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
 
-      if (huidig != null && volgend != null) {
+      for (int i = 0; i < lijn.punten.length - 1; i++) {
         canvas.drawLine(
-          huidig,
-          volgend,
+          lijn.punten[i],
+          lijn.punten[i + 1],
           paintLijn,
         );
       }
