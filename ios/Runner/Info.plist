@@ -57,6 +57,15 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 
+	<key>NSCameraUsageDescription</key>
+	<string>Thimaco gebruikt de camera om foto's te nemen voor werfinstructies en klantendossiers.</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Thimaco gebruikt de fotobibliotheek om bestaande foto's toe te voegen aan klantendossiers.</string>
+
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Thimaco kan bewerkte foto's opslaan voor werfinstructies en klantendossiers.</string>
+
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
