@@ -120,6 +120,16 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     return naam.isEmpty ? 'Nieuwe klantenfiche' : naam;
   }
 
+  Future<File> fotoBestand(
+    KlantenficheFoto foto,
+  ) async {
+    final appMap = await getApplicationDocumentsDirectory();
+
+    return File(
+      '${appMap.path}/klanten_fotos/$ficheId/${foto.bestandsNaam}',
+    );
+  }
+
   Future<void> fotoNemen() async {
     final foto = await imagePicker.pickImage(
       source: ImageSource.camera,
@@ -442,9 +452,32 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                                 ),
                                 child: Row(
                                   children: [
-                                    const Icon(
-                                      Icons.photo,
-                                      color: Color(0xFF0B7A3B),
+                                    FutureBuilder<File>(
+                                      future: fotoBestand(foto),
+                                      builder: (context, snapshot) {
+                                        if (!snapshot.hasData) {
+                                          return Container(
+                                            width: 60,
+                                            height: 60,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFE5E7EB),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                          );
+                                        }
+
+                                        return ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: Image.file(
+                                            snapshot.data!,
+                                            width: 60,
+                                            height: 60,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        );
+                                      },
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
