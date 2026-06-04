@@ -40,35 +40,69 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           ),
         ],
       ),
-      body: Center(
-        child: Stack(
-          children: [
-            Image.file(
-              widget.bestand,
-              fit: BoxFit.contain,
-            ),
-            IgnorePointer(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: KlantenficheFotoTekeningPainter(),
+      body: GestureDetector(
+        onPanStart: (details) {
+          setState(() {
+            controller.tekenPunten.add(
+              details.localPosition,
+            );
+          });
+        },
+        onPanUpdate: (details) {
+          setState(() {
+            controller.tekenPunten.add(
+              details.localPosition,
+            );
+          });
+        },
+        onPanEnd: (_) {
+          setState(() {
+            controller.tekenPunten.add(null);
+          });
+        },
+        child: Center(
+          child: Stack(
+            children: [
+              Image.file(
+                widget.bestand,
+                fit: BoxFit.contain,
               ),
-            ),
-          ],
+              CustomPaint(
+                size: Size.infinite,
+                painter: KlantenficheFotoTekeningPainter(
+                  punten: controller.tekenPunten,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(
           height: 60,
           color: Colors.white,
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Icon(Icons.edit),
-              Icon(Icons.text_fields),
-              Icon(Icons.arrow_upward),
-              Icon(Icons.circle_outlined),
-              Icon(Icons.crop_square),
-              Icon(Icons.delete_outline),
+              const Icon(
+                Icons.edit,
+                color: Color(0xFF0B7A3B),
+              ),
+              const Icon(Icons.text_fields),
+              const Icon(Icons.arrow_upward),
+              const Icon(Icons.circle_outlined),
+              const Icon(Icons.crop_square),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.wisAlles();
+                  });
+                },
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Colors.red,
+                ),
+              ),
             ],
           ),
         ),
