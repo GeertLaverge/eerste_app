@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'leveranciers_pagina.dart';
+import 'archief_klanten_pagina.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 
 class InstellingenPagina extends StatelessWidget {
@@ -22,26 +23,52 @@ class InstellingenPagina extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: SizedBox(
           width: 260,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              await OneDriveSyncService().slimmeSync();
+          child: Column(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await OneDriveSyncService().slimmeSync();
 
-              if (!context.mounted) return;
+                  if (!context.mounted) return;
 
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LeveranciersPagina(),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LeveranciersPagina(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.local_shipping_outlined),
+                label: const Text('Leveranciers'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: groen,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
                 ),
-              );
-            },
-            icon: const Icon(Icons.local_shipping_outlined),
-            label: const Text('Leveranciers'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: groen,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(52),
-            ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await OneDriveSyncService().slimmeSync();
+
+                  if (!context.mounted) return;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ArchiefKlantenPagina(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.archive_outlined),
+                label: const Text('Archief klanten'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: groen,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+            ],
           ),
         ),
       ),

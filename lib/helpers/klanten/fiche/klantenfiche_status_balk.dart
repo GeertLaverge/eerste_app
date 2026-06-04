@@ -11,6 +11,22 @@ class KlantenficheStatusBalk extends StatelessWidget {
   });
 
   static const groen = Color(0xFF0B7A3B);
+  static const lichtGroen = Color(0xFF7BC67E);
+  static const geel = Colors.amber;
+
+  Color _kleurVoorStatus(String status) {
+    switch (status) {
+      case 'Actief':
+        return lichtGroen;
+
+      case 'Opvolgen':
+        return geel;
+
+      case 'Afgewerkt':
+      default:
+        return groen;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +43,7 @@ class KlantenficheStatusBalk extends StatelessWidget {
         child: Row(
           children: opties.map((optie) {
             final actief = optie == geselecteerd;
+            final kleur = _kleurVoorStatus(optie);
 
             return Expanded(
               child: InkWell(
@@ -42,12 +59,12 @@ class KlantenficheStatusBalk extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           if (actief)
-                            const Padding(
-                              padding: EdgeInsets.only(right: 4),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 4),
                               child: Icon(
                                 Icons.check,
                                 size: 14,
-                                color: groen,
+                                color: kleur,
                               ),
                             ),
                           Flexible(
@@ -68,7 +85,7 @@ class KlantenficheStatusBalk extends StatelessWidget {
                     Container(
                       height: 2,
                       width: double.infinity,
-                      color: actief ? groen : Colors.transparent,
+                      color: actief ? kleur : Colors.transparent,
                     ),
                   ],
                 ),

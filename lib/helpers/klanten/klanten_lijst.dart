@@ -21,6 +21,37 @@ class KlantenLijst extends StatefulWidget {
 }
 
 class _KlantenLijstState extends State<KlantenLijst> {
+  Color kleurVoorKlantStatus(String status) {
+    switch (status) {
+      case 'Actief':
+        return const Color(0xFF7BC67E);
+
+      case 'Opvolgen':
+        return Colors.amber;
+
+      case 'Afgewerkt':
+      default:
+        return const Color(0xFF0B7A3B);
+    }
+  }
+
+  Color kleurVoorBestelStatus(String status) {
+    switch (status) {
+      case 'Te bestellen':
+        return Colors.red;
+
+      case 'Besteld':
+        return Colors.blue;
+
+      case 'Geleverd':
+        return const Color(0xFF7BC67E);
+
+      case 'Geen artikelen':
+      default:
+        return const Color(0xFF0B7A3B);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<KlantenficheModel>>(
@@ -31,8 +62,9 @@ class _KlantenLijstState extends State<KlantenLijst> {
         }
 
         final klanten = snapshot.data!.where((klant) {
-          final matchKlantStatus = widget.klantStatus == 'Alle' ||
-              klant.klantStatus == widget.klantStatus;
+          final matchKlantStatus = widget.klantStatus == 'Alle'
+              ? klant.klantStatus != 'Afgewerkt'
+              : klant.klantStatus == widget.klantStatus;
 
           final matchBestelStatus = widget.bestelStatus == 'Alle' ||
               klant.bestelStatus == widget.bestelStatus;
@@ -55,7 +87,12 @@ class _KlantenLijstState extends State<KlantenLijst> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+          padding: const EdgeInsets.fromLTRB(
+            12,
+            8,
+            12,
+            16,
+          ),
           itemCount: klanten.length,
           itemBuilder: (context, index) {
             final klant = klanten[index];
@@ -91,13 +128,38 @@ class _KlantenLijstState extends State<KlantenLijst> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          '${klant.klantStatus} · ${klant.bestelStatus}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              klant.klantStatus,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: kleurVoorKlantStatus(
+                                  klant.klantStatus,
+                                ),
+                              ),
+                            ),
+                            const Text(
+                              '  •  ',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF9CA3AF),
+                              ),
+                            ),
+                            Text(
+                              klant.bestelStatus,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: kleurVoorBestelStatus(
+                                  klant.bestelStatus,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

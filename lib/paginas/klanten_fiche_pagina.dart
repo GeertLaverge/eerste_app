@@ -10,6 +10,7 @@ import '../helpers/klanten/klantenfiche_leveranciers.dart';
 import '../helpers/klanten/fiche/klantenfiche_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
+import 'package:image_picker/image_picker.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -25,6 +26,8 @@ class KlantenFichePagina extends StatefulWidget {
 
 class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   String klantStatus = 'Actief';
+  String datumAfgewerkt = '';
+
   late final String ficheId;
 
   final naamController = TextEditingController();
@@ -37,10 +40,26 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final emailController = TextEditingController();
   final taakController = TextEditingController();
   final klantNrController = TextEditingController();
+  final ImagePicker imagePicker = ImagePicker();
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
   List<KlantenficheExtraWerk> extraWerken = [];
+  List<KlantenficheFoto> fotos = [];
+
+  Color kleurVoorBestelStatus(String status) {
+    switch (status) {
+      case 'Te bestellen':
+        return Colors.red;
+      case 'Besteld':
+        return Colors.blue;
+      case 'Geleverd':
+        return const Color(0xFF7BC67E);
+      case 'Geen artikelen':
+      default:
+        return const Color(0xFF0B7A3B);
+    }
+  }
 
   @override
   void initState() {
@@ -51,11 +70,13 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     final fiche = widget.bestaandeFiche;
 
     if (fiche == null) return;
+
     artikelen = List<KlantenficheArtikel>.from(
       fiche.artikelen,
     );
 
     klantStatus = fiche.klantStatus;
+    datumAfgewerkt = fiche.datumAfgewerkt;
 
     naamController.text = fiche.naam;
     klantNrController.text = fiche.klantNr;
@@ -70,6 +91,9 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     klantTaken = List<KlantTaakItem>.from(fiche.klantTaken);
     extraWerken = List<KlantenficheExtraWerk>.from(
       fiche.extraWerken,
+    );
+    fotos = List<KlantenficheFoto>.from(
+      fiche.fotos,
     );
   }
 
@@ -93,6 +117,24 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     return naam.isEmpty ? 'Nieuwe klantenfiche' : naam;
   }
 
+  Future<void> fotoNemen() async {
+    final foto = await imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+    );
+
+    if (foto == null) return;
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Foto genomen: ${foto.name}'),
+        backgroundColor: const Color(0xFF0B7A3B),
+      ),
+    );
+  }
+
   Future<void> automatischBewaren() async {
     await KlantenficheService.automatischBewaren(
       ficheId: ficheId,
@@ -106,15 +148,19 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       gsm2: gsm2Controller.text,
       email: emailController.text,
       klantStatus: klantStatus,
+      datumAfgewerkt: datumAfgewerkt,
       taakVoorKlant: '',
       klantTaken: klantTaken,
       extraWerken: extraWerken,
+      fotos: fotos,
       artikelen: artikelen,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bestelStatus = KlantenficheService.berekenBestelStatus(artikelen);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       body: SafeArea(
@@ -135,6 +181,17 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
               onGekozen: (waarde) async {
                 setState(() {
                   klantStatus = waarde;
+
+                  if (waarde == 'Afgewerkt') {
+                    final vandaag = DateTime.now();
+
+                    datumAfgewerkt =
+                        '${vandaag.day.toString().padLeft(2, '0')}/'
+                        '${vandaag.month.toString().padLeft(2, '0')}/'
+                        '${vandaag.year}';
+                  } else {
+                    datumAfgewerkt = '';
+                  }
                 });
 
                 await automatischBewaren();
@@ -258,8 +315,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                   ),
                   KlantenficheUitvalBlok(
                     titel: 'Leveranciers en artikelen',
-                    rechterTekst:
-                        KlantenficheService.berekenBestelStatus(artikelen),
+                    rechterTekst: bestelStatus,
+                    rechterBolKleur: kleurVoorBestelStatus(bestelStatus),
                     standaardOpen: false,
                     child: KlantenficheLeveranciers(
                       artikelen: artikelen,
@@ -286,14 +343,49 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                     ),
                   ),
                   KlantenficheUitvalBlok(
-                    titel: 'Extra werk',
+                    titel: 'Foto\'s en werfinstructies',
                     standaardOpen: false,
-                    child: KlantenficheExtraWerkVeld(
-                      extraWerken: extraWerken,
-                      onChanged: () async {
-                        setState(() {});
-                        await automatischBewaren();
-                      },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: fotoNemen,
+                                icon: const Icon(Icons.photo_camera_outlined),
+                                label: const Text('Foto nemen'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0B7A3B),
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  // Volgende stap: galerij openen
+                                },
+                                icon: const Icon(Icons.image_outlined),
+                                label: const Text('Kiezen'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF0B7A3B),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Nog geen foto\'s toegevoegd.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

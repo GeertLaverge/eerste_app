@@ -55,27 +55,36 @@ class AppStorage {
   // AGENDA FILTERS
   // ------------------------------------------------------------
 
-  static Future<void> bewaarAgendaFilters(Map<String, bool> waarden) async {
+  static Future<void> bewaarAgendaFilters(
+    Map<String, bool> waarden, {
+    String soort = 'detail',
+  }) async {
     final prefs = await openBox();
 
     for (final entry in waarden.entries) {
-      await prefs.setBool('agenda_zicht_${entry.key}', entry.value);
+      await prefs.setBool(
+        'agenda_zicht_${soort}_${entry.key}',
+        entry.value,
+      );
     }
 
     await _syncBackup();
   }
 
-  static Future<Map<String, bool>> laadAgendaFilters() async {
+  static Future<Map<String, bool>> laadAgendaFilters({
+    String soort = 'detail',
+  }) async {
     final prefs = await openBox();
 
     return {
-      'planningKlanten': prefs.getBool('agenda_zicht_planningKlanten') ?? true,
-      'opvolging': prefs.getBool('agenda_zicht_opvolging') ?? true,
-      'nadienst': prefs.getBool('agenda_zicht_nadienst') ?? true,
-      'dagTaken': prefs.getBool('agenda_zicht_dagTaken') ?? true,
-      'afspraken': prefs.getBool('agenda_zicht_afspraken') ?? true,
-      'vakantie': prefs.getBool('agenda_zicht_vakantie') ?? true,
-      'kraan': prefs.getBool('agenda_zicht_kraan') ?? true,
+      'planningKlanten':
+          prefs.getBool('agenda_zicht_${soort}_planningKlanten') ?? true,
+      'opvolging': prefs.getBool('agenda_zicht_${soort}_opvolging') ?? true,
+      'nadienst': prefs.getBool('agenda_zicht_${soort}_nadienst') ?? true,
+      'dagTaken': prefs.getBool('agenda_zicht_${soort}_dagTaken') ?? true,
+      'afspraken': prefs.getBool('agenda_zicht_${soort}_afspraken') ?? true,
+      'vakantie': prefs.getBool('agenda_zicht_${soort}_vakantie') ?? true,
+      'kraan': prefs.getBool('agenda_zicht_${soort}_kraan') ?? true,
     };
   }
 

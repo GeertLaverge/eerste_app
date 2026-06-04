@@ -5,6 +5,7 @@ class KlantenficheUitvalBlok extends StatefulWidget {
   final Widget child;
   final bool standaardOpen;
   final String? rechterTekst;
+  final Color? rechterBolKleur;
 
   const KlantenficheUitvalBlok({
     super.key,
@@ -12,6 +13,7 @@ class KlantenficheUitvalBlok extends StatefulWidget {
     required this.child,
     this.standaardOpen = false,
     this.rechterTekst,
+    this.rechterBolKleur,
   });
 
   @override
@@ -79,7 +81,17 @@ class _KlantenficheUitvalBlokState extends State<KlantenficheUitvalBlok> {
                     ),
                   ),
                   const Spacer(),
-                  if (widget.rechterTekst != null)
+                  if (widget.rechterTekst != null) ...[
+                    if (widget.rechterBolKleur != null)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(right: 6),
+                        decoration: BoxDecoration(
+                          color: widget.rechterBolKleur,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     Text(
                       widget.rechterTekst!,
                       style: const TextStyle(
@@ -88,6 +100,7 @@ class _KlantenficheUitvalBlokState extends State<KlantenficheUitvalBlok> {
                         color: Color(0xFF6B7280),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),

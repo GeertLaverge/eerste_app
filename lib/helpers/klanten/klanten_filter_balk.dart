@@ -13,6 +13,45 @@ class KlantenFilterBalk extends StatelessWidget {
   });
 
   static const groen = Color(0xFF0B7A3B);
+  static const lichtGroen = Color(0xFF7BC67E);
+  static const geel = Colors.amber;
+  static const paars = Colors.purple;
+  static const rood = Colors.red;
+  static const blauw = Colors.blue;
+
+  Color _kleurVoorOptie(String optie) {
+    switch (optie) {
+      // Klantstatus
+      case 'Actief':
+        return lichtGroen;
+
+      case 'Opvolgen':
+        return geel;
+
+      case 'Nadienst':
+        return paars;
+
+      case 'Afgewerkt':
+        return groen;
+
+      // Bestelstatus
+      case 'Te bestellen':
+        return rood;
+
+      case 'Besteld':
+        return blauw;
+
+      case 'Geleverd':
+        return lichtGroen;
+
+      case 'Geen artikelen':
+        return groen;
+
+      case 'Alle':
+      default:
+        return groen;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +60,7 @@ class KlantenFilterBalk extends StatelessWidget {
       child: Row(
         children: opties.map((optie) {
           final actief = optie == geselecteerd;
+          final kleur = _kleurVoorOptie(optie);
 
           return Expanded(
             child: InkWell(
@@ -39,12 +79,12 @@ class KlantenFilterBalk extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (actief)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 4),
+                          Padding(
+                            padding: const EdgeInsets.only(right: 4),
                             child: Icon(
                               Icons.check,
                               size: 14,
-                              color: groen,
+                              color: kleur,
                             ),
                           ),
                         Flexible(
@@ -62,12 +102,10 @@ class KlantenFilterBalk extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Lijn over volledige breedte van geselecteerde cel
                   Container(
                     height: 2,
                     width: double.infinity,
-                    color: actief ? groen : Colors.transparent,
+                    color: actief ? kleur : Colors.transparent,
                   ),
                 ],
               ),

@@ -93,7 +93,9 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> laadFilters() async {
-    final waarden = await AppStorage.laadAgendaFilters();
+    final waarden = await AppStorage.laadAgendaFilters(
+      soort: 'jaar',
+    );
 
     if (!mounted) return;
 
@@ -111,15 +113,18 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> bewaarFilters() async {
-    await AppStorage.bewaarAgendaFilters({
-      'planningKlanten': filters.toonPlanning,
-      'opvolging': filters.toonOpvolging,
-      'nadienst': filters.toonNadienst,
-      'afspraken': filters.toonAfspraak,
-      'dagTaken': filters.toonDagtaak,
-      'vakantie': filters.toonVerlof,
-      'kraan': filters.toonKraan,
-    });
+    await AppStorage.bewaarAgendaFilters(
+      {
+        'planningKlanten': filters.toonPlanning,
+        'opvolging': filters.toonOpvolging,
+        'nadienst': filters.toonNadienst,
+        'afspraken': filters.toonAfspraak,
+        'dagTaken': filters.toonDagtaak,
+        'vakantie': filters.toonVerlof,
+        'kraan': filters.toonKraan,
+      },
+      soort: 'jaar',
+    );
   }
 
   Future<void> laadAgendaItems() async {

@@ -26,24 +26,13 @@ class _HomeDashboardState extends State<HomeDashboard> {
     dynamic klant,
     dynamic taak,
   ) async {
+    debugPrint('VOOR: ${taak.tekst} = ${taak.isAfgewerkt}');
+
     setState(() {
       taak.isAfgewerkt = !taak.isAfgewerkt;
-
-      final allesAfgewerkt = klant.klantTaken.every(
-        (t) => t.isAfgewerkt,
-      );
-
-      if (allesAfgewerkt) {
-        final vandaag = DateTime.now();
-
-        klant.klantTakenAfgewerktOp =
-            '${vandaag.year.toString().padLeft(4, '0')}-'
-            '${vandaag.month.toString().padLeft(2, '0')}-'
-            '${vandaag.day.toString().padLeft(2, '0')}';
-      } else {
-        klant.klantTakenAfgewerktOp = '';
-      }
     });
+
+    debugPrint('NA: ${taak.tekst} = ${taak.isAfgewerkt}');
 
     await KlantenficheRepository.bewaarKlantenFiche(
       klant,
@@ -115,6 +104,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 tekst: taak.tekst,
                 isAfgewerkt: taak.isAfgewerkt,
                 onTap: () {
+                  print('CHECKBOX GEKLIKT: ${taak.tekst}');
                   taakAanpassen(klant, taak);
                 },
               );
@@ -186,23 +176,33 @@ class _KlantTaakRij extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        height: 30,
-        child: Row(
-          children: [
-            Icon(
-              isAfgewerkt ? Icons.check_box : Icons.check_box_outline_blank,
-              size: 18,
-              color: isAfgewerkt ? Colors.grey : const Color(0xFF0B7A3B),
+    return SizedBox(
+      height: 34,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 34,
+            height: 34,
+            child: Checkbox(
+              value: isAfgewerkt,
+              activeColor: const Color(0xFF0B7A3B),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+              onChanged: (_) {
+                debugPrint('CHECKBOX GEKLIKT');
+                onTap();
+              },
             ),
-            const SizedBox(width: 8),
-            Expanded(
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: Text(
                 tekst,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                overflow: TextOverflow.visible,
                 style: TextStyle(
                   fontSize: 13.2,
                   fontWeight: FontWeight.w600,
@@ -213,8 +213,8 @@ class _KlantTaakRij extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

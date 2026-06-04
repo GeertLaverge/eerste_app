@@ -138,7 +138,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   Future<void> laadFilters() async {
-    final waarden = await AppStorage.laadAgendaFilters();
+    final waarden = await AppStorage.laadAgendaFilters(
+      soort: 'detail',
+    );
 
     if (!mounted) return;
 
@@ -156,15 +158,18 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   Future<void> bewaarFilters() async {
-    await AppStorage.bewaarAgendaFilters({
-      'planningKlanten': filters.toonPlanning,
-      'opvolging': filters.toonOpvolging,
-      'nadienst': filters.toonNadienst,
-      'afspraken': filters.toonAfspraak,
-      'dagTaken': filters.toonDagtaak,
-      'vakantie': filters.toonVerlof,
-      'kraan': filters.toonKraan,
-    });
+    await AppStorage.bewaarAgendaFilters(
+      {
+        'planningKlanten': filters.toonPlanning,
+        'opvolging': filters.toonOpvolging,
+        'nadienst': filters.toonNadienst,
+        'afspraken': filters.toonAfspraak,
+        'dagTaken': filters.toonDagtaak,
+        'vakantie': filters.toonVerlof,
+        'kraan': filters.toonKraan,
+      },
+      soort: 'detail',
+    );
   }
 
   List<DateTime> zichtbareMaanden() {

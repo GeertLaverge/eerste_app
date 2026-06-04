@@ -104,12 +104,46 @@ class KlantenficheArtikel {
     };
   }
 
-  factory KlantenficheArtikel.fromJson(Map<String, dynamic> json) {
+  factory KlantenficheArtikel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return KlantenficheArtikel(
       leverancier: json['leverancier'] ?? '',
       artikel: json['artikel'] ?? '',
       besteld: json['besteld'] ?? false,
       geleverd: json['geleverd'] ?? false,
+    );
+  }
+}
+
+class KlantenficheFoto {
+  final String id;
+  final String bestandsNaam;
+  final String beschrijving;
+  final String datum;
+
+  const KlantenficheFoto({
+    required this.id,
+    required this.bestandsNaam,
+    this.beschrijving = '',
+    this.datum = '',
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'bestandsNaam': bestandsNaam,
+      'beschrijving': beschrijving,
+      'datum': datum,
+    };
+  }
+
+  factory KlantenficheFoto.fromJson(Map<String, dynamic> json) {
+    return KlantenficheFoto(
+      id: json['id'] ?? '',
+      bestandsNaam: json['bestandsNaam'] ?? '',
+      beschrijving: json['beschrijving'] ?? '',
+      datum: json['datum'] ?? '',
     );
   }
 }
@@ -135,9 +169,12 @@ class KlantenficheModel {
   final String taakVoorKlant;
   String klantTakenAfgewerktOp;
 
+  final String datumAfgewerkt;
+
   final List<KlantenficheArtikel> artikelen;
   final List<KlantTaakItem> klantTaken;
   final List<KlantenficheExtraWerk> extraWerken;
+  final List<KlantenficheFoto> fotos;
 
   KlantenficheModel({
     required this.id,
@@ -154,9 +191,11 @@ class KlantenficheModel {
     this.bestelStatus = 'Geen artikelen',
     this.taakVoorKlant = '',
     this.klantTakenAfgewerktOp = '',
+    this.datumAfgewerkt = '',
     this.klantTaken = const [],
     this.artikelen = const [],
     this.extraWerken = const [],
+    this.fotos = const [],
   });
 
   Map<String, dynamic> toJson() {
@@ -175,13 +214,17 @@ class KlantenficheModel {
       'bestelStatus': bestelStatus,
       'taakVoorKlant': taakVoorKlant,
       'klantTakenAfgewerktOp': klantTakenAfgewerktOp,
+      'datumAfgewerkt': datumAfgewerkt,
       'artikelen': artikelen.map((artikel) => artikel.toJson()).toList(),
       'klantTaken': klantTaken.map((taak) => taak.toJson()).toList(),
       'extraWerken': extraWerken.map((werk) => werk.toJson()).toList(),
+      'fotos': fotos.map((foto) => foto.toJson()).toList(),
     };
   }
 
-  factory KlantenficheModel.fromJson(Map<String, dynamic> json) {
+  factory KlantenficheModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return KlantenficheModel(
       id: json['id'] ?? '',
       naam: json['naam'] ?? '',
@@ -197,6 +240,7 @@ class KlantenficheModel {
       bestelStatus: json['bestelStatus'] ?? 'Geen artikelen',
       taakVoorKlant: json['taakVoorKlant'] ?? '',
       klantTakenAfgewerktOp: json['klantTakenAfgewerktOp'] ?? '',
+      datumAfgewerkt: json['datumAfgewerkt'] ?? '',
       klantTaken: (json['klantTaken'] as List<dynamic>? ?? [])
           .map(
             (item) => KlantTaakItem.fromJson(
@@ -214,6 +258,13 @@ class KlantenficheModel {
       extraWerken: (json['extraWerken'] as List<dynamic>? ?? [])
           .map(
             (item) => KlantenficheExtraWerk.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
+      fotos: (json['fotos'] as List<dynamic>? ?? [])
+          .map(
+            (item) => KlantenficheFoto.fromJson(
               Map<String, dynamic>.from(item),
             ),
           )
