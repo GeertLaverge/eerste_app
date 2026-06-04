@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'klantenfiche_foto_editor.dart';
 
 class KlantenficheFotoViewer extends StatelessWidget {
   final File bestand;
@@ -19,6 +20,20 @@ class KlantenficheFotoViewer extends StatelessWidget {
         foregroundColor: Colors.white,
         elevation: 0,
         title: const Text('Foto'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      KlantenficheFotoEditor(bestand: bestand),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Center(
         child: InteractiveViewer(
