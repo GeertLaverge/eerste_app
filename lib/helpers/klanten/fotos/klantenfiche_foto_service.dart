@@ -72,4 +72,44 @@ class KlantenficheFotoService {
       await bestand.delete();
     }
   }
+
+  static Future<KlantenficheFoto?> kiesFoto({
+    required String ficheId,
+  }) async {
+    final gekozenFoto = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (gekozenFoto == null) return null;
+
+    final appMap = await getApplicationDocumentsDirectory();
+
+    final klantMap = Directory(
+      '${appMap.path}/klanten_fotos/$ficheId',
+    );
+
+    if (!await klantMap.exists()) {
+      await klantMap.create(
+        recursive: true,
+      );
+    }
+
+    final nu = DateTime.now();
+    final fotoId = nu.millisecondsSinceEpoch.toString();
+    final bestandsNaam = 'foto_$fotoId.jpg';
+    final nieuwPad = '${klantMap.path}/$bestandsNaam';
+
+    await File(gekozenFoto.path).copy(nieuwPad);
+
+    final datum = '${nu.day.toString().padLeft(2, '0')}/'
+        '${nu.month.toString().padLeft(2, '0')}/'
+        '${nu.year}';
+
+    return KlantenficheFoto(
+      id: fotoId,
+      bestandsNaam: bestandsNaam,
+      datum: datum,
+    );
+  }
 }

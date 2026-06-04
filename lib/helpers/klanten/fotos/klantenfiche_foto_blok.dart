@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../fiche/klantenfiche_model.dart';
 import 'klantenfiche_foto_service.dart';
+import 'klantenfiche_foto_viewer.dart';
 
 class KlantenficheFotoBlok extends StatelessWidget {
   final String ficheId;
@@ -33,6 +34,27 @@ class KlantenficheFotoBlok extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Foto opgeslagen.'),
+        backgroundColor: Color(0xFF0B7A3B),
+      ),
+    );
+  }
+
+  Future<void> _fotoKiezen(BuildContext context) async {
+    final nieuweFoto = await KlantenficheFotoService.kiesFoto(
+      ficheId: ficheId,
+    );
+
+    if (nieuweFoto == null) return;
+
+    final nieuweFotos = List<KlantenficheFoto>.from(fotos)..add(nieuweFoto);
+
+    await onChanged(nieuweFotos);
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Foto toegevoegd.'),
         backgroundColor: Color(0xFF0B7A3B),
       ),
     );
@@ -109,7 +131,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
-                  // Volgende stap: galerij openen
+                  _fotoKiezen(context);
                 },
                 icon: const Icon(Icons.image_outlined),
                 label: const Text('Kiezen'),
@@ -162,13 +184,25 @@ class KlantenficheFotoBlok extends StatelessWidget {
                           );
                         }
 
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.file(
-                            snapshot.data!,
-                            width: 60,
-                            height: 60,
-                            fit: BoxFit.cover,
+                        return InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => KlantenficheFotoViewer(
+                                  bestand: snapshot.data!,
+                                ),
+                              ),
+                            );
+                          },
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              snapshot.data!,
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                            ),
                           ),
                         );
                       },
