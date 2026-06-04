@@ -10,10 +10,7 @@ import '../helpers/klanten/klantenfiche_leveranciers.dart';
 import '../helpers/klanten/fiche/klantenfiche_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
+import '../helpers/klanten/fotos/klantenfiche_foto_blok.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -43,7 +40,6 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final emailController = TextEditingController();
   final taakController = TextEditingController();
   final klantNrController = TextEditingController();
-  final ImagePicker imagePicker = ImagePicker();
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
@@ -118,72 +114,6 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   String get titelNaam {
     final naam = naamController.text.trim();
     return naam.isEmpty ? 'Nieuwe klantenfiche' : naam;
-  }
-
-  Future<File> fotoBestand(
-    KlantenficheFoto foto,
-  ) async {
-    final appMap = await getApplicationDocumentsDirectory();
-
-    return File(
-      '${appMap.path}/klanten_fotos/$ficheId/${foto.bestandsNaam}',
-    );
-  }
-
-  Future<void> fotoNemen() async {
-    final foto = await imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 80,
-    );
-
-    if (foto == null) return;
-
-    final appMap = await getApplicationDocumentsDirectory();
-
-    final klantMap = Directory(
-      '${appMap.path}/klanten_fotos/$ficheId',
-    );
-
-    if (!await klantMap.exists()) {
-      await klantMap.create(
-        recursive: true,
-      );
-    }
-
-    final nu = DateTime.now();
-
-    final fotoId = nu.millisecondsSinceEpoch.toString();
-
-    final bestandsNaam = 'foto_$fotoId.jpg';
-
-    final nieuwPad = '${klantMap.path}/$bestandsNaam';
-
-    await File(foto.path).copy(nieuwPad);
-
-    final datum = '${nu.day.toString().padLeft(2, '0')}/'
-        '${nu.month.toString().padLeft(2, '0')}/'
-        '${nu.year}';
-
-    setState(() {
-      fotos.add(
-        KlantenficheFoto(
-          id: fotoId,
-          bestandsNaam: bestandsNaam,
-          datum: datum,
-        ),
-      );
-    });
-
-    await automatischBewaren();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Foto opgeslagen.'),
-        backgroundColor: Color(0xFF0B7A3B),
-      ),
-    );
   }
 
   Future<void> automatischBewaren() async {
@@ -396,117 +326,16 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                   KlantenficheUitvalBlok(
                     titel: 'Foto\'s en werfinstructies',
                     standaardOpen: false,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: fotoNemen,
-                                icon: const Icon(Icons.photo_camera_outlined),
-                                label: const Text('Foto nemen'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0B7A3B),
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // Volgende stap: galerij openen
-                                },
-                                icon: const Icon(Icons.image_outlined),
-                                label: const Text('Kiezen'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF0B7A3B),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (fotos.isEmpty)
-                          const Text(
-                            'Nog geen foto\'s toegevoegd.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B7280),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        if (fotos.isNotEmpty)
-                          Column(
-                            children: fotos.map((foto) {
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: const Color(0xFFE5E7EB),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    FutureBuilder<File>(
-                                      future: fotoBestand(foto),
-                                      builder: (context, snapshot) {
-                                        if (!snapshot.hasData) {
-                                          return Container(
-                                            width: 60,
-                                            height: 60,
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFE5E7EB),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                          );
-                                        }
+                    child: KlantenficheFotoBlok(
+                      ficheId: ficheId,
+                      fotos: fotos,
+                      onChanged: (nieuweFotos) async {
+                        setState(() {
+                          fotos = nieuweFotos;
+                        });
 
-                                        return ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                          child: Image.file(
-                                            snapshot.data!,
-                                            width: 60,
-                                            height: 60,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            foto.bestandsNaam,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          Text(
-                                            foto.datum,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF6B7280),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                      ],
+                        await automatischBewaren();
+                      },
                     ),
                   ),
                 ],
