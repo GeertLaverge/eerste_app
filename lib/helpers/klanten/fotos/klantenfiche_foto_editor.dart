@@ -2,13 +2,23 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
-class KlantenficheFotoEditor extends StatelessWidget {
+import 'klantenfiche_foto_editor_controller.dart';
+import 'klantenfiche_foto_tekening_painter.dart';
+
+class KlantenficheFotoEditor extends StatefulWidget {
   final File bestand;
 
   const KlantenficheFotoEditor({
     super.key,
     required this.bestand,
   });
+
+  @override
+  State<KlantenficheFotoEditor> createState() => _KlantenficheFotoEditorState();
+}
+
+class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
+  final controller = KlantenficheFotoEditorController();
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +41,19 @@ class KlantenficheFotoEditor extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: Image.file(
-          bestand,
-          fit: BoxFit.contain,
+        child: Stack(
+          children: [
+            Image.file(
+              widget.bestand,
+              fit: BoxFit.contain,
+            ),
+            IgnorePointer(
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: KlantenficheFotoTekeningPainter(),
+              ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: SafeArea(
