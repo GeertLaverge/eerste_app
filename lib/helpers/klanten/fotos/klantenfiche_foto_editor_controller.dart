@@ -35,6 +35,7 @@ class KlantenficheFotoEditorController {
 
   TekenLijn? huidigeLijn;
   TekenLijn? geselecteerdeLijn;
+  Offset? rechteLijnStart;
 
   void startNieuweLijn(
     Offset startPunt,

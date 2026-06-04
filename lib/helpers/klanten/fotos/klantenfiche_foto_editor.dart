@@ -114,9 +114,31 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              const Icon(
-                Icons.edit,
-                color: Color(0xFF0B7A3B),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.tekenen;
+                  });
+                },
+                icon: Icon(
+                  Icons.edit,
+                  color: controller.actieveTool == FotoEditorTool.tekenen
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.rechteLijn;
+                  });
+                },
+                icon: Icon(
+                  Icons.horizontal_rule,
+                  color: controller.actieveTool == FotoEditorTool.rechteLijn
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
               ),
               _kleurKnop(const Color(0xFF0B7A3B)),
               _kleurKnop(Colors.red),
@@ -126,7 +148,46 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               IconButton(
                 onPressed: () {
                   setState(() {
-                    controller.wisAlles();
+                    if (controller.geselecteerdeLijn != null) {
+                      controller.verwijderGeselecteerdeLijn();
+                    } else {
+                      showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text(
+                              'Alle tekeningen wissen?',
+                            ),
+                            content: const Text(
+                              'Er is geen lijn geselecteerd. Wilt u alle tekeningen verwijderen?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('Annuleren'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+
+                                  setState(() {
+                                    controller.wisAlles();
+                                  });
+                                },
+                                child: const Text(
+                                  'Wissen',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
                   });
                 },
                 icon: const Icon(
