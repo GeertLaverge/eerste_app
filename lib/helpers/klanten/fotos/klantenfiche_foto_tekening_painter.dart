@@ -36,6 +36,6 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
   bool shouldRepaint(
     covariant KlantenficheFotoTekeningPainter oldDelegate,
   ) {
-    return oldDelegate.punten != punten;
+    return true;
   }
 }
