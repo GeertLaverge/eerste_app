@@ -19,6 +19,29 @@ class KlantenficheFotoEditor extends StatefulWidget {
 
 class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
   final controller = KlantenficheFotoEditorController();
+  Widget _kleurKnop(Color kleur) {
+    final actief = controller.actieveKleur == kleur;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          controller.kiesKleur(kleur);
+        });
+      },
+      child: Container(
+        width: actief ? 28 : 22,
+        height: actief ? 28 : 22,
+        decoration: BoxDecoration(
+          color: kleur,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: actief ? Colors.black : Colors.grey.shade300,
+            width: actief ? 3 : 1,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +94,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 size: Size.infinite,
                 painter: KlantenficheFotoTekeningPainter(
                   punten: controller.tekenPunten,
+                  kleur: controller.actieveKleur,
                 ),
               ),
             ],
@@ -88,10 +112,11 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 Icons.edit,
                 color: Color(0xFF0B7A3B),
               ),
-              const Icon(Icons.text_fields),
-              const Icon(Icons.arrow_upward),
-              const Icon(Icons.circle_outlined),
-              const Icon(Icons.crop_square),
+              _kleurKnop(const Color(0xFF0B7A3B)),
+              _kleurKnop(Colors.red),
+              _kleurKnop(Colors.blue),
+              _kleurKnop(Colors.amber),
+              _kleurKnop(Colors.black),
               IconButton(
                 onPressed: () {
                   setState(() {

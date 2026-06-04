@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 class KlantenficheFotoTekeningPainter extends CustomPainter {
   final List<Offset?> punten;
+  final Color kleur;
 
   const KlantenficheFotoTekeningPainter({
     required this.punten,
+    required this.kleur,
   });
 
   @override
@@ -13,7 +15,7 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
     Size size,
   ) {
     final paintLijn = Paint()
-      ..color = const Color(0xFF0B7A3B)
+      ..color = kleur
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
