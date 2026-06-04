@@ -11,6 +11,9 @@ import '../helpers/klanten/fiche/klantenfiche_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -125,12 +128,50 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
 
     if (foto == null) return;
 
+    final appMap = await getApplicationDocumentsDirectory();
+
+    final klantMap = Directory(
+      '${appMap.path}/klanten_fotos/$ficheId',
+    );
+
+    if (!await klantMap.exists()) {
+      await klantMap.create(
+        recursive: true,
+      );
+    }
+
+    final nu = DateTime.now();
+
+    final fotoId = nu.millisecondsSinceEpoch.toString();
+
+    final bestandsNaam = 'foto_$fotoId.jpg';
+
+    final nieuwPad = '${klantMap.path}/$bestandsNaam';
+
+    await File(foto.path).copy(nieuwPad);
+
+    final datum = '${nu.day.toString().padLeft(2, '0')}/'
+        '${nu.month.toString().padLeft(2, '0')}/'
+        '${nu.year}';
+
+    setState(() {
+      fotos.add(
+        KlantenficheFoto(
+          id: fotoId,
+          bestandsNaam: bestandsNaam,
+          datum: datum,
+        ),
+      );
+    });
+
+    await automatischBewaren();
+
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Foto genomen: ${foto.name}'),
-        backgroundColor: const Color(0xFF0B7A3B),
+      const SnackBar(
+        content: Text('Foto opgeslagen.'),
+        backgroundColor: Color(0xFF0B7A3B),
       ),
     );
   }
@@ -377,14 +418,61 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          'Nog geen foto\'s toegevoegd.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                            fontWeight: FontWeight.w600,
+                        if (fotos.isEmpty)
+                          const Text(
+                            'Nog geen foto\'s toegevoegd.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
+                        if (fotos.isNotEmpty)
+                          Column(
+                            children: fotos.map((foto) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFFE5E7EB),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.photo,
+                                      color: Color(0xFF0B7A3B),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            foto.bestandsNaam,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            foto.datum,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF6B7280),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
                       ],
                     ),
                   ),
