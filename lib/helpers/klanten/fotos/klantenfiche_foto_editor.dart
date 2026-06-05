@@ -325,6 +325,11 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             controller.geselecteerdHandleIndex = null;
             controller.geselecteerdeVormHandleIndex = null;
 
+            if (controller.tekstWordtVerplaatst) {
+              controller.stopTekstVerplaatsen();
+              return;
+            }
+
             if (controller.vormWordtVerplaatst) {
               controller.stopVormVerplaatsen();
               return;
