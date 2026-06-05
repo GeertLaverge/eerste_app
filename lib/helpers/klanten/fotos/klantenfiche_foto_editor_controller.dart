@@ -244,11 +244,33 @@ class KlantenficheFotoEditorController {
     deselecteerAlles();
 
     for (final vorm in vormen.reversed) {
-      final ruimereRect = vorm.rect.inflate(14);
+      if (vorm.type == FotoEditorTool.rechthoek &&
+          vorm.hoeken != null &&
+          vorm.hoeken!.length == 4) {
+        final hoeken = vorm.hoeken!;
 
-      if (ruimereRect.contains(punt)) {
-        selecteerVorm(vorm);
-        return;
+        for (int i = 0; i < hoeken.length; i++) {
+          final start = hoeken[i];
+          final einde = hoeken[(i + 1) % hoeken.length];
+
+          final afstand = afstandTotLijnSegment(
+            punt,
+            start,
+            einde,
+          );
+
+          if (afstand < 35) {
+            selecteerVorm(vorm);
+            return;
+          }
+        }
+      } else {
+        final ruimereRect = vorm.rect.inflate(24);
+
+        if (ruimereRect.contains(punt)) {
+          selecteerVorm(vorm);
+          return;
+        }
       }
     }
   }
@@ -457,7 +479,7 @@ class KlantenficheFotoEditorController {
       return false;
     }
 
-    const afstand = 40.0;
+    const afstand = 55.0;
 
     final hoeken = [
       geselecteerdeVorm!.rect.topLeft,

@@ -128,6 +128,8 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         flush: true,
       );
 
+      await FileImage(widget.bestand).evict();
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,8 +137,11 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           content: Text(
             'Foto opgeslagen',
           ),
+          backgroundColor: Color(0xFF0B7A3B),
         ),
       );
+
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint(e.toString());
     }
