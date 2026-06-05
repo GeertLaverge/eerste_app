@@ -182,6 +182,13 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               return;
             }
 
+            if (controller.actieveTool == FotoEditorTool.rechthoek ||
+                controller.actieveTool == FotoEditorTool.cirkel) {
+              controller.vormStart = details.localPosition;
+              controller.deselecteerAlles();
+              return;
+            }
+
             controller.startNieuweLijn(
               details.localPosition,
             );
@@ -257,6 +264,18 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               controller.rechteLijnStart = null;
               return;
             }
+            if ((controller.actieveTool == FotoEditorTool.rechthoek ||
+                    controller.actieveTool == FotoEditorTool.cirkel) &&
+                controller.vormStart != null) {
+              controller.voegVormToe(
+                start: controller.vormStart!,
+                einde: details.localPosition,
+                type: controller.actieveTool,
+              );
+
+              controller.vormStart = null;
+              return;
+            }
 
             controller.eindigLijn();
           });
@@ -273,6 +292,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 painter: KlantenficheFotoTekeningPainter(
                   lijnen: controller.lijnen,
                   teksten: controller.teksten,
+                  vormen: controller.vormen,
                 ),
               ),
             ],
@@ -324,6 +344,34 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 icon: Icon(
                   Icons.arrow_forward,
                   color: controller.actieveTool == FotoEditorTool.pijl
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.rechthoek;
+                    controller.deselecteerAlles();
+                  });
+                },
+                icon: Icon(
+                  Icons.crop_square,
+                  color: controller.actieveTool == FotoEditorTool.rechthoek
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.cirkel;
+                    controller.deselecteerAlles();
+                  });
+                },
+                icon: Icon(
+                  Icons.circle_outlined,
+                  color: controller.actieveTool == FotoEditorTool.cirkel
                       ? const Color(0xFF0B7A3B)
                       : Colors.grey,
                 ),

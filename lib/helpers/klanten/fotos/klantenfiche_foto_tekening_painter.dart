@@ -7,10 +7,12 @@ import 'klantenfiche_foto_editor_controller.dart';
 class KlantenficheFotoTekeningPainter extends CustomPainter {
   final List<TekenLijn> lijnen;
   final List<TekenTekst> teksten;
+  final List<TekenVorm> vormen;
 
   const KlantenficheFotoTekeningPainter({
     required this.lijnen,
     required this.teksten,
+    required this.vormen,
   });
 
   @override
@@ -116,6 +118,57 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
           eindRect,
           borderPaint,
         );
+      }
+    }
+    for (final vorm in vormen) {
+      final paintVorm = Paint()
+        ..color = vorm.geselecteerd ? Colors.yellow : vorm.kleur
+        ..strokeWidth = vorm.geselecteerd ? 6 : 4
+        ..style = PaintingStyle.stroke;
+
+      if (vorm.type == FotoEditorTool.rechthoek) {
+        canvas.drawRect(
+          vorm.rect,
+          paintVorm,
+        );
+      }
+
+      if (vorm.type == FotoEditorTool.cirkel) {
+        canvas.drawOval(
+          vorm.rect,
+          paintVorm,
+        );
+      }
+
+      if (vorm.geselecteerd) {
+        final handlePaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
+
+        final borderPaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+        const grootte = 10.0;
+
+        final punten = [
+          vorm.rect.topLeft,
+          vorm.rect.topRight,
+          vorm.rect.bottomRight,
+          vorm.rect.bottomLeft,
+        ];
+
+        for (final punt in punten) {
+          final rect = Rect.fromCenter(
+            center: punt,
+            width: grootte,
+            height: grootte,
+          );
+
+          canvas.drawRect(rect, handlePaint);
+          canvas.drawRect(rect, borderPaint);
+        }
       }
     }
 

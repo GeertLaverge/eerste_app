@@ -39,6 +39,21 @@ class TekenTekst {
   });
 }
 
+class TekenVorm {
+  Rect rect;
+  Color kleur;
+  FotoEditorTool type;
+
+  bool geselecteerd;
+
+  TekenVorm({
+    required this.rect,
+    required this.kleur,
+    required this.type,
+    this.geselecteerd = false,
+  });
+}
+
 class KlantenficheFotoEditorController {
   FotoEditorTool actieveTool = FotoEditorTool.tekenen;
 
@@ -50,11 +65,13 @@ class KlantenficheFotoEditorController {
 
   final List<TekenLijn> lijnen = [];
   final List<TekenTekst> teksten = [];
-
+  final List<TekenVorm> vormen = [];
   TekenLijn? huidigeLijn;
   TekenLijn? geselecteerdeLijn;
 
   TekenTekst? geselecteerdeTekst;
+
+  TekenVorm? geselecteerdeVorm;
 
   int? geselecteerdHandleIndex;
 
@@ -66,6 +83,7 @@ class KlantenficheFotoEditorController {
   Offset? laatsteTekstVerplaatsPositie;
 
   Offset? rechteLijnStart;
+  Offset? vormStart;
 
   void startNieuweLijn(
     Offset startPunt,
@@ -97,9 +115,13 @@ class KlantenficheFotoEditorController {
     for (final tekst in teksten) {
       tekst.geselecteerd = false;
     }
+    for (final vorm in vormen) {
+      vorm.geselecteerd = false;
+    }
 
     geselecteerdeLijn = null;
     geselecteerdeTekst = null;
+    geselecteerdeVorm = null;
   }
 
   void selecteerLijn(
@@ -159,10 +181,67 @@ class KlantenficheFotoEditorController {
   void wisAlles() {
     lijnen.clear();
     teksten.clear();
+    vormen.clear();
+    geselecteerdeVorm = null;
+    vormStart = null;
 
     huidigeLijn = null;
     geselecteerdeLijn = null;
     geselecteerdeTekst = null;
+  }
+
+  void voegVormToe({
+    required Offset start,
+    required Offset einde,
+    required FotoEditorTool type,
+  }) {
+    deselecteerAlles();
+
+    final rect = Rect.fromPoints(
+      start,
+      einde,
+    );
+
+    final vorm = TekenVorm(
+      rect: rect,
+      kleur: actieveKleur,
+      type: type,
+      geselecteerd: true,
+    );
+
+    vormen.add(vorm);
+    geselecteerdeVorm = vorm;
+  }
+
+  void selecteerVorm(
+    TekenVorm vorm,
+  ) {
+    deselecteerAlles();
+
+    vorm.geselecteerd = true;
+    geselecteerdeVorm = vorm;
+  }
+
+  void selecteerVormOpPunt(
+    Offset punt,
+  ) {
+    deselecteerAlles();
+
+    for (final vorm in vormen.reversed) {
+      final ruimereRect = vorm.rect.inflate(14);
+
+      if (ruimereRect.contains(punt)) {
+        selecteerVorm(vorm);
+        return;
+      }
+    }
+  }
+
+  void verwijderGeselecteerdeVorm() {
+    if (geselecteerdeVorm == null) return;
+
+    vormen.remove(geselecteerdeVorm);
+    geselecteerdeVorm = null;
   }
 
   double afstandTotLijnSegment(
