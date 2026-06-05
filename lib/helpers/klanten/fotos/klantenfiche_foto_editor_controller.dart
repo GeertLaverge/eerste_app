@@ -74,16 +74,21 @@ class KlantenficheFotoEditorController {
   TekenVorm? geselecteerdeVorm;
 
   int? geselecteerdHandleIndex;
+  int? geselecteerdeVormHandleIndex;
 
   bool lijnWordtVerplaatst = false;
 
   bool tekstWordtVerplaatst = false;
+
+  bool vormWordtVerplaatst = false;
 
   Offset? laatsteVerplaatsPositie;
   Offset? laatsteTekstVerplaatsPositie;
 
   Offset? rechteLijnStart;
   Offset? vormStart;
+
+  Offset? laatsteVormVerplaatsPositie;
 
   void startNieuweLijn(
     Offset startPunt,
@@ -317,6 +322,32 @@ class KlantenficheFotoEditorController {
     laatsteVerplaatsPositie = positie;
   }
 
+  void startVormVerplaatsen(
+    Offset positie,
+  ) {
+    vormWordtVerplaatst = true;
+    laatsteVormVerplaatsPositie = positie;
+  }
+
+  void verplaatsGeselecteerdeVorm(
+    Offset nieuwePositie,
+  ) {
+    if (!vormWordtVerplaatst) return;
+    if (geselecteerdeVorm == null) return;
+    if (laatsteVormVerplaatsPositie == null) return;
+
+    final delta = nieuwePositie - laatsteVormVerplaatsPositie!;
+
+    geselecteerdeVorm!.rect = geselecteerdeVorm!.rect.shift(delta);
+
+    laatsteVormVerplaatsPositie = nieuwePositie;
+  }
+
+  void stopVormVerplaatsen() {
+    vormWordtVerplaatst = false;
+    laatsteVormVerplaatsPositie = null;
+  }
+
   void verplaatsGeselecteerdeLijn(
     Offset nieuwePositie,
   ) {
@@ -406,5 +437,88 @@ class KlantenficheFotoEditorController {
     if (geselecteerdHandleIndex == null) return;
 
     geselecteerdeLijn!.punten[geselecteerdHandleIndex!] = nieuwePositie;
+  }
+
+  bool selecteerVormHandleOpPunt(
+    Offset punt,
+  ) {
+    if (geselecteerdeVorm == null) {
+      return false;
+    }
+
+    const afstand = 40.0;
+
+    final hoeken = [
+      geselecteerdeVorm!.rect.topLeft,
+      geselecteerdeVorm!.rect.topRight,
+      geselecteerdeVorm!.rect.bottomRight,
+      geselecteerdeVorm!.rect.bottomLeft,
+    ];
+
+    for (int i = 0; i < hoeken.length; i++) {
+      if ((punt - hoeken[i]).distance < afstand) {
+        geselecteerdeVormHandleIndex = i;
+        return true;
+      }
+    }
+
+    geselecteerdeVormHandleIndex = null;
+    return false;
+  }
+
+  void verplaatsVormHandle(
+    Offset nieuwePositie,
+  ) {
+    if (geselecteerdeVorm == null) return;
+    if (geselecteerdeVormHandleIndex == null) return;
+
+    final rect = geselecteerdeVorm!.rect;
+
+    Offset topLeft = rect.topLeft;
+    Offset topRight = rect.topRight;
+    Offset bottomRight = rect.bottomRight;
+    Offset bottomLeft = rect.bottomLeft;
+
+    switch (geselecteerdeVormHandleIndex) {
+      case 0:
+        topLeft = nieuwePositie;
+        break;
+      case 1:
+        topRight = nieuwePositie;
+        break;
+      case 2:
+        bottomRight = nieuwePositie;
+        break;
+      case 3:
+        bottomLeft = nieuwePositie;
+        break;
+    }
+
+    final links = [
+      topLeft.dx,
+      bottomLeft.dx,
+    ].reduce((a, b) => a < b ? a : b);
+
+    final rechts = [
+      topRight.dx,
+      bottomRight.dx,
+    ].reduce((a, b) => a > b ? a : b);
+
+    final boven = [
+      topLeft.dy,
+      topRight.dy,
+    ].reduce((a, b) => a < b ? a : b);
+
+    final onder = [
+      bottomLeft.dy,
+      bottomRight.dy,
+    ].reduce((a, b) => a > b ? a : b);
+
+    geselecteerdeVorm!.rect = Rect.fromLTRB(
+      links,
+      boven,
+      rechts,
+      onder,
+    );
   }
 }

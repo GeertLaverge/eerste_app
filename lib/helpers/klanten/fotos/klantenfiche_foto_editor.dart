@@ -131,6 +131,17 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             );
 
             if (handleGevonden) return;
+            final vormHandleGevonden = controller.selecteerVormHandleOpPunt(
+              details.localPosition,
+            );
+
+            if (vormHandleGevonden) return;
+
+            controller.selecteerVormOpPunt(
+              details.localPosition,
+            );
+
+            if (controller.geselecteerdeVorm != null) return;
 
             controller.selecteerTekstOpPunt(
               details.localPosition,
@@ -156,6 +167,18 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             );
 
             if (handleGevonden) return;
+            final vormHandleGevonden = controller.selecteerVormHandleOpPunt(
+              details.localPosition,
+            );
+
+            if (vormHandleGevonden) return;
+
+            if (controller.geselecteerdeVorm != null) {
+              controller.startVormVerplaatsen(
+                details.localPosition,
+              );
+              return;
+            }
 
             if (controller.geselecteerdeTekst != null) {
               controller.startTekstVerplaatsen(
@@ -195,6 +218,22 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           });
         },
         onPanUpdate: (details) {
+          if (controller.geselecteerdeVormHandleIndex != null) {
+            setState(() {
+              controller.verplaatsVormHandle(
+                details.localPosition,
+              );
+            });
+            return;
+          }
+          if (controller.vormWordtVerplaatst) {
+            setState(() {
+              controller.verplaatsGeselecteerdeVorm(
+                details.localPosition,
+              );
+            });
+            return;
+          }
           if (controller.tekstWordtVerplaatst) {
             setState(() {
               controller.verplaatsGeselecteerdeTekst(
@@ -234,9 +273,10 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         onPanEnd: (details) {
           setState(() {
             controller.geselecteerdHandleIndex = null;
+            controller.geselecteerdeVormHandleIndex = null;
 
-            if (controller.tekstWordtVerplaatst) {
-              controller.stopTekstVerplaatsen();
+            if (controller.vormWordtVerplaatst) {
+              controller.stopVormVerplaatsen();
               return;
             }
 
@@ -397,6 +437,13 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               _kleurKnop(Colors.black),
               IconButton(
                 onPressed: () {
+                  if (controller.geselecteerdeVorm != null) {
+                    setState(() {
+                      controller.verwijderGeselecteerdeVorm();
+                    });
+                    return;
+                  }
+
                   if (controller.geselecteerdeTekst != null) {
                     setState(() {
                       controller.verwijderGeselecteerdeTekst();
