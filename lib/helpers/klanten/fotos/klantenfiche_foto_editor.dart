@@ -19,6 +19,7 @@ class KlantenficheFotoEditor extends StatefulWidget {
 
 class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
   final controller = KlantenficheFotoEditorController();
+
   Widget _kleurKnop(Color kleur) {
     final actief = controller.actieveKleur == kleur;
 
@@ -43,6 +44,52 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
     );
   }
 
+  Future<void> _tekstToevoegen(Offset positie) async {
+    final tekstController = TextEditingController();
+
+    final tekst = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tekst toevoegen'),
+          content: TextField(
+            controller: tekstController,
+            autofocus: true,
+            decoration: const InputDecoration(
+              hintText: 'Typ tekst...',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuleren'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  tekstController.text.trim(),
+                );
+              },
+              child: const Text('Toevoegen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    tekstController.dispose();
+
+    if (tekst == null || tekst.isEmpty) return;
+
+    setState(() {
+      controller.voegTekstToe(
+        positie: positie,
+        tekst: tekst,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,20 +112,35 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
       ),
       body: GestureDetector(
         onTapDown: (details) {
+          if (controller.actieveTool == FotoEditorTool.tekst) {
+            _tekstToevoegen(details.localPosition);
+            return;
+          }
+
           setState(() {
             final handleGevonden = controller.selecteerHandleOpPunt(
               details.localPosition,
             );
 
             if (!handleGevonden) {
-              controller.selecteerLijnOpPunt(
+              controller.selecteerTekstOpPunt(
                 details.localPosition,
               );
+
+              if (controller.geselecteerdeTekst == null) {
+                controller.selecteerLijnOpPunt(
+                  details.localPosition,
+                );
+              }
             }
           });
         },
         onPanStart: (details) {
           setState(() {
+            if (controller.actieveTool == FotoEditorTool.tekst) {
+              return;
+            }
+
             final handleGevonden = controller.selecteerHandleOpPunt(
               details.localPosition,
             );
@@ -86,8 +148,22 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             if (handleGevonden) {
               return;
             }
+            if (controller.geselecteerdeTekst != null) {
+              controller.startTekstVerplaatsen(
+                details.localPosition,
+              );
+              return;
+            }
 
-            if (controller.actieveTool == FotoEditorTool.rechteLijn) {
+            if (controller.geselecteerdeLijn != null) {
+              controller.startVerplaatsen(
+                details.localPosition,
+              );
+              return;
+            }
+
+            if (controller.actieveTool == FotoEditorTool.rechteLijn ||
+                controller.actieveTool == FotoEditorTool.pijl) {
               controller.rechteLijnStart = details.localPosition;
               controller.deselecteerAlles();
               return;
@@ -108,6 +184,15 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             return;
           }
 
+          if (controller.lijnWordtVerplaatst) {
+            setState(() {
+              controller.verplaatsGeselecteerdeLijn(
+                details.localPosition,
+              );
+            });
+            return;
+          }
+
           if (controller.actieveTool != FotoEditorTool.tekenen) {
             return;
           }
@@ -120,8 +205,28 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         },
         onPanEnd: (details) {
           setState(() {
+            if (controller.tekstWordtVerplaatst) {
+              setState(() {
+                controller.verplaatsGeselecteerdeTekst(
+                  details.localPosition,
+                );
+              });
+
+              return;
+            }
             controller.geselecteerdHandleIndex = null;
-            if (controller.actieveTool == FotoEditorTool.rechteLijn &&
+            if (controller.tekstWordtVerplaatst) {
+              controller.stopTekstVerplaatsen();
+              return;
+            }
+
+            if (controller.lijnWordtVerplaatst) {
+              controller.stopVerplaatsen();
+              return;
+            }
+
+            if ((controller.actieveTool == FotoEditorTool.rechteLijn ||
+                    controller.actieveTool == FotoEditorTool.pijl) &&
                 controller.rechteLijnStart != null) {
               final eindPunt = details.localPosition;
 
@@ -132,6 +237,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                     eindPunt,
                   ],
                   kleur: controller.actieveKleur,
+                  type: controller.actieveTool,
                 ),
               );
 
@@ -153,6 +259,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 size: Size.infinite,
                 painter: KlantenficheFotoTekeningPainter(
                   lijnen: controller.lijnen,
+                  teksten: controller.teksten,
                 ),
               ),
             ],
@@ -192,6 +299,32 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                       : Colors.grey,
                 ),
               ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.pijl;
+                  });
+                },
+                icon: Icon(
+                  Icons.arrow_forward,
+                  color: controller.actieveTool == FotoEditorTool.pijl
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    controller.actieveTool = FotoEditorTool.tekst;
+                  });
+                },
+                icon: Icon(
+                  Icons.text_fields,
+                  color: controller.actieveTool == FotoEditorTool.tekst
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey,
+                ),
+              ),
               _kleurKnop(const Color(0xFF0B7A3B)),
               _kleurKnop(Colors.red),
               _kleurKnop(Colors.blue),
@@ -199,48 +332,56 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               _kleurKnop(Colors.black),
               IconButton(
                 onPressed: () {
-                  setState(() {
-                    if (controller.geselecteerdeLijn != null) {
-                      controller.verwijderGeselecteerdeLijn();
-                    } else {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text(
-                              'Alle tekeningen wissen?',
-                            ),
-                            content: const Text(
-                              'Er is geen lijn geselecteerd. Wilt u alle tekeningen verwijderen?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                                child: const Text('Annuleren'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
+                  if (controller.geselecteerdeTekst != null) {
+                    setState(() {
+                      controller.verwijderGeselecteerdeTekst();
+                    });
+                    return;
+                  }
 
-                                  setState(() {
-                                    controller.wisAlles();
-                                  });
-                                },
-                                child: const Text(
-                                  'Wissen',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                  ),
-                                ),
+                  if (controller.geselecteerdeLijn != null) {
+                    setState(() {
+                      controller.verwijderGeselecteerdeLijn();
+                    });
+                    return;
+                  }
+
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text(
+                          'Alle tekeningen wissen?',
+                        ),
+                        content: const Text(
+                          'Er is geen lijn of tekst geselecteerd. Wilt u alle tekeningen verwijderen?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text('Annuleren'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+
+                              setState(() {
+                                controller.wisAlles();
+                              });
+                            },
+                            child: const Text(
+                              'Wissen',
+                              style: TextStyle(
+                                color: Colors.red,
                               ),
-                            ],
-                          );
-                        },
+                            ),
+                          ),
+                        ],
                       );
-                    }
-                  });
+                    },
+                  );
                 },
                 icon: const Icon(
                   Icons.delete_outline,

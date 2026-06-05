@@ -12,11 +12,28 @@ enum FotoEditorTool {
 class TekenLijn {
   final List<Offset> punten;
   final Color kleur;
+  final FotoEditorTool type;
 
   bool geselecteerd;
 
   TekenLijn({
     required this.punten,
+    required this.kleur,
+    required this.type,
+    this.geselecteerd = false,
+  });
+}
+
+class TekenTekst {
+  Offset positie;
+  String tekst;
+  Color kleur;
+
+  bool geselecteerd;
+
+  TekenTekst({
+    required this.positie,
+    required this.tekst,
     required this.kleur,
     this.geselecteerd = false,
   });
@@ -32,10 +49,22 @@ class KlantenficheFotoEditorController {
   }
 
   final List<TekenLijn> lijnen = [];
+  final List<TekenTekst> teksten = [];
 
   TekenLijn? huidigeLijn;
   TekenLijn? geselecteerdeLijn;
+
+  TekenTekst? geselecteerdeTekst;
+
   int? geselecteerdHandleIndex;
+
+  bool lijnWordtVerplaatst = false;
+
+  bool tekstWordtVerplaatst = false;
+
+  Offset? laatsteVerplaatsPositie;
+  Offset? laatsteTekstVerplaatsPositie;
+
   Offset? rechteLijnStart;
 
   void startNieuweLijn(
@@ -44,6 +73,7 @@ class KlantenficheFotoEditorController {
     huidigeLijn = TekenLijn(
       punten: [startPunt],
       kleur: actieveKleur,
+      type: actieveTool,
     );
 
     lijnen.add(huidigeLijn!);
@@ -64,7 +94,12 @@ class KlantenficheFotoEditorController {
       lijn.geselecteerd = false;
     }
 
+    for (final tekst in teksten) {
+      tekst.geselecteerd = false;
+    }
+
     geselecteerdeLijn = null;
+    geselecteerdeTekst = null;
   }
 
   void selecteerLijn(
@@ -77,6 +112,42 @@ class KlantenficheFotoEditorController {
     geselecteerdeLijn = lijn;
   }
 
+  void selecteerTekst(
+    TekenTekst tekst,
+  ) {
+    deselecteerAlles();
+
+    tekst.geselecteerd = true;
+
+    geselecteerdeTekst = tekst;
+  }
+
+  void voegTekstToe({
+    required Offset positie,
+    required String tekst,
+  }) {
+    deselecteerAlles();
+
+    final nieuweTekst = TekenTekst(
+      positie: positie,
+      tekst: tekst,
+      kleur: actieveKleur,
+      geselecteerd: true,
+    );
+
+    teksten.add(nieuweTekst);
+
+    geselecteerdeTekst = nieuweTekst;
+  }
+
+  void verwijderGeselecteerdeTekst() {
+    if (geselecteerdeTekst == null) return;
+
+    teksten.remove(geselecteerdeTekst);
+
+    geselecteerdeTekst = null;
+  }
+
   void verwijderGeselecteerdeLijn() {
     if (geselecteerdeLijn == null) return;
 
@@ -87,8 +158,11 @@ class KlantenficheFotoEditorController {
 
   void wisAlles() {
     lijnen.clear();
+    teksten.clear();
+
     huidigeLijn = null;
     geselecteerdeLijn = null;
+    geselecteerdeTekst = null;
   }
 
   double afstandTotLijnSegment(
@@ -116,7 +190,29 @@ class KlantenficheFotoEditorController {
     return (punt - projectie).distance;
   }
 
-  void selecteerLijnOpPunt(Offset punt) {
+  void selecteerTekstOpPunt(
+    Offset punt,
+  ) {
+    deselecteerAlles();
+
+    for (final tekst in teksten.reversed) {
+      final rect = Rect.fromLTWH(
+        tekst.positie.dx - 6,
+        tekst.positie.dy - 6,
+        tekst.tekst.length * 14.0 + 12,
+        34,
+      );
+
+      if (rect.contains(punt)) {
+        selecteerTekst(tekst);
+        return;
+      }
+    }
+  }
+
+  void selecteerLijnOpPunt(
+    Offset punt,
+  ) {
     deselecteerAlles();
 
     for (final lijn in lijnen.reversed) {
@@ -133,6 +229,64 @@ class KlantenficheFotoEditorController {
         }
       }
     }
+  }
+
+  void startVerplaatsen(
+    Offset positie,
+  ) {
+    lijnWordtVerplaatst = true;
+    laatsteVerplaatsPositie = positie;
+  }
+
+  void verplaatsGeselecteerdeLijn(
+    Offset nieuwePositie,
+  ) {
+    if (!lijnWordtVerplaatst) return;
+    if (geselecteerdeLijn == null) return;
+    if (laatsteVerplaatsPositie == null) return;
+
+    final delta = nieuwePositie - laatsteVerplaatsPositie!;
+
+    for (int i = 0; i < geselecteerdeLijn!.punten.length; i++) {
+      geselecteerdeLijn!.punten[i] = geselecteerdeLijn!.punten[i] + delta;
+    }
+
+    laatsteVerplaatsPositie = nieuwePositie;
+  }
+
+  void stopVerplaatsen() {
+    lijnWordtVerplaatst = false;
+    laatsteVerplaatsPositie = null;
+  }
+
+  void startTekstVerplaatsen(
+    Offset positie,
+  ) {
+    tekstWordtVerplaatst = true;
+
+    laatsteTekstVerplaatsPositie = positie;
+  }
+
+  void verplaatsGeselecteerdeTekst(
+    Offset nieuwePositie,
+  ) {
+    if (!tekstWordtVerplaatst) return;
+
+    if (geselecteerdeTekst == null) return;
+
+    if (laatsteTekstVerplaatsPositie == null) return;
+
+    final delta = nieuwePositie - laatsteTekstVerplaatsPositie!;
+
+    geselecteerdeTekst!.positie = geselecteerdeTekst!.positie + delta;
+
+    laatsteTekstVerplaatsPositie = nieuwePositie;
+  }
+
+  void stopTekstVerplaatsen() {
+    tekstWordtVerplaatst = false;
+
+    laatsteTekstVerplaatsPositie = null;
   }
 
   bool selecteerHandleOpPunt(
