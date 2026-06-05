@@ -66,9 +66,15 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
       body: GestureDetector(
         onTapDown: (details) {
           setState(() {
-            controller.selecteerLijnOpPunt(
+            final handleGevonden = controller.selecteerHandleOpPunt(
               details.localPosition,
             );
+
+            if (!handleGevonden) {
+              controller.selecteerLijnOpPunt(
+                details.localPosition,
+              );
+            }
           });
         },
         onPanStart: (details) {
@@ -85,7 +91,18 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           });
         },
         onPanUpdate: (details) {
-          if (controller.actieveTool != FotoEditorTool.tekenen) return;
+          if (controller.geselecteerdHandleIndex != null) {
+            setState(() {
+              controller.verplaatsHandle(
+                details.localPosition,
+              );
+            });
+            return;
+          }
+
+          if (controller.actieveTool != FotoEditorTool.tekenen) {
+            return;
+          }
 
           setState(() {
             controller.voegPuntToe(
@@ -95,6 +112,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         },
         onPanEnd: (details) {
           setState(() {
+            controller.geselecteerdHandleIndex = null;
             if (controller.actieveTool == FotoEditorTool.rechteLijn &&
                 controller.rechteLijnStart != null) {
               final eindPunt = details.localPosition;

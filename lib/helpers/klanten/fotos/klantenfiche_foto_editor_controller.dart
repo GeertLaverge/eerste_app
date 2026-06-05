@@ -35,6 +35,7 @@ class KlantenficheFotoEditorController {
 
   TekenLijn? huidigeLijn;
   TekenLijn? geselecteerdeLijn;
+  int? geselecteerdHandleIndex;
   Offset? rechteLijnStart;
 
   void startNieuweLijn(
@@ -132,5 +133,45 @@ class KlantenficheFotoEditorController {
         }
       }
     }
+  }
+
+  bool selecteerHandleOpPunt(
+    Offset punt,
+  ) {
+    if (geselecteerdeLijn == null) {
+      return false;
+    }
+
+    if (geselecteerdeLijn!.punten.length != 2) {
+      return false;
+    }
+
+    const afstand = 18.0;
+
+    final start = geselecteerdeLijn!.punten.first;
+
+    final einde = geselecteerdeLijn!.punten.last;
+
+    if ((punt - start).distance < afstand) {
+      geselecteerdHandleIndex = 0;
+      return true;
+    }
+
+    if ((punt - einde).distance < afstand) {
+      geselecteerdHandleIndex = 1;
+      return true;
+    }
+
+    geselecteerdHandleIndex = null;
+    return false;
+  }
+
+  void verplaatsHandle(
+    Offset nieuwePositie,
+  ) {
+    if (geselecteerdeLijn == null) return;
+    if (geselecteerdHandleIndex == null) return;
+
+    geselecteerdeLijn!.punten[geselecteerdHandleIndex!] = nieuwePositie;
   }
 }
