@@ -300,7 +300,7 @@ class KlantenficheFotoEditorController {
       return false;
     }
 
-    const afstand = 18.0;
+    const afstand = 40.0;
 
     final start = geselecteerdeLijn!.punten.first;
 

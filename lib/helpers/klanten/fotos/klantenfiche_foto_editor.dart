@@ -87,6 +87,8 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         positie: positie,
         tekst: tekst,
       );
+
+      controller.actieveTool = FotoEditorTool.tekenen;
     });
   }
 
@@ -112,42 +114,38 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
       ),
       body: GestureDetector(
         onTapDown: (details) {
-          if (controller.actieveTool == FotoEditorTool.tekst) {
-            _tekstToevoegen(details.localPosition);
-            return;
-          }
-
           setState(() {
             final handleGevonden = controller.selecteerHandleOpPunt(
               details.localPosition,
             );
 
-            if (!handleGevonden) {
-              controller.selecteerTekstOpPunt(
-                details.localPosition,
-              );
+            if (handleGevonden) return;
 
-              if (controller.geselecteerdeTekst == null) {
-                controller.selecteerLijnOpPunt(
-                  details.localPosition,
-                );
-              }
-            }
+            controller.selecteerTekstOpPunt(
+              details.localPosition,
+            );
+
+            if (controller.geselecteerdeTekst != null) return;
+
+            controller.selecteerLijnOpPunt(
+              details.localPosition,
+            );
+
+            if (controller.geselecteerdeLijn != null) return;
           });
+
+          if (controller.actieveTool == FotoEditorTool.tekst) {
+            _tekstToevoegen(details.localPosition);
+          }
         },
         onPanStart: (details) {
           setState(() {
-            if (controller.actieveTool == FotoEditorTool.tekst) {
-              return;
-            }
-
             final handleGevonden = controller.selecteerHandleOpPunt(
               details.localPosition,
             );
 
-            if (handleGevonden) {
-              return;
-            }
+            if (handleGevonden) return;
+
             if (controller.geselecteerdeTekst != null) {
               controller.startTekstVerplaatsen(
                 details.localPosition,
@@ -159,6 +157,10 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               controller.startVerplaatsen(
                 details.localPosition,
               );
+              return;
+            }
+
+            if (controller.actieveTool == FotoEditorTool.tekst) {
               return;
             }
 
@@ -205,16 +207,8 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         },
         onPanEnd: (details) {
           setState(() {
-            if (controller.tekstWordtVerplaatst) {
-              setState(() {
-                controller.verplaatsGeselecteerdeTekst(
-                  details.localPosition,
-                );
-              });
-
-              return;
-            }
             controller.geselecteerdHandleIndex = null;
+
             if (controller.tekstWordtVerplaatst) {
               controller.stopTekstVerplaatsen();
               return;
