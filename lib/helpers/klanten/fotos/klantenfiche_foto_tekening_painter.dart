@@ -30,6 +30,53 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
           paintLijn,
         );
       }
+      if (lijn.geselecteerd && lijn.punten.length == 2) {
+        final start = lijn.punten.first;
+        final einde = lijn.punten.last;
+
+        final handlePaint = Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
+
+        final borderPaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+        const grootte = 10.0;
+
+        final startRect = Rect.fromCenter(
+          center: start,
+          width: grootte,
+          height: grootte,
+        );
+
+        final eindRect = Rect.fromCenter(
+          center: einde,
+          width: grootte,
+          height: grootte,
+        );
+
+        canvas.drawRect(
+          startRect,
+          handlePaint,
+        );
+
+        canvas.drawRect(
+          startRect,
+          borderPaint,
+        );
+
+        canvas.drawRect(
+          eindRect,
+          handlePaint,
+        );
+
+        canvas.drawRect(
+          eindRect,
+          borderPaint,
+        );
+      }
     }
   }
 
