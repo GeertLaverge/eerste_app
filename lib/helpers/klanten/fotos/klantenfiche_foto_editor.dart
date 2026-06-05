@@ -79,6 +79,14 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         },
         onPanStart: (details) {
           setState(() {
+            final handleGevonden = controller.selecteerHandleOpPunt(
+              details.localPosition,
+            );
+
+            if (handleGevonden) {
+              return;
+            }
+
             if (controller.actieveTool == FotoEditorTool.rechteLijn) {
               controller.rechteLijnStart = details.localPosition;
               controller.deselecteerAlles();
