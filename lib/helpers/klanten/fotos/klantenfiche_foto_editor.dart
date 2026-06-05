@@ -73,20 +73,46 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         },
         onPanStart: (details) {
           setState(() {
+            if (controller.actieveTool == FotoEditorTool.rechteLijn) {
+              controller.rechteLijnStart = details.localPosition;
+              controller.deselecteerAlles();
+              return;
+            }
+
             controller.startNieuweLijn(
               details.localPosition,
             );
           });
         },
         onPanUpdate: (details) {
+          if (controller.actieveTool != FotoEditorTool.tekenen) return;
+
           setState(() {
             controller.voegPuntToe(
               details.localPosition,
             );
           });
         },
-        onPanEnd: (_) {
+        onPanEnd: (details) {
           setState(() {
+            if (controller.actieveTool == FotoEditorTool.rechteLijn &&
+                controller.rechteLijnStart != null) {
+              final eindPunt = details.localPosition;
+
+              controller.lijnen.add(
+                TekenLijn(
+                  punten: [
+                    controller.rechteLijnStart!,
+                    eindPunt,
+                  ],
+                  kleur: controller.actieveKleur,
+                ),
+              );
+
+              controller.rechteLijnStart = null;
+              return;
+            }
+
             controller.eindigLijn();
           });
         },
