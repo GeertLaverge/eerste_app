@@ -62,7 +62,12 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Annuleren'),
+              child: const Text(
+                'Annuleren',
+                style: TextStyle(
+                  color: Color(0xFF0B7A3B),
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -71,7 +76,13 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                   tekstController.text.trim(),
                 );
               },
-              child: const Text('Toevoegen'),
+              child: const Text(
+                'Toevoegen',
+                style: TextStyle(
+                  color: Color(0xFF0B7A3B),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
         );
@@ -177,6 +188,14 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           });
         },
         onPanUpdate: (details) {
+          if (controller.tekstWordtVerplaatst) {
+            setState(() {
+              controller.verplaatsGeselecteerdeTekst(
+                details.localPosition,
+              );
+            });
+            return;
+          }
           if (controller.geselecteerdHandleIndex != null) {
             setState(() {
               controller.verplaatsHandle(
@@ -271,6 +290,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 onPressed: () {
                   setState(() {
                     controller.actieveTool = FotoEditorTool.tekenen;
+                    controller.deselecteerAlles();
                   });
                 },
                 icon: Icon(
@@ -284,6 +304,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 onPressed: () {
                   setState(() {
                     controller.actieveTool = FotoEditorTool.rechteLijn;
+                    controller.deselecteerAlles();
                   });
                 },
                 icon: Icon(
@@ -297,6 +318,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 onPressed: () {
                   setState(() {
                     controller.actieveTool = FotoEditorTool.pijl;
+                    controller.deselecteerAlles();
                   });
                 },
                 icon: Icon(
@@ -310,6 +332,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                 onPressed: () {
                   setState(() {
                     controller.actieveTool = FotoEditorTool.tekst;
+                    controller.deselecteerAlles();
                   });
                 },
                 icon: Icon(
