@@ -127,10 +127,26 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
         ..style = PaintingStyle.stroke;
 
       if (vorm.type == FotoEditorTool.rechthoek) {
-        canvas.drawRect(
-          vorm.rect,
-          paintVorm,
-        );
+        final hoeken = vorm.hoeken;
+
+        if (hoeken != null && hoeken.length == 4) {
+          final path = Path()
+            ..moveTo(hoeken[0].dx, hoeken[0].dy)
+            ..lineTo(hoeken[1].dx, hoeken[1].dy)
+            ..lineTo(hoeken[2].dx, hoeken[2].dy)
+            ..lineTo(hoeken[3].dx, hoeken[3].dy)
+            ..close();
+
+          canvas.drawPath(
+            path,
+            paintVorm,
+          );
+        } else {
+          canvas.drawRect(
+            vorm.rect,
+            paintVorm,
+          );
+        }
       }
 
       if (vorm.type == FotoEditorTool.cirkel) {
@@ -152,12 +168,15 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
 
         const grootte = 10.0;
 
-        final punten = [
-          vorm.rect.topLeft,
-          vorm.rect.topRight,
-          vorm.rect.bottomRight,
-          vorm.rect.bottomLeft,
-        ];
+        final punten =
+            vorm.type == FotoEditorTool.rechthoek && vorm.hoeken != null
+                ? vorm.hoeken!
+                : [
+                    vorm.rect.topLeft,
+                    vorm.rect.topRight,
+                    vorm.rect.bottomRight,
+                    vorm.rect.bottomLeft,
+                  ];
 
         for (final punt in punten) {
           final rect = Rect.fromCenter(

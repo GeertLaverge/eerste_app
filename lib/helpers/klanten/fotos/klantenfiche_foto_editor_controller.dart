@@ -41,6 +41,8 @@ class TekenTekst {
 
 class TekenVorm {
   Rect rect;
+  List<Offset>? hoeken;
+
   Color kleur;
   FotoEditorTool type;
 
@@ -48,6 +50,7 @@ class TekenVorm {
 
   TekenVorm({
     required this.rect,
+    this.hoeken,
     required this.kleur,
     required this.type,
     this.geselecteerd = false,
@@ -209,6 +212,14 @@ class KlantenficheFotoEditorController {
 
     final vorm = TekenVorm(
       rect: rect,
+      hoeken: type == FotoEditorTool.rechthoek
+          ? [
+              rect.topLeft,
+              rect.topRight,
+              rect.bottomRight,
+              rect.bottomLeft,
+            ]
+          : null,
       kleur: actieveKleur,
       type: type,
       geselecteerd: true,
@@ -471,6 +482,12 @@ class KlantenficheFotoEditorController {
   ) {
     if (geselecteerdeVorm == null) return;
     if (geselecteerdeVormHandleIndex == null) return;
+    if (geselecteerdeVorm!.type == FotoEditorTool.rechthoek &&
+        geselecteerdeVorm!.hoeken != null) {
+      geselecteerdeVorm!.hoeken![geselecteerdeVormHandleIndex!] = nieuwePositie;
+
+      return;
+    }
 
     final rect = geselecteerdeVorm!.rect;
 
@@ -494,31 +511,28 @@ class KlantenficheFotoEditorController {
         break;
     }
 
-    final links = [
-      topLeft.dx,
-      bottomLeft.dx,
-    ].reduce((a, b) => a < b ? a : b);
+    Offset vasteHoek;
 
-    final rechts = [
-      topRight.dx,
-      bottomRight.dx,
-    ].reduce((a, b) => a > b ? a : b);
+    switch (geselecteerdeVormHandleIndex) {
+      case 0:
+        vasteHoek = rect.bottomRight;
+        break;
+      case 1:
+        vasteHoek = rect.bottomLeft;
+        break;
+      case 2:
+        vasteHoek = rect.topLeft;
+        break;
+      case 3:
+        vasteHoek = rect.topRight;
+        break;
+      default:
+        return;
+    }
 
-    final boven = [
-      topLeft.dy,
-      topRight.dy,
-    ].reduce((a, b) => a < b ? a : b);
-
-    final onder = [
-      bottomLeft.dy,
-      bottomRight.dy,
-    ].reduce((a, b) => a > b ? a : b);
-
-    geselecteerdeVorm!.rect = Rect.fromLTRB(
-      links,
-      boven,
-      rechts,
-      onder,
+    geselecteerdeVorm!.rect = Rect.fromPoints(
+      vasteHoek,
+      nieuwePositie,
     );
   }
 }
