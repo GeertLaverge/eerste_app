@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'klantenfiche_foto_editor_controller.dart';
 import 'klantenfiche_foto_tekening_painter.dart';
 import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
 
 class KlantenficheFotoEditor extends StatefulWidget {
   final File bestand;
