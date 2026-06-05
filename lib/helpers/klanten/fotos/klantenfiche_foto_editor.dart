@@ -108,6 +108,12 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
 
   Future<void> _opslaanFoto() async {
     try {
+      setState(() {
+        controller.deselecteerAlles();
+      });
+      await Future.delayed(
+        const Duration(milliseconds: 50),
+      );
       final boundary = repaintKey.currentContext!.findRenderObject()
           as RenderRepaintBoundary;
 

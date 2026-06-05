@@ -249,6 +249,18 @@ class KlantenficheFotoEditorController {
           vorm.hoeken!.length == 4) {
         final hoeken = vorm.hoeken!;
 
+        final path = Path()
+          ..moveTo(hoeken[0].dx, hoeken[0].dy)
+          ..lineTo(hoeken[1].dx, hoeken[1].dy)
+          ..lineTo(hoeken[2].dx, hoeken[2].dy)
+          ..lineTo(hoeken[3].dx, hoeken[3].dy)
+          ..close();
+
+        if (path.contains(punt)) {
+          selecteerVorm(vorm);
+          return;
+        }
+
         for (int i = 0; i < hoeken.length; i++) {
           final start = hoeken[i];
           final einde = hoeken[(i + 1) % hoeken.length];
@@ -481,12 +493,15 @@ class KlantenficheFotoEditorController {
 
     const afstand = 55.0;
 
-    final hoeken = [
-      geselecteerdeVorm!.rect.topLeft,
-      geselecteerdeVorm!.rect.topRight,
-      geselecteerdeVorm!.rect.bottomRight,
-      geselecteerdeVorm!.rect.bottomLeft,
-    ];
+    final hoeken = geselecteerdeVorm!.type == FotoEditorTool.rechthoek &&
+            geselecteerdeVorm!.hoeken != null
+        ? geselecteerdeVorm!.hoeken!
+        : [
+            geselecteerdeVorm!.rect.topLeft,
+            geselecteerdeVorm!.rect.topRight,
+            geselecteerdeVorm!.rect.bottomRight,
+            geselecteerdeVorm!.rect.bottomLeft,
+          ];
 
     for (int i = 0; i < hoeken.length; i++) {
       if ((punt - hoeken[i]).distance < afstand) {
