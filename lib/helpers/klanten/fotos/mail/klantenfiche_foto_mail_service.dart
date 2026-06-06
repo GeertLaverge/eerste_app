@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -18,39 +19,34 @@ class KlantenficheFotoMailService {
         return token;
       }
 
-      final body = '''
-{
-  "message": {
-    "subject": "TEST THIMACO",
-    "body": {
-      "contentType": "Text",
-      "content": "Dit is een testmail zonder bijlage."
-    },
-    "toRecipients": [
-      {
-        "emailAddress": {
-          "address": "$ontvanger"
-        }
-      }
-    ]
-  },
-  "saveToSentItems": true
-}
-''';
+      final body = {
+        'subject': 'TEST CONCEPT THIMACO',
+        'body': {
+          'contentType': 'Text',
+          'content': 'Dit is een testconcept vanuit de Thimaco app.',
+        },
+        'toRecipients': [
+          {
+            'emailAddress': {
+              'address': ontvanger,
+            },
+          },
+        ],
+      };
 
       final response = await http.post(
         Uri.parse(
-          'https://graph.microsoft.com/v1.0/me/sendMail',
+          'https://graph.microsoft.com/v1.0/me/messages',
         ),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: body,
+        body: jsonEncode(body),
       );
 
       return '''
-STATUS: ${response.statusCode}
+CONCEPT STATUS: ${response.statusCode}
 
 ${response.body}
 ''';
