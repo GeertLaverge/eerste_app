@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../fiche/klantenfiche_model.dart';
 import 'klantenfiche_foto_service.dart';
 import 'klantenfiche_foto_viewer.dart';
+import 'mail/klantenfiche_foto_mail_pagina.dart';
 
 class KlantenficheFotoBlok extends StatelessWidget {
   final String ficheId;
@@ -56,6 +57,30 @@ class KlantenficheFotoBlok extends StatelessWidget {
       const SnackBar(
         content: Text('Foto toegevoegd.'),
         backgroundColor: Color(0xFF0B7A3B),
+      ),
+    );
+  }
+
+  Future<void> _openMailScherm(
+    BuildContext context,
+  ) async {
+    if (fotos.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Er zijn nog geen foto\'s om te mailen.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KlantenficheFotoMailPagina(
+          ficheId: ficheId,
+          fotos: fotos,
+        ),
       ),
     );
   }
@@ -127,7 +152,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
@@ -138,6 +163,16 @@ class KlantenficheFotoBlok extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: const Color(0xFF0B7A3B),
                 ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: () {
+                _openMailScherm(context);
+              },
+              icon: const Icon(
+                Icons.email_outlined,
+                color: Color(0xFF0B7A3B),
               ),
             ),
           ],

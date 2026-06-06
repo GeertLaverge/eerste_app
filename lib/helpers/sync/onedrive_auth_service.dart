@@ -8,6 +8,7 @@ class OneDriveAuthService {
   static const List<String> scopes = [
     'User.Read',
     'Files.ReadWrite.AppFolder',
+    'Mail.Send',
   ];
 
   SingleAccountPca? _pca;
