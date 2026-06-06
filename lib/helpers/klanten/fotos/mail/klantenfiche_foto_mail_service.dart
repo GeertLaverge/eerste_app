@@ -18,6 +18,8 @@ class KlantenficheFotoMailService {
       if (token.startsWith('FOUT')) {
         return token;
       }
+      print('ONTVANGER: $ontvanger');
+      print('AANTAL FOTO\'S: ${fotos.length}');
 
       final attachments = <Map<String, dynamic>>[];
 
@@ -62,11 +64,7 @@ class KlantenficheFotoMailService {
         body: jsonEncode(body),
       );
 
-      if (response.statusCode == 202) {
-        return 'MAIL_OK';
-      }
-
-      return 'MAIL_FOUT ${response.statusCode}\n${response.body}';
+      return 'STATUS ${response.statusCode}\n${response.body}';
     } catch (e) {
       return 'MAIL_EXCEPTION: $e';
     }
