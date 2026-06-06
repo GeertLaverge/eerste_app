@@ -324,6 +324,17 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                     ),
                   ),
                   KlantenficheUitvalBlok(
+                    titel: 'Extra werk',
+                    standaardOpen: false,
+                    child: KlantenficheExtraWerkVeld(
+                      extraWerken: extraWerken,
+                      onChanged: () async {
+                        setState(() {});
+                        await automatischBewaren();
+                      },
+                    ),
+                  ),
+                  KlantenficheUitvalBlok(
                     titel: 'Foto\'s en werfinstructies',
                     standaardOpen: false,
                     child: KlantenficheFotoBlok(

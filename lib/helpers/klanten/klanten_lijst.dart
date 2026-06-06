@@ -166,6 +166,45 @@ class _KlantenLijstState extends State<KlantenLijst> {
                   ),
                   IconButton(
                     onPressed: () async {
+                      final bevestigen = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Klant verwijderen?'),
+                            content: Text(
+                              'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, false);
+                                },
+                                child: const Text(
+                                  'Annuleren',
+                                  style: TextStyle(
+                                    color: Color(0xFF0B7A3B),
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context, true);
+                                },
+                                child: const Text(
+                                  'Verwijderen',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (bevestigen != true) return;
+
                       await KlantenficheRepository.verwijderKlantenFiche(
                         klant.id,
                       );
