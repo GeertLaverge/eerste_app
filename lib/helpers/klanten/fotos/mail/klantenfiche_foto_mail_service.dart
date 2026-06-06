@@ -14,6 +14,14 @@ class KlantenficheFotoMailService {
   }) async {
     try {
       final token = await OneDriveAuthService().login();
+      final gebruikerResponse = await http.get(
+        Uri.parse('https://graph.microsoft.com/v1.0/me'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('GEBRUIKER: ${gebruikerResponse.body}');
 
       if (token.startsWith('FOUT')) {
         return token;
