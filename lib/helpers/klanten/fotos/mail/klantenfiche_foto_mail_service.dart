@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -19,34 +18,17 @@ class KlantenficheFotoMailService {
         return token;
       }
 
-      final body = {
-        'subject': 'TEST CONCEPT THIMACO',
-        'body': {
-          'contentType': 'Text',
-          'content': 'Dit is een testconcept vanuit de Thimaco app.',
-        },
-        'toRecipients': [
-          {
-            'emailAddress': {
-              'address': ontvanger,
-            },
-          },
-        ],
-      };
-
-      final response = await http.post(
+      final response = await http.get(
         Uri.parse(
-          'https://graph.microsoft.com/v1.0/me/messages',
+          'https://graph.microsoft.com/v1.0/me/mailFolders/drafts/messages?\$top=10',
         ),
         headers: {
           'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
         },
-        body: jsonEncode(body),
       );
 
       return '''
-CONCEPT STATUS: ${response.statusCode}
+DRAFTS STATUS: ${response.statusCode}
 
 ${response.body}
 ''';
