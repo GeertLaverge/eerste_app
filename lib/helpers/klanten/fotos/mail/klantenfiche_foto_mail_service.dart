@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -19,19 +18,41 @@ class KlantenficheFotoMailService {
         return token;
       }
 
-      final gebruikerResponse = await http.get(
+      final body = '''
+{
+  "message": {
+    "subject": "TEST THIMACO",
+    "body": {
+      "contentType": "Text",
+      "content": "Dit is een testmail zonder bijlage."
+    },
+    "toRecipients": [
+      {
+        "emailAddress": {
+          "address": "$ontvanger"
+        }
+      }
+    ]
+  },
+  "saveToSentItems": true
+}
+''';
+
+      final response = await http.post(
         Uri.parse(
-          'https://graph.microsoft.com/v1.0/me',
+          'https://graph.microsoft.com/v1.0/me/sendMail',
         ),
         headers: {
           'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
+        body: body,
       );
 
       return '''
-STATUS: ${gebruikerResponse.statusCode}
+STATUS: ${response.statusCode}
 
-${gebruikerResponse.body}
+${response.body}
 ''';
     } catch (e) {
       return 'MAIL_EXCEPTION: $e';
