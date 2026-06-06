@@ -81,10 +81,11 @@ class _KlantenficheFotoMailPaginaState
       return;
     }
 
-    if (geselecteerdeFotos.isEmpty) {
-      _melding('Selecteer minstens één foto.', fout: true);
-      return;
-    }
+    // Tijdelijk uitgeschakeld voor mailtest zonder bijlage.
+// if (geselecteerdeFotos.isEmpty) {
+//   _melding('Selecteer minstens één foto.', fout: true);
+//   return;
+// }
 
     final bestanden = <File>[];
 
