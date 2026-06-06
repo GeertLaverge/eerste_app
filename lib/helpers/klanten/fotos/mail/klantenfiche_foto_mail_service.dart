@@ -19,66 +19,54 @@ class KlantenficheFotoMailService {
         return token;
       }
 
-      final conceptBody = {
-        'subject': 'TEST CONCEPT SEND THIMACO',
-        'body': {
-          'contentType': 'Text',
-          'content': 'Dit concept wordt aangemaakt en daarna verzonden.',
-        },
-        'toRecipients': [
-          {
-            'emailAddress': {
-              'address': ontvanger,
-            },
+      final attachments = <Map<String, dynamic>>[];
+
+      for (final foto in fotos) {
+        final bytes = await foto.readAsBytes();
+
+        attachments.add({
+          '@odata.type': '#microsoft.graph.fileAttachment',
+          'name': foto.uri.pathSegments.last,
+          'contentType': 'image/jpeg',
+          'contentBytes': base64Encode(bytes),
+        });
+      }
+
+      final body = {
+        'message': {
+          'subject': onderwerp,
+          'body': {
+            'contentType': 'Text',
+            'content': bericht,
           },
-        ],
+          'toRecipients': [
+            {
+              'emailAddress': {
+                'address': ontvanger,
+              },
+            },
+          ],
+          'attachments': attachments,
+        },
+        'saveToSentItems': true,
       };
 
-      final conceptResponse = await http.post(
+      final response = await http.post(
         Uri.parse(
-          'https://graph.microsoft.com/v1.0/me/messages',
+          'https://graph.microsoft.com/v1.0/me/sendMail',
         ),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(conceptBody),
+        body: jsonEncode(body),
       );
 
-      if (conceptResponse.statusCode != 201) {
-        return '''
-CONCEPT FOUT: ${conceptResponse.statusCode}
-
-${conceptResponse.body}
-''';
+      if (response.statusCode == 202) {
+        return 'MAIL_OK';
       }
 
-      final conceptData =
-          jsonDecode(conceptResponse.body) as Map<String, dynamic>;
-
-      final messageId = conceptData['id'];
-
-      if (messageId is! String || messageId.isEmpty) {
-        return 'CONCEPT FOUT: geen message id gevonden';
-      }
-
-      final sendResponse = await http.post(
-        Uri.parse(
-          'https://graph.microsoft.com/v1.0/me/messages/$messageId/send',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      return '''
-CONCEPT STATUS: ${conceptResponse.statusCode}
-MESSAGE ID: $messageId
-
-SEND STATUS: ${sendResponse.statusCode}
-
-${sendResponse.body}
-''';
+      return 'MAIL_FOUT ${response.statusCode}\n${response.body}';
     } catch (e) {
       return 'MAIL_EXCEPTION: $e';
     }

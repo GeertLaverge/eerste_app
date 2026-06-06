@@ -77,15 +77,20 @@ class _KlantenficheFotoMailPaginaState
 
   Future<void> _versturen() async {
     if (gekozenLeverancier == null) {
-      _melding('Kies eerst een leverancier.', fout: true);
+      _melding(
+        'Kies eerst een leverancier.',
+        fout: true,
+      );
       return;
     }
 
-    // Tijdelijk uitgeschakeld voor mailtest zonder bijlage.
-// if (geselecteerdeFotos.isEmpty) {
-//   _melding('Selecteer minstens één foto.', fout: true);
-//   return;
-// }
+    if (geselecteerdeFotos.isEmpty) {
+      _melding(
+        'Selecteer minstens één foto.',
+        fout: true,
+      );
+      return;
+    }
 
     final bestanden = <File>[];
 
@@ -113,7 +118,10 @@ class _KlantenficheFotoMailPaginaState
       _melding('Mail verzonden.');
       Navigator.pop(context);
     } else {
-      _melding(resultaat, fout: true);
+      _melding(
+        resultaat,
+        fout: true,
+      );
     }
   }
 

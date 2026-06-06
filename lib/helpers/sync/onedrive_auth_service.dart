@@ -10,6 +10,7 @@ class OneDriveAuthService {
     'Files.ReadWrite.AppFolder',
     'Mail.Send',
     'Mail.ReadWrite',
+    'offline_access',
   ];
 
   SingleAccountPca? _pca;
@@ -43,8 +44,6 @@ class OneDriveAuthService {
       } catch (_) {
         // Geen bestaand account of token: dan interactieve login openen.
       }
-
-      await pca.signOut();
 
       final result = await pca.acquireToken(
         scopes: scopes,
