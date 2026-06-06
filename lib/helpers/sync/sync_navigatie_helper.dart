@@ -7,7 +7,7 @@ class SyncNavigatieHelper {
     required BuildContext context,
     required Widget pagina,
   }) async {
-    await OneDriveSyncService().downloadBackup();
+    OneDriveSyncService().downloadBackup();
 
     if (!context.mounted) return;
 
