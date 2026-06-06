@@ -6,6 +6,7 @@ import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
+import 'klanten_pagina.dart';
 
 class HomePaginaNieuw extends StatefulWidget {
   const HomePaginaNieuw({
