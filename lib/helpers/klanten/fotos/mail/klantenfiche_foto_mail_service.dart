@@ -10,7 +10,7 @@ class KlantenficheFotoMailService {
 
   // TIJDELIJK: vul hier je SMTP-wachtwoord in om te testen.
   // Later zetten we dit beter in veilige opslag.
-  static const String _wachtwoord = 'VUL_HIER_SMTP_WACHTWOORD_IN';
+  static const String _wachtwoord = '52K2P4F522RYY';
 
   Future<String> verstuurMail({
     required List<File> fotos,
