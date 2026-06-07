@@ -1,11 +1,17 @@
-import 'dart:convert';
 import 'dart:io';
 
-import 'package:http/http.dart' as http;
-
-import '../../../sync/onedrive_auth_service.dart';
+import 'package:mailer/mailer.dart';
+import 'package:mailer/smtp_server.dart';
 
 class KlantenficheFotoMailService {
+  static const String _smtpServer = 'smtp-auth.mailprotect.be';
+  static const int _smtpPoort = 2525;
+  static const String _gebruikersnaam = 'info@thimaco.be';
+
+  // TIJDELIJK: vul hier je SMTP-wachtwoord in om te testen.
+  // Later zetten we dit beter in veilige opslag.
+  static const String _wachtwoord = 'VUL_HIER_SMTP_WACHTWOORD_IN';
+
   Future<String> verstuurMail({
     required List<File> fotos,
     required String ontvanger,
@@ -13,60 +19,33 @@ class KlantenficheFotoMailService {
     required String bericht,
   }) async {
     try {
-      final token = await OneDriveAuthService().login();
-
-      if (token.startsWith('FOUT')) {
-        return token;
-      }
-
-      final attachments = <Map<String, dynamic>>[];
-
-      for (final foto in fotos) {
-        final bytes = await foto.readAsBytes();
-
-        attachments.add({
-          '@odata.type': '#microsoft.graph.fileAttachment',
-          'name': foto.uri.pathSegments.last,
-          'contentType': 'image/jpeg',
-          'contentBytes': base64Encode(bytes),
-        });
-      }
-
-      final body = {
-        'message': {
-          'subject': onderwerp,
-          'body': {
-            'contentType': 'Text',
-            'content': bericht,
-          },
-          'toRecipients': [
-            {
-              'emailAddress': {
-                'address': ontvanger,
-              },
-            },
-          ],
-          'attachments': attachments,
-        },
-        'saveToSentItems': true,
-      };
-
-      final response = await http.post(
-        Uri.parse(
-          'https://graph.microsoft.com/v1.0/me/sendMail',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
+      final smtpServer = SmtpServer(
+        _smtpServer,
+        port: _smtpPoort,
+        username: _gebruikersnaam,
+        password: _wachtwoord,
+        ssl: false,
+        allowInsecure: false,
       );
 
-      if (response.statusCode == 202) {
-        return 'MAIL_OK';
+      final message = Message()
+        ..from = const Address(_gebruikersnaam, 'Thimaco')
+        ..recipients.add(ontvanger)
+        ..subject = onderwerp
+        ..text = bericht.trim().isEmpty ? 'Zie foto\'s in bijlage.' : bericht;
+
+      for (final foto in fotos) {
+        if (await foto.exists()) {
+          message.attachments.add(FileAttachment(foto));
+        }
       }
 
-      return 'MAIL_FOUT ${response.statusCode}\n${response.body}';
+      await send(message, smtpServer);
+
+      return 'MAIL_OK';
+    } on MailerException catch (e) {
+      final problemen = e.problems.map((p) => p.msg).join('\n');
+      return 'MAIL_FOUT\n$problemen';
     } catch (e) {
       return 'MAIL_EXCEPTION: $e';
     }
