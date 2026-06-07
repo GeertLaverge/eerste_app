@@ -212,6 +212,7 @@ ${_extraWerkenTekst()}
     if (resultaat == 'MAIL_OK') {
       setState(() {
         opvolgFicheVerstuurdNaarBureau = true;
+        klaarVoorNieuwePlanning = false;
       });
 
       await automatischBewaren();
@@ -235,6 +236,7 @@ ${_extraWerkenTekst()}
   Future<void> _klantIsOpgevolgd() async {
     setState(() {
       klantStatus = 'Opvolgen';
+      opvolgFicheVerstuurdNaarBureau = true;
       klaarVoorNieuwePlanning = true;
     });
 
@@ -242,7 +244,7 @@ ${_extraWerkenTekst()}
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Klant staat terug klaar om in te plannen.'),
+        content: Text('Klant staat klaar om opnieuw in te plannen.'),
         backgroundColor: Color(0xFF0B7A3B),
       ),
     );
@@ -547,7 +549,7 @@ ${_extraWerkenTekst()}
                                 child: Text(
                                   klaarVoorNieuwePlanning
                                       ? 'Klant staat klaar om in te plannen'
-                                      : 'Klant is opgevolgd',
+                                      : 'Fiche nagekeken, alles in (her)bestelling',
                                 ),
                               ),
                             ),

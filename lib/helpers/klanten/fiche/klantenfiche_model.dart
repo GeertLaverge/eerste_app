@@ -278,6 +278,10 @@ class KlantenficheModel {
             ),
           )
           .toList(),
+      opvolgTaken: json['opvolgTaken'] ?? '',
+      opvolgFicheVerstuurdNaarBureau:
+          json['opvolgFicheVerstuurdNaarBureau'] ?? false,
+      klaarVoorNieuwePlanning: json['klaarVoorNieuwePlanning'] ?? false,
     );
   }
 }
