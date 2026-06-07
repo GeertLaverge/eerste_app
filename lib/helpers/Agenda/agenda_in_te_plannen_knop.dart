@@ -23,7 +23,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
       final itemNaam = item.naamKlant.trim().toLowerCase();
       final itemTitel = item.titel.trim().toLowerCase();
 
-      return item.type == 'planning' &&
+      return (item.type == 'planning' || item.type == 'opvolging') &&
           (itemNaam == klantNaam || itemTitel == klantNaam);
     });
   }
@@ -327,7 +327,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            'Actieve klant',
+            item.type == 'opvolging' ? 'Opvolging' : 'Actieve klant',
             style: TextStyle(
               color: kleur,
               fontSize: 11,
