@@ -9,7 +9,10 @@ class AgendaKlantFicheOpenHelper {
     required BuildContext context,
     required AgendaItem item,
   }) async {
-    if (item.type != 'planning') return false;
+    if (item.type != 'planning' && item.type != 'opvolging') {
+      return false;
+    }
+
     if (item.naamKlant.trim().isEmpty) return false;
 
     final fiches = await KlantenficheRepository.laadKlantenFiches();

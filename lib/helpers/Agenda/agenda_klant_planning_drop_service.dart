@@ -30,65 +30,7 @@ class AgendaKlantPlanningDropService {
       itemsPerDag: itemsPerDag,
     );
 
-    if (item.type == 'opvolging') {
-      await _zetOpvolgKlantUitWachtrij(item);
-    }
-
     return nieuweItems;
-  }
-
-  static Future<void> _zetOpvolgKlantUitWachtrij(
-    AgendaItem item,
-  ) async {
-    final fiches = await KlantenficheRepository.laadKlantenFiches();
-
-    KlantenficheModel? gevonden;
-
-    for (final fiche in fiches) {
-      final zelfdeId = fiche.id.trim().isNotEmpty && fiche.id == item.klantNr;
-
-      final zelfdeKlantNr =
-          fiche.klantNr.trim().isNotEmpty && fiche.klantNr == item.klantNr;
-
-      final zelfdeNaam = fiche.naam.trim().toLowerCase() ==
-          item.naamKlant.trim().toLowerCase();
-
-      if (zelfdeId || zelfdeKlantNr || zelfdeNaam) {
-        gevonden = fiche;
-        break;
-      }
-    }
-
-    if (gevonden == null) return;
-
-    final aangepasteFiche = KlantenficheModel(
-      id: gevonden.id,
-      naam: gevonden.naam,
-      klantNr: gevonden.klantNr,
-      straatnaam: gevonden.straatnaam,
-      huisNr: gevonden.huisNr,
-      gemeente: gevonden.gemeente,
-      postcode: gevonden.postcode,
-      gsm: gevonden.gsm,
-      gsm2: gevonden.gsm2,
-      email: gevonden.email,
-      klantStatus: gevonden.klantStatus,
-      bestelStatus: gevonden.bestelStatus,
-      taakVoorKlant: gevonden.taakVoorKlant,
-      klantTakenAfgewerktOp: gevonden.klantTakenAfgewerktOp,
-      datumAfgewerkt: gevonden.datumAfgewerkt,
-      klantTaken: gevonden.klantTaken,
-      artikelen: gevonden.artikelen,
-      extraWerken: gevonden.extraWerken,
-      fotos: gevonden.fotos,
-      opvolgTaken: gevonden.opvolgTaken,
-      opvolgFicheVerstuurdNaarBureau: gevonden.opvolgFicheVerstuurdNaarBureau,
-      klaarVoorNieuwePlanning: false,
-    );
-
-    await KlantenficheRepository.bewaarKlantenFiche(
-      aangepasteFiche,
-    );
   }
 
   static Future<void> zetOpvolgKlantTerugInWachtrij(
@@ -138,6 +80,8 @@ class AgendaKlantPlanningDropService {
       klaarVoorNieuwePlanning: true,
     );
 
-    await KlantenficheRepository.bewaarKlantenFiche(aangepasteFiche);
+    await KlantenficheRepository.bewaarKlantenFiche(
+      aangepasteFiche,
+    );
   }
 }
