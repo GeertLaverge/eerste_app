@@ -234,6 +234,40 @@ ${_extraWerkenTekst()}
   }
 
   Future<void> _klantIsOpgevolgd() async {
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Fiche nagekeken?'),
+          content: const Text(
+            'Bent u zeker dat alles is nagekeken en dat de nodige artikelen opnieuw in bestelling staan?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Annuleren'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                'Ja, bevestigen',
+                style: TextStyle(
+                  color: Color(0xFF0B7A3B),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) return;
+
     setState(() {
       klantStatus = 'Opvolgen';
       opvolgFicheVerstuurdNaarBureau = true;
@@ -522,7 +556,49 @@ ${_extraWerkenTekst()}
                             child: ElevatedButton(
                               onPressed: opvolgFicheVerstuurdNaarBureau
                                   ? null
-                                  : _verstuurOpvolgFicheNaarBureau,
+                                  : () async {
+                                      final bevestigen = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            title: const Text(
+                                              'Opvolgfiche versturen?',
+                                            ),
+                                            content: const Text(
+                                              'Bent u zeker dat deze opvolgfiche naar het bureau mag worden verstuurd?',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context, false);
+                                                },
+                                                child: const Text(
+                                                  'Annuleren',
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed: () {
+                                                  Navigator.pop(context, true);
+                                                },
+                                                child: const Text(
+                                                  'Versturen',
+                                                  style: TextStyle(
+                                                    color: Color(0xFF0B7A3B),
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          );
+                                        },
+                                      );
+
+                                      if (bevestigen != true) {
+                                        return;
+                                      }
+
+                                      await _verstuurOpvolgFicheNaarBureau();
+                                    },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF0B7A3B),
                                 foregroundColor: Colors.white,

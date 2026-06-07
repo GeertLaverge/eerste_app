@@ -44,7 +44,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final compact = MediaQuery.of(context).size.width < 700;
 
     final planningPlaatsers = widget.planningVandaag.where((item) {
-      return item.type == 'planning';
+      return item.type == 'planning' || item.type == 'opvolging';
     }).toList();
 
     final planningBureau = widget.planningVandaag.where((item) {
@@ -67,50 +67,77 @@ class _HomeDashboardState extends State<HomeDashboard> {
         if (planningPlaatsers.isNotEmpty)
           _TaakSectie(
             titel: 'Planning plaatsers',
-            taken: planningPlaatsers.map((planning) {
-              return _TaakRij(
-                compact: compact,
-                start: planning.volledigeDag || planning.startUur == null
-                    ? ''
-                    : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
-                eind: planning.volledigeDag || planning.eindUur == null
-                    ? ''
-                    : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
-                kleur: const Color(0xFF0B7A3B),
-                titel: planning.titel,
-                straat: planning.straatnaam,
-                huisNr: planning.huisNr,
-                postcode: planning.postcode,
-                gemeente: planning.gemeente,
-                meldingVoorafMinuten: 0,
-              );
+            taken: planningPlaatsers.expand<Widget>((planning) {
+              final klant = widget.klantTakenVandaag.where((k) {
+                return k.naam.toString().trim().toLowerCase() ==
+                    planning.naamKlant.toString().trim().toLowerCase();
+              }).toList();
+
+              final takenWidgets = <Widget>[
+                _TaakRij(
+                  compact: compact,
+                  start: planning.volledigeDag || planning.startUur == null
+                      ? ''
+                      : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
+                  eind: planning.volledigeDag || planning.eindUur == null
+                      ? ''
+                      : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
+                  kleur: planning.type == 'opvolging'
+                      ? Colors.amber
+                      : const Color(0xFF0B7A3B),
+                  titel: planning.titel,
+                  straat: planning.straatnaam,
+                  huisNr: planning.huisNr,
+                  postcode: planning.postcode,
+                  gemeente: planning.gemeente,
+                  meldingVoorafMinuten: 0,
+                ),
+              ];
+
+              if (klant.isNotEmpty) {
+                final klantenFiche = klant.first;
+                final taken = List.from(klantenFiche.klantTaken);
+
+                taken.sort((a, b) {
+                  if (a.isAfgewerkt == b.isAfgewerkt) return 0;
+                  return a.isAfgewerkt ? 1 : -1;
+                });
+
+                takenWidgets.add(
+                  Container(
+                    margin: const EdgeInsets.only(
+                      left: 22,
+                      top: 4,
+                      bottom: 8,
+                    ),
+                    padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: HomeDashboard.rand,
+                      ),
+                    ),
+                    child: Column(
+                      children: taken.map<Widget>((taak) {
+                        return _KlantTaakRij(
+                          tekst: taak.tekst,
+                          isAfgewerkt: taak.isAfgewerkt,
+                          onTap: () {
+                            taakAanpassen(klantenFiche, taak);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              }
+
+              return takenWidgets;
             }).toList(),
           ),
         if (planningPlaatsers.isNotEmpty && planningBureau.isNotEmpty)
           const SizedBox(height: 6),
-        if (widget.klantTakenVandaag.isNotEmpty) const SizedBox(height: 6),
-        ...widget.klantTakenVandaag.map((klant) {
-          final taken = List.from(klant.klantTaken);
-
-          taken.sort((a, b) {
-            if (a.isAfgewerkt == b.isAfgewerkt) return 0;
-            return a.isAfgewerkt ? 1 : -1;
-          });
-
-          return _TaakSectie(
-            titel: 'Taak voor ${klant.naam}',
-            taken: taken.map<Widget>((taak) {
-              return _KlantTaakRij(
-                tekst: taak.tekst,
-                isAfgewerkt: taak.isAfgewerkt,
-                onTap: () {
-                  print('CHECKBOX GEKLIKT: ${taak.tekst}');
-                  taakAanpassen(klant, taak);
-                },
-              );
-            }).toList(),
-          );
-        }),
         if (planningBureau.isNotEmpty)
           _TaakSectie(
             titel: 'Planning bureau',

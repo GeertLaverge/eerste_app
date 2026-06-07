@@ -360,6 +360,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         dag: dag,
         item: item,
       );
+      if (item.type == 'opvolging') {
+        await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
+            item);
+      }
 
       final nieuweItems = await AgendaRepository.verwijder(
         dag: dag,

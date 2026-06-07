@@ -56,26 +56,14 @@ class _KlantenLijstState extends State<KlantenLijst> {
   }
 
   String statusTekst(KlantenficheModel klant) {
-    if (klant.klaarVoorNieuwePlanning) {
-      return 'Op te volgen - in te plannen';
-    }
-
     return klant.klantStatus;
   }
 
   Color kaartRandKleur(KlantenficheModel klant) {
-    if (klant.klaarVoorNieuwePlanning) {
-      return Colors.amber;
-    }
-
     return const Color(0xFFE5E7EB);
   }
 
   Color kaartAchtergrond(KlantenficheModel klant) {
-    if (klant.klaarVoorNieuwePlanning) {
-      return const Color(0xFFFFFBEB);
-    }
-
     return Colors.white;
   }
 
@@ -177,17 +165,6 @@ class _KlantenLijstState extends State<KlantenLijst> {
                   ),
                   child: Row(
                     children: [
-                      if (klant.klaarVoorNieuwePlanning) ...[
-                        Container(
-                          width: 10,
-                          height: 46,
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                      ],
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
