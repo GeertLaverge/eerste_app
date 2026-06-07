@@ -44,8 +44,7 @@ class KlantenficheFotoMailService {
 
       return 'MAIL_OK';
     } on MailerException catch (e) {
-      final problemen = e.problems.map((p) => p.msg).join('\n');
-      return 'MAIL_FOUT\n$problemen';
+      return 'MAIL_FOUT\n${e.toString()}';
     } catch (e) {
       return 'MAIL_EXCEPTION: $e';
     }
