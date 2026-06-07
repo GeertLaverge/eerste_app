@@ -175,6 +175,9 @@ class KlantenficheModel {
   final List<KlantTaakItem> klantTaken;
   final List<KlantenficheExtraWerk> extraWerken;
   final List<KlantenficheFoto> fotos;
+  final String opvolgTaken;
+  final bool opvolgFicheVerstuurdNaarBureau;
+  final bool klaarVoorNieuwePlanning;
 
   KlantenficheModel({
     required this.id,
@@ -196,6 +199,9 @@ class KlantenficheModel {
     this.artikelen = const [],
     this.extraWerken = const [],
     this.fotos = const [],
+    this.opvolgTaken = '',
+    this.opvolgFicheVerstuurdNaarBureau = false,
+    this.klaarVoorNieuwePlanning = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -219,6 +225,9 @@ class KlantenficheModel {
       'klantTaken': klantTaken.map((taak) => taak.toJson()).toList(),
       'extraWerken': extraWerken.map((werk) => werk.toJson()).toList(),
       'fotos': fotos.map((foto) => foto.toJson()).toList(),
+      'opvolgTaken': opvolgTaken,
+      'opvolgFicheVerstuurdNaarBureau': opvolgFicheVerstuurdNaarBureau,
+      'klaarVoorNieuwePlanning': klaarVoorNieuwePlanning,
     };
   }
 

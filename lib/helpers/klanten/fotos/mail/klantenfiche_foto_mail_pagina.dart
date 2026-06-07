@@ -30,6 +30,7 @@ class _KlantenficheFotoMailPaginaState
 
   final berichtController = TextEditingController();
   final zoekController = TextEditingController();
+  final emailController = TextEditingController();
 
   final Set<String> geselecteerdeFotos = {};
 
@@ -47,6 +48,7 @@ class _KlantenficheFotoMailPaginaState
   void dispose() {
     berichtController.dispose();
     zoekController.dispose();
+    emailController.dispose();
     super.dispose();
   }
 
@@ -75,10 +77,30 @@ class _KlantenficheFotoMailPaginaState
     }).toList();
   }
 
+  String get _ontvanger {
+    final handmatig = emailController.text.trim();
+    if (handmatig.isNotEmpty) return handmatig;
+    return gekozenLeverancier?.email.trim() ?? '';
+  }
+
+  bool _isGeldigEmail(String email) {
+    return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+  }
+
   Future<void> _versturen() async {
-    if (gekozenLeverancier == null) {
+    final ontvanger = _ontvanger;
+
+    if (ontvanger.isEmpty) {
       _melding(
-        'Kies eerst een leverancier.',
+        'Kies een leverancier of vul zelf een e-mailadres in.',
+        fout: true,
+      );
+      return;
+    }
+
+    if (!_isGeldigEmail(ontvanger)) {
+      _melding(
+        'Vul een geldig e-mailadres in.',
         fout: true,
       );
       return;
@@ -107,7 +129,7 @@ class _KlantenficheFotoMailPaginaState
 
     final resultaat = await KlantenficheFotoMailService().verstuurMail(
       fotos: bestanden,
-      ontvanger: gekozenLeverancier!.email,
+      ontvanger: ontvanger,
       onderwerp: 'Foto\'s en werfinstructies',
       bericht: berichtController.text.trim(),
     );
@@ -256,22 +278,25 @@ class _KlantenficheFotoMailPaginaState
           ),
           const SizedBox(height: 14),
           const Text(
-            'Leverancier',
+            'Ontvanger',
             style: TextStyle(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
           TextField(
-            controller: zoekController,
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
             onChanged: (waarde) {
-              setState(() {
-                zoekterm = waarde;
-              });
+              if (waarde.trim().isNotEmpty) {
+                setState(() {
+                  gekozenLeverancier = null;
+                });
+              }
             },
             decoration: InputDecoration(
-              hintText: 'Zoek leverancier...',
-              prefixIcon: const Icon(Icons.search),
+              hintText: 'E-mailadres handmatig invullen...',
+              prefixIcon: const Icon(Icons.email_outlined),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -282,42 +307,143 @@ class _KlantenficheFotoMailPaginaState
                 borderRadius: BorderRadius.circular(14),
                 borderSide: const BorderSide(color: rand),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(
+                  color: groen,
+                  width: 1.5,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          ...lijst.map((leverancier) {
-            final gekozen = gekozenLeverancier?.email == leverancier.email;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: gekozen ? groen : rand,
-                  width: gekozen ? 2 : 1,
-                ),
+          const SizedBox(height: 10),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: rand),
+            ),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                dividerColor: Colors.transparent,
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
               ),
-              child: ListTile(
-                onTap: () {
-                  setState(() {
-                    gekozenLeverancier = leverancier;
-                  });
-                },
-                leading: Icon(
-                  gekozen ? Icons.check_circle : Icons.circle_outlined,
-                  color: gekozen ? groen : Colors.grey,
-                ),
+              child: ExpansionTile(
+                tilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 title: Text(
-                  leverancier.naam,
+                  gekozenLeverancier == null
+                      ? 'Leverancier kiezen'
+                      : gekozenLeverancier!.naam,
                   style: const TextStyle(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                subtitle: Text(leverancier.email),
+                subtitle: Text(
+                  gekozenLeverancier == null
+                      ? 'Klik om de lijst te openen'
+                      : gekozenLeverancier!.email,
+                ),
+                leading: Icon(
+                  gekozenLeverancier == null
+                      ? Icons.storefront_outlined
+                      : Icons.check_circle,
+                  color: gekozenLeverancier == null ? Colors.grey : groen,
+                ),
+                children: [
+                  TextField(
+                    controller: zoekController,
+                    onChanged: (waarde) {
+                      setState(() {
+                        zoekterm = waarde;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Zoek leverancier...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: rand),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: rand),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: groen,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (lijst.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'Geen leveranciers gevonden.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  else
+                    SizedBox(
+                      height: 8 * 64,
+                      child: ListView.builder(
+                        itemCount: lijst.length,
+                        itemBuilder: (context, index) {
+                          final leverancier = lijst[index];
+                          final gekozen =
+                              gekozenLeverancier?.email == leverancier.email;
+
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: gekozen ? groen : rand,
+                                width: gekozen ? 2 : 1,
+                              ),
+                            ),
+                            child: ListTile(
+                              dense: true,
+                              onTap: () {
+                                setState(() {
+                                  gekozenLeverancier = leverancier;
+                                  emailController.clear();
+                                });
+                              },
+                              leading: Icon(
+                                gekozen
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
+                                color: gekozen ? groen : Colors.grey,
+                              ),
+                              title: Text(
+                                leverancier.naam,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              subtitle: Text(leverancier.email),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
-            );
-          }),
+            ),
+          ),
         ],
       ),
     );

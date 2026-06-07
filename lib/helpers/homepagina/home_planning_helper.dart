@@ -10,6 +10,7 @@ class HomePlanningHelper {
 
     final planning = items.where((item) {
       return item.type == 'planning' ||
+          item.type == 'opvolging' ||
           item.type == 'afspraak' ||
           item.type == 'verlof';
     }).toList();
@@ -29,7 +30,7 @@ class HomePlanningHelper {
     final fiches = await KlantenficheRepository.laadKlantenFiches();
 
     final klantenOpPlanning = planning.where((item) {
-      return item.type == 'planning' &&
+      return (item.type == 'planning' || item.type == 'opvolging') &&
           item.naamKlant.toString().trim().isNotEmpty;
     }).toList();
 

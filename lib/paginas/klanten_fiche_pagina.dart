@@ -11,6 +11,7 @@ import '../helpers/klanten/fiche/klantenfiche_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 import '../helpers/klanten/fotos/klantenfiche_foto_blok.dart';
+import '../helpers/klanten/fotos/mail/klantenfiche_foto_mail_service.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -40,6 +41,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final emailController = TextEditingController();
   final taakController = TextEditingController();
   final klantNrController = TextEditingController();
+  final opvolgTakenController = TextEditingController();
+
+  bool opvolgFicheVerstuurdNaarBureau = false;
+  bool klaarVoorNieuwePlanning = false;
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
@@ -94,6 +99,9 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     fotos = List<KlantenficheFoto>.from(
       fiche.fotos,
     );
+    opvolgTakenController.text = fiche.opvolgTaken;
+    opvolgFicheVerstuurdNaarBureau = fiche.opvolgFicheVerstuurdNaarBureau;
+    klaarVoorNieuwePlanning = fiche.klaarVoorNieuwePlanning;
   }
 
   @override
@@ -107,7 +115,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     gsmController.dispose();
     gsm2Controller.dispose();
     emailController.dispose();
-
+    opvolgTakenController.dispose();
     super.dispose();
   }
 
@@ -135,6 +143,108 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       extraWerken: extraWerken,
       fotos: fotos,
       artikelen: artikelen,
+      opvolgTaken: opvolgTakenController.text,
+      opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
+      klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
+    );
+  }
+
+  String _extraWerkenTekst() {
+    final ingevuld = extraWerken
+        .where((werk) => werk.omschrijving.trim().isNotEmpty)
+        .map((werk) => '- ${werk.omschrijving.trim()}')
+        .toList();
+
+    if (ingevuld.isEmpty) {
+      return 'Er zijn geen Extra werken uitgevoerd';
+    }
+
+    return ingevuld.join('\n');
+  }
+
+  Future<void> _verstuurOpvolgFicheNaarBureau() async {
+    final naam = naamController.text.trim();
+
+    if (naam.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Geef eerst een klantnaam in.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (opvolgTakenController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vul eerst de nog af te werken taken in.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final bericht = '''
+Klant '$naam' moet worden opgevolgd.
+
+Nog af te werken taken:
+${opvolgTakenController.text.trim()}
+
+Gelieve na te kijken of er nieuwe artikelen en taken voor klant moeten worden ingevuld.
+
+Van zodra de klantenfiche is aangepast aan de nieuwe status, druk op de knop:
+'Klant is opgevolgd'.
+
+Extra werken:
+${_extraWerkenTekst()}
+''';
+
+    final resultaat = await KlantenficheFotoMailService().verstuurMail(
+      fotos: [],
+      ontvanger: 'info@thimaco.be',
+      onderwerp: 'Op te volgen klant: $naam',
+      bericht: bericht,
+    );
+
+    if (!mounted) return;
+
+    if (resultaat == 'MAIL_OK') {
+      setState(() {
+        opvolgFicheVerstuurdNaarBureau = true;
+      });
+
+      await automatischBewaren();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opvolgfiche verstuurd naar bureau.'),
+          backgroundColor: Color(0xFF0B7A3B),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(resultaat),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _klantIsOpgevolgd() async {
+    setState(() {
+      klantStatus = 'Opvolgen';
+      klaarVoorNieuwePlanning = true;
+    });
+
+    await automatischBewaren();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Klant staat terug klaar om in te plannen.'),
+        backgroundColor: Color(0xFF0B7A3B),
+      ),
     );
   }
 
@@ -160,8 +270,64 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
             KlantenficheStatusBalk(
               geselecteerd: klantStatus,
               onGekozen: (waarde) async {
+                if (waarde == 'Opvolgen' || waarde == 'Afgewerkt') {
+                  final bevestigen = await showDialog<bool>(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text(
+                          waarde == 'Opvolgen'
+                              ? 'Klant op opvolgen plaatsen?'
+                              : 'Klant afwerken?',
+                        ),
+                        content: Text(
+                          waarde == 'Opvolgen'
+                              ? 'Bent u zeker? Leveranciers, artikelen en taken voor klant worden leeggemaakt.'
+                              : 'Bent u zeker dat deze klant volledig afgewerkt is?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context, false);
+                            },
+                            child: const Text('Annuleren'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context, true);
+                            },
+                            child: const Text(
+                              'Ja, bevestigen',
+                              style: TextStyle(
+                                color: Color(0xFF0B7A3B),
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (bevestigen != true) {
+                    return;
+                  }
+                }
+
                 setState(() {
                   klantStatus = waarde;
+
+                  if (waarde == 'Opvolgen') {
+                    artikelen.clear();
+                    klantTaken.clear();
+                    taakController.clear();
+
+                    opvolgTakenController.clear();
+                    opvolgFicheVerstuurdNaarBureau = false;
+                    klaarVoorNieuwePlanning = false;
+
+                    datumAfgewerkt = '';
+                  }
 
                   if (waarde == 'Afgewerkt') {
                     final vandaag = DateTime.now();
@@ -170,7 +336,9 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                         '${vandaag.day.toString().padLeft(2, '0')}/'
                         '${vandaag.month.toString().padLeft(2, '0')}/'
                         '${vandaag.year}';
-                  } else {
+                  }
+
+                  if (waarde != 'Afgewerkt' && waarde != 'Opvolgen') {
                     datumAfgewerkt = '';
                   }
                 });
@@ -323,6 +491,70 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
                       },
                     ),
                   ),
+                  if (klantStatus == 'Opvolgen')
+                    KlantenficheUitvalBlok(
+                      titel: 'Vul hier de nog af te werken taken in',
+                      standaardOpen: true,
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: opvolgTakenController,
+                            minLines: 4,
+                            maxLines: 8,
+                            onChanged: (_) {
+                              automatischBewaren();
+                            },
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Beschrijf hier wat nog moet opgevolgd worden...',
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: opvolgFicheVerstuurdNaarBureau
+                                  ? null
+                                  : _verstuurOpvolgFicheNaarBureau,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0B7A3B),
+                                foregroundColor: Colors.white,
+                              ),
+                              child: Text(
+                                opvolgFicheVerstuurdNaarBureau
+                                    ? 'Opvolgfiche is verstuurd naar bureau'
+                                    : 'Verstuur deze op te volgen fiche naar bureau',
+                              ),
+                            ),
+                          ),
+                          if (opvolgFicheVerstuurdNaarBureau) ...[
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: klaarVoorNieuwePlanning
+                                    ? null
+                                    : _klantIsOpgevolgd,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.amber,
+                                  foregroundColor: Colors.black,
+                                ),
+                                child: Text(
+                                  klaarVoorNieuwePlanning
+                                      ? 'Klant staat klaar om in te plannen'
+                                      : 'Klant is opgevolgd',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   KlantenficheUitvalBlok(
                     titel: 'Extra werk',
                     standaardOpen: false,

@@ -29,6 +29,9 @@ class _KlantenLijstState extends State<KlantenLijst> {
       case 'Opvolgen':
         return Colors.amber;
 
+      case 'Nadienst':
+        return Colors.purple;
+
       case 'Afgewerkt':
       default:
         return const Color(0xFF0B7A3B);
@@ -50,6 +53,30 @@ class _KlantenLijstState extends State<KlantenLijst> {
       default:
         return const Color(0xFF0B7A3B);
     }
+  }
+
+  String statusTekst(KlantenficheModel klant) {
+    if (klant.klaarVoorNieuwePlanning) {
+      return 'Op te volgen - in te plannen';
+    }
+
+    return klant.klantStatus;
+  }
+
+  Color kaartRandKleur(KlantenficheModel klant) {
+    if (klant.klaarVoorNieuwePlanning) {
+      return Colors.amber;
+    }
+
+    return const Color(0xFFE5E7EB);
+  }
+
+  Color kaartAchtergrond(KlantenficheModel klant) {
+    if (klant.klaarVoorNieuwePlanning) {
+      return const Color(0xFFFFFBEB);
+    }
+
+    return Colors.white;
   }
 
   @override
@@ -80,7 +107,20 @@ class _KlantenLijstState extends State<KlantenLijst> {
               klant.email.toLowerCase().contains(zoek);
 
           return matchKlantStatus && matchBestelStatus && matchZoek;
-        }).toList();
+        }).toList()
+          ..sort((a, b) {
+            if (a.klaarVoorNieuwePlanning && !b.klaarVoorNieuwePlanning) {
+              return -1;
+            }
+
+            if (!a.klaarVoorNieuwePlanning && b.klaarVoorNieuwePlanning) {
+              return 1;
+            }
+
+            return a.naam.toLowerCase().compareTo(
+                  b.naam.toLowerCase(),
+                );
+          });
 
         if (klanten.isEmpty) {
           return const KlantenLegeLijst();
@@ -97,128 +137,163 @@ class _KlantenLijstState extends State<KlantenLijst> {
           itemBuilder: (context, index) {
             final klant = klanten[index];
 
-            return InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => KlantenFichePagina(
-                      bestaandeFiche: klant,
-                    ),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: kaartAchtergrond(klant),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: kaartRandKleur(klant),
+                  width: klant.klaarVoorNieuwePlanning ? 1.5 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                );
+                ],
+              ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => KlantenFichePagina(
+                        bestaandeFiche: klant,
+                      ),
+                    ),
+                  );
 
-                if (!mounted) return;
+                  if (!mounted) return;
 
-                setState(() {});
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          klant.naam.isEmpty ? 'Naamloos' : klant.naam,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF1F2937),
+                  setState(() {});
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      if (klant.klaarVoorNieuwePlanning) ...[
+                        Container(
+                          width: 10,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.amber,
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        const SizedBox(height: 6),
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              klant.klantStatus,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: kleurVoorKlantStatus(
-                                  klant.klantStatus,
+                              klant.naam.isEmpty ? 'Naamloos' : klant.naam,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1F2937),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  statusTekst(klant),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: kleurVoorKlantStatus(
+                                      klant.klantStatus,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const Text(
-                              '  •  ',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF9CA3AF),
-                              ),
-                            ),
-                            Text(
-                              klant.bestelStatus,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: kleurVoorBestelStatus(
+                                const Text(
+                                  '  •  ',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                                Text(
                                   klant.bestelStatus,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: kleurVoorBestelStatus(
+                                      klant.bestelStatus,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () async {
-                      final bevestigen = await showDialog<bool>(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Klant verwijderen?'),
-                            content: Text(
-                              'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context, false);
-                                },
-                                child: const Text(
-                                  'Annuleren',
-                                  style: TextStyle(
-                                    color: Color(0xFF0B7A3B),
-                                  ),
+                      ),
+                      IconButton(
+                        onPressed: () async {
+                          final bevestigen = await showDialog<bool>(
+                            context: context,
+                            builder: (context) {
+                              return AlertDialog(
+                                title: const Text('Klant verwijderen?'),
+                                content: Text(
+                                  'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.',
                                 ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context, true);
-                                },
-                                child: const Text(
-                                  'Verwijderen',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.w700,
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, false);
+                                    },
+                                    child: const Text(
+                                      'Annuleren',
+                                      style: TextStyle(
+                                        color: Color(0xFF0B7A3B),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context, true);
+                                    },
+                                    child: const Text(
+                                      'Verwijderen',
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           );
+
+                          if (bevestigen != true) return;
+
+                          await KlantenficheRepository.verwijderKlantenFiche(
+                            klant.id,
+                          );
+
+                          if (!mounted) return;
+
+                          setState(() {});
                         },
-                      );
-
-                      if (bevestigen != true) return;
-
-                      await KlantenficheRepository.verwijderKlantenFiche(
-                        klant.id,
-                      );
-
-                      if (!mounted) return;
-
-                      setState(() {});
-                    },
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                    ),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           },

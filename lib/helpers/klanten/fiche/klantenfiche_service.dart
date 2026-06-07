@@ -46,6 +46,9 @@ class KlantenficheService {
     required List<KlantenficheExtraWerk> extraWerken,
     required List<KlantenficheArtikel> artikelen,
     required List<KlantenficheFoto> fotos,
+    required String opvolgTaken,
+    required bool opvolgFicheVerstuurdNaarBureau,
+    required bool klaarVoorNieuwePlanning,
   }) async {
     if (naam.trim().isEmpty &&
         straatnaam.trim().isEmpty &&
@@ -53,7 +56,8 @@ class KlantenficheService {
         email.trim().isEmpty &&
         artikelen.isEmpty &&
         klantTaken.isEmpty &&
-        extraWerken.isEmpty) {
+        extraWerken.isEmpty &&
+        opvolgTaken.trim().isEmpty) {
       return;
     }
 
@@ -81,6 +85,9 @@ class KlantenficheService {
       klantTaken: klantTaken,
       extraWerken: extraWerken,
       fotos: fotos,
+      opvolgTaken: opvolgTaken,
+      opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
+      klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

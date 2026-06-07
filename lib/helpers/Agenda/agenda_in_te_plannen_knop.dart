@@ -28,10 +28,15 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     });
   }
 
-  AgendaItem maakAgendaItemVanKlant(KlantenficheModel klant) {
+  AgendaItem maakAgendaItemVanKlant(
+    KlantenficheModel klant,
+  ) {
+    final isOpvolging =
+        klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
+
     return AgendaItem(
       titel: klant.naam,
-      type: 'planning',
+      type: isOpvolging ? 'opvolging' : 'planning',
       klantNr: klant.klantNr,
       naamKlant: klant.naam,
       straatnaam: klant.straatnaam,
@@ -41,7 +46,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
       gsm: klant.gsm,
       gsm2: klant.gsm2,
       email: klant.email,
-      opmerkingen: klant.taakVoorKlant,
+      opmerkingen: isOpvolging ? klant.opvolgTaken : klant.taakVoorKlant,
     );
   }
 
@@ -49,7 +54,12 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     final klanten = await KlantenficheRepository.laadKlantenFiches();
 
     final actieveKlanten = klanten.where((klant) {
-      return klant.klantStatus == 'Actief' &&
+      final actief = klant.klantStatus == 'Actief';
+
+      final opvolging =
+          klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
+
+      return (actief || opvolging) &&
           klant.naam.trim().isNotEmpty &&
           !klantStaatAlOpAgenda(klant);
     }).toList();

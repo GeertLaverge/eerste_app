@@ -10,6 +10,10 @@ class AgendaDagtaakTemplate {
   final int? eindUur;
   final int? eindMinuut;
 
+  final String homeWeergaveType;
+  final int dagenVooraf;
+  final String homeDatum;
+
   const AgendaDagtaakTemplate({
     required this.id,
     required this.naam,
@@ -18,6 +22,9 @@ class AgendaDagtaakTemplate {
     this.startMinuut,
     this.eindUur,
     this.eindMinuut,
+    this.homeWeergaveType = 'zelfdeDag',
+    this.dagenVooraf = 0,
+    this.homeDatum = '',
   });
 
   Map<String, dynamic> toJson() {
@@ -29,6 +36,9 @@ class AgendaDagtaakTemplate {
       'startMinuut': startMinuut,
       'eindUur': eindUur,
       'eindMinuut': eindMinuut,
+      'homeWeergaveType': homeWeergaveType,
+      'dagenVooraf': dagenVooraf,
+      'homeDatum': homeDatum,
     };
   }
 
@@ -43,6 +53,9 @@ class AgendaDagtaakTemplate {
       startMinuut: json['startMinuut'],
       eindUur: json['eindUur'],
       eindMinuut: json['eindMinuut'],
+      homeWeergaveType: json['homeWeergaveType'] ?? 'zelfdeDag',
+      dagenVooraf: json['dagenVooraf'] ?? 0,
+      homeDatum: json['homeDatum'] ?? '',
     );
   }
 }

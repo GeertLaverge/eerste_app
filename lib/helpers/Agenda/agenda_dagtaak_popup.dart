@@ -342,6 +342,9 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
           startMinuut: heeftTijd ? startTijd.minute : null,
           eindUur: heeftTijd ? eindTijd.hour : null,
           eindMinuut: heeftTijd ? eindTijd.minute : null,
+          homeWeergaveType: homeKeuze,
+          dagenVooraf: homeKeuze == 'dagenVooraf' ? aantalDagenVooraf() : 0,
+          homeDatum: homeKeuze == 'datum' ? homeDatumTekst() : '',
         ),
       );
     }
@@ -365,9 +368,9 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
         startMinuut: template.heeftTijd ? template.startMinuut : null,
         eindUur: template.heeftTijd ? template.eindUur : null,
         eindMinuut: template.heeftTijd ? template.eindMinuut : null,
-        homeWeergaveType: 'zelfdeDag',
-        dagenVooraf: 0,
-        homeDatum: '',
+        homeWeergaveType: template.homeWeergaveType,
+        dagenVooraf: template.dagenVooraf,
+        homeDatum: template.homeDatum,
       ),
     );
   }
