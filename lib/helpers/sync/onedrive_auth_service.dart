@@ -10,7 +10,6 @@ class OneDriveAuthService {
     'Files.ReadWrite.AppFolder',
     'Mail.Send',
     'Mail.ReadWrite',
-    'offline_access',
   ];
 
   SingleAccountPca? _pca;
