@@ -241,7 +241,7 @@ ${opvolgTakenController.text.trim()}
 Gelieve na te kijken of er nieuwe artikelen en taken voor klant moeten worden ingevuld.
 
 Van zodra de klantenfiche is aangepast aan de nieuwe status, druk op de knop:
-'Klant is opgevolgd'.
+'Fiche nagekeken, alles in (her)bestelling'.
 
 Extra werken:
 ${_extraWerkenTekst()}
@@ -353,6 +353,43 @@ ${_extraWerkenTekst()}
             KlantenficheStatusBalk(
               geselecteerd: klantStatus,
               onGekozen: (waarde) async {
+                if (waarde == klantStatus) return;
+
+                final huidigeStatus = klantStatus;
+
+                if (huidigeStatus == 'Opvolgen' && waarde == 'Actief') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Een klant op opvolgen kan niet terug naar actief.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (huidigeStatus == 'Afgewerkt' && waarde == 'Actief') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Een afgewerkte klant kan niet terug naar actief.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
+                if (huidigeStatus == 'Afgewerkt' && waarde == 'Opvolgen') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Een afgewerkte klant kan niet meer naar opvolgen.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  return;
+                }
+
                 if (waarde == 'Opvolgen' || waarde == 'Afgewerkt') {
                   final bevestigen = await showDialog<bool>(
                     context: context,
@@ -392,9 +429,7 @@ ${_extraWerkenTekst()}
                     },
                   );
 
-                  if (bevestigen != true) {
-                    return;
-                  }
+                  if (bevestigen != true) return;
                 }
 
                 setState(() {
