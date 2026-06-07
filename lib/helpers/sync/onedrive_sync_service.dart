@@ -9,12 +9,20 @@ import 'onedrive_auth_service.dart';
 
 class OneDriveSyncService {
   static const String _backupDatumKey = 'laatste_backup_datum';
+
+  static const String _lokaleWijzigingOpenstaandKey =
+      'lokale_wijziging_openstaand';
+
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
-  static DateTime? _laatsteLokaleWijziging;
 
-  static void registreerLokaleWijziging() {
-    _laatsteLokaleWijziging = DateTime.now();
+  static Future<void> registreerLokaleWijziging() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.setBool(
+      _lokaleWijzigingOpenstaandKey,
+      true,
+    );
   }
 
   Future<String> uploadBackup() async {
@@ -63,6 +71,11 @@ class OneDriveSyncService {
       await prefs.setString(
         _backupDatumKey,
         backupDatum,
+      );
+
+      await prefs.setBool(
+        _lokaleWijzigingOpenstaandKey,
+        false,
       );
 
       return 'BACKUP_OK';
@@ -369,6 +382,15 @@ class OneDriveSyncService {
   }
 
   Future<String> slimmeSync() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final lokaleWijzigingOpenstaand =
+        prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
+
+    if (lokaleWijzigingOpenstaand) {
+      return await uploadBackup();
+    }
+
     final lokaleDatumString = await lokaleBackupDatum();
     final oneDriveDatumString = await oneDriveBackupDatum();
 
@@ -388,14 +410,6 @@ class OneDriveSyncService {
     }
 
     if (oneDriveDatum.isAfter(lokaleDatum)) {
-      if (_laatsteLokaleWijziging != null) {
-        final verschil = DateTime.now().difference(_laatsteLokaleWijziging!);
-
-        if (verschil.inMinutes < 2) {
-          return await uploadBackup();
-        }
-      }
-
       return await downloadBackup();
     }
 

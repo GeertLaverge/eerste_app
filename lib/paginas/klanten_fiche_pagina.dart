@@ -160,8 +160,34 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       return 'Er zijn geen Extra werken uitgevoerd';
     }
 
-    var totaalMinuten = 0;
+    String tijdTekst(KlantenficheExtraWerk werk) {
+      if (werk.startUur == null ||
+          werk.startMinuut == null ||
+          werk.eindUur == null ||
+          werk.eindMinuut == null) {
+        return 'Geen tijd ingevuld';
+      }
 
+      final start =
+          '${werk.startUur!.toString().padLeft(2, '0')}:${werk.startMinuut!.toString().padLeft(2, '0')}';
+
+      final eind =
+          '${werk.eindUur!.toString().padLeft(2, '0')}:${werk.eindMinuut!.toString().padLeft(2, '0')}';
+
+      return '$start - $eind';
+    }
+
+    String duurTekst(int minuten) {
+      final uren = minuten ~/ 60;
+      final rest = minuten % 60;
+
+      if (uren == 0) return '$rest min';
+      if (rest == 0) return '$uren u';
+
+      return '$uren u $rest min';
+    }
+
+    var totaalMinuten = 0;
     final regels = <String>[];
 
     for (var i = 0; i < ingevuld.length; i++) {
@@ -169,34 +195,16 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       totaalMinuten += werk.aantalMinuten;
 
       regels.add('Extra werk ${i + 1}');
-      regels.add('Tijd: ${werk.tijdTekst}');
-      regels.add('Totaaltijd: ${werk.totaalTijdTekst}');
-
-      if (werk.omschrijving.trim().isNotEmpty) {
-        regels.add('Omschrijving werken: ${werk.omschrijving.trim()}');
-      } else {
-        regels.add('Omschrijving werken: niet ingevuld');
-      }
-
-      if (werk.gebruikteMaterialen.trim().isNotEmpty) {
-        regels.add('Gebruikte materialen: ${werk.gebruikteMaterialen.trim()}');
-      } else {
-        regels.add('Gebruikte materialen: niet ingevuld');
-      }
-
+      regels.add('Tijd: ${tijdTekst(werk)}');
+      regels.add('Totaaltijd: ${duurTekst(werk.aantalMinuten)}');
+      regels.add(
+          'Omschrijving werken: ${werk.omschrijving.trim().isEmpty ? 'niet ingevuld' : werk.omschrijving.trim()}');
+      regels.add(
+          'Gebruikte materialen: ${werk.gebruikteMaterialen.trim().isEmpty ? 'niet ingevuld' : werk.gebruikteMaterialen.trim()}');
       regels.add('');
     }
 
-    final totaalUren = totaalMinuten ~/ 60;
-    final restMinuten = totaalMinuten % 60;
-
-    final totaalTekst = totaalUren == 0
-        ? '$restMinuten min'
-        : restMinuten == 0
-            ? '$totaalUren u'
-            : '$totaalUren u $restMinuten min';
-
-    regels.add('Totale tijd extra werken: $totaalTekst');
+    regels.add('Totale tijd extra werken: ${duurTekst(totaalMinuten)}');
 
     return regels.join('\n');
   }
