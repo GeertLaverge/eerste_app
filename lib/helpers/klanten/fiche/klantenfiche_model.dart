@@ -30,7 +30,9 @@ class KlantenficheExtraWerk {
   int? startMinuut;
   int? eindUur;
   int? eindMinuut;
+
   String omschrijving;
+  String gebruikteMaterialen;
 
   KlantenficheExtraWerk({
     this.datum,
@@ -39,6 +41,7 @@ class KlantenficheExtraWerk {
     this.eindUur,
     this.eindMinuut,
     this.omschrijving = '',
+    this.gebruikteMaterialen = '',
   });
 
   int get aantalMinuten {
@@ -57,6 +60,37 @@ class KlantenficheExtraWerk {
     return eind - start;
   }
 
+  String get tijdTekst {
+    if (startUur == null ||
+        startMinuut == null ||
+        eindUur == null ||
+        eindMinuut == null) {
+      return 'Geen tijd ingevuld';
+    }
+
+    final start =
+        '${startUur!.toString().padLeft(2, '0')}:${startMinuut!.toString().padLeft(2, '0')}';
+
+    final eind =
+        '${eindUur!.toString().padLeft(2, '0')}:${eindMinuut!.toString().padLeft(2, '0')}';
+
+    return '$start - $eind';
+  }
+
+  String get totaalTijdTekst {
+    final minuten = aantalMinuten;
+
+    if (minuten <= 0) return '0 min';
+
+    final uren = minuten ~/ 60;
+    final rest = minuten % 60;
+
+    if (uren == 0) return '$rest min';
+    if (rest == 0) return '$uren u';
+
+    return '$uren u $rest min';
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'datum': datum?.toIso8601String(),
@@ -65,6 +99,7 @@ class KlantenficheExtraWerk {
       'eindUur': eindUur,
       'eindMinuut': eindMinuut,
       'omschrijving': omschrijving,
+      'gebruikteMaterialen': gebruikteMaterialen,
     };
   }
 
@@ -78,6 +113,7 @@ class KlantenficheExtraWerk {
       eindUur: json['eindUur'],
       eindMinuut: json['eindMinuut'],
       omschrijving: json['omschrijving'] ?? '',
+      gebruikteMaterialen: json['gebruikteMaterialen'] ?? '',
     );
   }
 }

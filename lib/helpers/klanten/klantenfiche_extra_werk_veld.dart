@@ -258,7 +258,47 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                     onChanged?.call();
                   },
                   decoration: InputDecoration(
-                    hintText: 'Omschrijving extra werk...',
+                    hintText: 'Omschrijving werken...',
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF0B7A3B),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: TextEditingController(
+                    text: werk.gebruikteMaterialen,
+                  )..selection = TextSelection.collapsed(
+                      offset: werk.gebruikteMaterialen.length,
+                    ),
+                  onChanged: (waarde) {
+                    werk.gebruikteMaterialen = waarde;
+                    onChanged?.call();
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Gebruikte materialen...',
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(

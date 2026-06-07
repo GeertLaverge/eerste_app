@@ -150,16 +150,55 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   }
 
   String _extraWerkenTekst() {
-    final ingevuld = extraWerken
-        .where((werk) => werk.omschrijving.trim().isNotEmpty)
-        .map((werk) => '- ${werk.omschrijving.trim()}')
-        .toList();
+    final ingevuld = extraWerken.where((werk) {
+      return werk.omschrijving.trim().isNotEmpty ||
+          werk.gebruikteMaterialen.trim().isNotEmpty ||
+          werk.aantalMinuten > 0;
+    }).toList();
 
     if (ingevuld.isEmpty) {
       return 'Er zijn geen Extra werken uitgevoerd';
     }
 
-    return ingevuld.join('\n');
+    var totaalMinuten = 0;
+
+    final regels = <String>[];
+
+    for (var i = 0; i < ingevuld.length; i++) {
+      final werk = ingevuld[i];
+      totaalMinuten += werk.aantalMinuten;
+
+      regels.add('Extra werk ${i + 1}');
+      regels.add('Tijd: ${werk.tijdTekst}');
+      regels.add('Totaaltijd: ${werk.totaalTijdTekst}');
+
+      if (werk.omschrijving.trim().isNotEmpty) {
+        regels.add('Omschrijving werken: ${werk.omschrijving.trim()}');
+      } else {
+        regels.add('Omschrijving werken: niet ingevuld');
+      }
+
+      if (werk.gebruikteMaterialen.trim().isNotEmpty) {
+        regels.add('Gebruikte materialen: ${werk.gebruikteMaterialen.trim()}');
+      } else {
+        regels.add('Gebruikte materialen: niet ingevuld');
+      }
+
+      regels.add('');
+    }
+
+    final totaalUren = totaalMinuten ~/ 60;
+    final restMinuten = totaalMinuten % 60;
+
+    final totaalTekst = totaalUren == 0
+        ? '$restMinuten min'
+        : restMinuten == 0
+            ? '$totaalUren u'
+            : '$totaalUren u $restMinuten min';
+
+    regels.add('Totale tijd extra werken: $totaalTekst');
+
+    return regels.join('\n');
   }
 
   Future<void> _verstuurOpvolgFicheNaarBureau() async {

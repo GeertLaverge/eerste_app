@@ -11,6 +11,11 @@ class OneDriveSyncService {
   static const String _backupDatumKey = 'laatste_backup_datum';
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
+  static DateTime? _laatsteLokaleWijziging;
+
+  static void registreerLokaleWijziging() {
+    _laatsteLokaleWijziging = DateTime.now();
+  }
 
   Future<String> uploadBackup() async {
     try {
@@ -383,6 +388,14 @@ class OneDriveSyncService {
     }
 
     if (oneDriveDatum.isAfter(lokaleDatum)) {
+      if (_laatsteLokaleWijziging != null) {
+        final verschil = DateTime.now().difference(_laatsteLokaleWijziging!);
+
+        if (verschil.inMinutes < 2) {
+          return await uploadBackup();
+        }
+      }
+
       return await downloadBackup();
     }
 
