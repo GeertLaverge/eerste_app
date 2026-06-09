@@ -1,6 +1,10 @@
 import 'agenda_tijd_helper.dart';
 
 class AgendaItem {
+  final String id;
+  final String updatedAt;
+  final String deletedAt;
+
   final String titel;
   final String type;
 
@@ -30,14 +34,14 @@ class AgendaItem {
   final bool heeftOverlap;
 
   final String homeWeergaveType;
-
   final int dagenVooraf;
-
   final String homeDatum;
-
   final int meldingVoorafMinuten;
 
   const AgendaItem({
+    this.id = '',
+    this.updatedAt = '',
+    this.deletedAt = '',
     required this.titel,
     required this.type,
     this.klantNr = '',
@@ -62,6 +66,30 @@ class AgendaItem {
     this.meldingVoorafMinuten = 60,
   });
 
+  String get syncId {
+    if (id.trim().isNotEmpty) return id;
+
+    return [
+      type,
+      titel,
+      klantNr,
+      naamKlant,
+      straatnaam,
+      huisNr,
+      gemeente,
+      postcode,
+      startUur,
+      startMinuut,
+      eindUur,
+      eindMinuut,
+      volledigeDag,
+    ].join('|').toLowerCase();
+  }
+
+  bool get isVerwijderd {
+    return deletedAt.trim().isNotEmpty;
+  }
+
   bool get heeftTijd {
     return startUur != null &&
         startMinuut != null &&
@@ -80,13 +108,8 @@ class AgendaItem {
   }
 
   String get tijdTekst {
-    if (volledigeDag) {
-      return '';
-    }
-
-    if (!heeftTijd) {
-      return '';
-    }
+    if (volledigeDag) return '';
+    if (!heeftTijd) return '';
 
     final start = AgendaTijdHelper.tijdTekst(
       uur: startUur!,
@@ -102,6 +125,9 @@ class AgendaItem {
   }
 
   AgendaItem copyWith({
+    String? id,
+    String? updatedAt,
+    String? deletedAt,
     bool? heeftOverlap,
     String? homeWeergaveType,
     int? dagenVooraf,
@@ -109,6 +135,9 @@ class AgendaItem {
     int? meldingVoorafMinuten,
   }) {
     return AgendaItem(
+      id: id ?? this.id,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
       titel: titel,
       type: type,
       klantNr: klantNr,
@@ -141,6 +170,9 @@ class AgendaItem {
     required int eindMinuut,
   }) {
     return AgendaItem(
+      id: id,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: deletedAt,
       titel: titel,
       type: type,
       klantNr: klantNr,
@@ -168,6 +200,9 @@ class AgendaItem {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
+      'updatedAt': updatedAt,
+      'deletedAt': deletedAt,
       'titel': titel,
       'type': type,
       'klantNr': klantNr,
@@ -196,6 +231,9 @@ class AgendaItem {
     Map<String, dynamic> json,
   ) {
     return AgendaItem(
+      id: json['id'] ?? '',
+      updatedAt: json['updatedAt'] ?? '',
+      deletedAt: json['deletedAt'] ?? '',
       titel: json['titel'] ?? '',
       type: json['type'] ?? 'afspraak',
       klantNr: json['klantNr'] ?? '',
