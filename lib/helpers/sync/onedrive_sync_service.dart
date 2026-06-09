@@ -7,6 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'onedrive_auth_service.dart';
 
+import '../Agenda/agenda_item.dart';
+import '../klanten/fiche/klantenfiche_model.dart';
+import 'sync_merge_service.dart';
+
 class OneDriveSyncService {
   static const String _backupDatumKey = 'laatste_backup_datum';
 
@@ -37,18 +41,108 @@ class OneDriveSyncService {
       final prefs = await SharedPreferences.getInstance();
       final backupDatum = DateTime.now().toIso8601String();
 
+      const url =
+          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
+
+      Map<String, dynamic> cloudBackup = {};
+
+      final cloudResponse = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (cloudResponse.statusCode == 200) {
+        cloudBackup = jsonDecode(cloudResponse.body) as Map<String, dynamic>;
+      }
+
+      Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) return {};
+
+        final data = jsonDecode(jsonString) as Map<String, dynamic>;
+
+        return data.map((datumKey, lijst) {
+          final items = (lijst as List<dynamic>)
+              .map(
+                (item) => AgendaItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList();
+
+          return MapEntry(datumKey, items);
+        });
+      }
+
+      String encodeAgenda(Map<String, List<AgendaItem>> data) {
+        final jsonMap = data.map((datumKey, items) {
+          return MapEntry(
+            datumKey,
+            items.map((item) => item.toJson()).toList(),
+          );
+        });
+
+        return jsonEncode(jsonMap);
+      }
+
+      List<KlantenficheModel> decodeKlanten(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) return [];
+
+        final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+        return lijst
+            .map(
+              (item) => KlantenficheModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList();
+      }
+
+      String encodeKlanten(List<KlantenficheModel> fiches) {
+        return jsonEncode(
+          fiches.map((fiche) => fiche.toJson()).toList(),
+        );
+      }
+
+      final lokaleAgenda = decodeAgenda(
+        prefs.getString('agenda_items_nieuw'),
+      );
+
+      final cloudAgenda = decodeAgenda(
+        cloudBackup['agendaItems'] is String
+            ? cloudBackup['agendaItems']
+            : null,
+      );
+
+      final mergedAgenda = SyncMergeService.mergeAgendaMap(
+        lokaleAgenda,
+        cloudAgenda,
+      );
+
+      final lokaleKlanten = decodeKlanten(
+        prefs.getString('klanten_fiches'),
+      );
+
+      final cloudKlanten = decodeKlanten(
+        cloudBackup['klantenFiches'] is String
+            ? cloudBackup['klantenFiches']
+            : null,
+      );
+
+      final mergedKlanten = SyncMergeService.mergeKlantenFiches(
+        lokaleKlanten,
+        cloudKlanten,
+      );
+
       final backup = {
         'backupDatum': backupDatum,
-        'agendaItems': prefs.getString('agenda_items_nieuw'),
+        'agendaItems': encodeAgenda(mergedAgenda),
         'dagtaakTemplates': prefs.getString('dagtaak_templates'),
         'leveranciers': prefs.getString('leveranciers_lijst'),
-        'klantenFiches': prefs.getString('klanten_fiches'),
+        'klantenFiches': encodeKlanten(mergedKlanten),
       };
-
-      final inhoud = jsonEncode(backup);
-
-      final url =
-          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
 
       final response = await http.put(
         Uri.parse(url),
@@ -56,12 +150,22 @@ class OneDriveSyncService {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: inhoud,
+        body: jsonEncode(backup),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
         return 'BACKUP_FOUT ${response.statusCode}\n${response.body}';
       }
+
+      await prefs.setString(
+        'agenda_items_nieuw',
+        encodeAgenda(mergedAgenda),
+      );
+
+      await prefs.setString(
+        'klanten_fiches',
+        encodeKlanten(mergedKlanten),
+      );
 
       final fotoResultaat = await _uploadKlantenFotos(token);
 
@@ -75,7 +179,7 @@ class OneDriveSyncService {
         false,
       );
 
-      laatsteSyncActie = 'Backup wordt geüpload...';
+      laatsteSyncActie = 'Merge upload uitgevoerd';
 
       if (!fotoResultaat.startsWith('FOTOS_OK')) {
         return 'BACKUP_OK_FOTOS_LATER\n$fotoResultaat';
@@ -208,7 +312,7 @@ class OneDriveSyncService {
         return token;
       }
 
-      final url =
+      const url =
           'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
 
       final response = await http.get(
@@ -223,45 +327,112 @@ class OneDriveSyncService {
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-
       final prefs = await SharedPreferences.getInstance();
 
-      final agendaItems = data['agendaItems'];
+      Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) return {};
+
+        final data = jsonDecode(jsonString) as Map<String, dynamic>;
+
+        return data.map((datumKey, lijst) {
+          final items = (lijst as List<dynamic>)
+              .map(
+                (item) => AgendaItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList();
+
+          return MapEntry(datumKey, items);
+        });
+      }
+
+      String encodeAgenda(Map<String, List<AgendaItem>> data) {
+        final jsonMap = data.map((datumKey, items) {
+          return MapEntry(
+            datumKey,
+            items.map((item) => item.toJson()).toList(),
+          );
+        });
+
+        return jsonEncode(jsonMap);
+      }
+
+      List<KlantenficheModel> decodeKlanten(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) return [];
+
+        final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+        return lijst
+            .map(
+              (item) => KlantenficheModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList();
+      }
+
+      String encodeKlanten(List<KlantenficheModel> fiches) {
+        return jsonEncode(
+          fiches.map((fiche) => fiche.toJson()).toList(),
+        );
+      }
+
+      final lokaleAgenda = decodeAgenda(
+        prefs.getString('agenda_items_nieuw'),
+      );
+
+      final cloudAgenda = decodeAgenda(
+        data['agendaItems'] is String ? data['agendaItems'] : null,
+      );
+
+      final mergedAgenda = SyncMergeService.mergeAgendaMap(
+        lokaleAgenda,
+        cloudAgenda,
+      );
+
+      final lokaleKlanten = decodeKlanten(
+        prefs.getString('klanten_fiches'),
+      );
+
+      final cloudKlanten = decodeKlanten(
+        data['klantenFiches'] is String ? data['klantenFiches'] : null,
+      );
+
+      final mergedKlanten = SyncMergeService.mergeKlantenFiches(
+        lokaleKlanten,
+        cloudKlanten,
+      );
+
+      await prefs.setString(
+        'agenda_items_nieuw',
+        encodeAgenda(mergedAgenda),
+      );
+
+      await prefs.setString(
+        'klanten_fiches',
+        encodeKlanten(mergedKlanten),
+      );
+
       final dagtaakTemplates = data['dagtaakTemplates'];
       final leveranciers = data['leveranciers'];
-      final klantenFiches = data['klantenFiches'];
       final backupDatum = data['backupDatum'];
-
-      if (agendaItems is String) {
-        await prefs.setString('agenda_items_nieuw', agendaItems);
-      }
 
       if (dagtaakTemplates is String) {
         await prefs.setString('dagtaak_templates', dagtaakTemplates);
       }
 
       if (leveranciers is String) {
-        await prefs.setString(
-          'leveranciers_lijst',
-          leveranciers,
-        );
-      }
-
-      if (klantenFiches is String) {
-        await prefs.setString(
-          'klanten_fiches',
-          klantenFiches,
-        );
+        await prefs.setString('leveranciers_lijst', leveranciers);
       }
 
       if (backupDatum is String) {
-        await prefs.setString(
-          _backupDatumKey,
-          backupDatum,
-        );
+        await prefs.setString(_backupDatumKey, backupDatum);
       }
 
       await _downloadKlantenFotos(token);
+
+      laatsteSyncActie = 'Merge download uitgevoerd';
 
       return 'IMPORT_OK';
     } catch (e) {
@@ -463,7 +634,7 @@ $laatsteSyncActie
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
-      laatsteSyncActie = 'Lokaal nieuwer, upload uitgevoerd';
+      laatsteSyncActie = 'Lokaal nieuwer, merge upload uitgevoerd';
       return await uploadBackup();
     }
 

@@ -187,6 +187,9 @@ class KlantenficheFoto {
 class KlantenficheModel {
   final String id;
 
+  final String updatedAt;
+  final String deletedAt;
+
   final String naam;
   final String klantNr;
 
@@ -238,11 +241,15 @@ class KlantenficheModel {
     this.opvolgTaken = '',
     this.opvolgFicheVerstuurdNaarBureau = false,
     this.klaarVoorNieuwePlanning = false,
+    this.updatedAt = '',
+    this.deletedAt = '',
   });
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'updatedAt': updatedAt,
+      'deletedAt': deletedAt,
       'naam': naam,
       'klantNr': klantNr,
       'straatnaam': straatnaam,
@@ -318,6 +325,8 @@ class KlantenficheModel {
       opvolgFicheVerstuurdNaarBureau:
           json['opvolgFicheVerstuurdNaarBureau'] ?? false,
       klaarVoorNieuwePlanning: json['klaarVoorNieuwePlanning'] ?? false,
+      updatedAt: json['updatedAt'] ?? '',
+      deletedAt: json['deletedAt'] ?? '',
     );
   }
 }
