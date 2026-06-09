@@ -15,6 +15,7 @@ class OneDriveSyncService {
 
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
+  static String laatsteSyncActie = 'Nog geen sync uitgevoerd';
 
   static Future<void> registreerLokaleWijziging() async {
     final prefs = await SharedPreferences.getInstance();
@@ -73,6 +74,8 @@ class OneDriveSyncService {
         _lokaleWijzigingOpenstaandKey,
         false,
       );
+
+      laatsteSyncActie = 'Backup wordt geüpload...';
 
       if (!fotoResultaat.startsWith('FOTOS_OK')) {
         return 'BACKUP_OK_FOTOS_LATER\n$fotoResultaat';
@@ -401,6 +404,9 @@ $openstaand
 
 BACKUP BEZIG:
 $_backupBezig
+
+LAATSTE SYNC ACTIE:
+$laatsteSyncActie
 ''';
   }
 
@@ -409,6 +415,7 @@ $_backupBezig
 
     if (_backupBezig) {
       _backupOpnieuwNodig = true;
+      laatsteSyncActie = 'Upload bezig, geen download uitgevoerd';
       return 'SYNC_UPLOAD_BEZIG';
     }
 
@@ -416,6 +423,7 @@ $_backupBezig
         prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
     if (lokaleWijzigingOpenstaand) {
+      laatsteSyncActie = 'Lokale wijziging openstaand, upload uitgevoerd';
       return await uploadBackup();
     }
 
@@ -423,10 +431,12 @@ $_backupBezig
     final oneDriveDatumString = await oneDriveBackupDatum();
 
     if (oneDriveDatumString == null) {
+      laatsteSyncActie = 'Geen OneDrive datum, upload uitgevoerd';
       return await uploadBackup();
     }
 
     if (lokaleDatumString == null) {
+      laatsteSyncActie = 'Geen lokale datum, download uitgevoerd';
       return await downloadBackup();
     }
 
@@ -434,6 +444,7 @@ $_backupBezig
     final oneDriveDatum = DateTime.tryParse(oneDriveDatumString);
 
     if (lokaleDatum == null || oneDriveDatum == null) {
+      laatsteSyncActie = 'Datumfout, geen sync uitgevoerd';
       return 'SYNC_DATUM_FOUT';
     }
 
@@ -442,16 +453,21 @@ $_backupBezig
           prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
       if (lokaleWijzigingOpenstaand) {
+        laatsteSyncActie =
+            'OneDrive nieuwer, maar lokale wijziging openstaand, upload uitgevoerd';
         return await uploadBackup();
       }
 
+      laatsteSyncActie = 'OneDrive nieuwer, download uitgevoerd';
       return await downloadBackup();
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
+      laatsteSyncActie = 'Lokaal nieuwer, upload uitgevoerd';
       return await uploadBackup();
     }
 
+    laatsteSyncActie = 'Geen wijziging, niets uitgevoerd';
     return 'SYNC_OK_GEEN_WIJZIGING';
   }
 }
