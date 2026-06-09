@@ -6,7 +6,6 @@ import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
-import 'klanten_pagina.dart';
 
 class HomePaginaNieuw extends StatefulWidget {
   const HomePaginaNieuw({
@@ -22,25 +21,36 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
   Timer? _syncTimer;
   static const achtergrond = Color(0xFFF7F8FA);
 
-  String syncMelding = 'Nog geen OneDrive test uitgevoerd';
+  String syncMelding = 'OneDrive sync wordt gecontroleerd...';
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      OneDriveSyncService().slimmeSync();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final melding = await OneDriveSyncService().slimmeSync();
+      final debug = await OneDriveSyncService().syncDebugInfo();
+
+      if (!mounted) return;
+
+      setState(() {
+        syncMelding = '$melding\n\n$debug';
+      });
     });
 
     _syncTimer = Timer.periodic(
       const Duration(minutes: 3),
       (_) async {
-        await OneDriveSyncService().slimmeSync();
+        final melding = await OneDriveSyncService().slimmeSync();
+        final debug = await OneDriveSyncService().syncDebugInfo();
 
-        if (mounted) {
-          setState(() {});
-        }
+        if (!mounted) return;
+
+        setState(() {
+          syncMelding = '$melding\n\n$debug';
+        });
       },
     );
   }
@@ -59,22 +69,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     });
 
     final melding = await OneDriveSyncService().uploadBackup();
-
-    final datum = await OneDriveSyncService().lokaleBackupDatum();
-
-    print('LOKALE BACKUP DATUM: $datum');
-    final oneDriveDatum = await OneDriveSyncService().oneDriveBackupDatum();
-
-    print('ONEDRIVE BACKUP DATUM: $oneDriveDatum');
+    final debug = await OneDriveSyncService().syncDebugInfo();
 
     if (!mounted) return;
 
     setState(() {
-      if (melding == 'BACKUP_OK') {
-        syncMelding = 'LOKAAL:\n$datum\n\nONEDRIVE:\n$oneDriveDatum';
-      } else {
-        syncMelding = melding;
-      }
+      syncMelding = '$melding\n\n$debug';
     });
   }
 
@@ -84,15 +84,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     });
 
     final melding = await OneDriveSyncService().downloadBackup();
+    final debug = await OneDriveSyncService().syncDebugInfo();
 
     if (!mounted) return;
 
     setState(() {
-      if (melding == 'IMPORT_OK') {
-        syncMelding = '✅ OneDrive backup geladen';
-      } else {
-        syncMelding = melding;
-      }
+      syncMelding = '$melding\n\n$debug';
     });
   }
 
@@ -102,18 +99,18 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     });
 
     final melding = await OneDriveSyncService().slimmeSync();
+    final debug = await OneDriveSyncService().syncDebugInfo();
 
     if (!mounted) return;
 
     setState(() {
-      syncMelding = melding;
+      syncMelding = '$melding\n\n$debug';
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final planningVandaag = HomePlanningHelper.planningVandaag();
-
     final dagTakenVandaag = HomePlanningHelper.dagTakenVandaag();
 
     return Scaffold(
@@ -138,6 +135,25 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                       children: [
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          child: Text(
+                            syncMelding,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                         FutureBuilder<List<List<dynamic>>>(
                           future: Future.wait([
                             planningVandaag,

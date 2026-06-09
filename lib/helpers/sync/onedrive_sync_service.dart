@@ -381,6 +381,29 @@ class OneDriveSyncService {
     }
   }
 
+  Future<String> syncDebugInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final lokaal = await lokaleBackupDatum();
+    final oneDrive = await oneDriveBackupDatum();
+
+    final openstaand = prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
+
+    return '''
+LOKAAL:
+$lokaal
+
+ONEDRIVE:
+$oneDrive
+
+LOKALE WIJZIGING OPENSTAAND:
+$openstaand
+
+BACKUP BEZIG:
+$_backupBezig
+''';
+  }
+
   Future<String> slimmeSync() async {
     final prefs = await SharedPreferences.getInstance();
 
