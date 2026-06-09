@@ -67,6 +67,8 @@ class KlantenficheService {
 
     final fiche = KlantenficheModel(
       id: ficheId,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
       naam: naam,
       klantNr: klantNr,
       straatnaam: straatnaam,
