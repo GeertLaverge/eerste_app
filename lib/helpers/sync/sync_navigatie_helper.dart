@@ -7,7 +7,7 @@ class SyncNavigatieHelper {
     required BuildContext context,
     required Widget pagina,
   }) async {
-    OneDriveSyncService().downloadBackup();
+    await OneDriveSyncService().slimmeSync();
 
     if (!context.mounted) return;
 
@@ -22,7 +22,9 @@ class SyncNavigatieHelper {
   static Future<void> terugNaarHomeMetUpload({
     required BuildContext context,
   }) async {
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    await OneDriveSyncService().uploadBackupOpAchtergrond();
+
+    if (!context.mounted) return;
 
     Navigator.pushNamedAndRemoveUntil(
       context,

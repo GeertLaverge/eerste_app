@@ -134,11 +134,16 @@ class AgendaSleepAfhandeling {
       );
     }
 
-    return AgendaRepository.verplaats(
-      oudeDag: oudeDag,
-      nieuweDag: nieuweDag,
-      item: nieuwItem,
+    final eerstVerwijderd = await AgendaRepository.verwijder(
+      dag: oudeDag,
+      item: item,
       itemsPerDag: itemsPerDag,
+    );
+
+    return AgendaRepository.voegToe(
+      dag: nieuweDag,
+      item: nieuwItem,
+      itemsPerDag: eerstVerwijderd,
     );
   }
 }
