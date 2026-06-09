@@ -384,6 +384,11 @@ class OneDriveSyncService {
   Future<String> slimmeSync() async {
     final prefs = await SharedPreferences.getInstance();
 
+    if (_backupBezig) {
+      _backupOpnieuwNodig = true;
+      return 'SYNC_UPLOAD_BEZIG';
+    }
+
     final lokaleWijzigingOpenstaand =
         prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
@@ -410,11 +415,18 @@ class OneDriveSyncService {
     }
 
     if (oneDriveDatum.isAfter(lokaleDatum)) {
+      final lokaleWijzigingOpenstaand =
+          prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
+
+      if (lokaleWijzigingOpenstaand) {
+        return await uploadBackup();
+      }
+
       return await downloadBackup();
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
-      return 'SYNC_LOKAAL_NIEUWER_GEEN_AUTO_UPLOAD';
+      return await uploadBackup();
     }
 
     return 'SYNC_OK_GEEN_WIJZIGING';
