@@ -64,10 +64,6 @@ class OneDriveSyncService {
 
       final fotoResultaat = await _uploadKlantenFotos(token);
 
-      if (!fotoResultaat.startsWith('FOTOS_OK')) {
-        return fotoResultaat;
-      }
-
       await prefs.setString(
         _backupDatumKey,
         backupDatum,
@@ -77,6 +73,10 @@ class OneDriveSyncService {
         _lokaleWijzigingOpenstaandKey,
         false,
       );
+
+      if (!fotoResultaat.startsWith('FOTOS_OK')) {
+        return 'BACKUP_OK_FOTOS_LATER\n$fotoResultaat';
+      }
 
       return 'BACKUP_OK';
     } catch (e) {

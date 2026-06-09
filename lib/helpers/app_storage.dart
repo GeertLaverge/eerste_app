@@ -16,7 +16,8 @@ class AppStorage {
 
   static Future<void> _syncBackup() async {
     await OneDriveSyncService.registreerLokaleWijziging();
-    await OneDriveSyncService().uploadBackupOpAchtergrond();
+
+    OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   // ------------------------------------------------------------
