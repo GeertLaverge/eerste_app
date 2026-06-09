@@ -22,7 +22,7 @@ class SyncNavigatieHelper {
   static Future<void> terugNaarHomeMetUpload({
     required BuildContext context,
   }) async {
-    await OneDriveSyncService().uploadBackupOpAchtergrond();
+    await OneDriveSyncService().slimmeSync();
 
     if (!context.mounted) return;
 
