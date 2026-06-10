@@ -409,6 +409,7 @@ class OneDriveSyncService {
 
       final dagtaakTemplates = data['dagtaakTemplates'];
       final leveranciers = data['leveranciers'];
+      final klantenficheLocks = data['klantenficheLocks'];
       final backupDatum = data['backupDatum'];
 
       if (dagtaakTemplates is String) {
@@ -417,6 +418,12 @@ class OneDriveSyncService {
 
       if (leveranciers is String) {
         await prefs.setString('leveranciers_lijst', leveranciers);
+      }
+      if (klantenficheLocks is String) {
+        await prefs.setString(
+          'klantenfiche_locks',
+          klantenficheLocks,
+        );
       }
 
       if (backupDatum is String) {
