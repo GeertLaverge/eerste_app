@@ -157,6 +157,24 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     });
   }
 
+  Map<String, List<AgendaItem>> zichtbareAgendaItems(
+    Map<String, List<AgendaItem>> bron,
+  ) {
+    final zichtbaar = <String, List<AgendaItem>>{};
+
+    bron.forEach((datumKey, items) {
+      final lijst = items.where((item) {
+        return !item.isVerwijderd;
+      }).toList();
+
+      if (lijst.isNotEmpty) {
+        zichtbaar[datumKey] = lijst;
+      }
+    });
+
+    return zichtbaar;
+  }
+
   Future<void> bewaarFilters() async {
     await AppStorage.bewaarAgendaFilters(
       {
@@ -590,8 +608,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   @override
   Widget build(BuildContext context) {
+    final zichtbareAgenda = zichtbareAgendaItems(
+      agendaItems,
+    );
+
     final zichtbareItems = AgendaFilterHelper.gefilterdeItems(
-      itemsPerDag: agendaItems,
+      itemsPerDag: zichtbareAgenda,
       toonPlanning: filters.toonPlanning,
       toonOpvolging: filters.toonOpvolging,
       toonNadienst: filters.toonNadienst,
@@ -792,7 +814,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                   ),
                   const SizedBox(width: 8),
                   AgendaInTePlannenKnop(
-                    items: agendaItems.values.expand((e) => e).toList(),
+                    items: zichtbareAgenda.values.expand((e) => e).toList(),
                   ),
                   const Spacer(),
                   AgendaOnderbalkKnoppen.weergave(

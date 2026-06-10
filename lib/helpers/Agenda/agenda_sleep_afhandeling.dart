@@ -127,9 +127,15 @@ class AgendaSleepAfhandeling {
     }
 
     if (actie.actie == AgendaSleepActie.kopieren) {
+      final kopieItem = nieuwItem.copyWith(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        updatedAt: DateTime.now().toIso8601String(),
+        deletedAt: '',
+      );
+
       return AgendaRepository.voegToe(
         dag: nieuweDag,
-        item: nieuwItem,
+        item: kopieItem,
         itemsPerDag: itemsPerDag,
       );
     }
