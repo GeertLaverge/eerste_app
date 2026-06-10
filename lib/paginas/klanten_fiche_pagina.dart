@@ -12,8 +12,6 @@ import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 import '../helpers/klanten/fotos/klantenfiche_foto_blok.dart';
 import '../helpers/klanten/fotos/mail/klantenfiche_foto_mail_service.dart';
-import '../helpers/klanten/fiche/klantenfiche_lock_service.dart';
-import 'dart:async';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -32,8 +30,6 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   String datumAfgewerkt = '';
 
   late final String ficheId;
-
-  Timer? _lockTimer;
 
   final naamController = TextEditingController();
   final straatController = TextEditingController();
@@ -106,24 +102,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     opvolgTakenController.text = fiche.opvolgTaken;
     opvolgFicheVerstuurdNaarBureau = fiche.opvolgFicheVerstuurdNaarBureau;
     klaarVoorNieuwePlanning = fiche.klaarVoorNieuwePlanning;
-
-    _lockTimer = Timer.periodic(
-      const Duration(seconds: 30),
-      (_) {
-        KlantenficheLockService.vernieuwLock(
-          ficheId,
-        );
-      },
-    );
   }
 
   @override
   void dispose() {
-    _lockTimer?.cancel();
-    KlantenficheLockService.verwijderLock(
-      ficheId,
-    );
-
     naamController.dispose();
     klantNrController.dispose();
     straatController.dispose();
@@ -362,10 +344,6 @@ ${_extraWerkenTekst()}
               titel: titelNaam,
               onTerug: () async {
                 await automatischBewaren();
-
-                await KlantenficheLockService.verwijderLock(
-                  ficheId,
-                );
 
                 if (!mounted) return;
 

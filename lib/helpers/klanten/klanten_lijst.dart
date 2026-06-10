@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../paginas/klanten_fiche_pagina.dart';
 import 'fiche/klantenfiche_model.dart';
 import 'fiche/klantenfiche_repository.dart';
-import 'fiche/klantenfiche_lock_service.dart';
 
 class KlantenLijst extends StatefulWidget {
   final String klantStatus;
@@ -146,26 +145,6 @@ class _KlantenLijstState extends State<KlantenLijst> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
                 onTap: () async {
-                  final magOpenen =
-                      await KlantenficheLockService.kanFicheOpenenEnLocken(
-                    klant.id,
-                  );
-
-                  if (!magOpenen) {
-                    if (!context.mounted) return;
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Deze klantenfiche is momenteel in gebruik op een ander toestel.',
-                        ),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-
-                    return;
-                  }
-
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
