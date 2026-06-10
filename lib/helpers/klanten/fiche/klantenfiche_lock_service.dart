@@ -35,7 +35,7 @@ class KlantenficheLockService {
     );
 
     await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    await OneDriveSyncService().uploadBackup();
   }
 
   static bool _isLockNogGeldig(
