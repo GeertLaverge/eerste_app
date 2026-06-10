@@ -38,9 +38,7 @@ class SyncMergeService {
       }
     }
 
-    return resultaat.values.where((item) {
-      return !item.isVerwijderd;
-    }).toList();
+    return resultaat.values.toList();
   }
 
   static Map<String, List<AgendaItem>> mergeAgendaMap(
@@ -104,8 +102,6 @@ class SyncMergeService {
       }
     }
 
-    return resultaat.values.where((fiche) {
-      return fiche.deletedAt.trim().isEmpty;
-    }).toList();
+    return resultaat.values.toList();
   }
 }

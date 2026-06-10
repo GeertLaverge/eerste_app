@@ -35,9 +35,15 @@ class AgendaSleepService {
     required AgendaItem item,
     required Map<String, List<AgendaItem>> itemsPerDag,
   }) {
+    final kopieItem = item.copyWith(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
+    );
+
     return AgendaToevoegService.voegItemToe(
       dag: nieuweDag,
-      nieuwItem: item,
+      nieuwItem: kopieItem,
       itemsPerDag: itemsPerDag,
     );
   }

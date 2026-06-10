@@ -242,9 +242,20 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       return;
     }
 
+    final nu = DateTime.now().toIso8601String();
+
+    final bestaandId = widget.bestaandItem?.id ?? '';
+
+    final itemId = bestaandId.trim().isNotEmpty
+        ? bestaandId
+        : DateTime.now().microsecondsSinceEpoch.toString();
+
     Navigator.pop(
       context,
       AgendaItem(
+        id: itemId,
+        updatedAt: nu,
+        deletedAt: '',
         titel: titel,
         type: type,
         meldingVoorafMinuten: switch (meldingVooraf) {

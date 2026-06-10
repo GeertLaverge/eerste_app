@@ -57,6 +57,8 @@ class AgendaKlantPlanningDropService {
 
     final aangepasteFiche = KlantenficheModel(
       id: gevonden.id,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: gevonden.deletedAt,
       naam: gevonden.naam,
       klantNr: gevonden.klantNr,
       straatnaam: gevonden.straatnaam,

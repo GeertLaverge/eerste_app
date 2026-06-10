@@ -3,7 +3,14 @@ import 'agenda_item.dart';
 import 'agenda_overlap_helper.dart';
 
 class AgendaVerplaatsService {
-  static bool zelfdeItem(AgendaItem a, AgendaItem b) {
+  static bool zelfdeItem(
+    AgendaItem a,
+    AgendaItem b,
+  ) {
+    if (a.id.trim().isNotEmpty && b.id.trim().isNotEmpty) {
+      return a.id == b.id;
+    }
+
     return a.titel == b.titel &&
         a.type == b.type &&
         a.startUur == b.startUur &&
@@ -34,7 +41,9 @@ class AgendaVerplaatsService {
 
     return AgendaOverlapHelper.overlapMelding(
       nieuwItem: item,
-      bestaandeItems: bestaandeItems,
+      bestaandeItems: bestaandeItems.where((item) {
+        return !item.isVerwijderd;
+      }).toList(),
     );
   }
 
@@ -69,7 +78,12 @@ class AgendaVerplaatsService {
       kopie[nieuweKey] ?? [],
     );
 
-    nieuweItems.add(item);
+    final verplaatstItem = item.copyWith(
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
+    );
+
+    nieuweItems.add(verplaatstItem);
     kopie[nieuweKey] = nieuweItems;
 
     return kopie;

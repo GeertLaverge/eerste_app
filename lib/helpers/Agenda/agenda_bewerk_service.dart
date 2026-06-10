@@ -7,6 +7,10 @@ class AgendaBewerkService {
     AgendaItem a,
     AgendaItem b,
   ) {
+    if (a.id.trim().isNotEmpty && b.id.trim().isNotEmpty) {
+      return a.id == b.id;
+    }
+
     return a.titel == b.titel &&
         a.type == b.type &&
         a.startUur == b.startUur &&
@@ -28,17 +32,15 @@ class AgendaBewerkService {
       itemsPerDag[datumKey] ?? [],
     );
 
-    final index = bestaandeItems.indexWhere(
+    bestaandeItems.removeWhere(
       (item) => zelfdeItem(item, oudItem),
     );
 
-    if (index >= 0) {
-      bestaandeItems.removeAt(index);
-    }
-
     return AgendaOverlapHelper.overlapMelding(
       nieuwItem: nieuwItem,
-      bestaandeItems: bestaandeItems,
+      bestaandeItems: bestaandeItems.where((item) {
+        return !item.isVerwijderd;
+      }).toList(),
     );
   }
 
@@ -62,8 +64,16 @@ class AgendaBewerkService {
       (item) => zelfdeItem(item, oudItem),
     );
 
+    final aangepastItem = nieuwItem.copyWith(
+      id: oudItem.id,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
+    );
+
     if (index >= 0) {
-      items[index] = nieuwItem;
+      items[index] = aangepastItem;
+    } else {
+      items.add(aangepastItem);
     }
 
     kopie[datumKey] = items;
@@ -90,15 +100,20 @@ class AgendaBewerkService {
       (bestaand) => zelfdeItem(bestaand, item),
     );
 
+    final nu = DateTime.now().toIso8601String();
+
+    final verwijderdItem = item.copyWith(
+      updatedAt: nu,
+      deletedAt: nu,
+    );
+
     if (index >= 0) {
-      items.removeAt(index);
+      items[index] = verwijderdItem;
+    } else {
+      items.add(verwijderdItem);
     }
 
-    if (items.isEmpty) {
-      kopie.remove(datumKey);
-    } else {
-      kopie[datumKey] = items;
-    }
+    kopie[datumKey] = items;
 
     return kopie;
   }

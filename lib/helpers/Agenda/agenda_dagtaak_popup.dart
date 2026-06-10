@@ -283,7 +283,18 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
   }
 
   AgendaItem maakItem() {
+    final nu = DateTime.now().toIso8601String();
+
+    final bestaandId = widget.bestaandItem?.id ?? '';
+
+    final itemId = bestaandId.trim().isNotEmpty
+        ? bestaandId
+        : DateTime.now().microsecondsSinceEpoch.toString();
+
     return AgendaItem(
+      id: itemId,
+      updatedAt: nu,
+      deletedAt: '',
       titel: naamController.text.trim(),
       type: 'dagtaak',
       volledigeDag: !heeftTijd,
@@ -361,6 +372,9 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
     Navigator.pop(
       context,
       AgendaItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        updatedAt: DateTime.now().toIso8601String(),
+        deletedAt: '',
         titel: template.naam,
         type: 'dagtaak',
         volledigeDag: !template.heeftTijd,

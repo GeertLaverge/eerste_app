@@ -94,10 +94,9 @@ class AppStorage {
   // NIEUWE AGENDA ITEMS
   // ------------------------------------------------------------
 
-  static Future<Map<String, List<AgendaItem>>> laadAgendaItemsNieuw() async {
-    final prefs = await openBox();
-    final jsonString = prefs.getString(_agendaItemsNieuwKey);
-
+  static Map<String, List<AgendaItem>> _decodeAgendaItems(
+    String? jsonString,
+  ) {
     if (jsonString == null || jsonString.isEmpty) {
       return {};
     }
@@ -106,18 +105,20 @@ class AppStorage {
 
     return data.map((datumKey, lijst) {
       final items = (lijst as List<dynamic>)
-          .map((item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+            (item) => AgendaItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList();
 
       return MapEntry(datumKey, items);
     });
   }
 
-  static Future<void> bewaarAgendaItemsNieuw(
+  static String encodeAgendaItemsVoorSync(
     Map<String, List<AgendaItem>> itemsPerDag,
-  ) async {
-    final prefs = await openBox();
-
+  ) {
     final data = itemsPerDag.map((datumKey, items) {
       return MapEntry(
         datumKey,
@@ -125,12 +126,58 @@ class AppStorage {
       );
     });
 
+    return jsonEncode(data);
+  }
+
+  static Future<Map<String, List<AgendaItem>>>
+      laadAgendaItemsNieuwVoorSync() async {
+    final prefs = await openBox();
+
+    return _decodeAgendaItems(
+      prefs.getString(_agendaItemsNieuwKey),
+    );
+  }
+
+  static Future<Map<String, List<AgendaItem>>> laadAgendaItemsNieuw() async {
+    final data = await laadAgendaItemsNieuwVoorSync();
+
+    final zichtbaar = <String, List<AgendaItem>>{};
+
+    data.forEach((datumKey, items) {
+      final zichtbareItems = items.where((item) {
+        return !item.isVerwijderd;
+      }).toList();
+
+      if (zichtbareItems.isNotEmpty) {
+        zichtbaar[datumKey] = zichtbareItems;
+      }
+    });
+
+    return zichtbaar;
+  }
+
+  static Future<void> bewaarAgendaItemsNieuw(
+    Map<String, List<AgendaItem>> itemsPerDag,
+  ) async {
+    final prefs = await openBox();
+
     await prefs.setString(
       _agendaItemsNieuwKey,
-      jsonEncode(data),
+      encodeAgendaItemsVoorSync(itemsPerDag),
     );
 
     await _syncBackup();
+  }
+
+  static Future<void> bewaarAgendaItemsNieuwVoorSync(
+    Map<String, List<AgendaItem>> itemsPerDag,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _agendaItemsNieuwKey,
+      encodeAgendaItemsVoorSync(itemsPerDag),
+    );
   }
 
   // ------------------------------------------------------------
@@ -165,5 +212,16 @@ class AppStorage {
     );
 
     await _syncBackup();
+  }
+
+  static Future<void> bewaarKlantenFichesVoorSync(
+    List<Map<String, dynamic>> klanten,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _klantenFichesKey,
+      jsonEncode(klanten),
+    );
   }
 }

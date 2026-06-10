@@ -10,6 +10,7 @@ import 'onedrive_auth_service.dart';
 import '../Agenda/agenda_item.dart';
 import '../klanten/fiche/klantenfiche_model.dart';
 import 'sync_merge_service.dart';
+import '../app_storage.dart';
 
 class OneDriveSyncService {
   static const String _backupDatumKey = 'laatste_backup_datum';
@@ -106,9 +107,7 @@ class OneDriveSyncService {
         );
       }
 
-      final lokaleAgenda = decodeAgenda(
-        prefs.getString('agenda_items_nieuw'),
-      );
+      final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
       final cloudAgenda = decodeAgenda(
         cloudBackup['agendaItems'] is String
@@ -157,14 +156,12 @@ class OneDriveSyncService {
         return 'BACKUP_FOUT ${response.statusCode}\n${response.body}';
       }
 
-      await prefs.setString(
-        'agenda_items_nieuw',
-        encodeAgenda(mergedAgenda),
+      await AppStorage.bewaarAgendaItemsNieuwVoorSync(
+        mergedAgenda,
       );
 
-      await prefs.setString(
-        'klanten_fiches',
-        encodeKlanten(mergedKlanten),
+      await AppStorage.bewaarKlantenFichesVoorSync(
+        mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
 
       final fotoResultaat = await _uploadKlantenFotos(token);
@@ -378,9 +375,7 @@ class OneDriveSyncService {
         );
       }
 
-      final lokaleAgenda = decodeAgenda(
-        prefs.getString('agenda_items_nieuw'),
-      );
+      final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
       final cloudAgenda = decodeAgenda(
         data['agendaItems'] is String ? data['agendaItems'] : null,
@@ -404,14 +399,12 @@ class OneDriveSyncService {
         cloudKlanten,
       );
 
-      await prefs.setString(
-        'agenda_items_nieuw',
-        encodeAgenda(mergedAgenda),
+      await AppStorage.bewaarAgendaItemsNieuwVoorSync(
+        mergedAgenda,
       );
 
-      await prefs.setString(
-        'klanten_fiches',
-        encodeKlanten(mergedKlanten),
+      await AppStorage.bewaarKlantenFichesVoorSync(
+        mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
 
       final dagtaakTemplates = data['dagtaakTemplates'];

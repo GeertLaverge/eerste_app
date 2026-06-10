@@ -10,7 +10,9 @@ class AgendaToevoegService {
   }) {
     final datumKey = AgendaDatumHelper.datumKey(dag);
 
-    final bestaandeItems = itemsPerDag[datumKey] ?? [];
+    final bestaandeItems = (itemsPerDag[datumKey] ?? []).where((item) {
+      return !item.isVerwijderd;
+    }).toList();
 
     return AgendaOverlapHelper.overlapMelding(
       nieuwItem: nieuwItem,
@@ -33,7 +35,18 @@ class AgendaToevoegService {
       kopie[datumKey] ?? [],
     );
 
-    bestaandeItems.add(nieuwItem);
+    final nu = DateTime.now().toIso8601String();
+
+    final itemMetSync = nieuwItem.copyWith(
+      id: nieuwItem.id.trim().isNotEmpty
+          ? nieuwItem.id
+          : DateTime.now().microsecondsSinceEpoch.toString(),
+      updatedAt:
+          nieuwItem.updatedAt.trim().isNotEmpty ? nieuwItem.updatedAt : nu,
+      deletedAt: '',
+    );
+
+    bestaandeItems.add(itemMetSync);
 
     kopie[datumKey] = bestaandeItems;
 
