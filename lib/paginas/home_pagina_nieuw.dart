@@ -21,8 +21,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
   Timer? _syncTimer;
   static const achtergrond = Color(0xFFF7F8FA);
 
-  String syncMelding = 'OneDrive sync wordt gecontroleerd...';
-
   @override
   void initState() {
     super.initState();
@@ -30,27 +28,21 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final melding = await OneDriveSyncService().slimmeSync();
-      final debug = await OneDriveSyncService().syncDebugInfo();
+      await OneDriveSyncService().slimmeSync();
 
       if (!mounted) return;
 
-      setState(() {
-        syncMelding = '$melding\n\n$debug';
-      });
+      setState(() {});
     });
 
     _syncTimer = Timer.periodic(
       const Duration(minutes: 3),
       (_) async {
-        final melding = await OneDriveSyncService().slimmeSync();
-        final debug = await OneDriveSyncService().syncDebugInfo();
+        await OneDriveSyncService().slimmeSync();
 
         if (!mounted) return;
 
-        setState(() {
-          syncMelding = '$melding\n\n$debug';
-        });
+        setState(() {});
       },
     );
   }
@@ -61,51 +53,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
-  }
-
-  Future<void> testOneDriveUpload() async {
-    setState(() {
-      syncMelding = 'OneDrive test gestart...';
-    });
-
-    final melding = await OneDriveSyncService().uploadBackup();
-    final debug = await OneDriveSyncService().syncDebugInfo();
-
-    if (!mounted) return;
-
-    setState(() {
-      syncMelding = '$melding\n\n$debug';
-    });
-  }
-
-  Future<void> laadOneDriveBackup() async {
-    setState(() {
-      syncMelding = 'OneDrive backup laden...';
-    });
-
-    final melding = await OneDriveSyncService().downloadBackup();
-    final debug = await OneDriveSyncService().syncDebugInfo();
-
-    if (!mounted) return;
-
-    setState(() {
-      syncMelding = '$melding\n\n$debug';
-    });
-  }
-
-  Future<void> slimmeSyncTest() async {
-    setState(() {
-      syncMelding = 'Slimme sync gestart...';
-    });
-
-    final melding = await OneDriveSyncService().slimmeSync();
-    final debug = await OneDriveSyncService().syncDebugInfo();
-
-    if (!mounted) return;
-
-    setState(() {
-      syncMelding = '$melding\n\n$debug';
-    });
   }
 
   @override
@@ -119,8 +66,8 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
         child: Column(
           children: [
             const HomeBovenBalk(),
-            Padding(
-              padding: const EdgeInsets.all(8),
+            const Padding(
+              padding: EdgeInsets.all(8),
               child: Column(
                 children: [],
               ),
@@ -135,25 +82,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
                       children: [
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFFE5E7EB),
-                            ),
-                          ),
-                          child: Text(
-                            syncMelding,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.black87,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
                         FutureBuilder<List<List<dynamic>>>(
                           future: Future.wait([
                             planningVandaag,

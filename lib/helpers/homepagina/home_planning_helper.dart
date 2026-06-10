@@ -9,6 +9,8 @@ class HomePlanningHelper {
     final items = data[sleutel] ?? [];
 
     final planning = items.where((item) {
+      if (item.isVerwijderd) return false;
+
       return item.type == 'planning' ||
           item.type == 'opvolging' ||
           item.type == 'afspraak' ||
@@ -30,6 +32,8 @@ class HomePlanningHelper {
     final fiches = await KlantenficheRepository.laadKlantenFiches();
 
     final klantenOpPlanning = planning.where((item) {
+      if (item.isVerwijderd) return false;
+
       return (item.type == 'planning' || item.type == 'opvolging') &&
           item.naamKlant.toString().trim().isNotEmpty;
     }).toList();
@@ -83,6 +87,7 @@ class HomePlanningHelper {
 
     data.forEach((datumKey, items) {
       for (final item in items) {
+        if (item.isVerwijderd) continue;
         if (item.type != 'dagtaak') continue;
 
         final toonDatum = _homeDatumVoorItem(
