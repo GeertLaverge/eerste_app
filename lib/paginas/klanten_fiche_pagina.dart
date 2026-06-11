@@ -12,6 +12,7 @@ import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 import '../helpers/klanten/fotos/klantenfiche_foto_blok.dart';
 import '../helpers/klanten/fotos/mail/klantenfiche_foto_mail_service.dart';
+import '../helpers/klanten/fiche/klantenfiche_afgewerkt_mail_helper.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -42,9 +43,11 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   final taakController = TextEditingController();
   final klantNrController = TextEditingController();
   final opvolgTakenController = TextEditingController();
+  final notitiesController = TextEditingController();
 
   bool opvolgFicheVerstuurdNaarBureau = false;
   bool klaarVoorNieuwePlanning = false;
+  bool afgewerktMailVerstuurd = false;
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
@@ -100,8 +103,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       fiche.fotos,
     );
     opvolgTakenController.text = fiche.opvolgTaken;
+    notitiesController.text = fiche.notities;
     opvolgFicheVerstuurdNaarBureau = fiche.opvolgFicheVerstuurdNaarBureau;
     klaarVoorNieuwePlanning = fiche.klaarVoorNieuwePlanning;
+    afgewerktMailVerstuurd = fiche.afgewerktMailVerstuurd;
   }
 
   @override
@@ -116,6 +121,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     gsm2Controller.dispose();
     emailController.dispose();
     opvolgTakenController.dispose();
+    notitiesController.dispose();
     super.dispose();
   }
 
@@ -144,8 +150,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       fotos: fotos,
       artikelen: artikelen,
       opvolgTaken: opvolgTakenController.text,
+      notities: notitiesController.text,
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
+      afgewerktMailVerstuurd: afgewerktMailVerstuurd,
     );
   }
 
@@ -379,17 +387,6 @@ ${_extraWerkenTekst()}
                   return;
                 }
 
-                if (huidigeStatus == 'Afgewerkt' && waarde == 'Opvolgen') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                          'Een afgewerkte klant kan niet meer naar opvolgen.'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-
                 if (waarde == 'Opvolgen' || waarde == 'Afgewerkt') {
                   final bevestigen = await showDialog<bool>(
                     context: context,
@@ -443,6 +440,7 @@ ${_extraWerkenTekst()}
                     opvolgTakenController.clear();
                     opvolgFicheVerstuurdNaarBureau = false;
                     klaarVoorNieuwePlanning = false;
+                    afgewerktMailVerstuurd = false;
 
                     datumAfgewerkt = '';
                   }
@@ -462,6 +460,40 @@ ${_extraWerkenTekst()}
                 });
 
                 await automatischBewaren();
+
+                if (waarde == 'Afgewerkt' && !afgewerktMailVerstuurd) {
+                  final resultaat = await KlantenficheAfgewerktMailHelper
+                      .verstuurAfgewerktMail(
+                    klantNaam: naamController.text,
+                    extraWerken: extraWerken,
+                  );
+
+                  if (!mounted) return;
+
+                  if (resultaat == 'MAIL_OK') {
+                    setState(() {
+                      afgewerktMailVerstuurd = true;
+                    });
+
+                    await automatischBewaren();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Melding naar bureau verstuurd.',
+                        ),
+                        backgroundColor: Color(0xFF0B7A3B),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(resultaat),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
               },
             ),
             Expanded(
@@ -715,6 +747,26 @@ ${_extraWerkenTekst()}
                         ],
                       ),
                     ),
+                  KlantenficheUitvalBlok(
+                    titel: 'Notities',
+                    standaardOpen: false,
+                    child: TextField(
+                      controller: notitiesController,
+                      minLines: 4,
+                      maxLines: 8,
+                      onChanged: (_) {
+                        automatischBewaren();
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Notities voor plaatsers...',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
+                  ),
                   KlantenficheUitvalBlok(
                     titel: 'Extra werk',
                     standaardOpen: false,

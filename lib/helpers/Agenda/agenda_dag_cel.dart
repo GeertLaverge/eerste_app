@@ -249,7 +249,8 @@ class AgendaDagCel extends StatelessWidget {
     required AgendaItem item,
     required Color kleur,
   }) {
-    final tijd = item.tijdTekst.isEmpty ? '' : item.tijdTekst;
+    final tijd =
+        item.tijdTekst.isEmpty ? '' : item.tijdTekst.replaceAll('\n', ' - ');
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -257,48 +258,21 @@ class AgendaDagCel extends StatelessWidget {
 
         Widget inhoud;
 
-        if (breedte >= 115) {
-          inhoud = Row(
+        if (breedte >= 82) {
+          inhoud = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                tijd,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: kleur,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  item.titel,
+              if (tijd.isNotEmpty)
+                Text(
+                  tijd,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: kleur,
                     fontSize: 10,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ),
-            ],
-          );
-        } else if (breedte >= 82) {
-          inhoud = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                tijd,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: kleur,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
               Text(
                 item.titel,
                 maxLines: 1,
@@ -315,16 +289,17 @@ class AgendaDagCel extends StatelessWidget {
           inhoud = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                tijd,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: kleur,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
+              if (tijd.isNotEmpty)
+                Text(
+                  tijd,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: kleur,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
               Text(
                 item.titel,
                 maxLines: 2,

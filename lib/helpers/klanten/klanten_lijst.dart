@@ -21,20 +21,27 @@ class KlantenLijst extends StatefulWidget {
 }
 
 class _KlantenLijstState extends State<KlantenLijst> {
+  static const groen = Color(0xFF0B7A3B);
+  static const rand = Color(0xFFE5E7EB);
+
+  final statusVolgorde = const [
+    'Actief',
+    'Opvolgen',
+    'Nadienst',
+    'Afgewerkt',
+  ];
+
   Color kleurVoorKlantStatus(String status) {
     switch (status) {
       case 'Actief':
         return const Color(0xFF7BC67E);
-
       case 'Opvolgen':
         return Colors.amber;
-
       case 'Nadienst':
         return Colors.purple;
-
       case 'Afgewerkt':
       default:
-        return const Color(0xFF0B7A3B);
+        return groen;
     }
   }
 
@@ -42,33 +49,458 @@ class _KlantenLijstState extends State<KlantenLijst> {
     switch (status) {
       case 'Te bestellen':
         return Colors.red;
-
       case 'Besteld':
         return Colors.blue;
-
       case 'Geleverd':
         return const Color(0xFF7BC67E);
-
       case 'Geen artikelen':
       default:
-        return const Color(0xFF0B7A3B);
+        return groen;
     }
   }
 
-  String statusTekst(KlantenficheModel klant) {
-    return klant.klantStatus;
+  int bestelStatusScore(String status) {
+    switch (status) {
+      case 'Te bestellen':
+        return 0;
+      case 'Besteld':
+        return 1;
+      case 'Geleverd':
+        return 2;
+      case 'Geen artikelen':
+      default:
+        return 3;
+    }
   }
 
-  Color kaartRandKleur(KlantenficheModel klant) {
-    return const Color(0xFFE5E7EB);
+  List<KlantenficheModel> filterKlanten(
+    List<KlantenficheModel> alleKlanten,
+  ) {
+    return alleKlanten.where((klant) {
+      if (klant.archiefDatum.isNotEmpty) {
+        return false;
+      }
+      final matchKlantStatus = widget.klantStatus == 'Alle'
+          ? true
+          : klant.klantStatus == widget.klantStatus;
+
+      final matchBestelStatus = widget.bestelStatus == 'Alle' ||
+          klant.bestelStatus == widget.bestelStatus;
+
+      final zoek = widget.zoekterm.trim().toLowerCase();
+
+      final matchZoek = zoek.isEmpty ||
+          klant.naam.toLowerCase().contains(zoek) ||
+          klant.straatnaam.toLowerCase().contains(zoek) ||
+          klant.gemeente.toLowerCase().contains(zoek) ||
+          klant.postcode.toLowerCase().contains(zoek) ||
+          klant.gsm.toLowerCase().contains(zoek) ||
+          klant.email.toLowerCase().contains(zoek);
+
+      return matchKlantStatus && matchBestelStatus && matchZoek;
+    }).toList();
   }
 
-  Color kaartAchtergrond(KlantenficheModel klant) {
-    return Colors.white;
+  List<KlantenficheModel> sorteerKlanten(
+    List<KlantenficheModel> klanten,
+  ) {
+    final lijst = List<KlantenficheModel>.from(klanten);
+
+    lijst.sort((a, b) {
+      if (a.klaarVoorNieuwePlanning && !b.klaarVoorNieuwePlanning) {
+        return -1;
+      }
+
+      if (!a.klaarVoorNieuwePlanning && b.klaarVoorNieuwePlanning) {
+        return 1;
+      }
+
+      final statusVergelijk = bestelStatusScore(a.bestelStatus).compareTo(
+        bestelStatusScore(b.bestelStatus),
+      );
+
+      if (statusVergelijk != 0) {
+        return statusVergelijk;
+      }
+
+      return a.naam.toLowerCase().compareTo(
+            b.naam.toLowerCase(),
+          );
+    });
+
+    return lijst;
+  }
+
+  Future<void> openFiche(
+    KlantenficheModel klant,
+  ) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => KlantenFichePagina(
+          bestaandeFiche: klant,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Future<void> verwijderFiche(
+    KlantenficheModel klant,
+  ) async {
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Klant verwijderen?'),
+          content: Text(
+            'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text(
+                'Annuleren',
+                style: TextStyle(
+                  color: groen,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                'Verwijderen',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) return;
+
+    await KlantenficheRepository.verwijderKlantenFiche(
+      klant.id,
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Future<void> archiveerKlant(
+    KlantenficheModel klant,
+  ) async {
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Klant archiveren?'),
+          content: Text(
+            'Bent u zeker dat u "${klant.naam}" naar het archief wilt verplaatsen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Annuleren'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                'Archiveren',
+                style: TextStyle(
+                  color: Color(0xFF0B7A3B),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) return;
+
+    final aangepasteFiche = KlantenficheModel(
+      id: klant.id,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
+      naam: klant.naam,
+      klantNr: klant.klantNr,
+      straatnaam: klant.straatnaam,
+      huisNr: klant.huisNr,
+      gemeente: klant.gemeente,
+      postcode: klant.postcode,
+      gsm: klant.gsm,
+      gsm2: klant.gsm2,
+      email: klant.email,
+      klantStatus: klant.klantStatus,
+      bestelStatus: klant.bestelStatus,
+      taakVoorKlant: klant.taakVoorKlant,
+      klantTakenAfgewerktOp: klant.klantTakenAfgewerktOp,
+      datumAfgewerkt: klant.datumAfgewerkt,
+      archiefDatum: DateTime.now().toIso8601String(),
+      artikelen: klant.artikelen,
+      klantTaken: klant.klantTaken,
+      extraWerken: klant.extraWerken,
+      fotos: klant.fotos,
+      opvolgTaken: klant.opvolgTaken,
+      opvolgFicheVerstuurdNaarBureau: klant.opvolgFicheVerstuurdNaarBureau,
+      klaarVoorNieuwePlanning: klant.klaarVoorNieuwePlanning,
+    );
+
+    await KlantenficheRepository.bewaarKlantenFiche(
+      aangepasteFiche,
+    );
+
+    if (!mounted) return;
+
+    setState(() {});
+  }
+
+  Widget statusGroep({
+    required String titel,
+    required List<KlantenficheModel> klanten,
+    required bool isTablet,
+  }) {
+    final kleur = kleurVoorKlantStatus(titel);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '$titel (${klanten.length})',
+            style: TextStyle(
+              color: kleur,
+              fontWeight: FontWeight.w900,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 6),
+          if (klanten.isEmpty)
+            legeCategorieRij()
+          else
+            ...klanten.map((klant) {
+              return klantRij(
+                klant: klant,
+                isTablet: isTablet,
+              );
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget legeCategorieRij() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 13,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: rand,
+        ),
+      ),
+      child: const Text(
+        'Geen klanten in deze categorie.',
+        style: TextStyle(
+          fontSize: 13,
+          color: Color(0xFF6B7280),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Widget klantRij({
+    required KlantenficheModel klant,
+    required bool isTablet,
+  }) {
+    final naam = klant.naam.isEmpty ? 'Naamloos' : klant.naam;
+    final bestelKleur = kleurVoorBestelStatus(klant.bestelStatus);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: rand,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          openFiche(klant);
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isTablet ? 16 : 12,
+            vertical: isTablet ? 13 : 11,
+          ),
+          child: isTablet
+              ? Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Text(
+                        naam,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: Center(
+                        child: statusTekstLabel(
+                          tekst: klant.bestelStatus,
+                          kleur: bestelKleur,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (klant.klantStatus == 'Afgewerkt')
+                          SizedBox(
+                            width: 42,
+                            child: IconButton(
+                              tooltip: 'Naar archief',
+                              onPressed: () {
+                                archiveerKlant(klant);
+                              },
+                              icon: const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Color(0xFF0B7A3B),
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          width: 42,
+                          child: IconButton(
+                            onPressed: () {
+                              verwijderFiche(klant);
+                            },
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Row(
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Text(
+                        naam,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1F2937),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 4,
+                      child: Center(
+                        child: statusTekstLabel(
+                          tekst: klant.bestelStatus,
+                          kleur: bestelKleur,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (klant.klantStatus == 'Afgewerkt')
+                          SizedBox(
+                            width: 42,
+                            child: IconButton(
+                              tooltip: 'Naar archief',
+                              onPressed: () {
+                                archiveerKlant(klant);
+                              },
+                              icon: const Icon(
+                                Icons.inventory_2_outlined,
+                                color: Color(0xFF0B7A3B),
+                              ),
+                            ),
+                          ),
+                        SizedBox(
+                          width: 42,
+                          child: IconButton(
+                            onPressed: () {
+                              verwijderFiche(klant);
+                            },
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget statusTekstLabel({
+    required String tekst,
+    required Color kleur,
+  }) {
+    return Text(
+      tekst,
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: kleur,
+        fontSize: 13,
+        fontWeight: FontWeight.w900,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 700;
+
     return FutureBuilder<List<KlantenficheModel>>(
       future: KlantenficheRepository.laadKlantenFiches(),
       builder: (context, snapshot) {
@@ -76,204 +508,34 @@ class _KlantenLijstState extends State<KlantenLijst> {
           return const SizedBox();
         }
 
-        final klanten = snapshot.data!.where((klant) {
-          final matchKlantStatus = widget.klantStatus == 'Alle'
-              ? klant.klantStatus != 'Afgewerkt'
-              : klant.klantStatus == widget.klantStatus;
+        final klanten = filterKlanten(snapshot.data!);
+        final children = <Widget>[];
 
-          final matchBestelStatus = widget.bestelStatus == 'Alle' ||
-              klant.bestelStatus == widget.bestelStatus;
+        for (final status in statusVolgorde) {
+          if (widget.klantStatus != 'Alle' && widget.klantStatus != status) {
+            continue;
+          }
 
-          final zoek = widget.zoekterm.trim().toLowerCase();
+          final groep = sorteerKlanten(
+            klanten.where((klant) {
+              return klant.klantStatus == status;
+            }).toList(),
+          );
 
-          final matchZoek = zoek.isEmpty ||
-              klant.naam.toLowerCase().contains(zoek) ||
-              klant.straatnaam.toLowerCase().contains(zoek) ||
-              klant.gemeente.toLowerCase().contains(zoek) ||
-              klant.postcode.toLowerCase().contains(zoek) ||
-              klant.gsm.toLowerCase().contains(zoek) ||
-              klant.email.toLowerCase().contains(zoek);
-
-          return matchKlantStatus && matchBestelStatus && matchZoek;
-        }).toList()
-          ..sort((a, b) {
-            if (a.klaarVoorNieuwePlanning && !b.klaarVoorNieuwePlanning) {
-              return -1;
-            }
-
-            if (!a.klaarVoorNieuwePlanning && b.klaarVoorNieuwePlanning) {
-              return 1;
-            }
-
-            return a.naam.toLowerCase().compareTo(
-                  b.naam.toLowerCase(),
-                );
-          });
-
-        if (klanten.isEmpty) {
-          return const KlantenLegeLijst();
+          children.add(
+            statusGroep(
+              titel: status,
+              klanten: groep,
+              isTablet: isTablet,
+            ),
+          );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            12,
-            8,
-            12,
-            16,
+        return ListView(
+          padding: const EdgeInsets.only(
+            bottom: 16,
           ),
-          itemCount: klanten.length,
-          itemBuilder: (context, index) {
-            final klant = klanten[index];
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: kaartAchtergrond(klant),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: kaartRandKleur(klant),
-                  width: klant.klaarVoorNieuwePlanning ? 1.5 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => KlantenFichePagina(
-                        bestaandeFiche: klant,
-                      ),
-                    ),
-                  );
-
-                  if (!mounted) return;
-
-                  setState(() {});
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              klant.naam.isEmpty ? 'Naamloos' : klant.naam,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1F2937),
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(
-                                  statusTekst(klant),
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: kleurVoorKlantStatus(
-                                      klant.klantStatus,
-                                    ),
-                                  ),
-                                ),
-                                const Text(
-                                  '  •  ',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF9CA3AF),
-                                  ),
-                                ),
-                                Text(
-                                  klant.bestelStatus,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: kleurVoorBestelStatus(
-                                      klant.bestelStatus,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () async {
-                          final bevestigen = await showDialog<bool>(
-                            context: context,
-                            builder: (context) {
-                              return AlertDialog(
-                                title: const Text('Klant verwijderen?'),
-                                content: Text(
-                                  'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, false);
-                                    },
-                                    child: const Text(
-                                      'Annuleren',
-                                      style: TextStyle(
-                                        color: Color(0xFF0B7A3B),
-                                      ),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(context, true);
-                                    },
-                                    child: const Text(
-                                      'Verwijderen',
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-
-                          if (bevestigen != true) return;
-
-                          await KlantenficheRepository.verwijderKlantenFiche(
-                            klant.id,
-                          );
-
-                          if (!mounted) return;
-
-                          setState(() {});
-                        },
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
+          children: children,
         );
       },
     );
@@ -293,7 +555,7 @@ class KlantenLegeLijst extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFFE5E7EB),
+            color: Color(0xFFE5E7EB),
           ),
         ),
         child: const Text(

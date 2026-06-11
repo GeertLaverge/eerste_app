@@ -106,6 +106,46 @@ class _KlantenPaginaState extends State<KlantenPagina> {
     );
   }
 
+  Widget vasteKolomBalk() {
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFF0B7A3B),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 9,
+      ),
+      child: const Row(
+        children: [
+          Expanded(
+            flex: 6,
+            child: Text(
+              'Naam klant',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 4,
+            child: Center(
+              child: Text(
+                'Status artikelen',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -137,6 +177,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                 });
               },
             ),
+            const SizedBox(height: 8),
             KlantenFilterBalk(
               opties: bestelStatussen,
               geselecteerd: bestelStatus,
@@ -146,6 +187,8 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                 });
               },
             ),
+            const SizedBox(height: 14),
+            vasteKolomBalk(),
             Expanded(
               child: KlantenLijst(
                 klantStatus: klantStatus,

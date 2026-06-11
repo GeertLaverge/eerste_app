@@ -26,13 +26,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     dynamic klant,
     dynamic taak,
   ) async {
-    debugPrint('VOOR: ${taak.tekst} = ${taak.isAfgewerkt}');
-
     setState(() {
       taak.isAfgewerkt = !taak.isAfgewerkt;
     });
-
-    debugPrint('NA: ${taak.tekst} = ${taak.isAfgewerkt}');
 
     await KlantenficheRepository.bewaarKlantenFiche(
       klant,
@@ -73,6 +69,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                     planning.naamKlant.toString().trim().toLowerCase();
               }).toList();
 
+              final klantenFiche = klant.isNotEmpty ? klant.first : null;
+
               final takenWidgets = <Widget>[
                 _TaakRij(
                   compact: compact,
@@ -91,6 +89,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   postcode: planning.postcode,
                   gemeente: planning.gemeente,
                   meldingVoorafMinuten: 0,
+                  opmerkingen: planning.opmerkingen,
+                  toonKlantNotities: klantenFiche != null,
+                  klantNotities: klantenFiche?.notities ?? '',
                 ),
               ];
 
@@ -157,6 +158,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 postcode: planning.postcode,
                 gemeente: planning.gemeente,
                 meldingVoorafMinuten: planning.meldingVoorafMinuten,
+                opmerkingen: planning.opmerkingen,
               );
             }).toList(),
           ),
@@ -182,6 +184,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
                 postcode: planning.postcode,
                 gemeente: planning.gemeente,
                 meldingVoorafMinuten: planning.meldingVoorafMinuten,
+                opmerkingen: planning.opmerkingen,
               );
             }).toList(),
           ),
@@ -216,7 +219,6 @@ class _KlantTaakRij extends StatelessWidget {
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
               onChanged: (_) {
-                debugPrint('CHECKBOX GEKLIKT');
                 onTap();
               },
             ),
@@ -328,6 +330,9 @@ class _TaakRij extends StatelessWidget {
   final String postcode;
   final String gemeente;
   final int meldingVoorafMinuten;
+  final String opmerkingen;
+  final String klantNotities;
+  final bool toonKlantNotities;
 
   const _TaakRij({
     required this.compact,
@@ -340,6 +345,9 @@ class _TaakRij extends StatelessWidget {
     required this.postcode,
     required this.gemeente,
     required this.meldingVoorafMinuten,
+    required this.opmerkingen,
+    this.klantNotities = '',
+    this.toonKlantNotities = false,
   });
 
   bool get heeftAdres {
@@ -348,8 +356,36 @@ class _TaakRij extends StatelessWidget {
         gemeente.trim().isNotEmpty;
   }
 
-  bool get heeftMelding {
-    return meldingVoorafMinuten > 0;
+  bool get heeftAfspraakNotitie {
+    return opmerkingen.trim().isNotEmpty;
+  }
+
+  bool get heeftKlantNotitie {
+    return toonKlantNotities && klantNotities.trim().isNotEmpty;
+  }
+
+  void toonPopup({
+    required BuildContext context,
+    required String titel,
+    required String tekst,
+  }) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text(titel),
+          content: Text(tekst),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Sluiten'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -384,43 +420,81 @@ class _TaakRij extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              titel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13.2,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    titel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.2,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (heeftAfspraakNotitie)
+                  InkWell(
+                    onTap: () {
+                      toonPopup(
+                        context: context,
+                        titel: 'Notitie afspraak',
+                        tekst: opmerkingen,
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 16,
+                        color: Color(0xFF0B7A3B),
+                      ),
+                    ),
+                  ),
+                if (heeftKlantNotitie)
+                  InkWell(
+                    onTap: () {
+                      toonPopup(
+                        context: context,
+                        titel: 'Notities klant',
+                        tekst: klantNotities,
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 16,
+                        color: Color(0xFF0B7A3B),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (heeftMelding)
-            const Padding(
-              padding: EdgeInsets.only(right: 6),
-              child: Icon(
-                Icons.notifications_none,
-                size: 15,
-                color: Color(0xFF0B7A3B),
-              ),
-            ),
-          InkWell(
-            onTap: heeftAdres
-                ? () async {
-                    await AgendaRouteHelper.openRoute(
-                      straat: straat,
-                      huisNr: huisNr,
-                      postcode: postcode,
-                      gemeente: gemeente,
-                    );
-                  }
-                : null,
-            child: Padding(
-              padding: EdgeInsets.only(left: compact ? 4 : 10),
-              child: Icon(
-                Icons.navigation_outlined,
-                size: 18,
-                color:
-                    heeftAdres ? const Color(0xFF0B7A3B) : Colors.grey.shade300,
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: heeftAdres
+                  ? () async {
+                      await AgendaRouteHelper.openRoute(
+                        straat: straat,
+                        huisNr: huisNr,
+                        postcode: postcode,
+                        gemeente: gemeente,
+                      );
+                    }
+                  : null,
+              child: Center(
+                child: Icon(
+                  Icons.navigation_outlined,
+                  size: 18,
+                  color: heeftAdres
+                      ? const Color(0xFF0B7A3B)
+                      : Colors.grey.shade300,
+                ),
               ),
             ),
           ),

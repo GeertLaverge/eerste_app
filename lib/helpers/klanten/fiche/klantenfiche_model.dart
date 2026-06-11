@@ -174,7 +174,9 @@ class KlantenficheFoto {
     };
   }
 
-  factory KlantenficheFoto.fromJson(Map<String, dynamic> json) {
+  factory KlantenficheFoto.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return KlantenficheFoto(
       id: json['id'] ?? '',
       bestandsNaam: json['bestandsNaam'] ?? '',
@@ -209,14 +211,18 @@ class KlantenficheModel {
   String klantTakenAfgewerktOp;
 
   final String datumAfgewerkt;
+  final String archiefDatum;
 
   final List<KlantenficheArtikel> artikelen;
   final List<KlantTaakItem> klantTaken;
   final List<KlantenficheExtraWerk> extraWerken;
   final List<KlantenficheFoto> fotos;
+
   final String opvolgTaken;
+  final String notities;
   final bool opvolgFicheVerstuurdNaarBureau;
   final bool klaarVoorNieuwePlanning;
+  final bool afgewerktMailVerstuurd;
 
   KlantenficheModel({
     required this.id,
@@ -234,13 +240,16 @@ class KlantenficheModel {
     this.taakVoorKlant = '',
     this.klantTakenAfgewerktOp = '',
     this.datumAfgewerkt = '',
+    this.archiefDatum = '',
     this.klantTaken = const [],
     this.artikelen = const [],
     this.extraWerken = const [],
     this.fotos = const [],
     this.opvolgTaken = '',
+    this.notities = '',
     this.opvolgFicheVerstuurdNaarBureau = false,
     this.klaarVoorNieuwePlanning = false,
+    this.afgewerktMailVerstuurd = false,
     this.updatedAt = '',
     this.deletedAt = '',
   });
@@ -264,13 +273,16 @@ class KlantenficheModel {
       'taakVoorKlant': taakVoorKlant,
       'klantTakenAfgewerktOp': klantTakenAfgewerktOp,
       'datumAfgewerkt': datumAfgewerkt,
+      'archiefDatum': archiefDatum,
       'artikelen': artikelen.map((artikel) => artikel.toJson()).toList(),
       'klantTaken': klantTaken.map((taak) => taak.toJson()).toList(),
       'extraWerken': extraWerken.map((werk) => werk.toJson()).toList(),
       'fotos': fotos.map((foto) => foto.toJson()).toList(),
       'opvolgTaken': opvolgTaken,
+      'notities': notities,
       'opvolgFicheVerstuurdNaarBureau': opvolgFicheVerstuurdNaarBureau,
       'klaarVoorNieuwePlanning': klaarVoorNieuwePlanning,
+      'afgewerktMailVerstuurd': afgewerktMailVerstuurd,
     };
   }
 
@@ -293,6 +305,7 @@ class KlantenficheModel {
       taakVoorKlant: json['taakVoorKlant'] ?? '',
       klantTakenAfgewerktOp: json['klantTakenAfgewerktOp'] ?? '',
       datumAfgewerkt: json['datumAfgewerkt'] ?? '',
+      archiefDatum: json['archiefDatum'] ?? '',
       klantTaken: (json['klantTaken'] as List<dynamic>? ?? [])
           .map(
             (item) => KlantTaakItem.fromJson(
@@ -322,9 +335,11 @@ class KlantenficheModel {
           )
           .toList(),
       opvolgTaken: json['opvolgTaken'] ?? '',
+      notities: json['notities'] ?? '',
       opvolgFicheVerstuurdNaarBureau:
           json['opvolgFicheVerstuurdNaarBureau'] ?? false,
       klaarVoorNieuwePlanning: json['klaarVoorNieuwePlanning'] ?? false,
+      afgewerktMailVerstuurd: json['afgewerktMailVerstuurd'] ?? false,
       updatedAt: json['updatedAt'] ?? '',
       deletedAt: json['deletedAt'] ?? '',
     );

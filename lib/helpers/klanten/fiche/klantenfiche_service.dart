@@ -28,6 +28,20 @@ class KlantenficheService {
     return 'Te bestellen';
   }
 
+  static Future<KlantenficheModel?> bestaandeFiche(
+    String ficheId,
+  ) async {
+    final fiches = await KlantenficheRepository.laadKlantenFiches();
+
+    for (final fiche in fiches) {
+      if (fiche.id == ficheId) {
+        return fiche;
+      }
+    }
+
+    return null;
+  }
+
   static Future<void> automatischBewaren({
     required String ficheId,
     required String naam,
@@ -47,8 +61,10 @@ class KlantenficheService {
     required List<KlantenficheArtikel> artikelen,
     required List<KlantenficheFoto> fotos,
     required String opvolgTaken,
+    required String notities,
     required bool opvolgFicheVerstuurdNaarBureau,
     required bool klaarVoorNieuwePlanning,
+    required bool afgewerktMailVerstuurd,
   }) async {
     if (naam.trim().isEmpty &&
         straatnaam.trim().isEmpty &&
@@ -57,9 +73,14 @@ class KlantenficheService {
         artikelen.isEmpty &&
         klantTaken.isEmpty &&
         extraWerken.isEmpty &&
-        opvolgTaken.trim().isEmpty) {
+        opvolgTaken.trim().isEmpty &&
+        notities.trim().isEmpty) {
       return;
     }
+
+    final bestaand = await bestaandeFiche(
+      ficheId,
+    );
 
     final bestelStatus = berekenBestelStatus(
       artikelen,
@@ -68,7 +89,7 @@ class KlantenficheService {
     final fiche = KlantenficheModel(
       id: ficheId,
       updatedAt: DateTime.now().toIso8601String(),
-      deletedAt: '',
+      deletedAt: bestaand?.deletedAt ?? '',
       naam: naam,
       klantNr: klantNr,
       straatnaam: straatnaam,
@@ -81,15 +102,18 @@ class KlantenficheService {
       klantStatus: klantStatus,
       bestelStatus: bestelStatus,
       taakVoorKlant: taakVoorKlant,
-      klantTakenAfgewerktOp: '',
+      klantTakenAfgewerktOp: bestaand?.klantTakenAfgewerktOp ?? '',
       datumAfgewerkt: datumAfgewerkt,
+      archiefDatum: bestaand?.archiefDatum ?? '',
       artikelen: artikelen,
       klantTaken: klantTaken,
       extraWerken: extraWerken,
       fotos: fotos,
       opvolgTaken: opvolgTaken,
+      notities: notities,
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
+      afgewerktMailVerstuurd: afgewerktMailVerstuurd,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

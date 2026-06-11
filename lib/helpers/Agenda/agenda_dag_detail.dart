@@ -57,7 +57,7 @@ class AgendaDagDetail extends StatelessWidget {
                               SizedBox(
                                 width: 92,
                                 child: Text(
-                                  item.tijdTekst,
+                                  item.tijdTekst.replaceAll('\n', ' - '),
                                   style: const TextStyle(
                                     color: Colors.black87,
                                     fontSize: 14,
