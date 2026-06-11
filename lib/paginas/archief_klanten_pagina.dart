@@ -23,8 +23,44 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
   }
 
   Future<void> heractiveerKlant(KlantenficheModel klant) async {
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Klant terug actief maken?'),
+          content: Text(
+            'Bent u zeker dat u "${klant.naam.isEmpty ? 'Naamloos' : klant.naam}" uit het archief wilt halen en terug actief wilt maken?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Annuleren'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text(
+                'Terug actief',
+                style: TextStyle(
+                  color: Color(0xFF0B7A3B),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) return;
+
     final nieuweFiche = KlantenficheModel(
       id: klant.id,
+      updatedAt: DateTime.now().toIso8601String(),
+      deletedAt: '',
       naam: klant.naam,
       klantNr: klant.klantNr,
       straatnaam: klant.straatnaam,
@@ -39,9 +75,16 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
       taakVoorKlant: klant.taakVoorKlant,
       klantTakenAfgewerktOp: klant.klantTakenAfgewerktOp,
       datumAfgewerkt: '',
+      archiefDatum: '',
       klantTaken: klant.klantTaken,
       artikelen: klant.artikelen,
       extraWerken: klant.extraWerken,
+      fotos: klant.fotos,
+      opvolgTaken: klant.opvolgTaken,
+      notities: klant.notities,
+      opvolgFicheVerstuurdNaarBureau: klant.opvolgFicheVerstuurdNaarBureau,
+      klaarVoorNieuwePlanning: false,
+      afgewerktMailVerstuurd: false,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(nieuweFiche);
@@ -167,7 +210,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
                 }
 
                 final klanten = snapshot.data!
-                    .where((k) => k.klantStatus == 'Afgewerkt')
+                    .where((k) => k.archiefDatum.isNotEmpty)
                     .where(
                       (k) =>
                           zoekterm.isEmpty ||
@@ -177,9 +220,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
 
                 if (klanten.isEmpty) {
                   return const Center(
-                    child: Text(
-                      'Geen afgewerkte klanten gevonden.',
-                    ),
+                    child: Text('Geen gearchiveerde klanten gevonden.'),
                   );
                 }
 
