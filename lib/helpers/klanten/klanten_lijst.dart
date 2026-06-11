@@ -80,6 +80,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
       if (klant.archiefDatum.isNotEmpty) {
         return false;
       }
+
       final matchKlantStatus = widget.klantStatus == 'Alle'
           ? true
           : klant.klantStatus == widget.klantStatus;
@@ -260,8 +261,10 @@ class _KlantenLijstState extends State<KlantenLijst> {
       extraWerken: klant.extraWerken,
       fotos: klant.fotos,
       opvolgTaken: klant.opvolgTaken,
+      notities: klant.notities,
       opvolgFicheVerstuurdNaarBureau: klant.opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klant.klaarVoorNieuwePlanning,
+      afgewerktMailVerstuurd: klant.afgewerktMailVerstuurd,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(
@@ -297,12 +300,40 @@ class _KlantenLijstState extends State<KlantenLijst> {
           if (klanten.isEmpty)
             legeCategorieRij()
           else
-            ...klanten.map((klant) {
-              return klantRij(
-                klant: klant,
-                isTablet: isTablet,
-              );
-            }),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: rand,
+                ),
+              ),
+              child: Column(
+                children: List.generate(
+                  klanten.length,
+                  (index) {
+                    final klant = klanten[index];
+
+                    return Column(
+                      children: [
+                        klantRij(
+                          klant: klant,
+                          isTablet: isTablet,
+                        ),
+                        if (index != klanten.length - 1)
+                          const Divider(
+                            height: 1,
+                            indent: 12,
+                            endIndent: 12,
+                            color: Color(0xFFE5E7EB),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -341,142 +372,79 @@ class _KlantenLijstState extends State<KlantenLijst> {
     final naam = klant.naam.isEmpty ? 'Naamloos' : klant.naam;
     final bestelKleur = kleurVoorBestelStatus(klant.bestelStatus);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: rand,
+    return InkWell(
+      onTap: () {
+        openFiche(klant);
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isTablet ? 16 : 12,
+          vertical: isTablet ? 11 : 9,
         ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          openFiche(klant);
-        },
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: isTablet ? 16 : 12,
-            vertical: isTablet ? 13 : 11,
-          ),
-          child: isTablet
-              ? Row(
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: Text(
-                        naam,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Center(
-                        child: statusTekstLabel(
-                          tekst: klant.bestelStatus,
-                          kleur: bestelKleur,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (klant.klantStatus == 'Afgewerkt')
-                          SizedBox(
-                            width: 42,
-                            child: IconButton(
-                              tooltip: 'Naar archief',
-                              onPressed: () {
-                                archiveerKlant(klant);
-                              },
-                              icon: const Icon(
-                                Icons.inventory_2_outlined,
-                                color: Color(0xFF0B7A3B),
-                              ),
-                            ),
-                          ),
-                        SizedBox(
-                          width: 42,
-                          child: IconButton(
-                            onPressed: () {
-                              verwijderFiche(klant);
-                            },
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(
-                      flex: 5,
-                      child: Text(
-                        naam,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF1F2937),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      flex: 4,
-                      child: Center(
-                        child: statusTekstLabel(
-                          tekst: klant.bestelStatus,
-                          kleur: bestelKleur,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (klant.klantStatus == 'Afgewerkt')
-                          SizedBox(
-                            width: 42,
-                            child: IconButton(
-                              tooltip: 'Naar archief',
-                              onPressed: () {
-                                archiveerKlant(klant);
-                              },
-                              icon: const Icon(
-                                Icons.inventory_2_outlined,
-                                color: Color(0xFF0B7A3B),
-                              ),
-                            ),
-                          ),
-                        SizedBox(
-                          width: 42,
-                          child: IconButton(
-                            onPressed: () {
-                              verwijderFiche(klant);
-                            },
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+        child: Row(
+          children: [
+            Expanded(
+              flex: 5,
+              child: Text(
+                naam,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1F2937),
                 ),
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: Center(
+                child: statusTekstLabel(
+                  tekst: klant.bestelStatus,
+                  kleur: bestelKleur,
+                ),
+              ),
+            ),
+            actieKnoppen(klant),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget actieKnoppen(
+    KlantenficheModel klant,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (klant.klantStatus == 'Afgewerkt')
+          SizedBox(
+            width: 38,
+            child: IconButton(
+              tooltip: 'Naar archief',
+              onPressed: () {
+                archiveerKlant(klant);
+              },
+              icon: const Icon(
+                Icons.inventory_2_outlined,
+                color: Color(0xFF0B7A3B),
+              ),
+            ),
+          ),
+        SizedBox(
+          width: 38,
+          child: IconButton(
+            onPressed: () {
+              verwijderFiche(klant);
+            },
+            icon: const Icon(
+              Icons.delete_outline,
+              color: Colors.red,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
