@@ -95,7 +95,18 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                   tekst: 'Nadienst',
                   onTap: () {
                     Navigator.pop(context);
-                    // Later: nadienst openen
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const KlantenFichePagina(
+                          startStatus: 'Nadienst',
+                        ),
+                      ),
+                    ).then((_) {
+                      if (!mounted) return;
+                      setState(() {});
+                    });
                   },
                 ),
               ],

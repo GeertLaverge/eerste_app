@@ -16,10 +16,12 @@ import '../helpers/klanten/fiche/klantenfiche_afgewerkt_mail_helper.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
+  final String startStatus;
 
   const KlantenFichePagina({
     super.key,
     this.bestaandeFiche,
+    this.startStatus = 'Actief',
   });
 
   @override
@@ -76,7 +78,10 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
 
     final fiche = widget.bestaandeFiche;
 
-    if (fiche == null) return;
+    if (fiche == null) {
+      klantStatus = widget.startStatus;
+      return;
+    }
 
     artikelen = List<KlantenficheArtikel>.from(
       fiche.artikelen,

@@ -13,6 +13,7 @@ class HomePlanningHelper {
 
       return item.type == 'planning' ||
           item.type == 'opvolging' ||
+          item.type == 'nadienst' ||
           item.type == 'afspraak' ||
           item.type == 'verlof';
     }).toList();
@@ -34,7 +35,9 @@ class HomePlanningHelper {
     final klantenOpPlanning = planning.where((item) {
       if (item.isVerwijderd) return false;
 
-      return (item.type == 'planning' || item.type == 'opvolging') &&
+      return (item.type == 'planning' ||
+              item.type == 'opvolging' ||
+              item.type == 'nadienst') &&
           item.naamKlant.toString().trim().isNotEmpty;
     }).toList();
 

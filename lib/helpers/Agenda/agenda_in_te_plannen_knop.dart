@@ -23,7 +23,9 @@ class AgendaInTePlannenKnop extends StatelessWidget {
       final itemNaam = item.naamKlant.trim().toLowerCase();
       final itemTitel = item.titel.trim().toLowerCase();
 
-      return (item.type == 'planning' || item.type == 'opvolging') &&
+      return (item.type == 'planning' ||
+              item.type == 'opvolging' ||
+              item.type == 'nadienst') &&
           (itemNaam == klantNaam || itemTitel == klantNaam);
     });
   }
@@ -36,7 +38,11 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
     return AgendaItem(
       titel: klant.naam,
-      type: isOpvolging ? 'opvolging' : 'planning',
+      type: klant.klantStatus == 'Nadienst'
+          ? 'nadienst'
+          : isOpvolging
+              ? 'opvolging'
+              : 'planning',
       klantNr: klant.klantNr,
       naamKlant: klant.naam,
       straatnaam: klant.straatnaam,
@@ -54,7 +60,8 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     final klanten = await KlantenficheRepository.laadKlantenFiches();
 
     final actieveKlanten = klanten.where((klant) {
-      final actief = klant.klantStatus == 'Actief';
+      final actief =
+          klant.klantStatus == 'Actief' || klant.klantStatus == 'Nadienst';
 
       final opvolging =
           klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
@@ -327,7 +334,11 @@ class AgendaInTePlannenKnop extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            item.type == 'opvolging' ? 'Opvolging' : 'Actieve klant',
+            item.type == 'nadienst'
+                ? 'Nadienst'
+                : item.type == 'opvolging'
+                    ? 'Opvolging'
+                    : 'Actieve klant',
             style: TextStyle(
               color: kleur,
               fontSize: 11,

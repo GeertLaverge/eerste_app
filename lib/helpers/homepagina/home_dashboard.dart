@@ -40,7 +40,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final compact = MediaQuery.of(context).size.width < 700;
 
     final planningPlaatsers = widget.planningVandaag.where((item) {
-      return item.type == 'planning' || item.type == 'opvolging';
+      return item.type == 'planning' ||
+          item.type == 'opvolging' ||
+          item.type == 'nadienst';
     }).toList();
 
     final planningBureau = widget.planningVandaag.where((item) {
@@ -80,9 +82,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   eind: planning.volledigeDag || planning.eindUur == null
                       ? ''
                       : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
-                  kleur: planning.type == 'opvolging'
-                      ? Colors.amber
-                      : const Color(0xFF0B7A3B),
+                  kleur: planning.type == 'nadienst'
+                      ? Colors.purple
+                      : planning.type == 'opvolging'
+                          ? Colors.amber
+                          : const Color(0xFF0B7A3B),
                   titel: planning.titel,
                   straat: planning.straatnaam,
                   huisNr: planning.huisNr,
