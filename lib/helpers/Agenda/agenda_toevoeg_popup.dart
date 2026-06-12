@@ -71,12 +71,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       emailController.text = item.email;
       opmerkingenController.text = item.opmerkingen;
 
-      if (item.type == 'afspraak' ||
-          item.type == 'dagtaak' ||
-          item.type == 'verlof' ||
-          item.type == 'kraan') {
-        type = item.type;
-      }
+      type = item.type;
 
       volledigeDag = item.volledigeDag;
 

@@ -55,6 +55,8 @@ class AgendaKlantPlanningDropService {
 
     if (gevonden == null) return;
 
+    final isNadienst = item.type == 'nadienst';
+
     final aangepasteFiche = KlantenficheModel(
       id: gevonden.id,
       updatedAt: DateTime.now().toIso8601String(),
@@ -68,18 +70,21 @@ class AgendaKlantPlanningDropService {
       gsm: gevonden.gsm,
       gsm2: gevonden.gsm2,
       email: gevonden.email,
-      klantStatus: gevonden.klantStatus,
+      klantStatus: isNadienst ? 'Nadienst' : gevonden.klantStatus,
       bestelStatus: gevonden.bestelStatus,
       taakVoorKlant: gevonden.taakVoorKlant,
       klantTakenAfgewerktOp: gevonden.klantTakenAfgewerktOp,
       datumAfgewerkt: gevonden.datumAfgewerkt,
+      archiefDatum: gevonden.archiefDatum,
       klantTaken: gevonden.klantTaken,
       artikelen: gevonden.artikelen,
       extraWerken: gevonden.extraWerken,
       fotos: gevonden.fotos,
       opvolgTaken: gevonden.opvolgTaken,
+      notities: gevonden.notities,
       opvolgFicheVerstuurdNaarBureau: gevonden.opvolgFicheVerstuurdNaarBureau,
-      klaarVoorNieuwePlanning: true,
+      klaarVoorNieuwePlanning: item.type == 'opvolging',
+      afgewerktMailVerstuurd: gevonden.afgewerktMailVerstuurd,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(
