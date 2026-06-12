@@ -53,11 +53,13 @@ class AgendaKlantPlanningDropService {
       }
     }
 
-    final nieuweStatus = item.type == 'nadienst'
-        ? 'Nadienst'
-        : item.type == 'opvolging'
-            ? 'Opvolgen'
-            : 'Actief';
+    final nieuweStatus = item.type == 'afspraak'
+        ? 'Afspraak'
+        : item.type == 'nadienst'
+            ? 'Nadienst'
+            : item.type == 'opvolging'
+                ? 'Opvolgen'
+                : 'Actief';
 
     final klaarVoorNieuwePlanning = item.type == 'opvolging';
 

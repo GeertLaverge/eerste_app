@@ -380,8 +380,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       );
       if (item.type == 'planning' ||
           item.type == 'opvolging' ||
-          item.type == 'nadienst' ||
-          item.type == 'afspraak') {
+          item.type == 'nadienst') {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
             item);
       }

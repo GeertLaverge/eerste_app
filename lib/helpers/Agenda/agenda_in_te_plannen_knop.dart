@@ -63,9 +63,9 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     final klanten = await KlantenficheRepository.laadKlantenFiches();
 
     final actieveKlanten = klanten.where((klant) {
-      final actief =
-          klant.klantStatus == 'Actief' || klant.klantStatus == 'Nadienst';
-
+      final actief = klant.klantStatus == 'Actief' ||
+          klant.klantStatus == 'Nadienst' ||
+          klant.inTePlannenType == 'afspraak';
       final opvolging =
           klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
 
