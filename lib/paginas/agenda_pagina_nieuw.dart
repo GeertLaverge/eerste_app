@@ -378,7 +378,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         dag: dag,
         item: item,
       );
-      if (item.type == 'opvolging') {
+      if (item.type == 'opvolging' || item.type == 'nadienst') {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
             item);
       }
@@ -531,59 +531,69 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
-    final nieuwItem = await showDialog<AgendaItem>(
-      context: context,
-      builder: (context) {
-        return AgendaToevoegPopup(
-          vastType: gekozenType,
-          geplandeItems: itemsVanGeselecteerdeDag(
-            agendaItems,
+    AgendaItem? conceptItem;
+
+    while (true) {
+      final nieuwItem = await showDialog<AgendaItem>(
+        context: context,
+        builder: (context) {
+          return AgendaToevoegPopup(
+            bestaandItem: conceptItem,
+            vastType: gekozenType,
+            geplandeItems: itemsVanGeselecteerdeDag(
+              agendaItems,
+            ),
+          );
+        },
+      );
+
+      if (nieuwItem == null) return;
+
+      final foutmelding = AgendaToevoegService.kanItemToevoegen(
+        dag: selectie.geselecteerdeDag,
+        nieuwItem: nieuwItem,
+        itemsPerDag: agendaItems,
+      );
+
+      if (foutmelding != null) {
+        conceptItem = nieuwItem;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(foutmelding),
+            backgroundColor: Colors.red,
           ),
         );
-      },
-    );
 
-    if (nieuwItem == null) return;
+        continue;
+      }
 
-    final foutmelding = AgendaToevoegService.kanItemToevoegen(
-      dag: selectie.geselecteerdeDag,
-      nieuwItem: nieuwItem,
-      itemsPerDag: agendaItems,
-    );
+      final nieuweItems = await AgendaRepository.voegToe(
+        dag: selectie.geselecteerdeDag,
+        item: nieuwItem,
+        itemsPerDag: agendaItems,
+      );
 
-    if (foutmelding != null) {
+      await AgendaMeldingService.planMelding(
+        dag: selectie.geselecteerdeDag,
+        item: nieuwItem,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        agendaItems = nieuweItems;
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(foutmelding),
-          backgroundColor: Colors.red,
+        const SnackBar(
+          content: Text('Item toegevoegd.'),
+          backgroundColor: Colors.green,
         ),
       );
+
       return;
     }
-
-    final nieuweItems = await AgendaRepository.voegToe(
-      dag: selectie.geselecteerdeDag,
-      item: nieuwItem,
-      itemsPerDag: agendaItems,
-    );
-
-    await AgendaMeldingService.planMelding(
-      dag: selectie.geselecteerdeDag,
-      item: nieuwItem,
-    );
-
-    if (!mounted) return;
-
-    setState(() {
-      agendaItems = nieuweItems;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Item toegevoegd.'),
-        backgroundColor: Colors.green,
-      ),
-    );
   }
 
   Future<void> openFilterMenu() async {

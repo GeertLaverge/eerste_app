@@ -6,6 +6,7 @@ import 'agenda_sleep_keuze_popup.dart';
 import 'agenda_sleep_tijd_popup.dart';
 import 'agenda_toevoeg_service.dart';
 import 'agenda_verplaats_service.dart';
+import 'agenda_klant_planning_drop_service.dart';
 
 class AgendaSleepAfhandeling {
   static AgendaItem itemMetNieuweTijden({
@@ -34,6 +35,21 @@ class AgendaSleepAfhandeling {
 
     AgendaItem nieuwItem = item;
     if (actie.actie == AgendaSleepActie.verwijderen) {
+      return AgendaRepository.verwijder(
+        dag: oudeDag,
+        item: item,
+        itemsPerDag: itemsPerDag,
+      );
+    }
+    if (actie.actie == AgendaSleepActie.terugInTePlannen) {
+      if (item.type == 'planning' ||
+          item.type == 'opvolging' ||
+          item.type == 'nadienst') {
+        await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
+          item,
+        );
+      }
+
       return AgendaRepository.verwijder(
         dag: oudeDag,
         item: item,

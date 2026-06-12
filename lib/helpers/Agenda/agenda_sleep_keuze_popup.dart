@@ -4,6 +4,7 @@ enum AgendaSleepActie {
   verplaatsen,
   kopieren,
   tijdAanpassen,
+  terugInTePlannen,
   verwijderen,
 }
 
@@ -57,7 +58,7 @@ class AgendaSleepKeuzePopup {
                       ),
                       const Expanded(
                         child: Text(
-                          'Taak verplaatsen',
+                          'Taak aanpassen',
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
@@ -163,6 +164,42 @@ class AgendaSleepKeuzePopup {
                       ),
                       label: const Text(
                         'Tijd aanpassen',
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(
+                          0,
+                          52,
+                        ),
+                        foregroundColor: const Color(
+                          0xFF0B7A3B,
+                        ),
+                        side: const BorderSide(
+                          color: Color(
+                            0xFF0B7A3B,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(
+                          context,
+                          const AgendaSleepKeuzeResultaat(
+                            actie: AgendaSleepActie.terugInTePlannen,
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.playlist_add_check,
+                      ),
+                      label: const Text(
+                        'Zet in de lijst nog in te plannen',
                       ),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(

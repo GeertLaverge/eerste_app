@@ -15,11 +15,17 @@ class JaarItemBlok extends StatelessWidget {
   Widget build(BuildContext context) {
     final tekstKleur = item.type == 'planning'
         ? const Color(0xFF0B7A3B)
-        : item.type == 'verlof'
-            ? Colors.red
-            : item.type == 'dagtaak'
-                ? Colors.orange
-                : Colors.blue;
+        : item.type == 'opvolging'
+            ? const Color(0xFFEAB308)
+            : item.type == 'nadienst'
+                ? Colors.purple
+                : item.type == 'verlof'
+                    ? Colors.red
+                    : item.type == 'dagtaak'
+                        ? Colors.orange
+                        : item.type == 'kraan'
+                            ? Colors.brown
+                            : Colors.blue;
 
     return Container(
       padding: const EdgeInsets.symmetric(

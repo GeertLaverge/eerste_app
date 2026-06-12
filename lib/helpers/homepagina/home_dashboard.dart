@@ -46,7 +46,9 @@ class _HomeDashboardState extends State<HomeDashboard> {
     }).toList();
 
     final planningBureau = widget.planningVandaag.where((item) {
-      return item.type != 'planning';
+      return item.type != 'planning' &&
+          item.type != 'opvolging' &&
+          item.type != 'nadienst';
     }).toList();
 
     if (widget.planningVandaag.isEmpty &&

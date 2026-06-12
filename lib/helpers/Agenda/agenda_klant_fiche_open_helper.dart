@@ -9,7 +9,9 @@ class AgendaKlantFicheOpenHelper {
     required BuildContext context,
     required AgendaItem item,
   }) async {
-    if (item.type != 'planning' && item.type != 'opvolging') {
+    if (item.type != 'planning' &&
+        item.type != 'opvolging' &&
+        item.type != 'nadienst') {
       return false;
     }
 
