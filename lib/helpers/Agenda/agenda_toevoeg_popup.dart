@@ -931,24 +931,18 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 ],
                 geplandeTakenBlok(),
                 const SizedBox(height: 8),
-                if (isBewerken || widget.isHeropendeNieuwePlanning) ...[
+                if (widget.isHeropendeNieuwePlanning) ...[
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      icon: Icon(
-                        widget.isHeropendeNieuwePlanning
-                            ? Icons.close
-                            : Icons.delete_outline,
+                      icon: const Icon(
+                        Icons.close,
                         color: Colors.red,
                       ),
-                      label: Text(
-                        widget.isHeropendeNieuwePlanning
-                            ? 'Planning annuleren'
-                            : 'Planning verwijderen',
-                      ),
+                      label: const Text('Planning annuleren'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                       ),

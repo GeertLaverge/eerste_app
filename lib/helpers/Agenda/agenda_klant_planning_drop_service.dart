@@ -29,8 +29,62 @@ class AgendaKlantPlanningDropService {
       item: itemMetTijd,
       itemsPerDag: itemsPerDag,
     );
+    await verwijderUitWachtrijNaInplannen(itemMetTijd);
 
     return nieuweItems;
+  }
+
+  static Future<void> verwijderUitWachtrijNaInplannen(
+    AgendaItem item,
+  ) async {
+    final fiches = await KlantenficheRepository.laadKlantenFiches();
+
+    for (final fiche in fiches) {
+      final zelfdeKlantNr =
+          fiche.klantNr.trim().isNotEmpty && fiche.klantNr == item.klantNr;
+
+      final zelfdeNaam = fiche.naam.trim().toLowerCase() ==
+          item.naamKlant.trim().toLowerCase();
+
+      if (!zelfdeKlantNr && !zelfdeNaam) continue;
+
+      final aangepasteFiche = KlantenficheModel(
+        id: fiche.id,
+        updatedAt: DateTime.now().toIso8601String(),
+        deletedAt: fiche.deletedAt,
+        naam: fiche.naam,
+        klantNr: fiche.klantNr,
+        straatnaam: fiche.straatnaam,
+        huisNr: fiche.huisNr,
+        gemeente: fiche.gemeente,
+        postcode: fiche.postcode,
+        gsm: fiche.gsm,
+        gsm2: fiche.gsm2,
+        email: fiche.email,
+        klantStatus: fiche.klantStatus,
+        bestelStatus: fiche.bestelStatus,
+        taakVoorKlant: fiche.taakVoorKlant,
+        klantTakenAfgewerktOp: fiche.klantTakenAfgewerktOp,
+        datumAfgewerkt: fiche.datumAfgewerkt,
+        archiefDatum: fiche.archiefDatum,
+        klantTaken: fiche.klantTaken,
+        artikelen: fiche.artikelen,
+        extraWerken: fiche.extraWerken,
+        fotos: fiche.fotos,
+        opvolgTaken: fiche.opvolgTaken,
+        notities: fiche.notities,
+        opvolgFicheVerstuurdNaarBureau: fiche.opvolgFicheVerstuurdNaarBureau,
+        klaarVoorNieuwePlanning: false,
+        afgewerktMailVerstuurd: fiche.afgewerktMailVerstuurd,
+        inTePlannenType: '',
+      );
+
+      await KlantenficheRepository.bewaarKlantenFiche(
+        aangepasteFiche,
+      );
+
+      return;
+    }
   }
 
   static Future<void> zetOpvolgKlantTerugInWachtrij(
