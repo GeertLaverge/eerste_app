@@ -10,12 +10,14 @@ class AgendaToevoegPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
   final List<AgendaItem> geplandeItems;
   final String? vastType;
+  final bool isHeropendeNieuwePlanning;
 
   const AgendaToevoegPopup({
     super.key,
     this.bestaandItem,
     this.geplandeItems = const [],
     this.vastType,
+    this.isHeropendeNieuwePlanning = false,
   });
 
   @override
@@ -47,6 +49,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   bool volledigeDag = false;
 
   bool get isBewerken => widget.bestaandItem != null;
+
+  bool get isNieuwePlanningMetFout {
+    return widget.bestaandItem != null &&
+        widget.bestaandItem!.id.trim().isEmpty;
+  }
 
   @override
   void initState() {
@@ -924,16 +931,24 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 ],
                 geplandeTakenBlok(),
                 const SizedBox(height: 8),
-                if (isBewerken) ...[
+                if (isBewerken || widget.isHeropendeNieuwePlanning) ...[
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: verwijderen,
-                      icon: const Icon(
-                        Icons.delete_outline,
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      icon: Icon(
+                        widget.isHeropendeNieuwePlanning
+                            ? Icons.close
+                            : Icons.delete_outline,
                         color: Colors.red,
                       ),
-                      label: const Text('Planning verwijderen'),
+                      label: Text(
+                        widget.isHeropendeNieuwePlanning
+                            ? 'Planning annuleren'
+                            : 'Planning verwijderen',
+                      ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
                       ),

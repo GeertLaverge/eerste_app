@@ -55,7 +55,13 @@ class AgendaKlantPlanningDropService {
 
     if (gevonden == null) return;
 
-    final isNadienst = item.type == 'nadienst';
+    final nieuweStatus = item.type == 'nadienst'
+        ? 'Nadienst'
+        : item.type == 'opvolging'
+            ? 'Opvolgen'
+            : 'Actief';
+
+    final klaarVoorNieuwePlanning = item.type == 'opvolging';
 
     final aangepasteFiche = KlantenficheModel(
       id: gevonden.id,
@@ -70,7 +76,7 @@ class AgendaKlantPlanningDropService {
       gsm: gevonden.gsm,
       gsm2: gevonden.gsm2,
       email: gevonden.email,
-      klantStatus: isNadienst ? 'Nadienst' : gevonden.klantStatus,
+      klantStatus: nieuweStatus,
       bestelStatus: gevonden.bestelStatus,
       taakVoorKlant: gevonden.taakVoorKlant,
       klantTakenAfgewerktOp: gevonden.klantTakenAfgewerktOp,
@@ -83,7 +89,7 @@ class AgendaKlantPlanningDropService {
       opvolgTaken: gevonden.opvolgTaken,
       notities: gevonden.notities,
       opvolgFicheVerstuurdNaarBureau: gevonden.opvolgFicheVerstuurdNaarBureau,
-      klaarVoorNieuwePlanning: item.type == 'opvolging',
+      klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: gevonden.afgewerktMailVerstuurd,
     );
 

@@ -540,6 +540,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           return AgendaToevoegPopup(
             bestaandItem: conceptItem,
             vastType: gekozenType,
+            isHeropendeNieuwePlanning: conceptItem != null,
             geplandeItems: itemsVanGeselecteerdeDag(
               agendaItems,
             ),
