@@ -215,9 +215,18 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       if (!mounted) return;
 
       setState(() {
-        agendaItems = nieuweItems;
+        agendaItems = Map<String, List<AgendaItem>>.from(
+          nieuweItems.map(
+            (key, value) => MapEntry(
+              key,
+              List<AgendaItem>.from(value),
+            ),
+          ),
+        );
         heeftWijzigingen = true;
       });
+
+      await laadAgendaItems();
 
       return;
     }

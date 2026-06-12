@@ -223,6 +223,7 @@ class KlantenficheModel {
   final bool opvolgFicheVerstuurdNaarBureau;
   final bool klaarVoorNieuwePlanning;
   final bool afgewerktMailVerstuurd;
+  final String inTePlannenType;
 
   KlantenficheModel({
     required this.id,
@@ -250,6 +251,7 @@ class KlantenficheModel {
     this.opvolgFicheVerstuurdNaarBureau = false,
     this.klaarVoorNieuwePlanning = false,
     this.afgewerktMailVerstuurd = false,
+    this.inTePlannenType = '',
     this.updatedAt = '',
     this.deletedAt = '',
   });
@@ -283,6 +285,7 @@ class KlantenficheModel {
       'opvolgFicheVerstuurdNaarBureau': opvolgFicheVerstuurdNaarBureau,
       'klaarVoorNieuwePlanning': klaarVoorNieuwePlanning,
       'afgewerktMailVerstuurd': afgewerktMailVerstuurd,
+      'inTePlannenType': inTePlannenType,
     };
   }
 
@@ -340,6 +343,7 @@ class KlantenficheModel {
           json['opvolgFicheVerstuurdNaarBureau'] ?? false,
       klaarVoorNieuwePlanning: json['klaarVoorNieuwePlanning'] ?? false,
       afgewerktMailVerstuurd: json['afgewerktMailVerstuurd'] ?? false,
+      inTePlannenType: json['inTePlannenType'] ?? '',
       updatedAt: json['updatedAt'] ?? '',
       deletedAt: json['deletedAt'] ?? '',
     );
