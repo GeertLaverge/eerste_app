@@ -571,6 +571,9 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                           children: List.generate(
                             12,
                             (index) => AgendaJaarMaandKolom(
+                              key: ValueKey(
+                                '$jaar-${index + 1}-${agendaItems.length}',
+                              ),
                               jaar: jaar,
                               maand: index + 1,
                               geselecteerdeDag: geselecteerdeDag,

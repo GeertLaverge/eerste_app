@@ -105,6 +105,7 @@ class AgendaKlantPlanningDropService {
       opvolgFicheVerstuurdNaarBureau: basisFiche.opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: basisFiche.afgewerktMailVerstuurd,
+      inTePlannenType: item.type,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

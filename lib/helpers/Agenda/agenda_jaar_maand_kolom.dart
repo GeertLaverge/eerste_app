@@ -104,7 +104,9 @@ class AgendaJaarMaandKolom extends StatelessWidget {
 
                 final items = datumKey == null
                     ? <AgendaItem>[]
-                    : agendaItemsData[datumKey] ?? [];
+                    : (agendaItemsData[datumKey] ?? [])
+                        .where((item) => !item.isVerwijderd)
+                        .toList();
 
                 final zichtbareItems = AgendaFilterHelper.gefilterdeItems(
                       itemsPerDag: {

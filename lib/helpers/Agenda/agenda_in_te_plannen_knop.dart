@@ -25,7 +25,8 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
       return (item.type == 'planning' ||
               item.type == 'opvolging' ||
-              item.type == 'nadienst') &&
+              item.type == 'nadienst' ||
+              item.type == 'afspraak') &&
           (itemNaam == klantNaam || itemTitel == klantNaam);
     });
   }
@@ -38,11 +39,13 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
     return AgendaItem(
       titel: klant.naam,
-      type: klant.klantStatus == 'Nadienst'
-          ? 'nadienst'
-          : isOpvolging
-              ? 'opvolging'
-              : 'planning',
+      type: klant.inTePlannenType.trim().isNotEmpty
+          ? klant.inTePlannenType
+          : klant.klantStatus == 'Nadienst'
+              ? 'nadienst'
+              : isOpvolging
+                  ? 'opvolging'
+                  : 'planning',
       klantNr: klant.klantNr,
       naamKlant: klant.naam,
       straatnaam: klant.straatnaam,
@@ -338,7 +341,9 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                 ? 'Nadienst'
                 : item.type == 'opvolging'
                     ? 'Opvolging'
-                    : 'Actieve klant',
+                    : item.type == 'afspraak'
+                        ? 'Afspraak klant'
+                        : 'Actieve klant',
             style: TextStyle(
               color: kleur,
               fontSize: 11,
