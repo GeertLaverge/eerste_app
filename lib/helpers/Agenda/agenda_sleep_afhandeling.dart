@@ -44,7 +44,8 @@ class AgendaSleepAfhandeling {
     if (actie.actie == AgendaSleepActie.terugInTePlannen) {
       if (item.type == 'planning' ||
           item.type == 'opvolging' ||
-          item.type == 'nadienst') {
+          item.type == 'nadienst' ||
+          item.type == 'afspraak') {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
           item,
         );

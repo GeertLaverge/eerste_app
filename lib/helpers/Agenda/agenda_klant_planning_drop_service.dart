@@ -53,8 +53,6 @@ class AgendaKlantPlanningDropService {
       }
     }
 
-    if (gevonden == null) return;
-
     final nieuweStatus = item.type == 'nadienst'
         ? 'Nadienst'
         : item.type == 'opvolging'
@@ -63,34 +61,50 @@ class AgendaKlantPlanningDropService {
 
     final klaarVoorNieuwePlanning = item.type == 'opvolging';
 
+    final basisFiche = gevonden ??
+        KlantenficheModel(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          naam: item.naamKlant.trim().isNotEmpty
+              ? item.naamKlant.trim()
+              : item.titel.trim(),
+          klantNr: item.klantNr,
+          straatnaam: item.straatnaam,
+          huisNr: item.huisNr,
+          gemeente: item.gemeente,
+          postcode: item.postcode,
+          gsm: item.gsm,
+          gsm2: item.gsm2,
+          email: item.email,
+        );
+
     final aangepasteFiche = KlantenficheModel(
-      id: gevonden.id,
+      id: basisFiche.id,
       updatedAt: DateTime.now().toIso8601String(),
-      deletedAt: gevonden.deletedAt,
-      naam: gevonden.naam,
-      klantNr: gevonden.klantNr,
-      straatnaam: gevonden.straatnaam,
-      huisNr: gevonden.huisNr,
-      gemeente: gevonden.gemeente,
-      postcode: gevonden.postcode,
-      gsm: gevonden.gsm,
-      gsm2: gevonden.gsm2,
-      email: gevonden.email,
+      deletedAt: basisFiche.deletedAt,
+      naam: basisFiche.naam,
+      klantNr: basisFiche.klantNr,
+      straatnaam: basisFiche.straatnaam,
+      huisNr: basisFiche.huisNr,
+      gemeente: basisFiche.gemeente,
+      postcode: basisFiche.postcode,
+      gsm: basisFiche.gsm,
+      gsm2: basisFiche.gsm2,
+      email: basisFiche.email,
       klantStatus: nieuweStatus,
-      bestelStatus: gevonden.bestelStatus,
-      taakVoorKlant: gevonden.taakVoorKlant,
-      klantTakenAfgewerktOp: gevonden.klantTakenAfgewerktOp,
-      datumAfgewerkt: gevonden.datumAfgewerkt,
-      archiefDatum: gevonden.archiefDatum,
-      klantTaken: gevonden.klantTaken,
-      artikelen: gevonden.artikelen,
-      extraWerken: gevonden.extraWerken,
-      fotos: gevonden.fotos,
-      opvolgTaken: gevonden.opvolgTaken,
-      notities: gevonden.notities,
-      opvolgFicheVerstuurdNaarBureau: gevonden.opvolgFicheVerstuurdNaarBureau,
+      bestelStatus: basisFiche.bestelStatus,
+      taakVoorKlant: basisFiche.taakVoorKlant,
+      klantTakenAfgewerktOp: basisFiche.klantTakenAfgewerktOp,
+      datumAfgewerkt: basisFiche.datumAfgewerkt,
+      archiefDatum: basisFiche.archiefDatum,
+      klantTaken: basisFiche.klantTaken,
+      artikelen: basisFiche.artikelen,
+      extraWerken: basisFiche.extraWerken,
+      fotos: basisFiche.fotos,
+      opvolgTaken: basisFiche.opvolgTaken,
+      notities: basisFiche.notities,
+      opvolgFicheVerstuurdNaarBureau: basisFiche.opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
-      afgewerktMailVerstuurd: gevonden.afgewerktMailVerstuurd,
+      afgewerktMailVerstuurd: basisFiche.afgewerktMailVerstuurd,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(
