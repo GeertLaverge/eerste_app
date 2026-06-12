@@ -378,7 +378,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         dag: dag,
         item: item,
       );
-      if (item.type == 'opvolging' || item.type == 'nadienst') {
+      if (item.type == 'planning' ||
+          item.type == 'opvolging' ||
+          item.type == 'nadienst' ||
+          item.type == 'afspraak') {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
             item);
       }
@@ -392,7 +395,14 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       if (!mounted) return;
 
       setState(() {
-        agendaItems = nieuweItems;
+        agendaItems = Map<String, List<AgendaItem>>.from(
+          nieuweItems.map(
+            (key, value) => MapEntry(
+              key,
+              List<AgendaItem>.from(value),
+            ),
+          ),
+        );
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -767,45 +777,52 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           ),
           if (agendaWeergave == AgendaWeergaveType.symbolen)
             AgendaDagDetail(
-              key: ValueKey(
-                selectie.geselecteerdeDag,
-              ),
-              dag: selectie.geselecteerdeDag,
-              items: itemsVanGeselecteerdeDag(
-                zichtbareItems,
-              ),
-              onItemTap: (item) {
-                openItem(
+                key: ValueKey(
                   selectie.geselecteerdeDag,
-                  item,
-                );
-              },
-              onItemVerwijder: (item) async {
-                await AgendaMeldingService.verwijderMelding(
-                  dag: selectie.geselecteerdeDag,
-                  item: item,
-                );
+                ),
+                dag: selectie.geselecteerdeDag,
+                items: itemsVanGeselecteerdeDag(
+                  zichtbareItems,
+                ),
+                onItemTap: (item) {
+                  openItem(
+                    selectie.geselecteerdeDag,
+                    item,
+                  );
+                },
+                onItemVerwijder: (item) async {
+                  await AgendaMeldingService.verwijderMelding(
+                    dag: selectie.geselecteerdeDag,
+                    item: item,
+                  );
 
-                final nieuweItems = await AgendaRepository.verwijder(
-                  dag: selectie.geselecteerdeDag,
-                  item: item,
-                  itemsPerDag: agendaItems,
-                );
+                  if (item.type == 'planning' ||
+                      item.type == 'opvolging' ||
+                      item.type == 'nadienst' ||
+                      item.type == 'afspraak') {
+                    await AgendaKlantPlanningDropService
+                        .zetOpvolgKlantTerugInWachtrij(item);
+                  }
 
-                if (!mounted) return;
+                  final nieuweItems = await AgendaRepository.verwijder(
+                    dag: selectie.geselecteerdeDag,
+                    item: item,
+                    itemsPerDag: agendaItems,
+                  );
 
-                setState(() {
-                  agendaItems = nieuweItems;
-                });
+                  if (!mounted) return;
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Item verwijderd.'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              },
-            ),
+                  setState(() {
+                    agendaItems = nieuweItems;
+                  });
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Item verwijderd.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }),
           const SizedBox(height: 6),
           SafeArea(
             top: false,

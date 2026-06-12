@@ -29,7 +29,10 @@ class AgendaSleepAfhandeling {
     required AgendaItem item,
     required Map<String, List<AgendaItem>> itemsPerDag,
   }) async {
-    final actie = await AgendaSleepKeuzePopup.toon(context);
+    final actie = await AgendaSleepKeuzePopup.toon(
+      context,
+      item: item,
+    );
 
     if (actie == null) return null;
 
