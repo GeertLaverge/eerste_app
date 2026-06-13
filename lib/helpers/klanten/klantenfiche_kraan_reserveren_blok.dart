@@ -59,7 +59,7 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
     itemsPerDag.forEach((datumKey, items) {
       for (final item in items) {
         if (item.isVerwijderd) continue;
-        if (item.type == 'kraan') continue;
+        if (item.type != 'planning') continue;
 
         final zelfdeKlant = item.naamKlant.trim().toLowerCase() == naam ||
             item.titel.trim().toLowerCase() == naam;

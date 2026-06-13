@@ -121,7 +121,10 @@ class AgendaKlantPlanningDropService {
                 ? 'Opvolgen'
                 : 'Actief';
 
-    final klaarVoorNieuwePlanning = item.type == 'opvolging';
+    final klaarVoorNieuwePlanning = item.type == 'planning' ||
+        item.type == 'opvolging' ||
+        item.type == 'nadienst' ||
+        item.type == 'afspraak';
 
     final basisFiche = gevonden ??
         KlantenficheModel(

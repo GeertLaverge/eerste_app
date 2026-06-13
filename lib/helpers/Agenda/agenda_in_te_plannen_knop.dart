@@ -21,6 +21,8 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     if (klantNaam.isEmpty) return true;
 
     return items.any((item) {
+      if (item.isVerwijderd) return false;
+
       final itemNaam = item.naamKlant.trim().toLowerCase();
       final itemTitel = item.titel.trim().toLowerCase();
 
@@ -66,8 +68,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     final actieveKlanten = klanten.where((klant) {
       final actief = klant.klantStatus == 'Actief' ||
           klant.klantStatus == 'Nadienst' ||
-          klant.inTePlannenType == 'afspraak';
-
+          klant.inTePlannenType.trim().isNotEmpty;
       final opvolging =
           klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
 
