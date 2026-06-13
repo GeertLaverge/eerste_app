@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../klanten/kraan_waarschuwing_icon.dart';
 import 'agenda_item.dart';
 import 'agenda_kleur_service.dart';
 import 'agenda_sleep_data.dart';
@@ -40,17 +41,11 @@ class AgendaDagCel extends StatelessWidget {
     this.onItemDrop,
     required this.weergave,
   });
+
   int weekNummer(DateTime datum) {
     final eersteDag = DateTime(datum.year, 1, 1);
 
-    return ((datum
-                    .difference(
-                      eersteDag,
-                    )
-                    .inDays +
-                eersteDag.weekday -
-                1) ~/
-            7) +
+    return ((datum.difference(eersteDag).inDays + eersteDag.weekday - 1) ~/ 7) +
         1;
   }
 
@@ -75,27 +70,18 @@ class AgendaDagCel extends StatelessWidget {
               constraints: BoxConstraints(
                 minHeight: weergave == AgendaWeergaveType.symbolen ? 70 : 102,
               ),
-              margin: const EdgeInsets.symmetric(
-                horizontal: 0.3,
-                vertical: 1,
-              ),
+              margin: const EdgeInsets.symmetric(horizontal: 0.3, vertical: 1),
               padding: const EdgeInsets.fromLTRB(3, 3, 3, 2),
               decoration: BoxDecoration(
                 color: isDoel
-                    ? const Color(
-                        0xFFE7F6EC,
-                      )
+                    ? const Color(0xFFE7F6EC)
                     : isWeekend
-                        ? const Color(
-                            0xFFEAEAEA,
-                          )
+                        ? const Color(0xFFEAEAEA)
                         : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: isDoel
                     ? Border.all(
-                        color: const Color(
-                          0xFF0B7A3B,
-                        ),
+                        color: const Color(0xFF0B7A3B),
                         width: 2,
                       )
                     : null,
@@ -122,9 +108,7 @@ class AgendaDagCel extends StatelessWidget {
                               color: geselecteerd
                                   ? Colors.white
                                   : isVandaag
-                                      ? const Color(
-                                          0xFF0B7A3B,
-                                        )
+                                      ? const Color(0xFF0B7A3B)
                                       : andereMaand
                                           ? Colors.grey
                                           : Colors.black87,
@@ -245,6 +229,32 @@ class AgendaDagCel extends StatelessWidget {
     );
   }
 
+  Widget titelMetKraan({
+    required AgendaItem item,
+    required Color kleur,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            item.titel,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: kleur,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (item.kraanNodig && !item.kraanIngepland)
+          const KraanWaarschuwingIcon(
+            actief: true,
+          ),
+      ],
+    );
+  }
+
   Widget itemBlok({
     required AgendaItem item,
     required Color kleur,
@@ -273,15 +283,9 @@ class AgendaDagCel extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              Text(
-                item.titel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: kleur,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
+              titelMetKraan(
+                item: item,
+                kleur: kleur,
               ),
             ],
           );
@@ -300,15 +304,9 @@ class AgendaDagCel extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              Text(
-                item.titel,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: kleur,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
+              titelMetKraan(
+                item: item,
+                kleur: kleur,
               ),
             ],
           );
@@ -316,10 +314,7 @@ class AgendaDagCel extends StatelessWidget {
 
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 1,
-            vertical: 2,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
           decoration: BoxDecoration(
             color: AgendaKleurService.achtergrond(item.type),
             borderRadius: BorderRadius.circular(7),

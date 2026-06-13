@@ -65,6 +65,12 @@ class KlantenficheService {
     required bool opvolgFicheVerstuurdNaarBureau,
     required bool klaarVoorNieuwePlanning,
     required bool afgewerktMailVerstuurd,
+    required bool kraanNodig,
+    required String kraanDatum,
+    required int? kraanStartUur,
+    required int? kraanStartMinuut,
+    required int? kraanEindUur,
+    required int? kraanEindMinuut,
   }) async {
     if (naam.trim().isEmpty &&
         straatnaam.trim().isEmpty &&
@@ -114,6 +120,13 @@ class KlantenficheService {
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: afgewerktMailVerstuurd,
+      inTePlannenType: bestaand?.inTePlannenType ?? '',
+      kraanNodig: kraanNodig,
+      kraanDatum: kraanDatum,
+      kraanStartUur: kraanStartUur,
+      kraanStartMinuut: kraanStartMinuut,
+      kraanEindUur: kraanEindUur,
+      kraanEindMinuut: kraanEindMinuut,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(

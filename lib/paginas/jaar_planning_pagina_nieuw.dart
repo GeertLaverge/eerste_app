@@ -21,6 +21,7 @@ import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
+import '../helpers/Agenda/agenda_filter_helper.dart';
 
 class JaarPlanningPaginaNieuw extends StatefulWidget {
   const JaarPlanningPaginaNieuw({super.key});
@@ -454,6 +455,16 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
 
   @override
   Widget build(BuildContext context) {
+    final zichtbareItems = AgendaFilterHelper.gefilterdeItems(
+      itemsPerDag: agendaItems,
+      toonPlanning: filters.toonPlanning,
+      toonOpvolging: filters.toonOpvolging,
+      toonNadienst: filters.toonNadienst,
+      toonAfspraak: filters.toonAfspraak,
+      toonDagtaak: filters.toonDagtaak,
+      toonVerlof: filters.toonVerlof,
+      toonKraan: filters.toonKraan,
+    );
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: Column(
@@ -577,7 +588,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                               jaar: jaar,
                               maand: index + 1,
                               geselecteerdeDag: geselecteerdeDag,
-                              agendaItemsData: agendaItems,
+                              agendaItemsData: zichtbareItems,
                               actieveFilters: filters,
                               maandBreedte: maandBreedte,
                               weekNummer: weekNummer,

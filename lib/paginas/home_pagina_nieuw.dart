@@ -87,6 +87,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                             planningVandaag,
                             dagTakenVandaag,
                             HomePlanningHelper.klantTakenVandaag(),
+                            HomePlanningHelper.kraanReservatiesVandaag(),
                           ]),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
@@ -97,6 +98,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                               planningVandaag: snapshot.data![0],
                               dagTakenVandaag: snapshot.data![1],
                               klantTakenVandaag: snapshot.data![2],
+                              kraanReservatiesVandaag: snapshot.data![3],
                             );
                           },
                         ),

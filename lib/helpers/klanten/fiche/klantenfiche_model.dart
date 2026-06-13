@@ -224,6 +224,12 @@ class KlantenficheModel {
   final bool klaarVoorNieuwePlanning;
   final bool afgewerktMailVerstuurd;
   final String inTePlannenType;
+  final bool kraanNodig;
+  final String kraanDatum;
+  final int? kraanStartUur;
+  final int? kraanStartMinuut;
+  final int? kraanEindUur;
+  final int? kraanEindMinuut;
 
   KlantenficheModel({
     required this.id,
@@ -252,6 +258,12 @@ class KlantenficheModel {
     this.klaarVoorNieuwePlanning = false,
     this.afgewerktMailVerstuurd = false,
     this.inTePlannenType = '',
+    this.kraanNodig = false,
+    this.kraanDatum = '',
+    this.kraanStartUur,
+    this.kraanStartMinuut,
+    this.kraanEindUur,
+    this.kraanEindMinuut,
     this.updatedAt = '',
     this.deletedAt = '',
   });
@@ -286,6 +298,12 @@ class KlantenficheModel {
       'klaarVoorNieuwePlanning': klaarVoorNieuwePlanning,
       'afgewerktMailVerstuurd': afgewerktMailVerstuurd,
       'inTePlannenType': inTePlannenType,
+      'kraanNodig': kraanNodig,
+      'kraanDatum': kraanDatum,
+      'kraanStartUur': kraanStartUur,
+      'kraanStartMinuut': kraanStartMinuut,
+      'kraanEindUur': kraanEindUur,
+      'kraanEindMinuut': kraanEindMinuut,
     };
   }
 
@@ -309,6 +327,12 @@ class KlantenficheModel {
       klantTakenAfgewerktOp: json['klantTakenAfgewerktOp'] ?? '',
       datumAfgewerkt: json['datumAfgewerkt'] ?? '',
       archiefDatum: json['archiefDatum'] ?? '',
+      kraanNodig: json['kraanNodig'] ?? false,
+      kraanDatum: json['kraanDatum'] ?? '',
+      kraanStartUur: json['kraanStartUur'],
+      kraanStartMinuut: json['kraanStartMinuut'],
+      kraanEindUur: json['kraanEindUur'],
+      kraanEindMinuut: json['kraanEindMinuut'],
       klantTaken: (json['klantTaken'] as List<dynamic>? ?? [])
           .map(
             (item) => KlantTaakItem.fromJson(

@@ -7,6 +7,8 @@ import 'agenda_sleep_tijd_popup.dart';
 import 'agenda_toevoeg_service.dart';
 import 'agenda_verplaats_service.dart';
 import 'agenda_klant_planning_drop_service.dart';
+import 'agenda_kraan_sync_service.dart';
+import 'agenda_kraan_beveiliging_service.dart';
 
 class AgendaSleepAfhandeling {
   static AgendaItem itemMetNieuweTijden({
@@ -19,6 +21,54 @@ class AgendaSleepAfhandeling {
       startMinuut: start.minute,
       eindUur: eind.hour,
       eindMinuut: eind.minute,
+    );
+  }
+
+  static void toonKraanMelding(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 6),
+        backgroundColor: Colors.brown,
+        content: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '🏗️ Kraan aangevraagd voor deze dag?',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+            InkWell(
+              onTap: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+              child: const Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static bool isKlantPlanning(AgendaItem item) {
+    return item.type == 'planning' ||
+        item.type == 'opvolging' ||
+        item.type == 'nadienst' ||
+        item.type == 'afspraak';
+  }
+
+  static void toonFout(
+    BuildContext context,
+    String melding,
+  ) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(melding),
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -37,6 +87,7 @@ class AgendaSleepAfhandeling {
     if (actie == null) return null;
 
     AgendaItem nieuwItem = item;
+
     if (actie.actie == AgendaSleepActie.verwijderen) {
       return AgendaRepository.verwijder(
         dag: oudeDag,
@@ -44,11 +95,9 @@ class AgendaSleepAfhandeling {
         itemsPerDag: itemsPerDag,
       );
     }
+
     if (actie.actie == AgendaSleepActie.terugInTePlannen) {
-      if (item.type == 'planning' ||
-          item.type == 'opvolging' ||
-          item.type == 'nadienst' ||
-          item.type == 'afspraak') {
+      if (isKlantPlanning(item)) {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
           item,
         );
@@ -86,12 +135,34 @@ class AgendaSleepAfhandeling {
         );
       }
 
-      return AgendaRepository.bewerk(
+      if (nieuwItem.type == 'kraan') {
+        final kraanFout = AgendaKraanBeveiligingService.controleerKraan(
+          dag: oudeDag,
+          kraanItem: nieuwItem,
+          itemsPerDag: itemsPerDag,
+        );
+
+        if (kraanFout != null) {
+          toonFout(context, kraanFout);
+          return null;
+        }
+      }
+
+      final nieuweItems = await AgendaRepository.bewerk(
         dag: oudeDag,
         oudItem: item,
         nieuwItem: nieuwItem,
         itemsPerDag: itemsPerDag,
       );
+
+      if (nieuwItem.type == 'kraan') {
+        await AgendaKraanSyncService.updateFicheNaKraanAanpassing(
+          dag: oudeDag,
+          kraanItem: nieuwItem,
+        );
+      }
+
+      return nieuweItems;
     }
 
     final tijd = await AgendaSleepTijdPopup.toon(
@@ -136,14 +207,21 @@ class AgendaSleepAfhandeling {
     }
 
     if (foutmelding != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(foutmelding),
-          backgroundColor: Colors.red,
-        ),
+      toonFout(context, foutmelding);
+      return null;
+    }
+
+    if (nieuwItem.type == 'kraan') {
+      final kraanFout = AgendaKraanBeveiligingService.controleerKraan(
+        dag: nieuweDag,
+        kraanItem: nieuwItem,
+        itemsPerDag: itemsPerDag,
       );
 
-      return null;
+      if (kraanFout != null) {
+        toonFout(context, kraanFout);
+        return null;
+      }
     }
 
     if (actie.actie == AgendaSleepActie.kopieren) {
@@ -166,10 +244,32 @@ class AgendaSleepAfhandeling {
       itemsPerDag: itemsPerDag,
     );
 
-    return AgendaRepository.voegToe(
+    var nieuweItems = await AgendaRepository.voegToe(
       dag: nieuweDag,
       item: nieuwItem,
       itemsPerDag: eerstVerwijderd,
     );
+
+    if (nieuwItem.type == 'kraan') {
+      await AgendaKraanSyncService.updateFicheNaKraanAanpassing(
+        dag: nieuweDag,
+        kraanItem: nieuwItem,
+      );
+    }
+
+    if (isKlantPlanning(nieuwItem)) {
+      final metKraan = await AgendaKraanSyncService.verplaatsKraanMeeMetKlant(
+        oudeDag: oudeDag,
+        nieuweDag: nieuweDag,
+        klantItem: nieuwItem,
+        itemsPerDag: nieuweItems,
+      );
+
+      nieuweItems = metKraan;
+
+      toonKraanMelding(context);
+    }
+
+    return nieuweItems;
   }
 }

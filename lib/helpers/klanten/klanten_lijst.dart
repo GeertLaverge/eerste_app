@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../paginas/klanten_fiche_pagina.dart';
 import 'fiche/klantenfiche_model.dart';
 import 'fiche/klantenfiche_repository.dart';
+import 'kraan_waarschuwing_icon.dart';
 
 class KlantenLijst extends StatefulWidget {
   final String klantStatus;
@@ -385,15 +386,21 @@ class _KlantenLijstState extends State<KlantenLijst> {
           children: [
             Expanded(
               flex: 5,
-              child: Text(
-                naam,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1F2937),
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      naam,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -418,6 +425,10 @@ class _KlantenLijstState extends State<KlantenLijst> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (klant.kraanNodig)
+          KraanWaarschuwingIcon(
+            actief: klant.kraanDatum.isEmpty,
+          ),
         if (klant.klantStatus == 'Afgewerkt')
           SizedBox(
             width: 38,

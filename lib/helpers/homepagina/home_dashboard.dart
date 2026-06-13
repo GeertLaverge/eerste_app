@@ -7,12 +7,14 @@ class HomeDashboard extends StatefulWidget {
   final List<dynamic> planningVandaag;
   final List<dynamic> dagTakenVandaag;
   final List<dynamic> klantTakenVandaag;
+  final List<dynamic> kraanReservatiesVandaag;
 
   const HomeDashboard({
     super.key,
     required this.planningVandaag,
     required this.dagTakenVandaag,
     required this.klantTakenVandaag,
+    required this.kraanReservatiesVandaag,
   });
 
   static const rand = Color(0xFFE5E7EB);
@@ -48,12 +50,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
     final planningBureau = widget.planningVandaag.where((item) {
       return item.type != 'planning' &&
           item.type != 'opvolging' &&
-          item.type != 'nadienst';
+          item.type != 'nadienst' &&
+          item.type != 'kraan';
     }).toList();
 
     if (widget.planningVandaag.isEmpty &&
         widget.dagTakenVandaag.isEmpty &&
-        widget.klantTakenVandaag.isEmpty) {
+        widget.klantTakenVandaag.isEmpty &&
+        widget.kraanReservatiesVandaag.isEmpty) {
       return const _TaakSectie(
         titel: 'Vandaag',
         taken: [
@@ -141,6 +145,29 @@ class _HomeDashboardState extends State<HomeDashboard> {
               }
 
               return takenWidgets;
+            }).toList(),
+          ),
+        if (widget.kraanReservatiesVandaag.isNotEmpty)
+          _TaakSectie(
+            titel: 'Kraanreservaties',
+            taken: widget.kraanReservatiesVandaag.map((planning) {
+              return _TaakRij(
+                compact: compact,
+                start: planning.volledigeDag || planning.startUur == null
+                    ? ''
+                    : '${planning.startUur.toString().padLeft(2, '0')}:${planning.startMinuut.toString().padLeft(2, '0')}',
+                eind: planning.volledigeDag || planning.eindUur == null
+                    ? ''
+                    : '${planning.eindUur.toString().padLeft(2, '0')}:${planning.eindMinuut.toString().padLeft(2, '0')}',
+                kleur: Colors.brown,
+                titel: '🏗️ ${planning.titel}',
+                straat: planning.straatnaam,
+                huisNr: planning.huisNr,
+                postcode: planning.postcode,
+                gemeente: planning.gemeente,
+                meldingVoorafMinuten: 0,
+                opmerkingen: planning.opmerkingen,
+              );
             }).toList(),
           ),
         if (planningPlaatsers.isNotEmpty && planningBureau.isNotEmpty)

@@ -32,6 +32,46 @@ class AgendaFilterHelper {
     }
   }
 
+  static String klantSleutel(AgendaItem item) {
+    final klantNr = item.klantNr.trim().toLowerCase();
+
+    if (klantNr.isNotEmpty) return 'nr:$klantNr';
+
+    final naam = item.naamKlant.trim().toLowerCase();
+
+    if (naam.isNotEmpty) return 'naam:$naam';
+
+    return 'titel:${item.titel.trim().toLowerCase()}';
+  }
+
+  static Map<String, String> eersteKraanWaarschuwingPerKlant(
+    Map<String, List<AgendaItem>> itemsPerDag,
+  ) {
+    final eersteDatumPerKlant = <String, String>{};
+
+    final datums = itemsPerDag.keys.toList()..sort();
+
+    for (final datumKey in datums) {
+      final items = itemsPerDag[datumKey] ?? [];
+
+      for (final item in items) {
+        if (item.isVerwijderd) continue;
+        if (!item.kraanNodig) continue;
+        if (item.kraanIngepland) continue;
+        if (item.type == 'kraan') continue;
+
+        final sleutel = klantSleutel(item);
+
+        eersteDatumPerKlant.putIfAbsent(
+          sleutel,
+          () => datumKey,
+        );
+      }
+    }
+
+    return eersteDatumPerKlant;
+  }
+
   static Map<String, List<AgendaItem>> gefilterdeItems({
     required Map<String, List<AgendaItem>> itemsPerDag,
     required bool toonPlanning,
@@ -43,6 +83,9 @@ class AgendaFilterHelper {
     required bool toonKraan,
   }) {
     final resultaat = <String, List<AgendaItem>>{};
+    final eersteKraanDatum = eersteKraanWaarschuwingPerKlant(
+      itemsPerDag,
+    );
 
     itemsPerDag.forEach((datumKey, items) {
       final zichtbareItems = items.where((item) {
@@ -55,6 +98,17 @@ class AgendaFilterHelper {
           toonDagtaak: toonDagtaak,
           toonVerlof: toonVerlof,
           toonKraan: toonKraan,
+        );
+      }).map((item) {
+        final sleutel = klantSleutel(item);
+        final magKraanWaarschuwingTonen = item.kraanNodig &&
+            !item.kraanIngepland &&
+            item.type != 'kraan' &&
+            eersteKraanDatum[sleutel] == datumKey;
+
+        return item.copyWith(
+          kraanNodig: magKraanWaarschuwingTonen,
+          kraanIngepland: item.kraanIngepland,
         );
       }).toList();
 

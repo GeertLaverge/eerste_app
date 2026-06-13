@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../helpers/Agenda/agenda_item.dart';
 import '../../helpers/Agenda/agenda_kleur_service.dart';
+import '../../helpers/klanten/kraan_waarschuwing_icon.dart';
 
 class JaarItemBlok extends StatelessWidget {
   final AgendaItem item;
@@ -54,16 +55,22 @@ class JaarItemBlok extends StatelessWidget {
             const SizedBox(
               width: 3,
             ),
-          Text(
-            item.titel,
-            maxLines: 1,
-            overflow: TextOverflow.visible,
-            style: TextStyle(
-              color: tekstKleur,
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
+          Flexible(
+            child: Text(
+              item.titel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: tekstKleur,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
+          if (item.kraanNodig && !item.kraanIngepland)
+            const KraanWaarschuwingIcon(
+              actief: true,
+            ),
         ],
       ),
     );

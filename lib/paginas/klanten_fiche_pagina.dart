@@ -13,6 +13,7 @@ import '../helpers/klanten/klantenfiche_extra_werk_veld.dart';
 import '../helpers/klanten/fotos/klantenfiche_foto_blok.dart';
 import '../helpers/klanten/fotos/mail/klantenfiche_foto_mail_service.dart';
 import '../helpers/klanten/fiche/klantenfiche_afgewerkt_mail_helper.dart';
+import '../helpers/klanten/klantenfiche_kraan_reserveren_blok.dart';
 
 class KlantenFichePagina extends StatefulWidget {
   final KlantenficheModel? bestaandeFiche;
@@ -50,6 +51,12 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   bool opvolgFicheVerstuurdNaarBureau = false;
   bool klaarVoorNieuwePlanning = false;
   bool afgewerktMailVerstuurd = false;
+  bool kraanNodig = false;
+  String kraanDatum = '';
+  int? kraanStartUur;
+  int? kraanStartMinuut;
+  int? kraanEindUur;
+  int? kraanEindMinuut;
 
   List<KlantenficheArtikel> artikelen = [];
   List<KlantTaakItem> klantTaken = [];
@@ -112,6 +119,12 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     opvolgFicheVerstuurdNaarBureau = fiche.opvolgFicheVerstuurdNaarBureau;
     klaarVoorNieuwePlanning = fiche.klaarVoorNieuwePlanning;
     afgewerktMailVerstuurd = fiche.afgewerktMailVerstuurd;
+    kraanNodig = fiche.kraanNodig;
+    kraanDatum = fiche.kraanDatum;
+    kraanStartUur = fiche.kraanStartUur;
+    kraanStartMinuut = fiche.kraanStartMinuut;
+    kraanEindUur = fiche.kraanEindUur;
+    kraanEindMinuut = fiche.kraanEindMinuut;
   }
 
   @override
@@ -159,6 +172,12 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: afgewerktMailVerstuurd,
+      kraanNodig: kraanNodig,
+      kraanDatum: kraanDatum,
+      kraanStartUur: kraanStartUur,
+      kraanStartMinuut: kraanStartMinuut,
+      kraanEindUur: kraanEindUur,
+      kraanEindMinuut: kraanEindMinuut,
     );
   }
 
@@ -779,6 +798,60 @@ ${_extraWerkenTekst()}
                       extraWerken: extraWerken,
                       onChanged: () async {
                         setState(() {});
+                        await automatischBewaren();
+                      },
+                    ),
+                  ),
+                  KlantenficheUitvalBlok(
+                    titel: 'Kraan reserveren',
+                    standaardOpen: false,
+                    child: KlantenficheKraanReserverenBlok(
+                      kraanNodig: kraanNodig,
+                      kraanDatum: kraanDatum,
+                      kraanStartUur: kraanStartUur,
+                      kraanStartMinuut: kraanStartMinuut,
+                      kraanEindUur: kraanEindUur,
+                      kraanEindMinuut: kraanEindMinuut,
+                      klantNaam: naamController.text,
+                      klantNr: klantNrController.text,
+                      straatnaam: straatController.text,
+                      huisNr: nrController.text,
+                      gemeente: gemeenteController.text,
+                      postcode: postcodeController.text,
+                      gsm: gsmController.text,
+                      email: emailController.text,
+                      onKraanNodigChanged: (waarde) async {
+                        setState(() {
+                          kraanNodig = waarde;
+
+                          if (!waarde) {
+                            kraanDatum = '';
+                            kraanStartUur = null;
+                            kraanStartMinuut = null;
+                            kraanEindUur = null;
+                            kraanEindMinuut = null;
+                          }
+                        });
+
+                        await automatischBewaren();
+                      },
+                      onKraanGereserveerd: ({
+                        required datum,
+                        required startUur,
+                        required startMinuut,
+                        required eindUur,
+                        required eindMinuut,
+                      }) async {
+                        setState(() {
+                          kraanNodig = true;
+
+                          kraanDatum = datum;
+                          kraanStartUur = startUur;
+                          kraanStartMinuut = startMinuut;
+                          kraanEindUur = eindUur;
+                          kraanEindMinuut = eindMinuut;
+                        });
+
                         await automatischBewaren();
                       },
                     ),

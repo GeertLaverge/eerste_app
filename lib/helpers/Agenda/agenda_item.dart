@@ -37,6 +37,8 @@ class AgendaItem {
   final int dagenVooraf;
   final String homeDatum;
   final int meldingVoorafMinuten;
+  final bool kraanNodig;
+  final bool kraanIngepland;
 
   const AgendaItem({
     this.id = '',
@@ -64,6 +66,8 @@ class AgendaItem {
     this.dagenVooraf = 0,
     this.homeDatum = '',
     this.meldingVoorafMinuten = 60,
+    this.kraanNodig = false,
+    this.kraanIngepland = false,
   });
 
   String get syncId {
@@ -133,6 +137,8 @@ class AgendaItem {
     int? dagenVooraf,
     String? homeDatum,
     int? meldingVoorafMinuten,
+    bool? kraanNodig,
+    bool? kraanIngepland,
   }) {
     return AgendaItem(
       id: id ?? this.id,
@@ -160,6 +166,8 @@ class AgendaItem {
       dagenVooraf: dagenVooraf ?? this.dagenVooraf,
       homeDatum: homeDatum ?? this.homeDatum,
       meldingVoorafMinuten: meldingVoorafMinuten ?? this.meldingVoorafMinuten,
+      kraanNodig: kraanNodig ?? this.kraanNodig,
+      kraanIngepland: kraanIngepland ?? this.kraanIngepland,
     );
   }
 
@@ -195,6 +203,8 @@ class AgendaItem {
       dagenVooraf: dagenVooraf,
       homeDatum: homeDatum,
       meldingVoorafMinuten: meldingVoorafMinuten,
+      kraanNodig: kraanNodig,
+      kraanIngepland: kraanIngepland,
     );
   }
 
@@ -224,6 +234,8 @@ class AgendaItem {
       'dagenVooraf': dagenVooraf,
       'homeDatum': homeDatum,
       'meldingVoorafMinuten': meldingVoorafMinuten,
+      'kraanNodig': kraanNodig,
+      'kraanIngepland': kraanIngepland,
     };
   }
 
@@ -255,7 +267,9 @@ class AgendaItem {
       homeWeergaveType: json['homeWeergaveType'] ?? '',
       dagenVooraf: json['dagenVooraf'] ?? 0,
       homeDatum: json['homeDatum'] ?? '',
-      meldingVoorafMinuten: json['meldingVoorafMinuten'] ?? 0,
+      meldingVoorafMinuten: json['meldingVoorafMinuten'] ?? 60,
+      kraanNodig: json['kraanNodig'] ?? false,
+      kraanIngepland: json['kraanIngepland'] ?? false,
     );
   }
 }

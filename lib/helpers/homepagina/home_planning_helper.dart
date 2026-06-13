@@ -28,6 +28,24 @@ class HomePlanningHelper {
     return planning;
   }
 
+  static Future<List<dynamic>> kraanReservatiesVandaag() async {
+    final data = await AppStorage.laadAgendaItemsNieuw();
+    final sleutel = _sleutelVandaag();
+
+    final items = data[sleutel] ?? [];
+
+    final kraanItems = items.where((item) {
+      if (item.isVerwijderd) return false;
+      return item.type == 'kraan';
+    }).toList();
+
+    kraanItems.sort(
+      (a, b) => a.startMinuten.compareTo(b.startMinuten),
+    );
+
+    return kraanItems;
+  }
+
   static Future<List<dynamic>> klantTakenVandaag() async {
     final planning = await planningVandaag();
     final fiches = await KlantenficheRepository.laadKlantenFiches();

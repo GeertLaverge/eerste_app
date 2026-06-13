@@ -5,6 +5,7 @@ import 'agenda_kleur_service.dart';
 import 'agenda_sleep_data.dart';
 import '../klanten/fiche/klantenfiche_model.dart';
 import '../klanten/fiche/klantenfiche_repository.dart';
+import '../klanten/kraan_waarschuwing_icon.dart';
 
 class AgendaInTePlannenKnop extends StatelessWidget {
   final List<AgendaItem> items;
@@ -31,9 +32,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     });
   }
 
-  AgendaItem maakAgendaItemVanKlant(
-    KlantenficheModel klant,
-  ) {
+  AgendaItem maakAgendaItemVanKlant(KlantenficheModel klant) {
     final isOpvolging =
         klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
 
@@ -56,6 +55,8 @@ class AgendaInTePlannenKnop extends StatelessWidget {
       gsm2: klant.gsm2,
       email: klant.email,
       opmerkingen: isOpvolging ? klant.opvolgTaken : klant.taakVoorKlant,
+      kraanNodig: klant.kraanNodig,
+      kraanIngepland: klant.kraanDatum.isNotEmpty,
     );
   }
 
@@ -81,11 +82,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
           ),
     );
 
-    return actieveKlanten
-        .map(
-          maakAgendaItemVanKlant,
-        )
-        .toList();
+    return actieveKlanten.map(maakAgendaItemVanKlant).toList();
   }
 
   void openMenu(BuildContext context) {
@@ -114,15 +111,11 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                   },
                   child: Container(
                     width: 360,
-                    constraints: const BoxConstraints(
-                      maxHeight: 520,
-                    ),
+                    constraints: const BoxConstraints(maxHeight: 520),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                      ),
+                      border: Border.all(color: Colors.grey.shade300),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.18),
@@ -204,9 +197,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                         AgendaKleurService.kleur(item.type);
 
                                     return Padding(
-                                      padding: const EdgeInsets.only(
-                                        bottom: 8,
-                                      ),
+                                      padding: const EdgeInsets.only(bottom: 8),
                                       child: Draggable<AgendaSleepData>(
                                         data: AgendaSleepData(
                                           oudeDag: DateTime(1900, 1, 1),
@@ -235,9 +226,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                               ),
                                               borderRadius:
                                                   BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: kleur,
-                                              ),
+                                              border: Border.all(color: kleur),
                                               boxShadow: const [
                                                 BoxShadow(
                                                   color: Colors.black26,
@@ -325,15 +314,25 @@ class AgendaInTePlannenKnop extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
-              item.titel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.black87,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              children: [
+                if (item.kraanNodig)
+                  KraanWaarschuwingIcon(
+                    actief: !item.kraanIngepland,
+                  ),
+                Expanded(
+                  child: Text(
+                    item.titel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(width: 8),

@@ -77,6 +77,12 @@ class AgendaKlantPlanningDropService {
         klaarVoorNieuwePlanning: false,
         afgewerktMailVerstuurd: fiche.afgewerktMailVerstuurd,
         inTePlannenType: '',
+        kraanNodig: fiche.kraanNodig,
+        kraanDatum: fiche.kraanDatum,
+        kraanStartUur: fiche.kraanStartUur,
+        kraanStartMinuut: fiche.kraanStartMinuut,
+        kraanEindUur: fiche.kraanEindUur,
+        kraanEindMinuut: fiche.kraanEindMinuut,
       );
 
       await KlantenficheRepository.bewaarKlantenFiche(
@@ -162,6 +168,12 @@ class AgendaKlantPlanningDropService {
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: basisFiche.afgewerktMailVerstuurd,
       inTePlannenType: item.type,
+      kraanNodig: basisFiche.kraanNodig,
+      kraanDatum: basisFiche.kraanDatum,
+      kraanStartUur: basisFiche.kraanStartUur,
+      kraanStartMinuut: basisFiche.kraanStartMinuut,
+      kraanEindUur: basisFiche.kraanEindUur,
+      kraanEindMinuut: basisFiche.kraanEindMinuut,
     );
 
     await KlantenficheRepository.bewaarKlantenFiche(
