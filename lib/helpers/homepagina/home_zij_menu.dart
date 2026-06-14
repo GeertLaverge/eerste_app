@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../paginas/klanten_pagina.dart';
 import '../sync/sync_navigatie_helper.dart';
+import '../../paginas/notities_bureau_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -22,56 +23,23 @@ class HomeZijMenu extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          right: BorderSide(
-            color: rand,
-          ),
+          right: BorderSide(color: rand),
         ),
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: compact ? 8 : 14,
-          ),
+          SizedBox(height: compact ? 8 : 14),
+          _menuKnop(context, 'Agenda', Icons.calendar_month_outlined,
+              actief: true),
+          _menuKnop(context, 'Klanten', Icons.groups_outlined),
           _menuKnop(
-            context,
-            'Agenda',
-            Icons.calendar_month_outlined,
-            actief: true,
-          ),
-          _menuKnop(
-            context,
-            'Klanten',
-            Icons.groups_outlined,
-          ),
-          _menuKnop(
-            context,
-            compact ? 'Notitie\'s\nplaatsers' : 'Notitie\'s plaatsers',
-            Icons.description_outlined,
-          ),
-          _menuKnop(
-            context,
-            compact ? 'Notitie\'s\nbureau' : 'Notitie\'s bureau',
-            Icons.edit_note_outlined,
-          ),
-          _menuKnop(
-            context,
-            'Puinzak',
-            Icons.delete_outline,
-          ),
-          _menuKnop(
-            context,
-            'Magazijn',
-            Icons.inventory_2_outlined,
-          ),
+              context, 'Notitie\'s\nplaatsers', Icons.description_outlined),
+          _menuKnop(context, 'Notitie\'s\nbureau', Icons.edit_note_outlined),
+          _menuKnop(context, 'Puinzak', Icons.delete_outline),
+          _menuKnop(context, 'Magazijn', Icons.inventory_2_outlined),
           const Spacer(),
-          _menuKnop(
-            context,
-            'Afmelden',
-            Icons.logout,
-          ),
-          SizedBox(
-            height: compact ? 8 : 12,
-          ),
+          _menuKnop(context, 'Afmelden', Icons.logout),
+          SizedBox(height: compact ? 8 : 12),
         ],
       ),
     );
@@ -100,9 +68,17 @@ class HomeZijMenu extends StatelessWidget {
           );
           return;
         }
+
+        if (titel.contains('bureau')) {
+          await SyncNavigatieHelper.openMetDownload(
+            context: context,
+            pagina: const NotitiesBureauPagina(),
+          );
+          return;
+        }
       },
       child: Container(
-        height: compact ? 78 : 52,
+        height: compact ? 86 : 64,
         decoration: BoxDecoration(
           border: Border(
             left: BorderSide(
@@ -128,7 +104,7 @@ class HomeZijMenu extends StatelessWidget {
                   Text(
                     titel,
                     textAlign: TextAlign.center,
-                    maxLines: 2,
+                    maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 10,
@@ -140,9 +116,7 @@ class HomeZijMenu extends StatelessWidget {
                 ],
               )
             : Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 child: Row(
                   children: [
                     Icon(
@@ -150,14 +124,16 @@ class HomeZijMenu extends StatelessWidget {
                       size: 20,
                       color: actief ? groen : Colors.black87,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         titel,
-                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
+                          height: 1.05,
                           fontWeight:
                               actief ? FontWeight.w700 : FontWeight.w500,
                           color: actief ? groen : Colors.black87,

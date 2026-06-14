@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'leveranciers_pagina.dart';
 import 'archief_klanten_pagina.dart';
+
 import '../helpers/sync/onedrive_sync_service.dart';
+import '../helpers/notities/notitie_acties_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
   const InstellingenPagina({super.key});
@@ -40,6 +42,28 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.local_shipping_outlined),
                 label: const Text('Leveranciers'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: groen,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await OneDriveSyncService().slimmeSync();
+
+                  if (!context.mounted) return;
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotitieActiesPagina(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.edit_note_outlined),
+                label: const Text('Acties notities'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: groen,
                   foregroundColor: Colors.white,

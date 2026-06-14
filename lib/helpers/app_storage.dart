@@ -1,14 +1,21 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Agenda/agenda_item.dart';
 import 'Agenda/agenda_dagtaak_template.dart';
 import 'sync/onedrive_sync_service.dart';
 
+import '../helpers/notities/notitie_model.dart';
+import '../helpers/notities/notitie_actie_model.dart';
+
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
   static const String _dagtaakTemplatesKey = 'dagtaak_templates';
   static const String _klantenFichesKey = 'klanten_fiches';
+
+  static const String _notitiesKey = 'thimaco_notities';
+  static const String _notitieActiesKey = 'thimaco_notitie_acties';
 
   static Future<SharedPreferences> openBox() async {
     return SharedPreferences.getInstance();
@@ -16,7 +23,6 @@ class AppStorage {
 
   static Future<void> _syncBackup() async {
     await OneDriveSyncService.registreerLokaleWijziging();
-
     OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
@@ -34,8 +40,9 @@ class AppStorage {
 
     return lijst
         .map(
-          (item) =>
-              AgendaDagtaakTemplate.fromJson(Map<String, dynamic>.from(item)),
+          (item) => AgendaDagtaakTemplate.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
         )
         .toList();
   }
@@ -47,7 +54,9 @@ class AppStorage {
 
     await prefs.setString(
       _dagtaakTemplatesKey,
-      jsonEncode(templates.map((template) => template.toJson()).toList()),
+      jsonEncode(
+        templates.map((template) => template.toJson()).toList(),
+      ),
     );
 
     await _syncBackup();
@@ -223,5 +232,77 @@ class AppStorage {
       _klantenFichesKey,
       jsonEncode(klanten),
     );
+  }
+
+  // ------------------------------------------------------------
+  // NOTITIES
+  // ------------------------------------------------------------
+
+  static Future<void> bewaarNotities(
+    List<NotitieModel> notities,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _notitiesKey,
+      jsonEncode(
+        notities.map((n) => n.toJson()).toList(),
+      ),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<List<NotitieModel>> laadNotities() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_notitiesKey);
+
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
+
+    final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+    return lijst
+        .map(
+          (item) => NotitieModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  static Future<void> bewaarNotitieActies(
+    List<NotitieActieModel> acties,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _notitieActiesKey,
+      jsonEncode(
+        acties.map((a) => a.toJson()).toList(),
+      ),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<List<NotitieActieModel>> laadNotitieActies() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_notitieActiesKey);
+
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
+
+    final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+    return lijst
+        .map(
+          (item) => NotitieActieModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
   }
 }

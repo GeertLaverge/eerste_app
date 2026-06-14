@@ -7,8 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'onedrive_auth_service.dart';
 
-import '../Agenda/agenda_item.dart';
-import '../klanten/fiche/klantenfiche_model.dart';
+import '/helpers/Agenda/agenda_item.dart';
+import '/helpers/klanten/fiche/klantenfiche_model.dart';
 import 'sync_merge_service.dart';
 import '../app_storage.dart';
 
@@ -141,6 +141,8 @@ class OneDriveSyncService {
         'dagtaakTemplates': prefs.getString('dagtaak_templates'),
         'leveranciers': prefs.getString('leveranciers_lijst'),
         'klantenFiches': encodeKlanten(mergedKlanten),
+        'notities': prefs.getString('thimaco_notities'),
+        'notitieActies': prefs.getString('thimaco_notitie_acties'),
       };
 
       final response = await http.put(
@@ -409,6 +411,10 @@ class OneDriveSyncService {
 
       final dagtaakTemplates = data['dagtaakTemplates'];
       final leveranciers = data['leveranciers'];
+
+      final notities = data['notities'];
+      final notitieActies = data['notitieActies'];
+
       final backupDatum = data['backupDatum'];
 
       if (dagtaakTemplates is String) {
@@ -417,6 +423,19 @@ class OneDriveSyncService {
 
       if (leveranciers is String) {
         await prefs.setString('leveranciers_lijst', leveranciers);
+      }
+      if (notities is String) {
+        await prefs.setString(
+          'thimaco_notities',
+          notities,
+        );
+      }
+
+      if (notitieActies is String) {
+        await prefs.setString(
+          'thimaco_notitie_acties',
+          notitieActies,
+        );
       }
       //
 
