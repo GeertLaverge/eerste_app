@@ -4,6 +4,7 @@ import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../paginas/klanten_pagina.dart';
 import '../sync/sync_navigatie_helper.dart';
 import '../../paginas/notities_bureau_pagina.dart';
+import '../../paginas/opmeting_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -35,6 +36,7 @@ class HomeZijMenu extends StatelessWidget {
           _menuKnop(
               context, 'Notitie\'s\nplaatsers', Icons.description_outlined),
           _menuKnop(context, 'Notitie\'s\nbureau', Icons.edit_note_outlined),
+          _menuKnop(context, 'Opmeting', Icons.straighten_outlined),
           _menuKnop(context, 'Puinzak', Icons.delete_outline),
           _menuKnop(context, 'Magazijn', Icons.inventory_2_outlined),
           const Spacer(),
@@ -73,6 +75,14 @@ class HomeZijMenu extends StatelessWidget {
           await SyncNavigatieHelper.openMetDownload(
             context: context,
             pagina: const NotitiesBureauPagina(),
+          );
+          return;
+        }
+
+        if (titel == 'Opmeting') {
+          await SyncNavigatieHelper.openMetDownload(
+            context: context,
+            pagina: const OpmetingPagina(),
           );
           return;
         }
