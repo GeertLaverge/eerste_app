@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 class OpmetingPagina extends StatefulWidget {
@@ -17,31 +19,23 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Offset? _eindPunt;
   Rect? _rechthoek;
 
-  final List<OpmetingLijn> _extraLijnen = [];
-
-  Offset? _vrijeLijnStart;
-  Offset? _vrijeLijnHuidig;
-
-  String _modus = 'rechthoek';
+  String _tool = 'lijn';
   String _tStijlRichting = 'Verticaal';
   String _tStijlVanaf = 'Links';
 
-  double? _tStijlAfstandMm;
+  final List<double> _tStijlAfstandenMm = [];
+  final List<OpmetingLijn> _extraLijnen = [];
+  final List<OpmetingDriehoek> _driehoeken = [];
 
-  final Map<String, List<double>> _vasteSnappuntenPerLijn = {};
+  Offset? _lijnStart;
+  Offset? _driehoekPunt1;
+  Offset? _driehoekPunt2;
 
-  Offset? _aanwijsPunt;
   Offset? _actiefSnappunt;
-  String? _actieveLijnId;
-  VerdeelKandidaat? _actieveVerdeelKandidaat;
-  List<VerdeelKandidaat> _verdeelKandidaten = [];
 
   static const double raster10cm = 200;
   static const double raster5mm = raster10cm / 20;
-
-  static const double snapGevoelsAfstand = 42;
-  static const double lijnGevoelsAfstand = 24;
-  static const double verdeelGevoelsAfstand = 38;
+  static const double snapAfstand = 46;
 
   @override
   void dispose() {
@@ -69,9 +63,12 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     if (_rechthoek == null) return lijnen;
 
     final r = _rechthoek!;
-    final tLijn = _tStijlLijn();
+    final breedteMm = _getal(_breedteController);
+    final hoogteMm = _getal(_hoogteController);
 
-    if (tLijn == null) {
+    if (breedteMm == null || hoogteMm == null) return lijnen;
+
+    if (_tStijlAfstandenMm.isEmpty) {
       lijnen.addAll([
         OpmetingLijn(id: 'boven', start: r.topLeft, einde: r.topRight),
         OpmetingLijn(id: 'rechts', start: r.topRight, einde: r.bottomRight),
@@ -82,42 +79,102 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return lijnen;
     }
 
+    final afstanden = _tStijlAfstandenMm.toList()..sort();
+
     if (_tStijlRichting == 'Verticaal') {
-      final x = tLijn.start.dx;
-      final bovenPunt = Offset(x, r.top);
-      final onderPunt = Offset(x, r.bottom);
+      final xs = <double>[r.left];
 
-      lijnen.addAll([
-        OpmetingLijn(id: 'boven_links', start: r.topLeft, einde: bovenPunt),
-        OpmetingLijn(id: 'boven_rechts', start: bovenPunt, einde: r.topRight),
-        OpmetingLijn(id: 'onder_links', start: r.bottomLeft, einde: onderPunt),
-        OpmetingLijn(
-          id: 'onder_rechts',
-          start: onderPunt,
-          einde: r.bottomRight,
-        ),
-        OpmetingLijn(id: 'links', start: r.topLeft, einde: r.bottomLeft),
-        OpmetingLijn(id: 'rechts', start: r.topRight, einde: r.bottomRight),
-        OpmetingLijn(id: 'tstijl', start: bovenPunt, einde: onderPunt),
-      ]);
+      for (final afstandMm in afstanden) {
+        final afstandPx = r.width * (afstandMm / breedteMm);
+        final x =
+            _tStijlVanaf == 'Links' ? r.left + afstandPx : r.right - afstandPx;
+
+        if (x > r.left && x < r.right) {
+          xs.add(x);
+        }
+      }
+
+      xs.add(r.right);
+      xs.sort();
+
+      for (var i = 0; i < xs.length - 1; i++) {
+        lijnen.add(
+          OpmetingLijn(
+            id: 'boven_$i',
+            start: Offset(xs[i], r.top),
+            einde: Offset(xs[i + 1], r.top),
+          ),
+        );
+
+        lijnen.add(
+          OpmetingLijn(
+            id: 'onder_$i',
+            start: Offset(xs[i], r.bottom),
+            einde: Offset(xs[i + 1], r.bottom),
+          ),
+        );
+      }
+
+      for (var i = 0; i < xs.length; i++) {
+        lijnen.add(
+          OpmetingLijn(
+            id: i == 0
+                ? 'links'
+                : i == xs.length - 1
+                    ? 'rechts'
+                    : 'tstijl_v_$i',
+            start: Offset(xs[i], r.top),
+            einde: Offset(xs[i], r.bottom),
+          ),
+        );
+      }
     } else {
-      final y = tLijn.start.dy;
-      final linksPunt = Offset(r.left, y);
-      final rechtsPunt = Offset(r.right, y);
+      final ys = <double>[r.top];
 
-      lijnen.addAll([
-        OpmetingLijn(id: 'links_boven', start: r.topLeft, einde: linksPunt),
-        OpmetingLijn(id: 'links_onder', start: linksPunt, einde: r.bottomLeft),
-        OpmetingLijn(id: 'rechts_boven', start: r.topRight, einde: rechtsPunt),
-        OpmetingLijn(
-          id: 'rechts_onder',
-          start: rechtsPunt,
-          einde: r.bottomRight,
-        ),
-        OpmetingLijn(id: 'boven', start: r.topLeft, einde: r.topRight),
-        OpmetingLijn(id: 'onder', start: r.bottomLeft, einde: r.bottomRight),
-        OpmetingLijn(id: 'tstijl', start: linksPunt, einde: rechtsPunt),
-      ]);
+      for (final afstandMm in afstanden) {
+        final afstandPx = r.height * (afstandMm / hoogteMm);
+        final y =
+            _tStijlVanaf == 'Links' ? r.top + afstandPx : r.bottom - afstandPx;
+
+        if (y > r.top && y < r.bottom) {
+          ys.add(y);
+        }
+      }
+
+      ys.add(r.bottom);
+      ys.sort();
+
+      for (var i = 0; i < ys.length - 1; i++) {
+        lijnen.add(
+          OpmetingLijn(
+            id: 'links_$i',
+            start: Offset(r.left, ys[i]),
+            einde: Offset(r.left, ys[i + 1]),
+          ),
+        );
+
+        lijnen.add(
+          OpmetingLijn(
+            id: 'rechts_$i',
+            start: Offset(r.right, ys[i]),
+            einde: Offset(r.right, ys[i + 1]),
+          ),
+        );
+      }
+
+      for (var i = 0; i < ys.length; i++) {
+        lijnen.add(
+          OpmetingLijn(
+            id: i == 0
+                ? 'boven'
+                : i == ys.length - 1
+                    ? 'onder'
+                    : 'tstijl_h_$i',
+            start: Offset(r.left, ys[i]),
+            einde: Offset(r.right, ys[i]),
+          ),
+        );
+      }
     }
 
     return lijnen;
@@ -126,17 +183,17 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   List<OpmetingLijn> _alleLijnen() {
     final lijnen = <OpmetingLijn>[
       ..._basisLijnen(),
+      ..._extraLijnen,
     ];
 
-    for (int i = 0; i < _extraLijnen.length; i++) {
-      final lijn = _extraLijnen[i];
-      lijnen.add(
-        OpmetingLijn(
-          id: 'extra_$i',
-          start: lijn.start,
-          einde: lijn.einde,
-        ),
-      );
+    for (var i = 0; i < _driehoeken.length; i++) {
+      final d = _driehoeken[i];
+
+      lijnen.addAll([
+        OpmetingLijn(id: 'driehoek_${i}_1', start: d.punt1, einde: d.punt2),
+        OpmetingLijn(id: 'driehoek_${i}_2', start: d.punt1, einde: d.punt3),
+        OpmetingLijn(id: 'driehoek_${i}_3', start: d.punt2, einde: d.punt3),
+      ]);
     }
 
     return lijnen;
@@ -149,92 +206,31 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       punten.add(lijn.start);
       punten.add(lijn.einde);
 
-      final fracties = _vasteSnappuntenPerLijn[lijn.id] ?? [];
-
-      for (final fractie in fracties) {
-        punten.add(_puntOpLijn(lijn, fractie));
-      }
+      punten.add(
+        Offset(
+          (lijn.start.dx + lijn.einde.dx) / 2,
+          (lijn.start.dy + lijn.einde.dy) / 2,
+        ),
+      );
     }
 
-    return punten;
+    return _uniekePunten(punten);
   }
 
-  Offset _puntOpLijn(OpmetingLijn lijn, double fractie) {
-    return Offset(
-      lijn.start.dx + ((lijn.einde.dx - lijn.start.dx) * fractie),
-      lijn.start.dy + ((lijn.einde.dy - lijn.start.dy) * fractie),
-    );
-  }
+  List<Offset> _uniekePunten(List<Offset> punten) {
+    final uniek = <Offset>[];
 
-  Offset _snapNaarPuntOfRaster(Offset punt) {
-    final punten = _snappunten();
-
-    Offset? beste;
-    double besteAfstand = 999999;
-
-    for (final p in punten) {
-      final afstand = (p - punt).distance;
-
-      if (afstand < besteAfstand) {
-        besteAfstand = afstand;
-        beste = p;
-      }
+    for (final punt in punten) {
+      final bestaat = uniek.any((p) => (p - punt).distance < 0.5);
+      if (!bestaat) uniek.add(punt);
     }
 
-    if (beste != null && besteAfstand <= snapGevoelsAfstand) {
-      return beste;
-    }
-
-    return _snapRaster(punt);
-  }
-
-  void _updateAanwijzing(Offset punt) {
-    final snap = _dichtsteSnappunt(punt);
-    final lijn = _lijnDichtstBij(punt);
-
-    final kandidaten = <VerdeelKandidaat>[];
-    VerdeelKandidaat? actieveKandidaat;
-
-    if (lijn != null) {
-      final basis = <VerdeelKandidaat>[
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 1 / 2, label: '1/2'),
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 1 / 3, label: '1/3'),
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 2 / 3, label: '2/3'),
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 1 / 4, label: '1/4'),
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 2 / 4, label: '2/4'),
-        VerdeelKandidaat(lijnId: lijn.id, fractie: 3 / 4, label: '3/4'),
-      ];
-
-      for (final kandidaat in basis) {
-        final bestaatAl = (_vasteSnappuntenPerLijn[lijn.id] ?? []).any(
-          (f) => (f - kandidaat.fractie).abs() < 0.001,
-        );
-
-        if (!bestaatAl) {
-          final p = _puntOpLijn(lijn, kandidaat.fractie);
-          kandidaten.add(kandidaat.copyWith(punt: p));
-
-          final afstand = (punt - p).distance;
-
-          if (afstand <= verdeelGevoelsAfstand) {
-            actieveKandidaat = kandidaat.copyWith(punt: p);
-          }
-        }
-      }
-    }
-
-    setState(() {
-      _aanwijsPunt = punt;
-      _actiefSnappunt = snap;
-      _actieveLijnId = lijn?.id;
-      _verdeelKandidaten = kandidaten;
-      _actieveVerdeelKandidaat = actieveKandidaat;
-    });
+    return uniek;
   }
 
   Offset? _dichtsteSnappunt(Offset punt) {
     Offset? beste;
-    double besteAfstand = 999999;
+    var besteAfstand = double.infinity;
 
     for (final p in _snappunten()) {
       final afstand = (p - punt).distance;
@@ -245,109 +241,45 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       }
     }
 
-    if (beste != null && besteAfstand <= snapGevoelsAfstand) {
+    if (beste != null && besteAfstand <= snapAfstand) {
       return beste;
     }
 
     return null;
   }
 
-  void _verdeelKandidaatVastzetten() {
-    final kandidaat = _actieveVerdeelKandidaat;
+  Offset _snapNaarPuntOfRaster(Offset punt) {
+    return _dichtsteSnappunt(punt) ?? _snapRaster(punt);
+  }
 
-    if (kandidaat == null) return;
-
+  void _updateAanwijzing(Offset punt) {
     setState(() {
-      final lijst = _vasteSnappuntenPerLijn.putIfAbsent(
-        kandidaat.lijnId,
-        () => [],
-      );
-
-      final bestaatAl = lijst.any(
-        (f) => (f - kandidaat.fractie).abs() < 0.001,
-      );
-
-      if (!bestaatAl) {
-        lijst.add(kandidaat.fractie);
-        lijst.sort();
-      }
-
-      _actieveVerdeelKandidaat = null;
+      _actiefSnappunt = _dichtsteSnappunt(punt);
     });
   }
 
-  void _startTekenen(DragStartDetails details) {
-    if (_actieveVerdeelKandidaat != null) {
-      _verdeelKandidaatVastzetten();
-      return;
-    }
+  void _startRechthoek(DragStartDetails details) {
+    if (_rechthoek != null) return;
 
-    final punt = _modus == 'lijn'
-        ? _snapNaarPuntOfRaster(details.localPosition)
-        : _snapRaster(details.localPosition);
+    final punt = _snapRaster(details.localPosition);
 
     setState(() {
-      if (_modus == 'lijn' && _rechthoek != null) {
-        _vrijeLijnStart = punt;
-        _vrijeLijnHuidig = punt;
-      } else {
-        _startPunt = punt;
-        _eindPunt = punt;
-        _rechthoek = null;
-        _extraLijnen.clear();
-        _vasteSnappuntenPerLijn.clear();
-        _tStijlAfstandMm = null;
-      }
+      _startPunt = punt;
+      _eindPunt = punt;
     });
   }
 
-  void _updateTekenen(DragUpdateDetails details) {
-    _updateAanwijzing(details.localPosition);
-
-    final punt = _modus == 'lijn'
-        ? _snapNaarPuntOfRaster(details.localPosition)
-        : _snapRaster(details.localPosition);
+  void _updateRechthoek(DragUpdateDetails details) {
+    if (_rechthoek != null) return;
 
     setState(() {
-      if (_modus == 'lijn' && _rechthoek != null) {
-        _vrijeLijnHuidig = punt;
-      } else {
-        _eindPunt = punt;
-      }
+      _eindPunt = _snapRaster(details.localPosition);
     });
   }
 
-  void _stopTekenen(DragEndDetails details) {
-    if (_modus == 'lijn' && _rechthoek != null) {
-      _stopVrijeLijn();
-    } else {
-      _maakRechthoek();
-    }
-  }
-
-  void _stopVrijeLijn() {
-    if (_vrijeLijnStart == null || _vrijeLijnHuidig == null) return;
-
-    if ((_vrijeLijnStart! - _vrijeLijnHuidig!).distance < 1) {
-      setState(() {
-        _vrijeLijnStart = null;
-        _vrijeLijnHuidig = null;
-      });
-      return;
-    }
-
-    setState(() {
-      _extraLijnen.add(
-        OpmetingLijn(
-          id: 'extra_${_extraLijnen.length}',
-          start: _vrijeLijnStart!,
-          einde: _vrijeLijnHuidig!,
-        ),
-      );
-
-      _vrijeLijnStart = null;
-      _vrijeLijnHuidig = null;
-    });
+  void _stopRechthoek(DragEndDetails details) {
+    if (_rechthoek != null) return;
+    _maakRechthoek();
   }
 
   void _maakRechthoek() {
@@ -399,50 +331,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         schermBreedte,
         schermHoogte,
       );
-      _modus = 'lijn';
     });
   }
 
-  OpmetingLijn? _tStijlLijn() {
-    if (_rechthoek == null || _tStijlAfstandMm == null) return null;
-
-    final breedteMm = _getal(_breedteController);
-    final hoogteMm = _getal(_hoogteController);
-
-    if (breedteMm == null || hoogteMm == null) return null;
-
-    final r = _rechthoek!;
-
-    if (_tStijlRichting == 'Verticaal') {
-      final afstandPx = r.width * (_tStijlAfstandMm! / breedteMm);
-
-      final x =
-          _tStijlVanaf == 'Links' ? r.left + afstandPx : r.right - afstandPx;
-
-      if (x <= r.left || x >= r.right) return null;
-
-      return OpmetingLijn(
-        id: 'tstijl',
-        start: Offset(x, r.top),
-        einde: Offset(x, r.bottom),
-      );
-    }
-
-    final afstandPx = r.height * (_tStijlAfstandMm! / hoogteMm);
-
-    final y =
-        _tStijlVanaf == 'Links' ? r.top + afstandPx : r.bottom - afstandPx;
-
-    if (y <= r.top || y >= r.bottom) return null;
-
-    return OpmetingLijn(
-      id: 'tstijl',
-      start: Offset(r.left, y),
-      einde: Offset(r.right, y),
-    );
-  }
-
-  void _tStijlInvoegen() {
+  void _tStijlToevoegen() {
     if (_rechthoek == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -464,44 +356,203 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     setState(() {
-      _tStijlAfstandMm = afstand;
-
-      _vasteSnappuntenPerLijn.remove('boven');
-      _vasteSnappuntenPerLijn.remove('onder');
-      _vasteSnappuntenPerLijn.remove('links');
-      _vasteSnappuntenPerLijn.remove('rechts');
+      _tStijlAfstandenMm.add(afstand);
+      _tStijlAfstandController.clear();
     });
   }
 
-  OpmetingLijn? _lijnDichtstBij(Offset punt) {
-    OpmetingLijn? besteLijn;
-    double besteAfstand = 999999;
+  void _klikCanvas(TapDownDetails details) {
+    if (_rechthoek == null) return;
 
-    for (final lijn in _alleLijnen()) {
-      final afstand = _afstandTotLijnstuk(
-        punt,
-        lijn.start,
-        lijn.einde,
+    final punt = _snapNaarPuntOfRaster(details.localPosition);
+
+    if (_tool == 'lijn') {
+      _klikLijn(punt);
+      return;
+    }
+
+    if (_tool == 'driehoek') {
+      _klikDriehoek(punt, details.localPosition);
+      return;
+    }
+  }
+
+  void _klikLijn(Offset punt) {
+    setState(() {
+      if (_lijnStart == null) {
+        _lijnStart = punt;
+        return;
+      }
+
+      if ((_lijnStart! - punt).distance < 1) return;
+
+      _extraLijnen.add(
+        OpmetingLijn(
+          id: 'extra_${_extraLijnen.length}',
+          start: _lijnStart!,
+          einde: punt,
+        ),
       );
 
-      if (afstand < besteAfstand) {
-        besteAfstand = afstand;
-        besteLijn = lijn;
+      _lijnStart = null;
+    });
+  }
+
+  void _klikDriehoek(
+    Offset snapPunt,
+    Offset vrijeKlik,
+  ) {
+    setState(() {
+      if (_driehoekPunt1 == null) {
+        _driehoekPunt1 = snapPunt;
+        return;
+      }
+
+      if (_driehoekPunt2 == null) {
+        _driehoekPunt2 = snapPunt;
+        return;
+      }
+
+      final top = _berekenDriehoekPunt(
+        punt1: _driehoekPunt1!,
+        punt2: _driehoekPunt2!,
+        richtingKlik: vrijeKlik,
+      );
+
+      if (top == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Geen evenwijdige lijn gevonden voor de driehoek.'),
+          ),
+        );
+
+        _driehoekPunt1 = null;
+        _driehoekPunt2 = null;
+        return;
+      }
+
+      _driehoeken.add(
+        OpmetingDriehoek(
+          punt1: _driehoekPunt1!,
+          punt2: _driehoekPunt2!,
+          punt3: top,
+        ),
+      );
+
+      _driehoekPunt1 = null;
+      _driehoekPunt2 = null;
+    });
+  }
+
+  Offset? _berekenDriehoekPunt({
+    required Offset punt1,
+    required Offset punt2,
+    required Offset richtingKlik,
+  }) {
+    final basis = punt2 - punt1;
+    final basisLengte = basis.distance;
+
+    if (basisLengte < 1) return null;
+
+    final basisUnit = Offset(
+      basis.dx / basisLengte,
+      basis.dy / basisLengte,
+    );
+
+    var normaal = Offset(
+      -basisUnit.dy,
+      basisUnit.dx,
+    );
+
+    final midden = Offset(
+      (punt1.dx + punt2.dx) / 2,
+      (punt1.dy + punt2.dy) / 2,
+    );
+
+    final klikVector = richtingKlik - midden;
+
+    if (_dot(klikVector, normaal) < 0) {
+      normaal = -normaal;
+    }
+
+    Offset? beste;
+    var besteAfstand = double.infinity;
+
+    for (final lijn in _alleLijnen()) {
+      if (_isZelfdeLijn(lijn, punt1, punt2)) continue;
+
+      final lijnVector = lijn.einde - lijn.start;
+      final lijnLengte = lijnVector.distance;
+
+      if (lijnLengte < 1) continue;
+
+      final lijnUnit = Offset(
+        lijnVector.dx / lijnLengte,
+        lijnVector.dy / lijnLengte,
+      );
+
+      final parallel = _kruis(basisUnit, lijnUnit).abs() < 0.03;
+
+      if (!parallel) continue;
+
+      final afstandOpNormaal = _dot(lijn.start - midden, normaal);
+
+      if (afstandOpNormaal <= 1) continue;
+
+      final kandidaat = midden + (normaal * afstandOpNormaal);
+
+      if (!_puntOpLijnstuk(kandidaat, lijn.start, lijn.einde)) continue;
+
+      if (afstandOpNormaal < besteAfstand) {
+        besteAfstand = afstandOpNormaal;
+        beste = kandidaat;
       }
     }
 
-    if (besteAfstand <= lijnGevoelsAfstand) {
-      return besteLijn;
-    }
-
-    return null;
+    return beste;
   }
 
-  double _afstandTotLijnstuk(
+  bool _isZelfdeLijn(
+    OpmetingLijn lijn,
+    Offset punt1,
+    Offset punt2,
+  ) {
+    final d1 = (lijn.start - punt1).distance + (lijn.einde - punt2).distance;
+    final d2 = (lijn.start - punt2).distance + (lijn.einde - punt1).distance;
+
+    return d1 < 1 || d2 < 1;
+  }
+
+  bool _puntOpLijnstuk(
     Offset punt,
     Offset start,
     Offset einde,
   ) {
+    final lijn = einde - start;
+    final lengte = lijn.distance;
+
+    if (lengte < 1) return false;
+
+    final afstand = _afstandTotLijnstuk(punt: punt, start: start, einde: einde);
+
+    if (afstand > 1.5) return false;
+
+    final minX = math.min(start.dx, einde.dx) - 1;
+    final maxX = math.max(start.dx, einde.dx) + 1;
+    final minY = math.min(start.dy, einde.dy) - 1;
+    final maxY = math.max(start.dy, einde.dy) + 1;
+
+    return punt.dx >= minX &&
+        punt.dx <= maxX &&
+        punt.dy >= minY &&
+        punt.dy <= maxY;
+  }
+
+  double _afstandTotLijnstuk({
+    required Offset punt,
+    required Offset start,
+    required Offset einde,
+  }) {
     final dx = einde.dx - start.dx;
     final dy = einde.dy - start.dy;
 
@@ -522,25 +573,37 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     return (punt - projectie).distance;
   }
 
+  double _dot(Offset a, Offset b) {
+    return (a.dx * b.dx) + (a.dy * b.dy);
+  }
+
+  double _kruis(Offset a, Offset b) {
+    return (a.dx * b.dy) - (a.dy * b.dx);
+  }
+
   void _undo() {
     setState(() {
+      if (_driehoeken.isNotEmpty) {
+        _driehoeken.removeLast();
+        return;
+      }
+
       if (_extraLijnen.isNotEmpty) {
-        _vasteSnappuntenPerLijn.remove('extra_${_extraLijnen.length - 1}');
         _extraLijnen.removeLast();
         return;
       }
 
-      if (_tStijlAfstandMm != null) {
-        _vasteSnappuntenPerLijn.remove('tstijl');
-        _tStijlAfstandMm = null;
+      if (_tStijlAfstandenMm.isNotEmpty) {
+        _tStijlAfstandenMm.removeLast();
         return;
       }
 
       _rechthoek = null;
       _startPunt = null;
       _eindPunt = null;
-      _vasteSnappuntenPerLijn.clear();
-      _modus = 'rechthoek';
+      _lijnStart = null;
+      _driehoekPunt1 = null;
+      _driehoekPunt2 = null;
     });
   }
 
@@ -549,17 +612,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       _startPunt = null;
       _eindPunt = null;
       _rechthoek = null;
+      _tStijlAfstandenMm.clear();
       _extraLijnen.clear();
-      _vrijeLijnStart = null;
-      _vrijeLijnHuidig = null;
-      _tStijlAfstandMm = null;
-      _vasteSnappuntenPerLijn.clear();
-      _aanwijsPunt = null;
+      _driehoeken.clear();
+      _lijnStart = null;
+      _driehoekPunt1 = null;
+      _driehoekPunt2 = null;
       _actiefSnappunt = null;
-      _actieveLijnId = null;
-      _actieveVerdeelKandidaat = null;
-      _verdeelKandidaten.clear();
-      _modus = 'rechthoek';
     });
   }
 
@@ -622,11 +681,80 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  Widget _toolKnop({
+    required String waarde,
+    required String tekst,
+    required IconData icoon,
+  }) {
+    final actief = _tool == waarde;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _tool = waarde;
+          _lijnStart = null;
+          _driehoekPunt1 = null;
+          _driehoekPunt2 = null;
+        });
+      },
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: actief ? const Color(0xFF0B7A3B) : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: actief ? const Color(0xFF0B7A3B) : const Color(0xFFE5E7EB),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icoon,
+              size: 18,
+              color: actief ? Colors.white : const Color(0xFF111827),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              tekst,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: actief ? Colors.white : const Color(0xFF111827),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String get _instructie {
+    if (_rechthoek == null) {
+      return 'Geef breedte/hoogte in en teken de eerste lijn.';
+    }
+
+    if (_tool == 'lijn') {
+      return _lijnStart == null
+          ? 'Klik op eerste snappunt voor lijn.'
+          : 'Klik op tweede snappunt om lijn te plaatsen.';
+    }
+
+    if (_driehoekPunt1 == null) {
+      return 'Driehoek: klik hoek 1 op snappunt.';
+    }
+
+    if (_driehoekPunt2 == null) {
+      return 'Driehoek: klik hoek 2 op snappunt.';
+    }
+
+    return 'Klik richting waar de punt van de driehoek moet komen.';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final instructie = _rechthoek == null
-        ? 'Teken eerste lijn voor rechthoek'
-        : 'Beweeg over lijn voor 1/2 · 1/3 · 1/4 snappunten';
+    final lijnen = _alleLijnen();
+    final snappunten = _snappunten();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
@@ -685,12 +813,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                   onChanged: (waarde) {
                     setState(() {
                       _tStijlRichting = waarde;
+                      _tStijlAfstandenMm.clear();
                     });
                   },
                 ),
                 _veld(
                   controller: _tStijlAfstandController,
-                  label: 'Afstand mm',
+                  label: 'T-stijl mm',
                 ),
                 _keuze(
                   waarde: _tStijlVanaf,
@@ -698,6 +827,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                   onChanged: (waarde) {
                     setState(() {
                       _tStijlVanaf = waarde;
+                      _tStijlAfstandenMm.clear();
                     });
                   },
                 ),
@@ -706,11 +836,21 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                     backgroundColor: const Color(0xFF0B7A3B),
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: _tStijlInvoegen,
+                  onPressed: _tStijlToevoegen,
                   child: const Text('T-stijl'),
                 ),
+                _toolKnop(
+                  waarde: 'lijn',
+                  tekst: 'Lijn',
+                  icoon: Icons.show_chart,
+                ),
+                _toolKnop(
+                  waarde: 'driehoek',
+                  tekst: 'Driehoek',
+                  icoon: Icons.change_history,
+                ),
                 Text(
-                  instructie,
+                  _instructie,
                   style: const TextStyle(
                     fontSize: 12,
                     color: Color(0xFF6B7280),
@@ -725,9 +865,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
               padding: const EdgeInsets.all(10),
               child: ClipRect(
                 child: Listener(
-                  onPointerHover: (event) {
-                    _updateAanwijzing(event.localPosition);
-                  },
                   onPointerMove: (event) {
                     _updateAanwijzing(event.localPosition);
                   },
@@ -736,25 +873,21 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                   },
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTapUp: (_) {
-                      _verdeelKandidaatVastzetten();
-                    },
-                    onPanStart: _startTekenen,
-                    onPanUpdate: _updateTekenen,
-                    onPanEnd: _stopTekenen,
+                    onTapDown: _klikCanvas,
+                    onPanStart: _startRechthoek,
+                    onPanUpdate: _updateRechthoek,
+                    onPanEnd: _stopRechthoek,
                     child: CustomPaint(
                       painter: _OpmetingPainter(
                         startPunt: _startPunt,
                         eindPunt: _eindPunt,
                         rechthoek: _rechthoek,
-                        vrijeLijnStart: _vrijeLijnStart,
-                        vrijeLijnHuidig: _vrijeLijnHuidig,
-                        lijnen: _alleLijnen(),
-                        actieveLijnId: _actieveLijnId,
-                        snappunten: _snappunten(),
+                        lijnen: lijnen,
+                        snappunten: snappunten,
                         actiefSnappunt: _actiefSnappunt,
-                        verdeelKandidaten: _verdeelKandidaten,
-                        actieveVerdeelKandidaat: _actieveVerdeelKandidaat,
+                        lijnStart: _lijnStart,
+                        driehoekPunt1: _driehoekPunt1,
+                        driehoekPunt2: _driehoekPunt2,
                         raster10cm: raster10cm,
                         raster5mm: raster5mm,
                       ),
@@ -772,7 +905,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 }
 
 class OpmetingLijn {
-  OpmetingLijn({
+  const OpmetingLijn({
     required this.id,
     required this.start,
     required this.einde,
@@ -783,29 +916,16 @@ class OpmetingLijn {
   final Offset einde;
 }
 
-class VerdeelKandidaat {
-  const VerdeelKandidaat({
-    required this.lijnId,
-    required this.fractie,
-    required this.label,
-    this.punt,
+class OpmetingDriehoek {
+  const OpmetingDriehoek({
+    required this.punt1,
+    required this.punt2,
+    required this.punt3,
   });
 
-  final String lijnId;
-  final double fractie;
-  final String label;
-  final Offset? punt;
-
-  VerdeelKandidaat copyWith({
-    Offset? punt,
-  }) {
-    return VerdeelKandidaat(
-      lijnId: lijnId,
-      fractie: fractie,
-      label: label,
-      punt: punt ?? this.punt,
-    );
-  }
+  final Offset punt1;
+  final Offset punt2;
+  final Offset punt3;
 }
 
 class _OpmetingPainter extends CustomPainter {
@@ -813,14 +933,12 @@ class _OpmetingPainter extends CustomPainter {
     required this.startPunt,
     required this.eindPunt,
     required this.rechthoek,
-    required this.vrijeLijnStart,
-    required this.vrijeLijnHuidig,
     required this.lijnen,
-    required this.actieveLijnId,
     required this.snappunten,
     required this.actiefSnappunt,
-    required this.verdeelKandidaten,
-    required this.actieveVerdeelKandidaat,
+    required this.lijnStart,
+    required this.driehoekPunt1,
+    required this.driehoekPunt2,
     required this.raster10cm,
     required this.raster5mm,
   });
@@ -829,17 +947,13 @@ class _OpmetingPainter extends CustomPainter {
   final Offset? eindPunt;
   final Rect? rechthoek;
 
-  final Offset? vrijeLijnStart;
-  final Offset? vrijeLijnHuidig;
-
   final List<OpmetingLijn> lijnen;
-  final String? actieveLijnId;
-
   final List<Offset> snappunten;
   final Offset? actiefSnappunt;
 
-  final List<VerdeelKandidaat> verdeelKandidaten;
-  final VerdeelKandidaat? actieveVerdeelKandidaat;
+  final Offset? lijnStart;
+  final Offset? driehoekPunt1;
+  final Offset? driehoekPunt2;
 
   final double raster10cm;
   final double raster5mm;
@@ -854,18 +968,13 @@ class _OpmetingPainter extends CustomPainter {
       ..color = const Color(0xFFCBD5E1)
       ..strokeWidth = 0.8;
 
-    final gewoneLijn = Paint()
+    final lijnPaint = Paint()
       ..color = const Color(0xFF0B7A3B)
       ..strokeWidth = 2.1
       ..strokeCap = StrokeCap.round;
 
-    final actieveLijn = Paint()
-      ..color = const Color(0xFFF97316)
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round;
-
-    final previewLijn = Paint()
-      ..color = const Color(0xFF0B7A3B).withOpacity(0.5)
+    final previewPaint = Paint()
+      ..color = const Color(0xFF0B7A3B).withOpacity(0.45)
       ..strokeWidth = 2
       ..strokeCap = StrokeCap.round;
 
@@ -880,10 +989,10 @@ class _OpmetingPainter extends CustomPainter {
     final snapActief = Paint()
       ..color = const Color(0xFFDC2626)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
+      ..strokeWidth = 2.4;
 
-    final kandidaatPaint = Paint()
-      ..color = const Color(0xFFDC2626)
+    final gekozenPuntPaint = Paint()
+      ..color = const Color(0xFFF97316)
       ..style = PaintingStyle.fill;
 
     for (double x = 0; x <= size.width; x += raster5mm) {
@@ -903,59 +1012,13 @@ class _OpmetingPainter extends CustomPainter {
     }
 
     if (startPunt != null && eindPunt != null && rechthoek == null) {
-      canvas.drawLine(startPunt!, eindPunt!, previewLijn);
-      canvas.drawCircle(startPunt!, 4, previewLijn);
-      canvas.drawCircle(eindPunt!, 4, previewLijn);
+      canvas.drawLine(startPunt!, eindPunt!, previewPaint);
+      canvas.drawCircle(startPunt!, 4, previewPaint);
+      canvas.drawCircle(eindPunt!, 4, previewPaint);
     }
 
     for (final lijn in lijnen) {
-      canvas.drawLine(
-        lijn.start,
-        lijn.einde,
-        lijn.id == actieveLijnId ? actieveLijn : gewoneLijn,
-      );
-    }
-
-    if (vrijeLijnStart != null && vrijeLijnHuidig != null) {
-      canvas.drawLine(
-        vrijeLijnStart!,
-        vrijeLijnHuidig!,
-        previewLijn,
-      );
-    }
-
-    for (final kandidaat in verdeelKandidaten) {
-      final punt = kandidaat.punt;
-      if (punt == null) continue;
-
-      final actief = actieveVerdeelKandidaat != null &&
-          actieveVerdeelKandidaat!.lijnId == kandidaat.lijnId &&
-          (actieveVerdeelKandidaat!.fractie - kandidaat.fractie).abs() < 0.001;
-
-      canvas.drawCircle(
-        punt,
-        actief ? 6 : 4,
-        kandidaatPaint,
-      );
-
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: kandidaat.label,
-          style: TextStyle(
-            color: actief ? const Color(0xFFDC2626) : const Color(0xFF6B7280),
-            fontSize: actief ? 13 : 11,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-
-      textPainter.layout();
-
-      textPainter.paint(
-        canvas,
-        punt + const Offset(8, -22),
-      );
+      canvas.drawLine(lijn.start, lijn.einde, lijnPaint);
     }
 
     for (final punt in snappunten) {
@@ -964,7 +1027,20 @@ class _OpmetingPainter extends CustomPainter {
     }
 
     if (actiefSnappunt != null) {
-      canvas.drawCircle(actiefSnappunt!, 18, snapActief);
+      canvas.drawCircle(actiefSnappunt!, 20, snapActief);
+    }
+
+    if (lijnStart != null) {
+      canvas.drawCircle(lijnStart!, 6, gekozenPuntPaint);
+    }
+
+    if (driehoekPunt1 != null) {
+      canvas.drawCircle(driehoekPunt1!, 6, gekozenPuntPaint);
+    }
+
+    if (driehoekPunt2 != null) {
+      canvas.drawCircle(driehoekPunt2!, 6, gekozenPuntPaint);
+      canvas.drawLine(driehoekPunt1!, driehoekPunt2!, previewPaint);
     }
   }
 
