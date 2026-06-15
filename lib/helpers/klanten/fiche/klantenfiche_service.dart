@@ -120,7 +120,14 @@ class KlantenficheService {
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: afgewerktMailVerstuurd,
-      inTePlannenType: bestaand?.inTePlannenType ?? '',
+      inTePlannenType: bestaand?.inTePlannenType ??
+          (klantStatus == 'Nadienst'
+              ? 'nadienst'
+              : klantStatus == 'Opvolgen'
+                  ? 'opvolging'
+                  : klantStatus == 'Actief'
+                      ? 'planning'
+                      : ''),
       kraanNodig: kraanNodig,
       kraanDatum: kraanDatum,
       kraanStartUur: kraanStartUur,

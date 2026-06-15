@@ -87,6 +87,11 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
 
     if (fiche == null) {
       klantStatus = widget.startStatus;
+
+      if (widget.startStatus == 'Nadienst') {
+        klaarVoorNieuwePlanning = true;
+      }
+
       return;
     }
 
