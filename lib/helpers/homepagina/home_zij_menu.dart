@@ -5,6 +5,7 @@ import '../../paginas/klanten_pagina.dart';
 import '../sync/sync_navigatie_helper.dart';
 import '../../paginas/notities_bureau_pagina.dart';
 import '../../paginas/opmeting_pagina.dart';
+import '../../paginas/opmeting_raam_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -82,7 +83,7 @@ class HomeZijMenu extends StatelessWidget {
         if (titel == 'Opmeting') {
           await SyncNavigatieHelper.openMetDownload(
             context: context,
-            pagina: const OpmetingPagina(),
+            pagina: const OpmetingRaamPagina(),
           );
           return;
         }
