@@ -33,83 +33,106 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
 
   static const groen = Color(0xFF0B7A3B);
 
-  Widget _veld(
+  Widget _veldCompact(
     String label,
-    TextEditingController controller,
-  ) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
+    TextEditingController controller, {
+    double breedte = 92,
+  }) {
+    return SizedBox(
+      width: breedte,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
-        SizedBox(
-          width: 74,
-          height: 34,
-          child: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            onChanged: (_) => onChanged(),
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 6,
-                vertical: 8,
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 32,
+            child: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => onChanged(),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 7,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        const Text(
-          'mm',
-          style: TextStyle(fontSize: 11),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _resultaat(String label, int waarde) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+  Widget _resultaatRegel() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7F6EC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFB7E3C3),
         ),
-        Text(
-          '$waarde',
-          style: const TextStyle(
-            color: groen,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-          ),
+      ),
+      child: Text(
+        'Raammaat: $raammaatBreedte × $raammaatHoogte mm',
+        style: const TextStyle(
+          color: groen,
+          fontSize: 15,
+          fontWeight: FontWeight.w900,
         ),
-        const SizedBox(width: 8),
-        const Text(
-          'mm',
-          style: TextStyle(fontSize: 11),
+      ),
+    );
+  }
+
+  Widget _verschilRegel() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7F6EC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: const Color(0xFFB7E3C3),
         ),
-      ],
+      ),
+      child: Text(
+        'Verschil tablet: $verschilTablet mm',
+        style: const TextStyle(
+          color: groen,
+          fontSize: 14,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: _kaartDecoratie(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,28 +145,86 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 12),
-          _veld('Dagmaat hoogte', dagmaatHoogteController),
-          const SizedBox(height: 8),
-          _veld('Dagmaat breedte', dagmaatBreedteController),
-          const Divider(height: 20),
-          _veld('Slag links', slagLinksController),
-          const SizedBox(height: 8),
-          _veld('Slag rechts', slagRechtsController),
-          const SizedBox(height: 8),
-          _veld('Slag boven', slagBovenController),
-          const SizedBox(height: 8),
-          _veld('Slag onder', slagOnderController),
-          const Divider(height: 20),
-          _resultaat('Raammaat hoogte', raammaatHoogte),
-          const SizedBox(height: 8),
-          _resultaat('Raammaat breedte', raammaatBreedte),
-          const Divider(height: 20),
-          _veld('Binnen tablet', binnenTabletController),
-          const SizedBox(height: 8),
-          _veld('Buiten tablet', buitenTabletController),
-          const SizedBox(height: 8),
-          _resultaat('Verschil', verschilTablet),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _veldCompact(
+                  'Dagmaat breedte',
+                  dagmaatBreedteController,
+                  breedte: double.infinity,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _veldCompact(
+                  'Dagmaat hoogte',
+                  dagmaatHoogteController,
+                  breedte: double.infinity,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _veldCompact(
+                  'Slag L',
+                  slagLinksController,
+                  breedte: double.infinity,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _veldCompact(
+                  'Slag R',
+                  slagRechtsController,
+                  breedte: double.infinity,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _veldCompact(
+                  'Slag B',
+                  slagBovenController,
+                  breedte: double.infinity,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _veldCompact(
+                  'Slag O',
+                  slagOnderController,
+                  breedte: double.infinity,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _resultaatRegel(),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _veldCompact(
+                  'Binnen tablet',
+                  binnenTabletController,
+                  breedte: double.infinity,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _veldCompact(
+                  'Buiten tablet',
+                  buitenTabletController,
+                  breedte: double.infinity,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _verschilRegel(),
         ],
       ),
     );

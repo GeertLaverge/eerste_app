@@ -23,6 +23,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   final binnenTabletController = TextEditingController(text: '80');
   final buitenTabletController = TextEditingController(text: '105');
   final notitiesController = TextEditingController();
+  final positieController = TextEditingController(text: '');
 
   String actieveTool = 'lijn';
 
@@ -51,6 +52,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     binnenTabletController.dispose();
     buitenTabletController.dispose();
     notitiesController.dispose();
+    positieController.dispose();
     super.dispose();
   }
 
@@ -138,7 +140,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       body: Row(
         children: [
           Expanded(
-            flex: 60,
+            flex: 50,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
               child: Column(
@@ -148,6 +150,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
                       breedteMm: raammaatBreedte,
                       hoogteMm: raammaatHoogte,
                       actieveTool: actieveTool,
+                      positieController: positieController,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -168,7 +171,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
             ),
           ),
           Expanded(
-            flex: 40,
+            flex: 50,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
               child: ListView(

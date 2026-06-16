@@ -8,11 +8,13 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
     required this.breedteMm,
     required this.hoogteMm,
     required this.actieveTool,
+    required this.positieController,
   });
 
   final int breedteMm;
   final int hoogteMm;
   final String actieveTool;
+  final TextEditingController positieController;
 
   @override
   State<OpmetingRaamTekenvlak> createState() => _OpmetingRaamTekenvlakState();
@@ -472,39 +474,88 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     return Container(
       decoration: _kaartDecoratie(),
       clipBehavior: Clip.antiAlias,
-      child: Listener(
-        onPointerMove: (event) {
-          _updateAanwijzing(event.localPosition);
-        },
-        onPointerDown: (event) {
-          _updateAanwijzing(event.localPosition);
-        },
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: _klikCanvas,
-          onPanStart: _startRechthoek,
-          onPanUpdate: _updateRechthoek,
-          onPanEnd: _stopRechthoek,
-          child: CustomPaint(
-            painter: _RaamTekenvlakPainter(
-              startPunt: _startPunt,
-              eindPunt: _eindPunt,
-              rechthoek: _rechthoek,
-              lijnen: _alleLijnen(),
-              snappunten: _snappunten(),
-              actiefSnappunt: _actiefSnappunt,
-              lijnStart: _lijnStart,
-              driehoekPunt1: _driehoekPunt1,
-              driehoekPunt2: _driehoekPunt2,
-              breedteMm: widget.breedteMm,
-              hoogteMm: widget.hoogteMm,
-              actieveTool: widget.actieveTool,
-              onUndo: _undo,
-              onAllesWissen: _allesWissen,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Listener(
+              onPointerMove: (event) {
+                _updateAanwijzing(event.localPosition);
+              },
+              onPointerDown: (event) {
+                _updateAanwijzing(event.localPosition);
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: _klikCanvas,
+                onPanStart: _startRechthoek,
+                onPanUpdate: _updateRechthoek,
+                onPanEnd: _stopRechthoek,
+                child: CustomPaint(
+                  painter: _RaamTekenvlakPainter(
+                    startPunt: _startPunt,
+                    eindPunt: _eindPunt,
+                    rechthoek: _rechthoek,
+                    lijnen: _alleLijnen(),
+                    snappunten: _snappunten(),
+                    actiefSnappunt: _actiefSnappunt,
+                    lijnStart: _lijnStart,
+                    driehoekPunt1: _driehoekPunt1,
+                    driehoekPunt2: _driehoekPunt2,
+                    breedteMm: widget.breedteMm,
+                    hoogteMm: widget.hoogteMm,
+                    actieveTool: widget.actieveTool,
+                    onUndo: _undo,
+                    onAllesWissen: _allesWissen,
+                  ),
+                  child: const SizedBox.expand(),
+                ),
+              ),
             ),
-            child: const SizedBox.expand(),
           ),
-        ),
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Container(
+              width: 180,
+              height: 38,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.95),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFD1D5DB),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Text(
+                    'Pos:',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0B7A3B),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: TextField(
+                      controller: widget.positieController,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
