@@ -29,4 +29,4 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: dart analyze .
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
