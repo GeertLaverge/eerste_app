@@ -17,13 +17,16 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: '3.35.1'
 
       - name: Flutter version
         run: flutter --version
+
+      - name: Dart version
+        run: dart --version
 
       - name: Flutter pub get
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        run: dart analyze .
