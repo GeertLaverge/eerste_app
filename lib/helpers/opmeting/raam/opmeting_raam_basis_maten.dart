@@ -33,36 +33,42 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
 
   static const groen = Color(0xFF0B7A3B);
 
-  Widget _veldCompact(
-    String label,
-    TextEditingController controller, {
-    double breedte = 92,
+  Widget _veld({
+    required String label,
+    required TextEditingController controller,
+    double veldBreedte = 58,
+    int maxLength = 4,
   }) {
-    return SizedBox(
-      width: breedte,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Expanded(
+      child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(width: 6),
           SizedBox(
-            height: 32,
+            width: veldBreedte,
+            height: 30,
             child: TextField(
               controller: controller,
               keyboardType: TextInputType.number,
+              maxLength: maxLength,
               onChanged: (_) => onChanged(),
               textAlign: TextAlign.center,
               decoration: InputDecoration(
+                counterText: '',
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 7,
+                  horizontal: 4,
+                  vertical: 6,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
@@ -70,7 +76,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               ),
               style: const TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ),
@@ -79,7 +85,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     );
   }
 
-  Widget _resultaatRegel() {
+  Widget _raammaatRegel() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(
@@ -97,7 +103,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
         'Raammaat: $raammaatBreedte × $raammaatHoogte mm',
         style: const TextStyle(
           color: groen,
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w900,
         ),
       ),
@@ -105,25 +111,38 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   }
 
   Widget _verschilRegel() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE7F6EC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFB7E3C3),
+    return Expanded(
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE7F6EC),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: const Color(0xFFB7E3C3),
+          ),
         ),
-      ),
-      child: Text(
-        'Verschil tablet: $verschilTablet mm',
-        style: const TextStyle(
-          color: groen,
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
+        child: Row(
+          children: [
+            const Text(
+              'Verschil',
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: groen,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              '$verschilTablet',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: groen,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -145,86 +164,76 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             children: [
-              Expanded(
-                child: _veldCompact(
-                  'Dagmaat breedte',
-                  dagmaatBreedteController,
-                  breedte: double.infinity,
-                ),
+              _veld(
+                label: 'Dagmaat breedte',
+                controller: dagmaatBreedteController,
+                veldBreedte: 62,
+              ),
+              const SizedBox(width: 16),
+              _veld(
+                label: 'Dagmaat hoogte',
+                controller: dagmaatHoogteController,
+                veldBreedte: 62,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _veld(
+                label: 'Slag Links',
+                controller: slagLinksController,
+                veldBreedte: 42,
+                maxLength: 3,
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: _veldCompact(
-                  'Dagmaat hoogte',
-                  dagmaatHoogteController,
-                  breedte: double.infinity,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _veldCompact(
-                  'Slag L',
-                  slagLinksController,
-                  breedte: double.infinity,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _veldCompact(
-                  'Slag R',
-                  slagRechtsController,
-                  breedte: double.infinity,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _veldCompact(
-                  'Slag B',
-                  slagBovenController,
-                  breedte: double.infinity,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _veldCompact(
-                  'Slag O',
-                  slagOnderController,
-                  breedte: double.infinity,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _resultaatRegel(),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _veldCompact(
-                  'Binnen tablet',
-                  binnenTabletController,
-                  breedte: double.infinity,
-                ),
+              _veld(
+                label: 'Slag Rechts',
+                controller: slagRechtsController,
+                veldBreedte: 42,
+                maxLength: 3,
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: _veldCompact(
-                  'Buiten tablet',
-                  buitenTabletController,
-                  breedte: double.infinity,
-                ),
+              _veld(
+                label: 'Slag Boven',
+                controller: slagBovenController,
+                veldBreedte: 42,
+                maxLength: 3,
+              ),
+              const SizedBox(width: 8),
+              _veld(
+                label: 'Slag Onder',
+                controller: slagOnderController,
+                veldBreedte: 42,
+                maxLength: 3,
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          _verschilRegel(),
+          const SizedBox(height: 8),
+          _raammaatRegel(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _veld(
+                label: 'Binnen tablet',
+                controller: binnenTabletController,
+                veldBreedte: 46,
+                maxLength: 3,
+              ),
+              const SizedBox(width: 8),
+              _veld(
+                label: 'Buiten tablet',
+                controller: buitenTabletController,
+                veldBreedte: 46,
+                maxLength: 3,
+              ),
+              const SizedBox(width: 8),
+              _verschilRegel(),
+            ],
+          ),
         ],
       ),
     );
