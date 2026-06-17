@@ -30,12 +30,11 @@ jobs:
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
-        
+
       - name: Build iOS IPA
         run: flutter build ipa --release --no-codesign
-      
-      - name: Upload IPA
-        uses: actions/upload-artifact@v4
-        with:
-          name: thimaco-ios-build
-          path: build/ios/ipa
+
+      - name: Toon build map
+        run: |
+          echo "===== BUILD CONTENT ====="
+          find build -type f || ls -R build
