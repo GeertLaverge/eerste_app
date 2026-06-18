@@ -469,9 +469,11 @@ class OneDriveSyncService {
     return prefs.getString(_backupDatumKey);
   }
 
-  Future<String?> oneDriveBackupDatum() async {
+  Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
-      final token = await OneDriveAuthService().tokenSilent();
+      final token = magLoginVragen
+          ? await OneDriveAuthService().loginInteractief()
+          : await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return null;
@@ -523,7 +525,7 @@ $laatsteSyncActie
 ''';
   }
 
-  Future<String> slimmeSync() async {
+  Future<String> slimmeSync({bool magLoginVragen = false}) async {
     final prefs = await SharedPreferences.getInstance();
 
     if (_backupBezig) {
@@ -541,7 +543,9 @@ $laatsteSyncActie
     }
 
     final lokaleDatumString = await lokaleBackupDatum();
-    final oneDriveDatumString = await oneDriveBackupDatum();
+    final oneDriveDatumString = await oneDriveBackupDatum(
+      magLoginVragen: magLoginVragen,
+    );
 
     if (oneDriveDatumString == null) {
       laatsteSyncActie = 'Geen OneDrive datum, upload uitgevoerd';

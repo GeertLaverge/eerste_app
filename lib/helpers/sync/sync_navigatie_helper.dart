@@ -7,29 +7,20 @@ class SyncNavigatieHelper {
     required BuildContext context,
     required Widget pagina,
   }) async {
-    await OneDriveSyncService().slimmeSync();
+    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
 
     if (!context.mounted) return;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => pagina,
-      ),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => pagina));
   }
 
   static Future<void> terugNaarHomeMetUpload({
     required BuildContext context,
   }) async {
-    await OneDriveSyncService().slimmeSync();
+    await OneDriveSyncService().slimmeSync(magLoginVragen: false);
 
     if (!context.mounted) return;
 
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
   }
 }
