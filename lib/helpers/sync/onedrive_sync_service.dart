@@ -268,10 +268,8 @@ class OneDriveSyncService {
     }
   }
 
-  Future<String> downloadBackup() async {
+  Future<String> downloadBackupMetToken(String token) async {
     try {
-      final token = await OneDriveAuthService().tokenSilent();
-
       if (token.startsWith('FOUT')) {
         return token;
       }
@@ -307,17 +305,6 @@ class OneDriveSyncService {
         });
       }
 
-      String encodeAgenda(Map<String, List<AgendaItem>> data) {
-        final jsonMap = data.map((datumKey, items) {
-          return MapEntry(
-            datumKey,
-            items.map((item) => item.toJson()).toList(),
-          );
-        });
-
-        return jsonEncode(jsonMap);
-      }
-
       List<KlantenficheModel> decodeKlanten(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) return [];
 
@@ -331,26 +318,22 @@ class OneDriveSyncService {
             .toList();
       }
 
-      String encodeKlanten(List<KlantenficheModel> fiches) {
-        return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
-      }
-
-      final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
-
       final cloudAgenda = decodeAgenda(
         data['agendaItems'] is String ? data['agendaItems'] : null,
       );
+
+      final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
       final mergedAgenda = SyncMergeService.mergeAgendaMap(
         lokaleAgenda,
         cloudAgenda,
       );
 
-      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
-
       final cloudKlanten = decodeKlanten(
         data['klantenFiches'] is String ? data['klantenFiches'] : null,
       );
+
+      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
 
       final mergedKlanten = SyncMergeService.mergeKlantenFiches(
         lokaleKlanten,
@@ -363,37 +346,29 @@ class OneDriveSyncService {
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
 
-      final dagtaakTemplates = data['dagtaakTemplates'];
-      final leveranciers = data['leveranciers'];
-
-      final notities = data['notities'];
-      final notitieActies = data['notitieActies'];
-
-      final backupDatum = data['backupDatum'];
-
-      if (dagtaakTemplates is String) {
-        await prefs.setString('dagtaak_templates', dagtaakTemplates);
+      if (data['dagtaakTemplates'] is String) {
+        await prefs.setString('dagtaak_templates', data['dagtaakTemplates']);
       }
 
-      if (leveranciers is String) {
-        await prefs.setString('leveranciers_lijst', leveranciers);
-      }
-      if (notities is String) {
-        await prefs.setString('thimaco_notities', notities);
+      if (data['leveranciers'] is String) {
+        await prefs.setString('leveranciers_lijst', data['leveranciers']);
       }
 
-      if (notitieActies is String) {
-        await prefs.setString('thimaco_notitie_acties', notitieActies);
+      if (data['notities'] is String) {
+        await prefs.setString('thimaco_notities', data['notities']);
       }
-      //
 
-      if (backupDatum is String) {
-        await prefs.setString(_backupDatumKey, backupDatum);
+      if (data['notitieActies'] is String) {
+        await prefs.setString('thimaco_notitie_acties', data['notitieActies']);
+      }
+
+      if (data['backupDatum'] is String) {
+        await prefs.setString(_backupDatumKey, data['backupDatum']);
       }
 
       await _downloadKlantenFotos(token);
 
-      laatsteSyncActie = 'Merge download uitgevoerd';
+      laatsteSyncActie = 'Download met login-token uitgevoerd';
 
       return 'IMPORT_OK';
     } catch (e) {
@@ -415,7 +390,7 @@ class OneDriveSyncService {
       return token;
     }
 
-    final resultaat = await downloadBackup();
+    final resultaat = await downloadBackupMetToken(token);
 
     laatsteSyncActie = 'Eerste start sync uitgevoerd: $resultaat';
 
@@ -575,7 +550,9 @@ $laatsteSyncActie
 
     if (lokaleDatumString == null) {
       laatsteSyncActie = 'Geen lokale datum, download uitgevoerd';
-      return await downloadBackup();
+      return await downloadBackupMetToken(
+        await OneDriveAuthService().tokenSilent(),
+      );
     }
 
     final lokaleDatum = DateTime.tryParse(lokaleDatumString);

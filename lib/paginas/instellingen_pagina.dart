@@ -52,8 +52,19 @@ class InstellingenPagina extends StatelessWidget {
 
               ElevatedButton.icon(
                 onPressed: () async {
+                  final token = await OneDriveAuthService().loginInteractief();
+
+                  if (!context.mounted) return;
+
+                  if (token.startsWith('FOUT')) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(token)));
+                    return;
+                  }
+
                   final resultaat = await OneDriveSyncService()
-                      .downloadBackup();
+                      .downloadBackupMetToken(token);
 
                   if (!context.mounted) return;
 
