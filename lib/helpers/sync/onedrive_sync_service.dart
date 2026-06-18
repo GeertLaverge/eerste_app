@@ -574,7 +574,13 @@ $laatsteSyncActie
       }
 
       laatsteSyncActie = 'OneDrive nieuwer, download uitgevoerd';
-      return await downloadBackup();
+      final token = await OneDriveAuthService().tokenSilent();
+
+      if (token.startsWith('FOUT')) {
+        return token;
+      }
+
+      return await downloadBackupMetToken(token);
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
