@@ -8,9 +8,7 @@ import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 
 class HomePaginaNieuw extends StatefulWidget {
-  const HomePaginaNieuw({
-    super.key,
-  });
+  const HomePaginaNieuw({super.key});
 
   @override
   State<HomePaginaNieuw> createState() => _HomePaginaNieuwState();
@@ -28,23 +26,22 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await OneDriveSyncService().slimmeSync();
+      final resultaat = await OneDriveSyncService().eersteStartSync();
+
+      debugPrint('EERSTE START SYNC: $resultaat');
 
       if (!mounted) return;
 
       setState(() {});
     });
 
-    _syncTimer = Timer.periodic(
-      const Duration(minutes: 3),
-      (_) async {
-        await OneDriveSyncService().slimmeSync();
+    _syncTimer = Timer.periodic(const Duration(minutes: 3), (_) async {
+      await OneDriveSyncService().slimmeSync();
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setState(() {});
-      },
-    );
+      setState(() {});
+    });
   }
 
   @override
@@ -68,16 +65,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
             const HomeBovenBalk(),
             const Padding(
               padding: EdgeInsets.all(8),
-              child: Column(
-                children: [],
-              ),
+              child: Column(children: []),
             ),
             Expanded(
               child: Row(
                 children: [
-                  HomeZijMenu(
-                    compact: MediaQuery.of(context).size.width < 700,
-                  ),
+                  HomeZijMenu(compact: MediaQuery.of(context).size.width < 700),
                   Expanded(
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),

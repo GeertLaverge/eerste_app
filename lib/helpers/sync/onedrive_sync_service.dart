@@ -401,6 +401,27 @@ class OneDriveSyncService {
     }
   }
 
+  Future<String> eersteStartSync() async {
+    final lokaal = await lokaleBackupDatum();
+
+    if (lokaal != null) {
+      return slimmeSync();
+    }
+
+    final token = await OneDriveAuthService().loginInteractief();
+
+    if (token.startsWith('FOUT')) {
+      laatsteSyncActie = 'Eerste login mislukt';
+      return token;
+    }
+
+    final resultaat = await downloadBackup();
+
+    laatsteSyncActie = 'Eerste start sync uitgevoerd: $resultaat';
+
+    return resultaat;
+  }
+
   Future<void> _downloadKlantenFotos(String token) async {
     const manifestUrl =
         'https://graph.microsoft.com/v1.0/me/drive/special/approot:/klanten_fotos_manifest.json:/content';
