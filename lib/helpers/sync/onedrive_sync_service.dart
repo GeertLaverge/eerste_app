@@ -25,15 +25,12 @@ class OneDriveSyncService {
   static Future<void> registreerLokaleWijziging() async {
     final prefs = await SharedPreferences.getInstance();
 
-    await prefs.setBool(
-      _lokaleWijzigingOpenstaandKey,
-      true,
-    );
+    await prefs.setBool(_lokaleWijzigingOpenstaandKey, true);
   }
 
   Future<String> uploadBackup() async {
     try {
-      final token = await OneDriveAuthService().login();
+      final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return token;
@@ -49,9 +46,7 @@ class OneDriveSyncService {
 
       final cloudResponse = await http.get(
         Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (cloudResponse.statusCode == 200) {
@@ -66,9 +61,7 @@ class OneDriveSyncService {
         return data.map((datumKey, lijst) {
           final items = (lijst as List<dynamic>)
               .map(
-                (item) => AgendaItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
+                (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
               )
               .toList();
 
@@ -94,17 +87,14 @@ class OneDriveSyncService {
 
         return lijst
             .map(
-              (item) => KlantenficheModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  KlantenficheModel.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList();
       }
 
       String encodeKlanten(List<KlantenficheModel> fiches) {
-        return jsonEncode(
-          fiches.map((fiche) => fiche.toJson()).toList(),
-        );
+        return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
       }
 
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
@@ -120,9 +110,7 @@ class OneDriveSyncService {
         cloudAgenda,
       );
 
-      final lokaleKlanten = decodeKlanten(
-        prefs.getString('klanten_fiches'),
-      );
+      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
 
       final cloudKlanten = decodeKlanten(
         cloudBackup['klantenFiches'] is String
@@ -158,9 +146,7 @@ class OneDriveSyncService {
         return 'BACKUP_FOUT ${response.statusCode}\n${response.body}';
       }
 
-      await AppStorage.bewaarAgendaItemsNieuwVoorSync(
-        mergedAgenda,
-      );
+      await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
 
       await AppStorage.bewaarKlantenFichesVoorSync(
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
@@ -168,15 +154,9 @@ class OneDriveSyncService {
 
       final fotoResultaat = await _uploadKlantenFotos(token);
 
-      await prefs.setString(
-        _backupDatumKey,
-        backupDatum,
-      );
+      await prefs.setString(_backupDatumKey, backupDatum);
 
-      await prefs.setBool(
-        _lokaleWijzigingOpenstaandKey,
-        false,
-      );
+      await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
 
       laatsteSyncActie = 'Merge upload uitgevoerd';
 
@@ -194,25 +174,17 @@ class OneDriveSyncService {
     try {
       final appMap = await getApplicationDocumentsDirectory();
 
-      final fotosMap = Directory(
-        '${appMap.path}/klanten_fotos',
-      );
+      final fotosMap = Directory('${appMap.path}/klanten_fotos');
 
       if (!await fotosMap.exists()) {
-        await _uploadFotoManifest(
-          token: token,
-          bestanden: [],
-        );
+        await _uploadFotoManifest(token: token, bestanden: []);
 
         return 'FOTOS_OK_GEEN_FOTOS';
       }
 
       final bestanden = <Map<String, String>>[];
 
-      final entities = fotosMap.listSync(
-        recursive: true,
-        followLinks: false,
-      );
+      final entities = fotosMap.listSync(recursive: true, followLinks: false);
 
       for (final entity in entities) {
         if (entity is! File) continue;
@@ -221,13 +193,9 @@ class OneDriveSyncService {
             .replaceFirst('${fotosMap.path}/', '')
             .replaceAll('\\', '/');
 
-        bestanden.add({
-          'pad': relatiefPad,
-        });
+        bestanden.add({'pad': relatiefPad});
 
-        final encodedPad = _encodeOneDrivePath(
-          'klanten_fotos/$relatiefPad',
-        );
+        final encodedPad = _encodeOneDrivePath('klanten_fotos/$relatiefPad');
 
         final url =
             'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$encodedPad:/content';
@@ -248,10 +216,7 @@ class OneDriveSyncService {
         }
       }
 
-      await _uploadFotoManifest(
-        token: token,
-        bestanden: bestanden,
-      );
+      await _uploadFotoManifest(token: token, bestanden: bestanden);
 
       return 'FOTOS_OK ${bestanden.length}';
     } catch (e) {
@@ -305,7 +270,7 @@ class OneDriveSyncService {
 
   Future<String> downloadBackup() async {
     try {
-      final token = await OneDriveAuthService().login();
+      final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return token;
@@ -316,9 +281,7 @@ class OneDriveSyncService {
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode != 200) {
@@ -336,9 +299,7 @@ class OneDriveSyncService {
         return data.map((datumKey, lijst) {
           final items = (lijst as List<dynamic>)
               .map(
-                (item) => AgendaItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
+                (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
               )
               .toList();
 
@@ -364,17 +325,14 @@ class OneDriveSyncService {
 
         return lijst
             .map(
-              (item) => KlantenficheModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
+              (item) =>
+                  KlantenficheModel.fromJson(Map<String, dynamic>.from(item)),
             )
             .toList();
       }
 
       String encodeKlanten(List<KlantenficheModel> fiches) {
-        return jsonEncode(
-          fiches.map((fiche) => fiche.toJson()).toList(),
-        );
+        return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
       }
 
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
@@ -388,9 +346,7 @@ class OneDriveSyncService {
         cloudAgenda,
       );
 
-      final lokaleKlanten = decodeKlanten(
-        prefs.getString('klanten_fiches'),
-      );
+      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
 
       final cloudKlanten = decodeKlanten(
         data['klantenFiches'] is String ? data['klantenFiches'] : null,
@@ -401,9 +357,7 @@ class OneDriveSyncService {
         cloudKlanten,
       );
 
-      await AppStorage.bewaarAgendaItemsNieuwVoorSync(
-        mergedAgenda,
-      );
+      await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
 
       await AppStorage.bewaarKlantenFichesVoorSync(
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
@@ -425,17 +379,11 @@ class OneDriveSyncService {
         await prefs.setString('leveranciers_lijst', leveranciers);
       }
       if (notities is String) {
-        await prefs.setString(
-          'thimaco_notities',
-          notities,
-        );
+        await prefs.setString('thimaco_notities', notities);
       }
 
       if (notitieActies is String) {
-        await prefs.setString(
-          'thimaco_notitie_acties',
-          notitieActies,
-        );
+        await prefs.setString('thimaco_notitie_acties', notitieActies);
       }
       //
 
@@ -459,9 +407,7 @@ class OneDriveSyncService {
 
     final manifestResponse = await http.get(
       Uri.parse(manifestUrl),
-      headers: {
-        'Authorization': 'Bearer $token',
-      },
+      headers: {'Authorization': 'Bearer $token'},
     );
 
     if (manifestResponse.statusCode != 200) {
@@ -476,14 +422,10 @@ class OneDriveSyncService {
 
     final appMap = await getApplicationDocumentsDirectory();
 
-    final fotosMap = Directory(
-      '${appMap.path}/klanten_fotos',
-    );
+    final fotosMap = Directory('${appMap.path}/klanten_fotos');
 
     if (!await fotosMap.exists()) {
-      await fotosMap.create(
-        recursive: true,
-      );
+      await fotosMap.create(recursive: true);
     }
 
     for (final item in bestanden) {
@@ -493,38 +435,27 @@ class OneDriveSyncService {
 
       if (pad is! String || pad.trim().isEmpty) continue;
 
-      final encodedPad = _encodeOneDrivePath(
-        'klanten_fotos/$pad',
-      );
+      final encodedPad = _encodeOneDrivePath('klanten_fotos/$pad');
 
       final url =
           'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$encodedPad:/content';
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode != 200) continue;
 
-      final lokaalBestand = File(
-        '${fotosMap.path}/$pad',
-      );
+      final lokaalBestand = File('${fotosMap.path}/$pad');
 
       final parent = lokaalBestand.parent;
 
       if (!await parent.exists()) {
-        await parent.create(
-          recursive: true,
-        );
+        await parent.create(recursive: true);
       }
 
-      await lokaalBestand.writeAsBytes(
-        response.bodyBytes,
-        flush: true,
-      );
+      await lokaalBestand.writeAsBytes(response.bodyBytes, flush: true);
     }
   }
 
@@ -540,7 +471,7 @@ class OneDriveSyncService {
 
   Future<String?> oneDriveBackupDatum() async {
     try {
-      final token = await OneDriveAuthService().login();
+      final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return null;
@@ -551,9 +482,7 @@ class OneDriveSyncService {
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode != 200) {
