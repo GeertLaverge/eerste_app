@@ -12,6 +12,10 @@ class InstellingenPagina extends StatelessWidget {
 
   static const groen = Color(0xFF0B7A3B);
 
+  void _toonMelding(BuildContext context, String tekst) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tekst)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,14 +34,21 @@ class InstellingenPagina extends StatelessWidget {
             children: [
               ElevatedButton.icon(
                 onPressed: () async {
-                  final resultaat = await OneDriveAuthService()
-                      .loginInteractief();
+                  final token = await OneDriveAuthService().loginInteractief();
 
                   if (!context.mounted) return;
 
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(resultaat)));
+                  if (token.startsWith('FOUT')) {
+                    _toonMelding(context, token);
+                    return;
+                  }
+
+                  final resultaat = await OneDriveSyncService()
+                      .downloadBackupMetToken(token);
+
+                  if (!context.mounted) return;
+
+                  _toonMelding(context, 'Aangemeld: $resultaat');
                 },
                 icon: const Icon(Icons.login),
                 label: const Text('Aanmelden Microsoft'),
@@ -52,27 +63,15 @@ class InstellingenPagina extends StatelessWidget {
 
               ElevatedButton.icon(
                 onPressed: () async {
-                  final token = await OneDriveAuthService().loginInteractief();
+                  final resultaat = await OneDriveSyncService().slimmeSync(
+                    magLoginVragen: false,
+                  );
 
                   if (!context.mounted) return;
 
-                  if (token.startsWith('FOUT')) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text(token)));
-                    return;
-                  }
-
-                  final resultaat = await OneDriveSyncService()
-                      .downloadBackupMetToken(token);
-
-                  if (!context.mounted) return;
-
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(resultaat)));
+                  _toonMelding(context, resultaat);
                 },
-                icon: const Icon(Icons.cloud_download),
+                icon: const Icon(Icons.sync),
                 label: const Text('Synchroniseren'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,
@@ -85,7 +84,7 @@ class InstellingenPagina extends StatelessWidget {
 
               ElevatedButton.icon(
                 onPressed: () async {
-                  await OneDriveSyncService().slimmeSync();
+                  await OneDriveSyncService().slimmeSync(magLoginVragen: false);
 
                   if (!context.mounted) return;
 
@@ -109,7 +108,7 @@ class InstellingenPagina extends StatelessWidget {
 
               ElevatedButton.icon(
                 onPressed: () async {
-                  await OneDriveSyncService().slimmeSync();
+                  await OneDriveSyncService().slimmeSync(magLoginVragen: false);
 
                   if (!context.mounted) return;
 
@@ -133,7 +132,7 @@ class InstellingenPagina extends StatelessWidget {
 
               ElevatedButton.icon(
                 onPressed: () async {
-                  await OneDriveSyncService().slimmeSync();
+                  await OneDriveSyncService().slimmeSync(magLoginVragen: false);
 
                   if (!context.mounted) return;
 

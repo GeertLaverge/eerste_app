@@ -7,7 +7,7 @@ class SyncNavigatieHelper {
     required BuildContext context,
     required Widget pagina,
   }) async {
-    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
+    await OneDriveSyncService().slimmeSync(magLoginVragen: false);
 
     if (!context.mounted) return;
 

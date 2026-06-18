@@ -26,9 +26,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final resultaat = await OneDriveSyncService().eersteStartSync();
+      final resultaat = await OneDriveSyncService().slimmeSync(
+        magLoginVragen: false,
+      );
 
-      debugPrint('EERSTE START SYNC: $resultaat');
+      debugPrint('START SILENT SYNC: $resultaat');
 
       if (!mounted) return;
 
@@ -36,7 +38,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     });
 
     _syncTimer = Timer.periodic(const Duration(minutes: 3), (_) async {
-      await OneDriveSyncService().slimmeSync();
+      final resultaat = await OneDriveSyncService().slimmeSync(
+        magLoginVragen: false,
+      );
+
+      debugPrint('TIMER SILENT SYNC: $resultaat');
 
       if (!mounted) return;
 

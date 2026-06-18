@@ -24,7 +24,6 @@ class OneDriveSyncService {
 
   static Future<void> registreerLokaleWijziging() async {
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setBool(_lokaleWijzigingOpenstaandKey, true);
   }
 
@@ -33,6 +32,7 @@ class OneDriveSyncService {
       final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
+        laatsteSyncActie = 'Upload niet uitgevoerd: geen silent token';
         return token;
       }
 
@@ -155,7 +155,6 @@ class OneDriveSyncService {
       final fotoResultaat = await _uploadKlantenFotos(token);
 
       await prefs.setString(_backupDatumKey, backupDatum);
-
       await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
 
       laatsteSyncActie = 'Merge upload uitgevoerd';
@@ -173,17 +172,14 @@ class OneDriveSyncService {
   Future<String> _uploadKlantenFotos(String token) async {
     try {
       final appMap = await getApplicationDocumentsDirectory();
-
       final fotosMap = Directory('${appMap.path}/klanten_fotos');
 
       if (!await fotosMap.exists()) {
         await _uploadFotoManifest(token: token, bestanden: []);
-
         return 'FOTOS_OK_GEEN_FOTOS';
       }
 
       final bestanden = <Map<String, String>>[];
-
       final entities = fotosMap.listSync(recursive: true, followLinks: false);
 
       for (final entity in entities) {
@@ -376,27 +372,6 @@ class OneDriveSyncService {
     }
   }
 
-  Future<String> eersteStartSync() async {
-    final lokaal = await lokaleBackupDatum();
-
-    if (lokaal != null) {
-      return slimmeSync();
-    }
-
-    final token = await OneDriveAuthService().loginInteractief();
-
-    if (token.startsWith('FOUT')) {
-      laatsteSyncActie = 'Eerste login mislukt';
-      return token;
-    }
-
-    final resultaat = await downloadBackupMetToken(token);
-
-    laatsteSyncActie = 'Eerste start sync uitgevoerd: $resultaat';
-
-    return resultaat;
-  }
-
   Future<void> _downloadKlantenFotos(String token) async {
     const manifestUrl =
         'https://graph.microsoft.com/v1.0/me/drive/special/approot:/klanten_fotos_manifest.json:/content';
@@ -411,13 +386,11 @@ class OneDriveSyncService {
     }
 
     final manifest = jsonDecode(manifestResponse.body) as Map<String, dynamic>;
-
     final bestanden = manifest['bestanden'];
 
     if (bestanden is! List) return;
 
     final appMap = await getApplicationDocumentsDirectory();
-
     final fotosMap = Directory('${appMap.path}/klanten_fotos');
 
     if (!await fotosMap.exists()) {
@@ -444,7 +417,6 @@ class OneDriveSyncService {
       if (response.statusCode != 200) continue;
 
       final lokaalBestand = File('${fotosMap.path}/$pad');
-
       final parent = lokaalBestand.parent;
 
       if (!await parent.exists()) {
@@ -461,7 +433,6 @@ class OneDriveSyncService {
 
   Future<String?> lokaleBackupDatum() async {
     final prefs = await SharedPreferences.getInstance();
-
     return prefs.getString(_backupDatumKey);
   }
 
@@ -475,7 +446,7 @@ class OneDriveSyncService {
         return null;
       }
 
-      final url =
+      const url =
           'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
 
       final response = await http.get(
@@ -488,7 +459,6 @@ class OneDriveSyncService {
       }
 
       final data = jsonDecode(response.body);
-
       return data['backupDatum'];
     } catch (_) {
       return null;
@@ -500,7 +470,6 @@ class OneDriveSyncService {
 
     final lokaal = await lokaleBackupDatum();
     final oneDrive = await oneDriveBackupDatum();
-
     final openstaand = prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
     return '''
@@ -533,26 +502,40 @@ $laatsteSyncActie
     final lokaleWijzigingOpenstaand =
         prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
-    if (lokaleWijzigingOpenstaand) {
-      laatsteSyncActie = 'Lokale wijziging openstaand, upload uitgevoerd';
-      return await uploadBackup();
-    }
-
     final lokaleDatumString = await lokaleBackupDatum();
+
     final oneDriveDatumString = await oneDriveBackupDatum(
       magLoginVragen: magLoginVragen,
     );
 
     if (oneDriveDatumString == null) {
-      laatsteSyncActie = 'Geen OneDrive datum, upload uitgevoerd';
+      laatsteSyncActie = 'Geen OneDrive login of geen OneDrive backup gevonden';
+
+      if (lokaleWijzigingOpenstaand) {
+        laatsteSyncActie =
+            'Lokale wijziging openstaand, maar geen OneDrive login';
+        return 'SYNC_GEEN_ONEDRIVE_LOGIN_UPLOAD_OVERGESLAGEN';
+      }
+
+      return 'SYNC_GEEN_ONEDRIVE_LOGIN';
+    }
+
+    if (lokaleWijzigingOpenstaand) {
+      laatsteSyncActie = 'Lokale wijziging openstaand, upload uitgevoerd';
       return await uploadBackup();
     }
 
     if (lokaleDatumString == null) {
       laatsteSyncActie = 'Geen lokale datum, download uitgevoerd';
-      return await downloadBackupMetToken(
-        await OneDriveAuthService().tokenSilent(),
-      );
+
+      final token = await OneDriveAuthService().tokenSilent();
+
+      if (token.startsWith('FOUT')) {
+        laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
+        return token;
+      }
+
+      return await downloadBackupMetToken(token);
     }
 
     final lokaleDatum = DateTime.tryParse(lokaleDatumString);
@@ -564,19 +547,12 @@ $laatsteSyncActie
     }
 
     if (oneDriveDatum.isAfter(lokaleDatum)) {
-      final lokaleWijzigingOpenstaand =
-          prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
-
-      if (lokaleWijzigingOpenstaand) {
-        laatsteSyncActie =
-            'OneDrive nieuwer, maar lokale wijziging openstaand, upload uitgevoerd';
-        return await uploadBackup();
-      }
-
       laatsteSyncActie = 'OneDrive nieuwer, download uitgevoerd';
+
       final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
+        laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
         return token;
       }
 
