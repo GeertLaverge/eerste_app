@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'leveranciers_pagina.dart';
 import 'archief_klanten_pagina.dart';
 
+import '../helpers/sync/onedrive_auth_service.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/notities/notitie_acties_pagina.dart';
 
@@ -29,6 +30,50 @@ class InstellingenPagina extends StatelessWidget {
             children: [
               ElevatedButton.icon(
                 onPressed: () async {
+                  final resultaat = await OneDriveAuthService()
+                      .loginInteractief();
+
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(resultaat)));
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Aanmelden Microsoft'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final resultaat = await OneDriveSyncService()
+                      .downloadBackup();
+
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(resultaat)));
+                },
+                icon: const Icon(Icons.cloud_download),
+                label: const Text('Synchroniseren'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              ElevatedButton.icon(
+                onPressed: () async {
                   await OneDriveSyncService().slimmeSync();
 
                   if (!context.mounted) return;
@@ -48,7 +93,9 @@ class InstellingenPagina extends StatelessWidget {
                   minimumSize: const Size.fromHeight(52),
                 ),
               ),
+
               const SizedBox(height: 12),
+
               ElevatedButton.icon(
                 onPressed: () async {
                   await OneDriveSyncService().slimmeSync();
@@ -70,7 +117,9 @@ class InstellingenPagina extends StatelessWidget {
                   minimumSize: const Size.fromHeight(52),
                 ),
               ),
+
               const SizedBox(height: 12),
+
               ElevatedButton.icon(
                 onPressed: () async {
                   await OneDriveSyncService().slimmeSync();
