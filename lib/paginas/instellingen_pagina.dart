@@ -64,7 +64,7 @@ class InstellingenPagina extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: () async {
                   final resultaat = await OneDriveSyncService().slimmeSync(
-                    magLoginVragen: false,
+                    magLoginVragen: true,
                   );
 
                   if (!context.mounted) return;
