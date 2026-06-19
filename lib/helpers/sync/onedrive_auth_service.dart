@@ -13,6 +13,10 @@ class OneDriveAuthService {
 
   static SingleAccountPca? _pca;
 
+  // TIJDELIJKE TEST-FALLBACK
+  // Bewaart het laatste token zolang de app open blijft.
+  static String? _laatsteToken;
+
   Future<SingleAccountPca> _getPca() async {
     _pca ??= await SingleAccountPca.create(
       clientId: clientId,
@@ -34,11 +38,21 @@ class OneDriveAuthService {
       final token = result.accessToken;
 
       if (token.isEmpty) {
+        if (_laatsteToken != null && _laatsteToken!.isNotEmpty) {
+          return _laatsteToken!;
+        }
+
         return 'FOUT_GEEN_TOKEN_SILENT';
       }
 
+      _laatsteToken = token;
+
       return token;
     } catch (e) {
+      if (_laatsteToken != null && _laatsteToken!.isNotEmpty) {
+        return _laatsteToken!;
+      }
+
       return 'FOUT_SILENT_LOGIN: $e';
     }
   }
@@ -54,6 +68,8 @@ class OneDriveAuthService {
       if (token.isEmpty) {
         return 'FOUT_GEEN_TOKEN';
       }
+
+      _laatsteToken = token;
 
       return token;
     } catch (e) {
