@@ -5,7 +5,6 @@ import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/klanten/klanten_filter_balk.dart';
 import '../helpers/klanten/klanten_lijst.dart';
 import 'klanten_fiche_pagina.dart';
-import '../helpers/sync/sync_navigatie_helper.dart';
 
 class KlantenPagina extends StatefulWidget {
   const KlantenPagina({super.key});
@@ -38,9 +37,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
   void openNieuweKlantenfiche() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const KlantenFichePagina(),
-      ),
+      MaterialPageRoute(builder: (_) => const KlantenFichePagina()),
     ).then((_) {
       if (!mounted) return;
       setState(() {});
@@ -56,15 +53,11 @@ class _KlantenPaginaState extends State<KlantenPagina> {
           insetPadding: const EdgeInsets.all(24),
           child: Container(
             width: 260,
-            padding: const EdgeInsets.symmetric(
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFE5E7EB),
-              ),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.12),
@@ -85,10 +78,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                     openNieuweKlantenfiche();
                   },
                 ),
-                const Divider(
-                  height: 1,
-                  color: Color(0xFFE5E7EB),
-                ),
+                const Divider(height: 1, color: Color(0xFFE5E7EB)),
                 _popupKeuze(
                   context,
                   icoon: Icons.build_circle_outlined,
@@ -99,9 +89,8 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const KlantenFichePagina(
-                          startStatus: 'Nadienst',
-                        ),
+                        builder: (_) =>
+                            const KlantenFichePagina(startStatus: 'Nadienst'),
                       ),
                     ).then((_) {
                       if (!mounted) return;
@@ -121,10 +110,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
     return Container(
       width: double.infinity,
       color: const Color(0xFF0B7A3B),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 9,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
       child: const Row(
         children: [
           Expanded(
@@ -165,9 +151,11 @@ class _KlantenPaginaState extends State<KlantenPagina> {
         child: Column(
           children: [
             KlantenBovenBalk(
-              onTerug: () async {
-                await SyncNavigatieHelper.terugNaarHomeMetUpload(
-                  context: context,
+              onTerug: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/',
+                  (route) => false,
                 );
               },
               onNieuw: openNieuwMenu,
@@ -226,17 +214,10 @@ Widget _popupKeuze(
     splashColor: Colors.transparent,
     highlightColor: Colors.transparent,
     child: Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
         children: [
-          Icon(
-            icoon,
-            size: 22,
-            color: const Color(0xFF0B7A3B),
-          ),
+          Icon(icoon, size: 22, color: const Color(0xFF0B7A3B)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

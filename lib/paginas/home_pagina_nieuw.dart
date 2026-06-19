@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../helpers/homepagina/home_boven_balk.dart';
 import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
-import '../helpers/sync/onedrive_sync_service.dart';
 
 class HomePaginaNieuw extends StatefulWidget {
   const HomePaginaNieuw({super.key});
@@ -16,7 +14,6 @@ class HomePaginaNieuw extends StatefulWidget {
 
 class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     with WidgetsBindingObserver {
-  Timer? _syncTimer;
   static const achtergrond = Color(0xFFF7F8FA);
 
   @override
@@ -25,6 +22,8 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
     WidgetsBinding.instance.addObserver(this);
 
+    // TIJDELIJK UITGESCHAKELD VOOR SYNC DEBUG
+    /*
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final resultaat = await OneDriveSyncService().slimmeSync(
         magLoginVragen: false,
@@ -48,12 +47,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
       setState(() {});
     });
+    */
   }
 
   @override
   void dispose() {
-    _syncTimer?.cancel();
-
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

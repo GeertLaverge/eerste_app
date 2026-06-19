@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../paginas/klanten_pagina.dart';
-import '../sync/sync_navigatie_helper.dart';
 import '../../paginas/notities_bureau_pagina.dart';
-import '../../paginas/opmeting_pagina.dart';
 import '../../paginas/opmeting_raam_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
 
-  const HomeZijMenu({
-    super.key,
-    required this.compact,
-  });
+  const HomeZijMenu({super.key, required this.compact});
 
   static const groen = Color(0xFF0B7A3B);
   static const rand = Color(0xFFE5E7EB);
@@ -24,18 +19,23 @@ class HomeZijMenu extends StatelessWidget {
       width: compact ? 68 : 125,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(
-          right: BorderSide(color: rand),
-        ),
+        border: Border(right: BorderSide(color: rand)),
       ),
       child: Column(
         children: [
           SizedBox(height: compact ? 8 : 14),
-          _menuKnop(context, 'Agenda', Icons.calendar_month_outlined,
-              actief: true),
+          _menuKnop(
+            context,
+            'Agenda',
+            Icons.calendar_month_outlined,
+            actief: true,
+          ),
           _menuKnop(context, 'Klanten', Icons.groups_outlined),
           _menuKnop(
-              context, 'Notitie\'s\nplaatsers', Icons.description_outlined),
+            context,
+            'Notitie\'s\nplaatsers',
+            Icons.description_outlined,
+          ),
           _menuKnop(context, 'Notitie\'s\nbureau', Icons.edit_note_outlined),
           _menuKnop(context, 'Opmeting', Icons.straighten_outlined),
           _menuKnop(context, 'Puinzak', Icons.delete_outline),
@@ -56,34 +56,42 @@ class HomeZijMenu extends StatelessWidget {
   }) {
     return InkWell(
       onTap: () async {
+        // TIJDELIJK UITGESCHAKELD VOOR SYNC DEBUG
+        /*
+        await SyncNavigatieHelper.openMetDownload(
+          context: context,
+          pagina: pagina,
+        );
+        */
+
         if (titel == 'Agenda') {
-          await SyncNavigatieHelper.openMetDownload(
-            context: context,
-            pagina: const AgendaPaginaNieuw(),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AgendaPaginaNieuw()),
           );
           return;
         }
 
         if (titel == 'Klanten') {
-          await SyncNavigatieHelper.openMetDownload(
-            context: context,
-            pagina: const KlantenPagina(),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const KlantenPagina()),
           );
           return;
         }
 
         if (titel.contains('bureau')) {
-          await SyncNavigatieHelper.openMetDownload(
-            context: context,
-            pagina: const NotitiesBureauPagina(),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotitiesBureauPagina()),
           );
           return;
         }
 
         if (titel == 'Opmeting') {
-          await SyncNavigatieHelper.openMetDownload(
-            context: context,
-            pagina: const OpmetingRaamPagina(),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const OpmetingRaamPagina()),
           );
           return;
         }
@@ -96,21 +104,14 @@ class HomeZijMenu extends StatelessWidget {
               color: actief ? groen : Colors.transparent,
               width: 3,
             ),
-            bottom: const BorderSide(
-              color: rand,
-              width: 0.7,
-            ),
+            bottom: const BorderSide(color: rand, width: 0.7),
           ),
         ),
         child: compact
             ? Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    icoon,
-                    size: 21,
-                    color: actief ? groen : Colors.black87,
-                  ),
+                  Icon(icoon, size: 21, color: actief ? groen : Colors.black87),
                   const SizedBox(height: 4),
                   Text(
                     titel,
@@ -145,8 +146,9 @@ class HomeZijMenu extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.05,
-                          fontWeight:
-                              actief ? FontWeight.w700 : FontWeight.w500,
+                          fontWeight: actief
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: actief ? groen : Colors.black87,
                         ),
                       ),

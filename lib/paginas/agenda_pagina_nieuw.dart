@@ -34,7 +34,6 @@ import '../helpers/Agenda/agenda_tijd_picker.dart';
 import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
-import '../helpers/sync/sync_navigatie_helper.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
   const AgendaPaginaNieuw({super.key});
@@ -98,18 +97,18 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     );
 
     final eersteRasterDag = eersteDagFocusMaand.subtract(
-      Duration(
-        days: eersteDagFocusMaand.weekday - 1,
-      ),
+      Duration(days: eersteDagFocusMaand.weekday - 1),
     );
 
     final weekIndexVandaag = vandaag.difference(eersteRasterDag).inDays ~/ 7;
 
     final maandTitelHoogte = 36.0;
-    final weekHoogte =
-        agendaWeergave == AgendaWeergaveType.symbolen ? 92.0 : 118.0;
+    final weekHoogte = agendaWeergave == AgendaWeergaveType.symbolen
+        ? 92.0
+        : 118.0;
 
-    final positie = maandTitelHoogte +
+    final positie =
+        maandTitelHoogte +
         (wekenVorigeMaand * weekHoogte) +
         maandTitelHoogte +
         (weekIndexVandaag * weekHoogte);
@@ -138,9 +137,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   Future<void> laadFilters() async {
-    final waarden = await AppStorage.laadAgendaFilters(
-      soort: 'detail',
-    );
+    final waarden = await AppStorage.laadAgendaFilters(soort: 'detail');
 
     if (!mounted) return;
 
@@ -176,40 +173,29 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   Future<void> bewaarFilters() async {
-    await AppStorage.bewaarAgendaFilters(
-      {
-        'planningKlanten': filters.toonPlanning,
-        'opvolging': filters.toonOpvolging,
-        'nadienst': filters.toonNadienst,
-        'afspraken': filters.toonAfspraak,
-        'dagTaken': filters.toonDagtaak,
-        'vakantie': filters.toonVerlof,
-        'kraan': filters.toonKraan,
-      },
-      soort: 'detail',
-    );
+    await AppStorage.bewaarAgendaFilters({
+      'planningKlanten': filters.toonPlanning,
+      'opvolging': filters.toonOpvolging,
+      'nadienst': filters.toonNadienst,
+      'afspraken': filters.toonAfspraak,
+      'dagTaken': filters.toonDagtaak,
+      'vakantie': filters.toonVerlof,
+      'kraan': filters.toonKraan,
+    }, soort: 'detail');
   }
 
   List<DateTime> zichtbareMaanden() {
     return [
-      DateTime(
-        selectie.focusMaand.year,
-        selectie.focusMaand.month - 1,
-      ),
+      DateTime(selectie.focusMaand.year, selectie.focusMaand.month - 1),
       selectie.focusMaand,
-      DateTime(
-        selectie.focusMaand.year,
-        selectie.focusMaand.month + 1,
-      ),
+      DateTime(selectie.focusMaand.year, selectie.focusMaand.month + 1),
     ];
   }
 
   List<AgendaItem> itemsVanGeselecteerdeDag(
     Map<String, List<AgendaItem>> zichtbareItems,
   ) {
-    final key = AgendaDatumHelper.datumKey(
-      selectie.geselecteerdeDag,
-    );
+    final key = AgendaDatumHelper.datumKey(selectie.geselecteerdeDag);
 
     return zichtbareItems[key] ?? [];
   }
@@ -220,8 +206,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
-    final oudeScrollPositie =
-        agendaScroll.hasClients ? agendaScroll.offset : 0.0;
+    final oudeScrollPositie = agendaScroll.hasClients
+        ? agendaScroll.offset
+        : 0.0;
 
     setState(() {
       selectie = selectie.kiesDag(dag);
@@ -235,21 +222,13 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         agendaScroll.position.maxScrollExtent,
       );
 
-      agendaScroll.jumpTo(
-        veiligePositie,
-      );
+      agendaScroll.jumpTo(veiligePositie);
     });
   }
 
-  void startVerplaatsen({
-    required DateTime oudeDag,
-    required AgendaItem item,
-  }) {
+  void startVerplaatsen({required DateTime oudeDag, required AgendaItem item}) {
     setState(() {
-      verplaatsState = verplaatsState.start(
-        oudeDag: oudeDag,
-        item: item,
-      );
+      verplaatsState = verplaatsState.start(oudeDag: oudeDag, item: item);
 
       selectie = selectie.kiesDag(oudeDag);
     });
@@ -267,11 +246,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       verplaatsState = verplaatsState.stop();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Verplaatsen geannuleerd.'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Verplaatsen geannuleerd.')));
   }
 
   Future<void> verplaatsNaarDag(DateTime nieuweDag) async {
@@ -289,10 +266,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     if (foutmelding != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(foutmelding),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
       );
       return;
     }
@@ -304,15 +278,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       itemsPerDag: agendaItems,
     );
 
-    await AgendaMeldingService.verwijderMelding(
-      dag: oudeDag,
-      item: item,
-    );
+    await AgendaMeldingService.verwijderMelding(dag: oudeDag, item: item);
 
-    await AgendaMeldingService.planMelding(
-      dag: nieuweDag,
-      item: item,
-    );
+    await AgendaMeldingService.planMelding(dag: nieuweDag, item: item);
 
     if (!mounted) return;
 
@@ -330,10 +298,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     );
   }
 
-  Future<void> openItem(
-    DateTime dag,
-    AgendaItem item,
-  ) async {
+  Future<void> openItem(DateTime dag, AgendaItem item) async {
     if (verplaatsState.actief) return;
 
     final geopend = await AgendaKlantFicheOpenHelper.openAlsKlantPlanning(
@@ -358,31 +323,24 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     final resultaat = await AgendaItemOpenHelper.open(
       context: context,
       item: item,
-      geplandeItems: itemsVanGeselecteerdeDag(
-        agendaItems,
-      ),
+      geplandeItems: itemsVanGeselecteerdeDag(agendaItems),
     );
 
     if (resultaat == null) return;
 
     if (resultaat == 'verplaatsen') {
-      startVerplaatsen(
-        oudeDag: dag,
-        item: item,
-      );
+      startVerplaatsen(oudeDag: dag, item: item);
       return;
     }
 
     if (resultaat == 'verwijderen') {
-      await AgendaMeldingService.verwijderMelding(
-        dag: dag,
-        item: item,
-      );
+      await AgendaMeldingService.verwijderMelding(dag: dag, item: item);
       if (item.type == 'planning' ||
           item.type == 'opvolging' ||
           item.type == 'nadienst') {
         await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
-            item);
+          item,
+        );
       }
 
       final nieuweItems = await AgendaRepository.verwijder(
@@ -396,10 +354,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       setState(() {
         agendaItems = Map<String, List<AgendaItem>>.from(
           nieuweItems.map(
-            (key, value) => MapEntry(
-              key,
-              List<AgendaItem>.from(value),
-            ),
+            (key, value) => MapEntry(key, List<AgendaItem>.from(value)),
           ),
         );
       });
@@ -424,18 +379,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
       if (foutmelding != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(foutmelding),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
         );
         return;
       }
 
-      await AgendaMeldingService.verwijderMelding(
-        dag: dag,
-        item: item,
-      );
+      await AgendaMeldingService.verwijderMelding(dag: dag, item: item);
 
       final nieuweItems = await AgendaRepository.bewerk(
         dag: dag,
@@ -444,10 +393,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         itemsPerDag: agendaItems,
       );
 
-      await AgendaMeldingService.planMelding(
-        dag: dag,
-        item: resultaat,
-      );
+      await AgendaMeldingService.planMelding(dag: dag, item: resultaat);
 
       if (!mounted) return;
 
@@ -470,9 +416,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
-    final gekozenType = await AgendaTypeKeuzePopup.open(
-      context,
-    );
+    final gekozenType = await AgendaTypeKeuzePopup.open(context);
 
     if (gekozenType == null) return;
 
@@ -550,9 +494,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
             bestaandItem: conceptItem,
             vastType: gekozenType,
             isHeropendeNieuwePlanning: conceptItem != null,
-            geplandeItems: itemsVanGeselecteerdeDag(
-              agendaItems,
-            ),
+            geplandeItems: itemsVanGeselecteerdeDag(agendaItems),
           );
         },
       );
@@ -569,10 +511,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         conceptItem = nieuwItem;
 
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(foutmelding),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
         );
 
         continue;
@@ -612,10 +551,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
-    final nieuweFilters = await AgendaFilterPopup.open(
-      context,
-      filters,
-    );
+    final nieuweFilters = await AgendaFilterPopup.open(context, filters);
 
     if (nieuweFilters == null) return;
 
@@ -628,9 +564,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   @override
   Widget build(BuildContext context) {
-    final zichtbareAgenda = zichtbareAgendaItems(
-      agendaItems,
-    );
+    final zichtbareAgenda = zichtbareAgendaItems(agendaItems);
 
     final zichtbareItems = AgendaFilterHelper.gefilterdeItems(
       itemsPerDag: zichtbareAgenda,
@@ -648,15 +582,11 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       body: Column(
         children: [
           if (verplaatsState.actief && verplaatsState.item != null)
-            AgendaVerplaatsBalk(
-              item: verplaatsState.item!,
-            ),
+            AgendaVerplaatsBalk(item: verplaatsState.item!),
           AgendaTopBalk(
             focusMaand: selectie.focusMaand,
-            onTerug: () async {
-              await SyncNavigatieHelper.terugNaarHomeMetUpload(
-                context: context,
-              );
+            onTerug: () {
+              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
             },
             onVorigeMaand: () {
               setState(() {
@@ -675,17 +605,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           Flexible(
             fit: FlexFit.tight,
             child: Padding(
-              padding: const EdgeInsets.only(
-                bottom: 0,
-              ),
+              padding: const EdgeInsets.only(bottom: 0),
               child: ListView(
                 controller: agendaScroll,
-                padding: const EdgeInsets.fromLTRB(
-                  8,
-                  8,
-                  8,
-                  20,
-                ),
+                padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
                 children: zichtbareMaanden().map((maand) {
                   return AgendaMaandBlok(
                     maand: maand,
@@ -694,27 +617,20 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     weergave: agendaWeergave,
                     onDagKlik: selecteerDag,
                     onItemTap: openItem,
-                    onItemSleep: (
-                      dag,
-                      item,
-                    ) async {
+                    onItemSleep: (dag, item) async {
                       // Niet meer gebruiken.
                     },
-                    onItemDrop: (
-                      nieuweDag,
-                      item,
-                      oudeDag,
-                    ) async {
+                    onItemDrop: (nieuweDag, item, oudeDag) async {
                       if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
                         oudeDag,
                       )) {
                         final nieuweItems =
                             await AgendaKlantPlanningDropService.verwerk(
-                          context: context,
-                          nieuweDag: nieuweDag,
-                          item: item,
-                          itemsPerDag: agendaItems,
-                        );
+                              context: context,
+                              nieuweDag: nieuweDag,
+                              item: item,
+                              itemsPerDag: agendaItems,
+                            );
 
                         if (nieuweItems == null) return;
 
@@ -736,12 +652,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       }
                       final nieuweItems =
                           await AgendaSleepAfhandeling.verwerkDrop(
-                        context: context,
-                        oudeDag: oudeDag,
-                        nieuweDag: nieuweDag,
-                        item: item,
-                        itemsPerDag: agendaItems,
-                      );
+                            context: context,
+                            oudeDag: oudeDag,
+                            nieuweDag: nieuweDag,
+                            item: item,
+                            itemsPerDag: agendaItems,
+                          );
 
                       if (nieuweItems == null) return;
 
@@ -776,63 +692,53 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           ),
           if (agendaWeergave == AgendaWeergaveType.symbolen)
             AgendaDagDetail(
-                key: ValueKey(
-                  selectie.geselecteerdeDag,
-                ),
-                dag: selectie.geselecteerdeDag,
-                items: itemsVanGeselecteerdeDag(
-                  zichtbareItems,
-                ),
-                onItemTap: (item) {
-                  openItem(
-                    selectie.geselecteerdeDag,
+              key: ValueKey(selectie.geselecteerdeDag),
+              dag: selectie.geselecteerdeDag,
+              items: itemsVanGeselecteerdeDag(zichtbareItems),
+              onItemTap: (item) {
+                openItem(selectie.geselecteerdeDag, item);
+              },
+              onItemVerwijder: (item) async {
+                await AgendaMeldingService.verwijderMelding(
+                  dag: selectie.geselecteerdeDag,
+                  item: item,
+                );
+
+                if (item.type == 'planning' ||
+                    item.type == 'opvolging' ||
+                    item.type == 'nadienst' ||
+                    item.type == 'afspraak') {
+                  await AgendaKlantPlanningDropService.zetOpvolgKlantTerugInWachtrij(
                     item,
                   );
-                },
-                onItemVerwijder: (item) async {
-                  await AgendaMeldingService.verwijderMelding(
-                    dag: selectie.geselecteerdeDag,
-                    item: item,
-                  );
+                }
 
-                  if (item.type == 'planning' ||
-                      item.type == 'opvolging' ||
-                      item.type == 'nadienst' ||
-                      item.type == 'afspraak') {
-                    await AgendaKlantPlanningDropService
-                        .zetOpvolgKlantTerugInWachtrij(item);
-                  }
+                final nieuweItems = await AgendaRepository.verwijder(
+                  dag: selectie.geselecteerdeDag,
+                  item: item,
+                  itemsPerDag: agendaItems,
+                );
 
-                  final nieuweItems = await AgendaRepository.verwijder(
-                    dag: selectie.geselecteerdeDag,
-                    item: item,
-                    itemsPerDag: agendaItems,
-                  );
+                if (!mounted) return;
 
-                  if (!mounted) return;
+                setState(() {
+                  agendaItems = nieuweItems;
+                });
 
-                  setState(() {
-                    agendaItems = nieuweItems;
-                  });
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Item verwijderd.'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }),
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Item verwijderd.'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 6),
           SafeArea(
             top: false,
             child: Container(
               color: const Color(0xFFF5F5F5),
-              padding: const EdgeInsets.fromLTRB(
-                12,
-                8,
-                12,
-                6,
-              ),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
               child: Row(
                 children: [
                   AgendaOnderbalkKnoppen.actie(

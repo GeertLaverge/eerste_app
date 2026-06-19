@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../helpers/sync/onedrive_sync_service.dart';
 
 class LeveranciersPagina extends StatefulWidget {
   const LeveranciersPagina({super.key});
@@ -48,12 +47,13 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
 
     await prefs.setString(
       'leveranciers_lijst',
-      jsonEncode(
-        leveranciers.map((e) => e.toJson()).toList(),
-      ),
+      jsonEncode(leveranciers.map((e) => e.toJson()).toList()),
     );
 
-    await OneDriveSyncService().uploadBackupOpAchtergrond();
+    // TIJDELIJK UITGESCHAKELD VOOR SYNC DEBUG
+    /*
+await OneDriveSyncService().uploadBackupOpAchtergrond();
+*/
   }
 
   List<Leverancier> get gefilterdeLeveranciers {
@@ -119,27 +119,16 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
                   _veld(naam, 'Naam leverancier'),
                   Row(
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: _veld(straat, 'Straat'),
-                      ),
+                      Expanded(flex: 3, child: _veld(straat, 'Straat')),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _veld(huisNr, 'Nr'),
-                      ),
+                      Expanded(child: _veld(huisNr, 'Nr')),
                     ],
                   ),
                   Row(
                     children: [
-                      Expanded(
-                        flex: 2,
-                        child: _veld(postcode, 'Postcode'),
-                      ),
+                      Expanded(flex: 2, child: _veld(postcode, 'Postcode')),
                       const SizedBox(width: 8),
-                      Expanded(
-                        flex: 3,
-                        child: _veld(gemeente, 'Gemeente'),
-                      ),
+                      Expanded(flex: 3, child: _veld(gemeente, 'Gemeente')),
                     ],
                   ),
                   _veld(telefoon, 'Vaste telefoon'),
@@ -277,10 +266,7 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
     await bewaarLeveranciers();
   }
 
-  Widget _veld(
-    TextEditingController controller,
-    String label,
-  ) {
+  Widget _veld(TextEditingController controller, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
@@ -293,10 +279,7 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
             borderSide: BorderSide(color: Colors.grey.shade400),
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: groen,
-              width: 1.6,
-            ),
+            borderSide: BorderSide(color: groen, width: 1.6),
           ),
         ),
       ),
@@ -373,10 +356,7 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
                             artikelToevoegen(leverancier);
                           },
                           onArtikelWijzigen: (artikel) {
-                            artikelWijzigen(
-                              leverancier,
-                              artikel,
-                            );
+                            artikelWijzigen(leverancier, artikel);
                           },
                           onArtikelVerwijderen: (artikel) async {
                             setState(() {
@@ -418,9 +398,7 @@ class _ArtikelDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -428,10 +406,7 @@ class _ArtikelDialog extends StatelessWidget {
           children: [
             Text(
               titel,
-              style: const TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -444,10 +419,7 @@ class _ArtikelDialog extends StatelessWidget {
                   borderSide: BorderSide(color: Colors.grey.shade400),
                 ),
                 focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: groen,
-                    width: 1.6,
-                  ),
+                  borderSide: BorderSide(color: groen, width: 1.6),
                 ),
               ),
             ),
@@ -589,9 +561,7 @@ class _LeverancierKaartState extends State<_LeverancierKaart> {
                               widget.onArtikelWijzigen(artikel);
                             },
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 7,
-                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 7),
                               child: Text(
                                 '• $artikel',
                                 style: const TextStyle(
@@ -649,18 +619,12 @@ class _LeverancierKaartState extends State<_LeverancierKaart> {
       padding: const EdgeInsets.only(bottom: 5),
       child: Row(
         children: [
-          Icon(
-            icoon,
-            size: 17,
-            color: _LeveranciersKleuren.groen,
-          ),
+          Icon(icoon, size: 17, color: _LeveranciersKleuren.groen),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               tekst,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
