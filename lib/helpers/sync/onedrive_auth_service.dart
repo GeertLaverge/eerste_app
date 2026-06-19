@@ -13,6 +13,7 @@ class OneDriveAuthService {
 
   static SingleAccountPca? _pca;
 
+  // Tijdelijke fallback: werkt alleen zolang de app open blijft.
   static String? _laatsteToken;
 
   Future<SingleAccountPca> _getPca() async {
@@ -32,6 +33,7 @@ class OneDriveAuthService {
       final pca = await _getPca();
 
       final result = await pca.acquireTokenSilent(scopes: scopes);
+
       final token = result.accessToken;
 
       if (token.isEmpty) {
@@ -58,6 +60,7 @@ class OneDriveAuthService {
       final pca = await _getPca();
 
       final result = await pca.acquireToken(scopes: scopes);
+
       final token = result.accessToken;
 
       if (token.isEmpty) {
@@ -68,6 +71,22 @@ class OneDriveAuthService {
       return token;
     } catch (e) {
       return 'FOUT_LOGIN: $e';
+    }
+  }
+
+  Future<String> accountDebugInfo() async {
+    try {
+      final pca = await _getPca();
+
+      final account = await pca.currentAccount;
+
+      if (account == null) {
+        return 'ACCOUNT_DEBUG: GEEN CURRENT ACCOUNT';
+      }
+
+      return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN\n$account';
+    } catch (e) {
+      return 'ACCOUNT_DEBUG_FOUT: $e';
     }
   }
 

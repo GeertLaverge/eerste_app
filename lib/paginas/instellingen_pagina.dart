@@ -138,6 +138,25 @@ class InstellingenPagina extends StatelessWidget {
                   minimumSize: const Size.fromHeight(52),
                 ),
               ),
+              const SizedBox(height: 12),
+
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final accountInfo = await OneDriveAuthService()
+                      .accountDebugInfo();
+
+                  if (!context.mounted) return;
+
+                  await _toonDebugDialog(context, accountInfo);
+                },
+                icon: const Icon(Icons.account_circle_outlined),
+                label: const Text('Account debug'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(52),
+                ),
+              ),
 
               const SizedBox(height: 20),
 
