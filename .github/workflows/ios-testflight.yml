@@ -56,24 +56,31 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           printf "%s" "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/thimaco.mobileprovision
 
-      - name: Build iOS archive
-        run: flutter build ipa --release --no-codesign
+      - name: Build Flutter iOS without codesign
+        run: flutter build ios --release --no-codesign
 
-      - name: Check archive entitlements file
+      - name: Archive signed iOS app
         run: |
-          find build/ios/archive -name "*.xcent" -print
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            DEVELOPMENT_TEAM=D788LU8M3B \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
+            PROVISIONING_PROFILE_SPECIFIER="Thimaco ios_app_store 1779733945"
+
+      - name: Check archive entitlements
+        run: |
+          codesign -d --entitlements :- build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
 
       - name: Export signed IPA
         run: |
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
-            -exportOptionsPlist ios/ExportOptions.plist \
-            CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ secrets.APPSTORE_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APPSTORE_ISSUER_ID }}
+            -exportOptionsPlist ios/ExportOptions.plist
 
       - name: Check entitlements after export
         run: |
