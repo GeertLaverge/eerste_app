@@ -336,7 +336,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -365,6 +365,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+
+				CODE_SIGN_STYLE = Manual;
+                DEVELOPMENT_TEAM = D788LU8M3B;
+                "CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
+                 PROVISIONING_PROFILE_SPECIFIER = "Thimaco ios_app_store 1779733945";
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
@@ -514,7 +519,7 @@
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -563,21 +568,27 @@
 			name = Debug;
 		};
 		97C147071CF9000F007C117D /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
-				ENABLE_BITCODE = NO;
-				INFOPLIST_FILE = Runner/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = be.thimaco.app;
-				CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+    isa = XCBuildConfiguration;
+    baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+    buildSettings = {
+        ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+        CLANG_ENABLE_MODULES = YES;
+        CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+        ENABLE_BITCODE = NO;
+        INFOPLIST_FILE = Runner/Info.plist;
+
+        CODE_SIGN_STYLE = Manual;
+        DEVELOPMENT_TEAM = D788LU8M3B;
+        "CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";
+        PROVISIONING_PROFILE_SPECIFIER = "Thimaco ios_app_store 1779733945";
+
+        LD_RUNPATH_SEARCH_PATHS = (
+            "$(inherited)",
+            "@executable_path/Frameworks",
+        );
+        PRODUCT_BUNDLE_IDENTIFIER = be.thimaco.app;
+        CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
+        PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -603,6 +614,7 @@
 				97C147031CF9000F007C117D /* Debug */,
 				97C147041CF9000F007C117D /* Release */,
 				249021D3217E4FDB00AE95B9 /* Profile */,
+				
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
