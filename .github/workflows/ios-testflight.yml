@@ -41,6 +41,8 @@ jobs:
             -configuration Release \
             -archivePath build/ios/archive/Runner.xcarchive \
             DEVELOPMENT_TEAM=D788LU8M3B \
+            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APPSTORE_KEY_ID }} \
