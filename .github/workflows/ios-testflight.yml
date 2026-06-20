@@ -59,6 +59,10 @@ jobs:
       - name: Build iOS archive
         run: flutter build ipa --release --no-codesign
 
+      - name: Check entitlements before export
+        run: |
+          codesign -d --entitlements :- build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+
       - name: Export signed IPA
         run: |
           xcodebuild -exportArchive \
