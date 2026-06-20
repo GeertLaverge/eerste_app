@@ -68,6 +68,7 @@ jobs:
             -archivePath build/ios/archive/Runner.xcarchive \
             DEVELOPMENT_TEAM=D788LU8M3B \
             CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
             PROVISIONING_PROFILE_SPECIFIER="Thimaco ios_app_store 1779733945"
 
