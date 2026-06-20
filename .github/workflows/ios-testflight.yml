@@ -30,27 +30,8 @@ jobs:
           mkdir -p ~/.appstoreconnect/private_keys
           echo "${{ secrets.APPSTORE_PRIVATE_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
 
-      - name: Build Flutter iOS without signing
-        run: flutter build ios --release --no-codesign
-
-      - name: Archive with Xcode signing
-        run: |
-          xcodebuild archive \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive \
-            DEVELOPMENT_TEAM=D788LU8M3B \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
-            -authenticationKeyID ${{ secrets.APPSTORE_KEY_ID }} \
-            -authenticationKeyIssuerID ${{ secrets.APPSTORE_ISSUER_ID }}
-
-      - name: Check entitlements
-        run: |
-          codesign -d --entitlements :- build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+      - name: Build iOS archive
+        run: flutter build ipa --release --no-codesign
 
       - name: Export signed IPA
         run: |
@@ -62,6 +43,13 @@ jobs:
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APPSTORE_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.APPSTORE_ISSUER_ID }}
+
+      - name: Check entitlements after export
+        run: |
+          APP_PATH=$(find build/ios/ipa -name "*.ipa" -print -quit)
+          mkdir -p build/ios/check
+          unzip -q "$APP_PATH" -d build/ios/check
+          codesign -d --entitlements :- build/ios/check/Payload/Runner.app
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
