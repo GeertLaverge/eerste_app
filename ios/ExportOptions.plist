@@ -9,7 +9,13 @@
   <string>D788LU8M3B</string>
 
   <key>signingStyle</key>
-  <string>automatic</string>
+  <string>manual</string>
+
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>be.thimaco.app</key>
+    <string>Thimaco ios_app_store 1779733945</string>
+  </dict>
 
   <key>destination</key>
   <string>export</string>

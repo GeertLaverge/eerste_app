@@ -2,7 +2,8 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+182
+version: 1.0.0+183
+
 
 environment:
   sdk: '^3.11.0'
