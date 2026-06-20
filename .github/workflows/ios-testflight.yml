@@ -69,7 +69,7 @@ jobs:
             DEVELOPMENT_TEAM=D788LU8M3B \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="Thimaco ios_app_store 1779733945"
+            
 
       - name: Check archive entitlements
         run: |
