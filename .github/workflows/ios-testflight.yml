@@ -65,6 +65,7 @@ jobs:
             -archivePath build/ios/archive/Runner.xcarchive \
             -exportPath build/ios/ipa \
             -exportOptionsPlist ios/ExportOptions.plist \
+            CODE_SIGN_ENTITLEMENTS=Runner/Runner.entitlements \
             -allowProvisioningUpdates \
             -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8 \
             -authenticationKeyID ${{ secrets.APPSTORE_KEY_ID }} \
