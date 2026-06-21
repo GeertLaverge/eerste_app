@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../helpers/klanten/klanten_boven_balk.dart';
 import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/klanten/klanten_filter_balk.dart';
 import '../helpers/klanten/klanten_lijst.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 import 'klanten_fiche_pagina.dart';
 
 class KlantenPagina extends StatefulWidget {
@@ -85,7 +85,6 @@ class _KlantenPaginaState extends State<KlantenPagina> {
                   tekst: 'Nadienst',
                   onTap: () {
                     Navigator.pop(context);
-
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -103,6 +102,59 @@ class _KlantenPaginaState extends State<KlantenPagina> {
           ),
         );
       },
+    );
+  }
+
+  Widget bovenBalk() {
+    return Container(
+      height: 58,
+      color: const Color(0xFF0B7A3B),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.home, color: Colors.white),
+            onPressed: () async {
+              await SyncNavigatieHelper.terugNaarHomeMetDownload(
+                context: context,
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.cloud_download_outlined,
+              color: Colors.white,
+            ),
+            onPressed: () async {
+              await SyncNavigatieHelper.downloadVanafPagina(context: context);
+              if (!mounted) return;
+              setState(() {});
+            },
+          ),
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Klanten',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
+            onPressed: () async {
+              await SyncNavigatieHelper.uploadVanafPagina(context: context);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add, color: Colors.white, size: 28),
+            onPressed: openNieuwMenu,
+          ),
+        ],
+      ),
     );
   }
 
@@ -150,16 +202,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
       body: SafeArea(
         child: Column(
           children: [
-            KlantenBovenBalk(
-              onTerug: () {
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/',
-                  (route) => false,
-                );
-              },
-              onNieuw: openNieuwMenu,
-            ),
+            bovenBalk(),
             KlantenZoekbalk(
               onChanged: (waarde) {
                 setState(() {

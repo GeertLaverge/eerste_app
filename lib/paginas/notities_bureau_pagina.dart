@@ -5,6 +5,7 @@ import '../helpers/notities/notitie_dag_container.dart';
 import '../helpers/notities/notitie_helper.dart';
 import '../helpers/notities/notitie_model.dart';
 import '../helpers/notities/notitie_repository.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 
 class NotitiesBureauPagina extends StatefulWidget {
   const NotitiesBureauPagina({super.key});
@@ -145,40 +146,53 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
     return '${delen[2]}/${delen[1]}/${delen[0]}';
   }
 
+  PreferredSizeWidget _bovenBalk() {
+    return AppBar(
+      backgroundColor: const Color(0xFF0B7A3B),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      centerTitle: true,
+      leading: IconButton(
+        icon: const Icon(Icons.home, size: 24),
+        onPressed: () async {
+          await SyncNavigatieHelper.terugNaarHomeMetDownload(context: context);
+        },
+      ),
+      title: const Text(
+        'Notities Bureau',
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'Download',
+          onPressed: () async {
+            await SyncNavigatieHelper.downloadVanafPagina(context: context);
+            await _laad();
+          },
+          icon: const Icon(Icons.cloud_download_outlined, size: 24),
+        ),
+        IconButton(
+          tooltip: 'Upload',
+          onPressed: () async {
+            await SyncNavigatieHelper.uploadVanafPagina(context: context);
+          },
+          icon: const Icon(Icons.cloud_upload_outlined, size: 24),
+        ),
+        IconButton(
+          onPressed: _notitieToevoegen,
+          icon: const Icon(Icons.add, size: 28),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0B7A3B),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.home, size: 24),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text(
-          'Notities Bureau',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _notitieToevoegen,
-            icon: const Icon(Icons.add, size: 28),
-          ),
-        ],
-      ),
+      appBar: _bovenBalk(),
       body: ListView.builder(
-        padding: const EdgeInsets.only(
-          top: 8,
-          bottom: 18,
-        ),
+        padding: const EdgeInsets.only(top: 8, bottom: 18),
         itemCount: _datumKeys.length,
         itemBuilder: (context, index) {
           final datumKey = _datumKeys[index];

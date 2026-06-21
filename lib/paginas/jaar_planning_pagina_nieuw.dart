@@ -94,9 +94,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> laadFilters() async {
-    final waarden = await AppStorage.laadAgendaFilters(
-      soort: 'jaar',
-    );
+    final waarden = await AppStorage.laadAgendaFilters(soort: 'jaar');
 
     if (!mounted) return;
 
@@ -114,18 +112,15 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> bewaarFilters() async {
-    await AppStorage.bewaarAgendaFilters(
-      {
-        'planningKlanten': filters.toonPlanning,
-        'opvolging': filters.toonOpvolging,
-        'nadienst': filters.toonNadienst,
-        'afspraken': filters.toonAfspraak,
-        'dagTaken': filters.toonDagtaak,
-        'vakantie': filters.toonVerlof,
-        'kraan': filters.toonKraan,
-      },
-      soort: 'jaar',
-    );
+    await AppStorage.bewaarAgendaFilters({
+      'planningKlanten': filters.toonPlanning,
+      'opvolging': filters.toonOpvolging,
+      'nadienst': filters.toonNadienst,
+      'afspraken': filters.toonAfspraak,
+      'dagTaken': filters.toonDagtaak,
+      'vakantie': filters.toonVerlof,
+      'kraan': filters.toonKraan,
+    }, soort: 'jaar');
   }
 
   Future<void> laadAgendaItems() async {
@@ -139,10 +134,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> openFilterMenu() async {
-    final nieuweFilters = await AgendaFilterPopup.open(
-      context,
-      filters,
-    );
+    final nieuweFilters = await AgendaFilterPopup.open(context, filters);
 
     if (nieuweFilters == null) return;
 
@@ -165,10 +157,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     return DateTime(jaar, 1, 1);
   }
 
-  Future<void> openItem(
-    DateTime dag,
-    AgendaItem item,
-  ) async {
+  Future<void> openItem(DateTime dag, AgendaItem item) async {
     setState(() {
       geselecteerdeDag = dag;
     });
@@ -190,19 +179,13 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     final resultaat = await AgendaItemOpenHelper.open(
       context: context,
       item: item,
-      geplandeItems: agendaItems[AgendaDatumHelper.datumKey(
-            dag,
-          )] ??
-          [],
+      geplandeItems: agendaItems[AgendaDatumHelper.datumKey(dag)] ?? [],
     );
 
     if (resultaat == null) return;
 
     if (resultaat == 'verplaatsen') {
-      startVerplaatsen(
-        oudeDag: dag,
-        item: item,
-      );
+      startVerplaatsen(oudeDag: dag, item: item);
       return;
     }
 
@@ -218,10 +201,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       setState(() {
         agendaItems = Map<String, List<AgendaItem>>.from(
           nieuweItems.map(
-            (key, value) => MapEntry(
-              key,
-              List<AgendaItem>.from(value),
-            ),
+            (key, value) => MapEntry(key, List<AgendaItem>.from(value)),
           ),
         );
         heeftWijzigingen = true;
@@ -242,10 +222,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
 
       if (foutmelding != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(foutmelding),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
         );
         return;
       }
@@ -267,9 +244,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> openToevoegPopup() async {
-    final gekozenType = await AgendaTypeKeuzePopup.open(
-      context,
-    );
+    final gekozenType = await AgendaTypeKeuzePopup.open(context);
 
     if (gekozenType == null) return;
 
@@ -326,15 +301,9 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     });
   }
 
-  void startVerplaatsen({
-    required DateTime oudeDag,
-    required AgendaItem item,
-  }) {
+  void startVerplaatsen({required DateTime oudeDag, required AgendaItem item}) {
     setState(() {
-      verplaatsState = verplaatsState.start(
-        oudeDag: oudeDag,
-        item: item,
-      );
+      verplaatsState = verplaatsState.start(oudeDag: oudeDag, item: item);
     });
   }
 
@@ -343,9 +312,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     required AgendaItem item,
     required DateTime oudeDag,
   }) async {
-    if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
-      oudeDag,
-    )) {
+    if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(oudeDag)) {
       final nieuweItems = await AgendaKlantPlanningDropService.verwerk(
         context: context,
         nieuweDag: nieuweDag,
@@ -392,15 +359,9 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   int weekNummer(DateTime datum) {
-    final donderdag = datum.add(
-      Duration(days: 4 - datum.weekday),
-    );
+    final donderdag = datum.add(Duration(days: 4 - datum.weekday));
 
-    final eersteDonderdag = DateTime(
-      donderdag.year,
-      1,
-      4,
-    );
+    final eersteDonderdag = DateTime(donderdag.year, 1, 4);
 
     return 1 + donderdag.difference(eersteDonderdag).inDays ~/ 7;
   }
@@ -431,11 +392,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       double offset = 0;
 
       for (int maand = 1; maand < vandaag.month; maand++) {
-        offset += maandBreedte(
-          maand,
-          agendaItems,
-          filters,
-        );
+        offset += maandBreedte(maand, agendaItems, filters);
         offset += 8;
       }
 
@@ -480,9 +437,19 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                   AgendaOnderbalkKnoppen.actie(
                     icoon: Icons.home,
                     onTap: () async {
-                      await SyncNavigatieHelper.terugNaarHomeMetUpload(
+                      await SyncNavigatieHelper.terugNaarHomeMetDownload(
                         context: context,
                       );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  AgendaOnderbalkKnoppen.actie(
+                    icoon: Icons.cloud_download_outlined,
+                    onTap: () async {
+                      await SyncNavigatieHelper.downloadVanafPagina(
+                        context: context,
+                      );
+                      await laadAgendaItems();
                     },
                   ),
                   const Spacer(),
@@ -492,9 +459,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                         jaar--;
                       });
                     },
-                    icon: const Icon(
-                      Icons.chevron_left,
-                    ),
+                    icon: const Icon(Icons.chevron_left),
                   ),
                   SizedBox(
                     width: 90,
@@ -515,11 +480,18 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                         jaar++;
                       });
                     },
-                    icon: const Icon(
-                      Icons.chevron_right,
-                    ),
+                    icon: const Icon(Icons.chevron_right),
                   ),
                   const Spacer(),
+                  AgendaOnderbalkKnoppen.actie(
+                    icoon: Icons.cloud_upload_outlined,
+                    onTap: () async {
+                      await SyncNavigatieHelper.uploadVanafPagina(
+                        context: context,
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
                   AgendaOnderbalkKnoppen.actie(
                     icoon: Icons.add,
                     onTap: openToevoegPopup,
@@ -541,14 +513,8 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                       children: List.generate(
                         12,
                         (index) => Container(
-                          width: maandBreedte(
-                            index + 1,
-                            agendaItems,
-                            filters,
-                          ),
-                          margin: const EdgeInsets.only(
-                            right: 8,
-                          ),
+                          width: maandBreedte(index + 1, agendaItems, filters),
+                          margin: const EdgeInsets.only(right: 8),
                           alignment: Alignment.center,
                           child: Text(
                             maanden[index],
@@ -565,12 +531,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                 Expanded(
                   child: SingleChildScrollView(
                     controller: verticaleScroll,
-                    padding: const EdgeInsets.fromLTRB(
-                      10,
-                      8,
-                      10,
-                      12,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(10, 8, 10, 12),
                     child: Scrollbar(
                       controller: kalenderScroll,
                       thumbVisibility: true,
