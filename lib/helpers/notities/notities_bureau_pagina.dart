@@ -5,6 +5,7 @@ import '/helpers/notities/notitie_dag_container.dart';
 import '/helpers/notities/notitie_helper.dart';
 import '/helpers/notities/notitie_model.dart';
 import '/helpers/notities/notitie_repository.dart';
+import '/helpers/sync/sync_navigatie_helper.dart';
 
 class NotitiesBureauPagina extends StatefulWidget {
   const NotitiesBureauPagina({super.key});
@@ -125,36 +126,31 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(
-            Icons.home,
-            size: 24,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
+          icon: const Icon(Icons.home, size: 24),
+          onPressed: () async {
+            await SyncNavigatieHelper.terugNaarHomeMetDownload(
+              context: context,
+            );
           },
         ),
-        title: const Text(
-          'Notities Bureau',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
+        title: GestureDetector(
+          onTap: () async {
+            await SyncNavigatieHelper.uploadVanafPagina(context: context);
+          },
+          child: const Text(
+            'Notities Bureau',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
         ),
         actions: [
           IconButton(
             onPressed: _notitieToevoegen,
-            icon: const Icon(
-              Icons.add,
-              size: 28,
-            ),
+            icon: const Icon(Icons.add, size: 28),
           ),
         ],
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.only(
-          top: 8,
-          bottom: 18,
-        ),
+        padding: const EdgeInsets.only(top: 8, bottom: 18),
         itemCount: _datumKeys.length,
         itemBuilder: (context, index) {
           final datumKey = _datumKeys[index];
@@ -164,25 +160,13 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
             return DragTarget<NotitieModel>(
               onWillAcceptWithDetails: (_) => true,
               onAcceptWithDetails: (details) {
-                _notitieVerplaatst(
-                  details.data,
-                  datumKey,
-                );
+                _notitieVerplaatst(details.data, datumKey);
               },
-              builder: (
-                context,
-                candidateData,
-                rejectedData,
-              ) {
+              builder: (context, candidateData, rejectedData) {
                 final isHover = candidateData.isNotEmpty;
 
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    12,
-                    8,
-                    12,
-                    4,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 2,

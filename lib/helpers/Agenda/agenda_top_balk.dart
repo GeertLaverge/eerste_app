@@ -7,6 +7,7 @@ class AgendaTopBalk extends StatelessWidget {
   final VoidCallback onVorigeMaand;
   final VoidCallback onVolgendeMaand;
   final VoidCallback? onToevoegen;
+  final VoidCallback? onUpload;
 
   const AgendaTopBalk({
     super.key,
@@ -15,6 +16,7 @@ class AgendaTopBalk extends StatelessWidget {
     required this.onVorigeMaand,
     required this.onVolgendeMaand,
     this.onToevoegen,
+    this.onUpload,
   });
 
   String maandNaam(int maand) {
@@ -42,23 +44,11 @@ class AgendaTopBalk extends StatelessWidget {
     return SafeArea(
       bottom: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(
-          10,
-          10,
-          10,
-          6,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 12,
-          vertical: 10,
-        ),
+        margin: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(
-            0xFFF5F5F5,
-          ),
-          borderRadius: BorderRadius.circular(
-            26,
-          ),
+          color: const Color(0xFFF5F5F5),
+          borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
           children: [
@@ -71,62 +61,47 @@ class AgendaTopBalk extends StatelessWidget {
                     InkWell(
                       onTap: onVorigeMaand,
                       child: const Padding(
-                        padding: EdgeInsets.all(
-                          2,
-                        ),
+                        padding: EdgeInsets.all(2),
                         child: Icon(
                           Icons.chevron_left,
                           size: 24,
-                          color: Color(
-                            0xFF0B7A3B,
-                          ),
+                          color: Color(0xFF0B7A3B),
                         ),
                       ),
                     ),
-                    const SizedBox(
-                      width: 2,
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          maandNaam(
-                            focusMaand.month,
-                          ),
-                          style: const TextStyle(
-                            color: Color(
-                              0xFF0B7A3B,
+                    const SizedBox(width: 2),
+                    GestureDetector(
+                      onTap: onUpload,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            maandNaam(focusMaand.month),
+                            style: const TextStyle(
+                              color: Color(0xFF0B7A3B),
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
                             ),
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
                           ),
-                        ),
-                        Text(
-                          '${focusMaand.year}',
-                          style: const TextStyle(
-                            color: Color(
-                              0xFF0B7A3B,
+                          Text(
+                            '${focusMaand.year}',
+                            style: const TextStyle(
+                              color: Color(0xFF0B7A3B),
+                              fontSize: 13,
                             ),
-                            fontSize: 13,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                    const SizedBox(
-                      width: 2,
-                    ),
+                    const SizedBox(width: 2),
                     InkWell(
                       onTap: onVolgendeMaand,
                       child: const Padding(
-                        padding: EdgeInsets.all(
-                          2,
-                        ),
+                        padding: EdgeInsets.all(2),
                         child: Icon(
                           Icons.chevron_right,
                           size: 24,
-                          color: Color(
-                            0xFF0B7A3B,
-                          ),
+                          color: Color(0xFF0B7A3B),
                         ),
                       ),
                     ),
@@ -134,39 +109,25 @@ class AgendaTopBalk extends StatelessWidget {
                 ),
               ),
             ),
-            groeneKnop(
-              Icons.add,
-              onToevoegen ?? () {},
-            ),
+            groeneKnop(Icons.add, onToevoegen ?? () {}),
           ],
         ),
       ),
     );
   }
 
-  Widget groeneKnop(
-    IconData icon,
-    VoidCallback onTap,
-  ) {
+  Widget groeneKnop(IconData icon, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(
-        99,
-      ),
+      borderRadius: BorderRadius.circular(99),
       child: Container(
         width: 42,
         height: 42,
         decoration: const BoxDecoration(
-          color: Color(
-            0xFF0B7A3B,
-          ),
+          color: Color(0xFF0B7A3B),
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icon,
-          color: Colors.white,
-          size: 20,
-        ),
+        child: Icon(icon, color: Colors.white, size: 20),
       ),
     );
   }

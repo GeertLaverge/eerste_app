@@ -442,16 +442,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                       );
                     },
                   ),
-                  const SizedBox(width: 8),
-                  AgendaOnderbalkKnoppen.actie(
-                    icoon: Icons.cloud_download_outlined,
-                    onTap: () async {
-                      await SyncNavigatieHelper.downloadVanafPagina(
-                        context: context,
-                      );
-                      await laadAgendaItems();
-                    },
-                  ),
+
                   const Spacer(),
                   IconButton(
                     onPressed: () {
@@ -483,15 +474,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                     icon: const Icon(Icons.chevron_right),
                   ),
                   const Spacer(),
-                  AgendaOnderbalkKnoppen.actie(
-                    icoon: Icons.cloud_upload_outlined,
-                    onTap: () async {
-                      await SyncNavigatieHelper.uploadVanafPagina(
-                        context: context,
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 8),
+
                   AgendaOnderbalkKnoppen.actie(
                     icoon: Icons.add,
                     onTap: openToevoegPopup,
@@ -590,7 +573,13 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                   AgendaOnderbalkKnoppen.weergave(
                     tekst: 'Symbolen',
                     actief: false,
-                    onTap: () {
+                    onTap: () async {
+                      await SyncNavigatieHelper.downloadVanafPagina(
+                        context: context,
+                      );
+
+                      if (!context.mounted) return;
+
                       Navigator.pop(context, 'symbolen');
                     },
                   ),
@@ -598,7 +587,13 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
                   AgendaOnderbalkKnoppen.weergave(
                     tekst: 'Details',
                     actief: false,
-                    onTap: () {
+                    onTap: () async {
+                      await SyncNavigatieHelper.downloadVanafPagina(
+                        context: context,
+                      );
+
+                      if (!context.mounted) return;
+
                       Navigator.pop(context, 'details');
                     },
                   ),

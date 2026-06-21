@@ -10,10 +10,7 @@ import '../klanten/kraan_waarschuwing_icon.dart';
 class AgendaInTePlannenKnop extends StatelessWidget {
   final List<AgendaItem> items;
 
-  const AgendaInTePlannenKnop({
-    super.key,
-    required this.items,
-  });
+  const AgendaInTePlannenKnop({super.key, required this.items});
 
   bool klantStaatAlOpAgenda(KlantenficheModel klant) {
     final klantNaam = klant.naam.trim().toLowerCase();
@@ -43,10 +40,10 @@ class AgendaInTePlannenKnop extends StatelessWidget {
       type: klant.inTePlannenType.trim().isNotEmpty
           ? klant.inTePlannenType
           : klant.klantStatus == 'Nadienst'
-              ? 'nadienst'
-              : isOpvolging
-                  ? 'opvolging'
-                  : 'planning',
+          ? 'nadienst'
+          : isOpvolging
+          ? 'opvolging'
+          : 'planning',
       klantNr: klant.klantNr,
       naamKlant: klant.naam,
       straatnaam: klant.straatnaam,
@@ -66,21 +63,23 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     final klanten = await KlantenficheRepository.laadKlantenFiches();
 
     final actieveKlanten = klanten.where((klant) {
-      final actief = klant.klantStatus == 'Actief' ||
-          klant.klantStatus == 'Nadienst' ||
-          klant.inTePlannenType.trim().isNotEmpty;
       final opvolging =
           klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
 
-      return (actief || opvolging) &&
-          klant.naam.trim().isNotEmpty &&
-          !klantStaatAlOpAgenda(klant);
+      final actief =
+          klant.klantStatus == 'Actief' ||
+          klant.klantStatus == 'Nadienst' ||
+          klant.inTePlannenType.trim().isNotEmpty;
+
+      if (klant.naam.trim().isEmpty) return false;
+
+      if (opvolging) return true;
+
+      return actief && !klantStaatAlOpAgenda(klant);
     }).toList();
 
     actieveKlanten.sort(
-      (a, b) => a.naam.toLowerCase().compareTo(
-            b.naam.toLowerCase(),
-          ),
+      (a, b) => a.naam.toLowerCase().compareTo(b.naam.toLowerCase()),
     );
 
     return actieveKlanten.map(maakAgendaItemVanKlant).toList();
@@ -182,9 +181,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                     padding: EdgeInsets.all(20),
                                     child: Text(
                                       'Geen actieve klanten in wachtrij',
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                      ),
+                                      style: TextStyle(color: Colors.black54),
                                     ),
                                   );
                                 }
@@ -194,8 +191,9 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                   itemCount: lijst.length,
                                   itemBuilder: (context, index) {
                                     final item = lijst[index];
-                                    final kleur =
-                                        AgendaKleurService.kleur(item.type);
+                                    final kleur = AgendaKleurService.kleur(
+                                      item.type,
+                                    );
 
                                     return Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
@@ -221,10 +219,10 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                               vertical: 8,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: AgendaKleurService
-                                                  .achtergrond(
-                                                item.type,
-                                              ),
+                                              color:
+                                                  AgendaKleurService.achtergrond(
+                                                    item.type,
+                                                  ),
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                               border: Border.all(color: kleur),
@@ -281,46 +279,29 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     Overlay.of(context).insert(overlayEntry);
   }
 
-  Widget inTePlannenRij({
-    required AgendaItem item,
-    required Color kleur,
-  }) {
+  Widget inTePlannenRij({required AgendaItem item, required Color kleur}) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: AgendaKleurService.achtergrond(item.type),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: kleur.withValues(alpha: 0.45),
-        ),
+        border: Border.all(color: kleur.withValues(alpha: 0.45)),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.drag_indicator,
-            size: 18,
-            color: Colors.grey.shade500,
-          ),
+          Icon(Icons.drag_indicator, size: 18, color: Colors.grey.shade500),
           const SizedBox(width: 6),
           Container(
             width: 9,
             height: 9,
-            decoration: BoxDecoration(
-              color: kleur,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: kleur, shape: BoxShape.circle),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Row(
               children: [
                 if (item.kraanNodig)
-                  KraanWaarschuwingIcon(
-                    actief: !item.kraanIngepland,
-                  ),
+                  KraanWaarschuwingIcon(actief: !item.kraanIngepland),
                 Expanded(
                   child: Text(
                     item.titel,
@@ -341,10 +322,10 @@ class AgendaInTePlannenKnop extends StatelessWidget {
             item.type == 'nadienst'
                 ? 'Nadienst'
                 : item.type == 'opvolging'
-                    ? 'Opvolging'
-                    : item.type == 'afspraak'
-                        ? 'Afspraak klant'
-                        : 'Actieve klant',
+                ? 'Opvolging'
+                : item.type == 'afspraak'
+                ? 'Afspraak klant'
+                : 'Actieve klant',
             style: TextStyle(
               color: kleur,
               fontSize: 11,
@@ -386,19 +367,13 @@ class AgendaInTePlannenKnop extends StatelessWidget {
               right: -2,
               top: -2,
               child: Container(
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
+                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                 alignment: Alignment.center,
                 padding: const EdgeInsets.symmetric(horizontal: 5),
                 decoration: BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white,
-                    width: 2,
-                  ),
+                  border: Border.all(color: Colors.white, width: 2),
                 ),
                 child: Text(
                   aantal > 99 ? '99+' : aantal.toString(),

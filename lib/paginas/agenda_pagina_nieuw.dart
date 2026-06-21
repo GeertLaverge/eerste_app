@@ -34,6 +34,7 @@ import '../helpers/Agenda/agenda_tijd_picker.dart';
 import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
   const AgendaPaginaNieuw({super.key});
@@ -585,8 +586,13 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
             AgendaVerplaatsBalk(item: verplaatsState.item!),
           AgendaTopBalk(
             focusMaand: selectie.focusMaand,
-            onTerug: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+            onTerug: () async {
+              await SyncNavigatieHelper.terugNaarHomeMetDownload(
+                context: context,
+              );
+            },
+            onUpload: () async {
+              await SyncNavigatieHelper.uploadVanafPagina(context: context);
             },
             onVorigeMaand: () {
               setState(() {
@@ -774,6 +780,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     tekst: 'Jaaragenda',
                     actief: false,
                     onTap: () async {
+                      await SyncNavigatieHelper.downloadVanafPagina(
+                        context: context,
+                      );
+
+                      if (!context.mounted) return;
+
                       final resultaat = await Navigator.push<Object>(
                         context,
                         MaterialPageRoute(

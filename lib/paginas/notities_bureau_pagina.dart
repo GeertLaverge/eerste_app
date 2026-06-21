@@ -158,26 +158,16 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
           await SyncNavigatieHelper.terugNaarHomeMetDownload(context: context);
         },
       ),
-      title: const Text(
-        'Notities Bureau',
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+      title: GestureDetector(
+        onTap: () async {
+          await SyncNavigatieHelper.uploadVanafPagina(context: context);
+        },
+        child: const Text(
+          'Notities Bureau',
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
       ),
       actions: [
-        IconButton(
-          tooltip: 'Download',
-          onPressed: () async {
-            await SyncNavigatieHelper.downloadVanafPagina(context: context);
-            await _laad();
-          },
-          icon: const Icon(Icons.cloud_download_outlined, size: 24),
-        ),
-        IconButton(
-          tooltip: 'Upload',
-          onPressed: () async {
-            await SyncNavigatieHelper.uploadVanafPagina(context: context);
-          },
-          icon: const Icon(Icons.cloud_upload_outlined, size: 24),
-        ),
         IconButton(
           onPressed: _notitieToevoegen,
           icon: const Icon(Icons.add, size: 28),

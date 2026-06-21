@@ -120,34 +120,22 @@ class _KlantenPaginaState extends State<KlantenPagina> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.cloud_download_outlined,
-              color: Colors.white,
-            ),
-            onPressed: () async {
-              await SyncNavigatieHelper.downloadVanafPagina(context: context);
-              if (!mounted) return;
-              setState(() {});
-            },
-          ),
-          const Expanded(
+          Expanded(
             child: Center(
-              child: Text(
-                'Klanten',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
+              child: GestureDetector(
+                onTap: () async {
+                  await SyncNavigatieHelper.uploadVanafPagina(context: context);
+                },
+                child: const Text(
+                  'Klanten',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.cloud_upload_outlined, color: Colors.white),
-            onPressed: () async {
-              await SyncNavigatieHelper.uploadVanafPagina(context: context);
-            },
           ),
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white, size: 28),

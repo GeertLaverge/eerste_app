@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class KlantenBovenBalk extends StatelessWidget {
   final VoidCallback onTerug;
   final VoidCallback onNieuw;
+  final VoidCallback? onUpload;
 
   const KlantenBovenBalk({
     super.key,
     required this.onTerug,
     required this.onNieuw,
+    this.onUpload,
   });
 
   @override
@@ -23,14 +25,17 @@ class KlantenBovenBalk extends StatelessWidget {
             icon: const Icon(Icons.home_rounded),
             color: Colors.white,
           ),
-          const Expanded(
-            child: Text(
-              'Klanten',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
+          Expanded(
+            child: GestureDetector(
+              onTap: onUpload,
+              child: const Text(
+                'Klanten',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
