@@ -80,13 +80,18 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   @override
   void initState() {
     super.initState();
-    ficheId = widget.bestaandeFiche?.id ??
+    ficheId =
+        widget.bestaandeFiche?.id ??
         DateTime.now().millisecondsSinceEpoch.toString();
 
     final fiche = widget.bestaandeFiche;
 
     if (fiche == null) {
       klantStatus = widget.startStatus;
+
+      if (widget.startStatus == 'Actief') {
+        klaarVoorNieuwePlanning = true;
+      }
 
       if (widget.startStatus == 'Nadienst') {
         klaarVoorNieuwePlanning = true;
@@ -95,9 +100,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       return;
     }
 
-    artikelen = List<KlantenficheArtikel>.from(
-      fiche.artikelen,
-    );
+    artikelen = List<KlantenficheArtikel>.from(fiche.artikelen);
 
     klantStatus = fiche.klantStatus;
     datumAfgewerkt = fiche.datumAfgewerkt;
@@ -113,12 +116,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     emailController.text = fiche.email;
     taakController.text = fiche.taakVoorKlant;
     klantTaken = List<KlantTaakItem>.from(fiche.klantTaken);
-    extraWerken = List<KlantenficheExtraWerk>.from(
-      fiche.extraWerken,
-    );
-    fotos = List<KlantenficheFoto>.from(
-      fiche.fotos,
-    );
+    extraWerken = List<KlantenficheExtraWerk>.from(fiche.extraWerken);
+    fotos = List<KlantenficheFoto>.from(fiche.fotos);
     opvolgTakenController.text = fiche.opvolgTaken;
     notitiesController.text = fiche.notities;
     opvolgFicheVerstuurdNaarBureau = fiche.opvolgFicheVerstuurdNaarBureau;
@@ -235,9 +234,11 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       regels.add('Tijd: ${tijdTekst(werk)}');
       regels.add('Totaaltijd: ${duurTekst(werk.aantalMinuten)}');
       regels.add(
-          'Omschrijving werken: ${werk.omschrijving.trim().isEmpty ? 'niet ingevuld' : werk.omschrijving.trim()}');
+        'Omschrijving werken: ${werk.omschrijving.trim().isEmpty ? 'niet ingevuld' : werk.omschrijving.trim()}',
+      );
       regels.add(
-          'Gebruikte materialen: ${werk.gebruikteMaterialen.trim().isEmpty ? 'niet ingevuld' : werk.gebruikteMaterialen.trim()}');
+        'Gebruikte materialen: ${werk.gebruikteMaterialen.trim().isEmpty ? 'niet ingevuld' : werk.gebruikteMaterialen.trim()}',
+      );
       regels.add('');
     }
 
@@ -269,7 +270,8 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
       return;
     }
 
-    final bericht = '''
+    final bericht =
+        '''
 Klant '$naam' moet worden opgevolgd.
 
 Nog af te werken taken:
@@ -309,10 +311,7 @@ ${_extraWerkenTekst()}
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(resultaat),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(resultaat), backgroundColor: Colors.red),
       );
     }
   }
@@ -398,7 +397,8 @@ ${_extraWerkenTekst()}
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                          'Een klant op opvolgen kan niet terug naar actief.'),
+                        'Een klant op opvolgen kan niet terug naar actief.',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -409,7 +409,8 @@ ${_extraWerkenTekst()}
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
-                          'Een afgewerkte klant kan niet terug naar actief.'),
+                        'Een afgewerkte klant kan niet terug naar actief.',
+                      ),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -491,11 +492,11 @@ ${_extraWerkenTekst()}
                 await automatischBewaren();
 
                 if (waarde == 'Afgewerkt' && !afgewerktMailVerstuurd) {
-                  final resultaat = await KlantenficheAfgewerktMailHelper
-                      .verstuurAfgewerktMail(
-                    klantNaam: naamController.text,
-                    extraWerken: extraWerken,
-                  );
+                  final resultaat =
+                      await KlantenficheAfgewerktMailHelper.verstuurAfgewerktMail(
+                        klantNaam: naamController.text,
+                        extraWerken: extraWerken,
+                      );
 
                   if (!mounted) return;
 
@@ -508,9 +509,7 @@ ${_extraWerkenTekst()}
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text(
-                          'Melding naar bureau verstuurd.',
-                        ),
+                        content: Text('Melding naar bureau verstuurd.'),
                         backgroundColor: Color(0xFF0B7A3B),
                       ),
                     );
@@ -550,8 +549,9 @@ ${_extraWerkenTekst()}
                           },
                           toonMenuKnop: true,
                           onMenuTap: () async {
-                            final klant =
-                                await KlantenficheKlantkiezer.toon(context);
+                            final klant = await KlantenficheKlantkiezer.toon(
+                              context,
+                            );
 
                             if (klant == null) return;
 
@@ -715,9 +715,7 @@ ${_extraWerkenTekst()}
                                                 onPressed: () {
                                                   Navigator.pop(context, false);
                                                 },
-                                                child: const Text(
-                                                  'Annuleren',
-                                                ),
+                                                child: const Text('Annuleren'),
                                               ),
                                               TextButton(
                                                 onPressed: () {
@@ -840,25 +838,26 @@ ${_extraWerkenTekst()}
 
                         await automatischBewaren();
                       },
-                      onKraanGereserveerd: ({
-                        required datum,
-                        required startUur,
-                        required startMinuut,
-                        required eindUur,
-                        required eindMinuut,
-                      }) async {
-                        setState(() {
-                          kraanNodig = true;
+                      onKraanGereserveerd:
+                          ({
+                            required datum,
+                            required startUur,
+                            required startMinuut,
+                            required eindUur,
+                            required eindMinuut,
+                          }) async {
+                            setState(() {
+                              kraanNodig = true;
 
-                          kraanDatum = datum;
-                          kraanStartUur = startUur;
-                          kraanStartMinuut = startMinuut;
-                          kraanEindUur = eindUur;
-                          kraanEindMinuut = eindMinuut;
-                        });
+                              kraanDatum = datum;
+                              kraanStartUur = startUur;
+                              kraanStartMinuut = startMinuut;
+                              kraanEindUur = eindUur;
+                              kraanEindMinuut = eindMinuut;
+                            });
 
-                        await automatischBewaren();
-                      },
+                            await automatischBewaren();
+                          },
                     ),
                   ),
                   KlantenficheUitvalBlok(

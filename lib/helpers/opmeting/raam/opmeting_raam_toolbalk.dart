@@ -21,10 +21,14 @@ class OpmetingRaamToolbalk extends StatelessWidget {
       child: Row(
         children: [
           _knop('lijn', Icons.show_chart, 'Lijn'),
-          _knop('driehoek', Icons.change_history, 'Driehoek'),
+
           _knop('tstijl', Icons.format_align_center, 'T-stijl'),
-          _knop('middenstijl', Icons.add, 'Middenstijl'),
-          _knop('vlak', Icons.select_all, 'Vlak'),
+
+          _knop('driehoek', Icons.change_history, 'Draairichting'),
+
+          _knop('vleugel', Icons.crop_square, 'Vleugel'),
+
+          _knop('opvulling', Icons.layers_outlined, 'Opvulling'),
           const Spacer(),
           _knop('undo', Icons.undo, 'Ongedaan'),
           _knop('redo', Icons.redo, 'Herstel'),
@@ -33,11 +37,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     );
   }
 
-  Widget _knop(
-    String waarde,
-    IconData icoon,
-    String tekst,
-  ) {
+  Widget _knop(String waarde, IconData icoon, String tekst) {
     final actief = actieveTool == waarde;
 
     return InkWell(
@@ -49,18 +49,12 @@ class OpmetingRaamToolbalk extends StatelessWidget {
         decoration: BoxDecoration(
           color: actief ? const Color(0xFFE7F6EC) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: actief ? groen : Colors.transparent,
-          ),
+          border: Border.all(color: actief ? groen : Colors.transparent),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icoon,
-              size: 19,
-              color: actief ? groen : Colors.black87,
-            ),
+            Icon(icoon, size: 19, color: actief ? groen : Colors.black87),
             const SizedBox(height: 3),
             Text(
               tekst,
@@ -82,9 +76,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color(0xFFE5E7EB),
-      ),
+      border: Border.all(color: const Color(0xFFE5E7EB)),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withOpacity(0.035),

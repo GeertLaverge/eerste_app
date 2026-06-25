@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../helpers/opmeting/raam/opmeting_raam_basis_maten.dart';
 import '../helpers/opmeting/raam/opmeting_raam_notities.dart';
 import '../helpers/opmeting/raam/opmeting_raam_technische_keuzes.dart';
-import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
 import '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart';
+import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
   const OpmetingRaamPagina({super.key});
@@ -107,23 +107,12 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         ),
         title: const Text(
           'Opmeting raam',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-          ),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.add),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.copy_outlined),
-          ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.delete_outline),
-          ),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.add)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.copy_outlined)),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline)),
           Padding(
             padding: const EdgeInsets.only(right: 10),
             child: ElevatedButton(
@@ -163,9 +152,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
                     },
                   ),
                   const SizedBox(height: 10),
-                  OpmetingRaamNotities(
-                    controller: notitiesController,
-                  ),
+                  OpmetingRaamNotities(controller: notitiesController),
                 ],
               ),
             ),
