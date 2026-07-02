@@ -5,12 +5,22 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     super.key,
     required this.actieveTool,
     required this.onToolGekozen,
+    required this.kanOngedaanMaken,
+    required this.kanHerstellen,
+    required this.onOngedaanMaken,
+    required this.onHerstellen,
   });
 
   final String actieveTool;
   final ValueChanged<String> onToolGekozen;
 
-  static const groen = Color(0xFF0B7A3B);
+  final bool kanOngedaanMaken;
+  final bool kanHerstellen;
+
+  final VoidCallback onOngedaanMaken;
+  final VoidCallback onHerstellen;
+
+  static const Color groen = Color(0xFF0B7A3B);
 
   @override
   Widget build(BuildContext context) {
@@ -20,28 +30,57 @@ class OpmetingRaamToolbalk extends StatelessWidget {
       decoration: _kaartDecoratie(),
       child: Row(
         children: [
-          _knop('lijn', Icons.show_chart, 'Lijn'),
-
-          _knop('tstijl', Icons.format_align_center, 'T-stijl'),
-
-          _knop('driehoek', Icons.change_history, 'Draairichting'),
-
-          _knop('vleugel', Icons.crop_square, 'Vleugel'),
-
-          _knop('opvulling', Icons.layers_outlined, 'Opvulling'),
+          _toolKnop(waarde: 'lijn', icoon: Icons.show_chart, tekst: 'Lijn'),
+          _toolKnop(
+            waarde: 'tstijl',
+            icoon: Icons.format_align_center,
+            tekst: 'T-stijl',
+          ),
+          _toolKnop(
+            waarde: 'vleugel',
+            icoon: Icons.crop_square,
+            tekst: 'Vleugel',
+          ),
+          _toolKnop(
+            waarde: 'opvulling',
+            icoon: Icons.layers_outlined,
+            tekst: 'Opvulling',
+          ),
+          _toolKnop(
+            waarde: 'kleinhout',
+            icoon: Icons.grid_on_outlined,
+            tekst: 'Kleinhouten',
+          ),
           const Spacer(),
-          _knop('undo', Icons.undo, 'Ongedaan'),
-          _knop('redo', Icons.redo, 'Herstel'),
+          _actieKnop(
+            icoon: Icons.undo,
+            tekst: 'Ongedaan',
+            ingeschakeld: kanOngedaanMaken,
+            onTap: onOngedaanMaken,
+          ),
+          _actieKnop(
+            icoon: Icons.redo,
+            tekst: 'Herstel',
+            ingeschakeld: kanHerstellen,
+            onTap: onHerstellen,
+          ),
         ],
       ),
     );
   }
 
-  Widget _knop(String waarde, IconData icoon, String tekst) {
+  Widget _toolKnop({
+    required String waarde,
+    required IconData icoon,
+    required String tekst,
+  }) {
     final actief = actieveTool == waarde;
 
     return InkWell(
-      onTap: () => onToolGekozen(waarde),
+      borderRadius: BorderRadius.circular(8),
+      onTap: () {
+        onToolGekozen(waarde);
+      },
       child: Container(
         width: 78,
         margin: const EdgeInsets.symmetric(horizontal: 2),
@@ -64,6 +103,51 @@ class OpmetingRaamToolbalk extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: actief ? FontWeight.w800 : FontWeight.w500,
                 color: actief ? groen : Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actieKnop({
+    required IconData icoon,
+    required String tekst,
+    required bool ingeschakeld,
+    required VoidCallback onTap,
+  }) {
+    final kleur = ingeschakeld
+        ? const Color(0xFF111827)
+        : const Color(0xFFB6BBC3);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: ingeschakeld ? onTap : null,
+      child: Container(
+        width: 78,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: BoxDecoration(
+          color: ingeschakeld ? const Color(0xFFF9FAFB) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: ingeschakeld ? const Color(0xFFE5E7EB) : Colors.transparent,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icoon, size: 19, color: kleur),
+            const SizedBox(height: 3),
+            Text(
+              tekst,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: kleur,
               ),
             ),
           ],

@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/klanten/klanten_filter_balk.dart';
 import '../helpers/klanten/klanten_lijst.dart';
+import '../helpers/klanten/klanten_zoekbalk.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
 import 'klanten_fiche_pagina.dart';
 
@@ -10,13 +12,18 @@ class KlantenPagina extends StatefulWidget {
   const KlantenPagina({super.key});
 
   @override
-  State<KlantenPagina> createState() => _KlantenPaginaState();
+  State<KlantenPagina> createState() {
+    return _KlantenPaginaState();
+  }
 }
 
 class _KlantenPaginaState extends State<KlantenPagina> {
   String zoekterm = '';
   String klantStatus = 'Alle';
   String bestelStatus = 'Alle';
+
+  int _laatsteVerwerkteDownloadVersie = 0;
+  int _klantenLijstVersie = 0;
 
   final klantStatussen = const [
     'Alle',
@@ -34,20 +41,68 @@ class _KlantenPaginaState extends State<KlantenPagina> {
     'Geen artikelen',
   ];
 
-  void openNieuweKlantenfiche() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const KlantenFichePagina()),
-    ).then((_) {
-      if (!mounted) return;
-      setState(() {});
+  @override
+  void initState() {
+    super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+  }
+
+  @override
+  void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+
+    super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    _herlaadKlantenLijst();
+  }
+
+  void _herlaadKlantenLijst() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      /*
+       * Door de versie te verhogen krijgt de KeyedSubtree
+       * een nieuwe key. KlantenLijst wordt daardoor volledig
+       * opnieuw opgebouwd en leest de lokale gegevens opnieuw.
+       */
+      _klantenLijstVersie++;
     });
   }
 
+  Future<void> openNieuweKlantenfiche() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(builder: (_) => const KlantenFichePagina()),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _herlaadKlantenLijst();
+  }
+
   void openNieuwMenu() {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
           insetPadding: const EdgeInsets.all(24),
@@ -70,31 +125,22 @@ class _KlantenPaginaState extends State<KlantenPagina> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _popupKeuze(
-                  context,
                   icoon: Icons.person_add_alt_1_outlined,
                   tekst: 'Nieuwe klantenfiche',
                   onTap: () {
-                    Navigator.pop(context);
-                    openNieuweKlantenfiche();
+                    Navigator.pop(dialogContext);
+
+                    unawaited(openNieuweKlantenfiche());
                   },
                 ),
                 const Divider(height: 1, color: Color(0xFFE5E7EB)),
                 _popupKeuze(
-                  context,
                   icoon: Icons.build_circle_outlined,
                   tekst: 'Nadienst',
                   onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const KlantenFichePagina(startStatus: 'Nadienst'),
-                      ),
-                    ).then((_) {
-                      if (!mounted) return;
-                      setState(() {});
-                    });
+                    Navigator.pop(dialogContext);
+
+                    unawaited(_openNieuweNadienst());
                   },
                 ),
               ],
@@ -103,6 +149,21 @@ class _KlantenPaginaState extends State<KlantenPagina> {
         );
       },
     );
+  }
+
+  Future<void> _openNieuweNadienst() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const KlantenFichePagina(startStatus: 'Nadienst'),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _herlaadKlantenLijst();
   }
 
   Widget bovenBalk() {
@@ -114,9 +175,13 @@ class _KlantenPaginaState extends State<KlantenPagina> {
         children: [
           IconButton(
             icon: const Icon(Icons.home, color: Colors.white),
-            onPressed: () async {
-              await SyncNavigatieHelper.terugNaarHomeMetDownload(
-                context: context,
+            onPressed: () {
+              /*
+               * Niet meer wachten op de download.
+               * Home wordt onmiddellijk geopend.
+               */
+              unawaited(
+                SyncNavigatieHelper.terugNaarHomeMetDownload(context: context),
               );
             },
           ),
@@ -124,6 +189,10 @@ class _KlantenPaginaState extends State<KlantenPagina> {
             child: Center(
               child: GestureDetector(
                 onTap: () async {
+                  /*
+                   * Dit blijft een bewuste, handmatige upload.
+                   * Alleen deze actie wacht op het resultaat.
+                   */
                   await SyncNavigatieHelper.uploadVanafPagina(context: context);
                 },
                 child: const Text(
@@ -220,10 +289,13 @@ class _KlantenPaginaState extends State<KlantenPagina> {
             const SizedBox(height: 14),
             vasteKolomBalk(),
             Expanded(
-              child: KlantenLijst(
-                klantStatus: klantStatus,
-                bestelStatus: bestelStatus,
-                zoekterm: zoekterm,
+              child: KeyedSubtree(
+                key: ValueKey<int>(_klantenLijstVersie),
+                child: KlantenLijst(
+                  klantStatus: klantStatus,
+                  bestelStatus: bestelStatus,
+                  zoekterm: zoekterm,
+                ),
               ),
             ),
           ],
@@ -233,8 +305,7 @@ class _KlantenPaginaState extends State<KlantenPagina> {
   }
 }
 
-Widget _popupKeuze(
-  BuildContext context, {
+Widget _popupKeuze({
   required IconData icoon,
   required String tekst,
   required VoidCallback onTap,

@@ -1,31 +1,68 @@
 import 'package:flutter/material.dart';
 
 import '../helpers/opmeting/raam/opmeting_raam_basis_maten.dart';
+import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
 import '../helpers/opmeting/raam/opmeting_raam_notities.dart';
 import '../helpers/opmeting/raam/opmeting_raam_technische_keuzes.dart';
 import '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart';
 import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
+import '../helpers/opmeting/raam/opmeting_raam_vulling_helper.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
   const OpmetingRaamPagina({super.key});
 
   @override
-  State<OpmetingRaamPagina> createState() => _OpmetingRaamPaginaState();
+  State<OpmetingRaamPagina> createState() {
+    return _OpmetingRaamPaginaState();
+  }
 }
 
 class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
-  final dagmaatHoogteController = TextEditingController(text: '2000');
-  final dagmaatBreedteController = TextEditingController(text: '1000');
-  final slagLinksController = TextEditingController(text: '20');
-  final slagRechtsController = TextEditingController(text: '20');
-  final slagBovenController = TextEditingController(text: '20');
-  final slagOnderController = TextEditingController(text: '20');
-  final binnenTabletController = TextEditingController(text: '80');
-  final buitenTabletController = TextEditingController(text: '105');
-  final notitiesController = TextEditingController();
-  final positieController = TextEditingController(text: '');
+  final TextEditingController dagmaatHoogteController = TextEditingController(
+    text: '2000',
+  );
+
+  final TextEditingController dagmaatBreedteController = TextEditingController(
+    text: '1000',
+  );
+
+  final TextEditingController slagLinksController = TextEditingController(
+    text: '20',
+  );
+
+  final TextEditingController slagRechtsController = TextEditingController(
+    text: '20',
+  );
+
+  final TextEditingController slagBovenController = TextEditingController(
+    text: '20',
+  );
+
+  final TextEditingController slagOnderController = TextEditingController(
+    text: '20',
+  );
+
+  final TextEditingController binnenTabletController = TextEditingController(
+    text: '80',
+  );
+
+  final TextEditingController buitenTabletController = TextEditingController(
+    text: '105',
+  );
+
+  final TextEditingController notitiesController = TextEditingController();
+
+  final TextEditingController positieController = TextEditingController();
+
+  final OpmetingRaamTekenvlakController tekenvlakController =
+      OpmetingRaamTekenvlakController();
 
   String actieveTool = 'lijn';
+
+  int vleugelMenuOpenSignaal = 0;
+  int tStijlMenuOpenSignaal = 0;
+  int opvullingMenuOpenSignaal = 0;
+  int kleinhoutMenuOpenSignaal = 0;
 
   String vleugelprofiel = 'Classic';
   String dorpel = 'Standaard';
@@ -41,23 +78,35 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   String vensterbanken = 'Geen';
   String afwerkingslatten = 'Geen';
 
+  List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen =
+      <OpmetingRaamVullingLegendaItem>[];
+
+  List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten =
+      <OpmetingRaamKleinhoutLegendaItem>[];
+
   @override
   void dispose() {
     dagmaatHoogteController.dispose();
     dagmaatBreedteController.dispose();
+
     slagLinksController.dispose();
     slagRechtsController.dispose();
     slagBovenController.dispose();
     slagOnderController.dispose();
+
     binnenTabletController.dispose();
     buitenTabletController.dispose();
+
     notitiesController.dispose();
     positieController.dispose();
+
+    tekenvlakController.dispose();
+
     super.dispose();
   }
 
   double _waarde(TextEditingController controller) {
-    return double.tryParse(controller.text.replaceAll(',', '.')) ?? 0;
+    return double.tryParse(controller.text.trim().replaceAll(',', '.')) ?? 0;
   }
 
   int get raammaatBreedte {
@@ -83,6 +132,121 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     setState(() {});
   }
 
+  void _toolGekozen(String tool) {
+    setState(() {
+      actieveTool = tool;
+
+      switch (tool) {
+        case 'tstijl':
+          tStijlMenuOpenSignaal++;
+          break;
+
+        case 'vleugel':
+          vleugelMenuOpenSignaal++;
+          break;
+
+        case 'opvulling':
+          opvullingMenuOpenSignaal++;
+          break;
+
+        case 'kleinhout':
+          kleinhoutMenuOpenSignaal++;
+          break;
+      }
+    });
+  }
+
+  void _verwerkOpvullingen(
+    List<OpmetingRaamVullingLegendaItem> nieuweOpvullingen,
+  ) {
+    if (_zijnOpvullingenGelijk(gekozenOpvullingen, nieuweOpvullingen)) {
+      return;
+    }
+
+    setState(() {
+      gekozenOpvullingen = List<OpmetingRaamVullingLegendaItem>.unmodifiable(
+        nieuweOpvullingen,
+      );
+    });
+  }
+
+  void _verwerkKleinhouten(
+    List<OpmetingRaamKleinhoutLegendaItem> nieuweKleinhouten,
+  ) {
+    if (_zijnKleinhoutenGelijk(gekozenKleinhouten, nieuweKleinhouten)) {
+      return;
+    }
+
+    setState(() {
+      gekozenKleinhouten = List<OpmetingRaamKleinhoutLegendaItem>.unmodifiable(
+        nieuweKleinhouten,
+      );
+    });
+  }
+
+  bool _zijnOpvullingenGelijk(
+    List<OpmetingRaamVullingLegendaItem> eerste,
+    List<OpmetingRaamVullingLegendaItem> tweede,
+  ) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    for (var index = 0; index < eerste.length; index++) {
+      final eersteItem = eerste[index];
+      final tweedeItem = tweede[index];
+
+      if (eersteItem.nummer != tweedeItem.nummer ||
+          eersteItem.naam != tweedeItem.naam ||
+          eersteItem.kleur.value != tweedeItem.kleur.value ||
+          eersteItem.weergaveKleur.value != tweedeItem.weergaveKleur.value) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _zijnKleinhoutenGelijk(
+    List<OpmetingRaamKleinhoutLegendaItem> eerste,
+    List<OpmetingRaamKleinhoutLegendaItem> tweede,
+  ) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    for (var index = 0; index < eerste.length; index++) {
+      final eersteItem = eerste[index];
+      final tweedeItem = tweede[index];
+
+      if (eersteItem.nummer != tweedeItem.nummer ||
+          eersteItem.type != tweedeItem.type ||
+          eersteItem.patroon != tweedeItem.patroon ||
+          eersteItem.aantalHorizontaal != tweedeItem.aantalHorizontaal ||
+          eersteItem.aantalVerticaal != tweedeItem.aantalVerticaal ||
+          eersteItem.horizontaleHoogteMm != tweedeItem.horizontaleHoogteMm ||
+          !_zelfdeTeksten(eersteItem.vlakIds, tweedeItem.vlakIds)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _zelfdeTeksten(List<String> eerste, List<String> tweede) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    for (var index = 0; index < eerste.length; index++) {
+      if (eerste[index] != tweede[index]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   Future<void> _opslaan() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -90,6 +254,64 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         backgroundColor: Color(0xFF0B7A3B),
       ),
     );
+  }
+
+  void _technischeKeuzeGewijzigd(String veld, String waarde) {
+    setState(() {
+      switch (veld) {
+        case 'vleugelprofiel':
+          vleugelprofiel = waarde;
+          break;
+
+        case 'dorpel':
+          dorpel = waarde;
+          break;
+
+        case 'binnenkastprofiel':
+          binnenkastprofiel = waarde;
+          break;
+
+        case 'rolluik':
+          rolluik = waarde;
+          break;
+
+        case 'vliegenraam':
+          vliegenraam = waarde;
+          break;
+
+        case 'verbredingsprofielen':
+          verbredingsprofielen = waarde;
+          break;
+
+        case 'koppelprofielen':
+          koppelprofielen = waarde;
+          break;
+
+        case 'ventilatierooster':
+          ventilatierooster = waarde;
+          break;
+
+        case 'hoekprofielen':
+          hoekprofielen = waarde;
+          break;
+
+        case 'binnenafwerking':
+          binnenafwerking = waarde;
+          break;
+
+        case 'rolluikkast':
+          rolluikkast = waarde;
+          break;
+
+        case 'vensterbanken':
+          vensterbanken = waarde;
+          break;
+
+        case 'afwerkingslatten':
+          afwerkingslatten = waarde;
+          break;
+      }
+    });
   }
 
   @override
@@ -103,7 +325,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: const Text(
           'Opmeting raam',
@@ -139,16 +363,28 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
                       breedteMm: raammaatBreedte,
                       hoogteMm: raammaatHoogte,
                       actieveTool: actieveTool,
+                      vleugelMenuOpenSignaal: vleugelMenuOpenSignaal,
+                      tStijlMenuOpenSignaal: tStijlMenuOpenSignaal,
+                      opvullingMenuOpenSignaal: opvullingMenuOpenSignaal,
+                      kleinhoutMenuOpenSignaal: kleinhoutMenuOpenSignaal,
                       positieController: positieController,
+                      controller: tekenvlakController,
+                      onOpvullingenGewijzigd: _verwerkOpvullingen,
+                      onKleinhoutenGewijzigd: _verwerkKleinhouten,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  OpmetingRaamToolbalk(
-                    actieveTool: actieveTool,
-                    onToolGekozen: (tool) {
-                      setState(() {
-                        actieveTool = tool;
-                      });
+                  AnimatedBuilder(
+                    animation: tekenvlakController,
+                    builder: (context, child) {
+                      return OpmetingRaamToolbalk(
+                        actieveTool: actieveTool,
+                        onToolGekozen: _toolGekozen,
+                        kanOngedaanMaken: tekenvlakController.kanOngedaanMaken,
+                        kanHerstellen: tekenvlakController.kanHerstellen,
+                        onOngedaanMaken: tekenvlakController.ongedaanMaken,
+                        onHerstellen: tekenvlakController.herstellen,
+                      );
                     },
                   ),
                   const SizedBox(height: 10),
@@ -181,6 +417,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
                   OpmetingRaamTechnischeKeuzes(
                     vleugelprofiel: vleugelprofiel,
                     dorpel: dorpel,
+                    opvullingen: gekozenOpvullingen,
+                    kleinhouten: gekozenKleinhouten,
                     binnenkastprofiel: binnenkastprofiel,
                     rolluik: rolluik,
                     vliegenraam: vliegenraam,
@@ -192,51 +430,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
                     rolluikkast: rolluikkast,
                     vensterbanken: vensterbanken,
                     afwerkingslatten: afwerkingslatten,
-                    onChanged: (veld, waarde) {
-                      setState(() {
-                        switch (veld) {
-                          case 'vleugelprofiel':
-                            vleugelprofiel = waarde;
-                            break;
-                          case 'dorpel':
-                            dorpel = waarde;
-                            break;
-                          case 'binnenkastprofiel':
-                            binnenkastprofiel = waarde;
-                            break;
-                          case 'rolluik':
-                            rolluik = waarde;
-                            break;
-                          case 'vliegenraam':
-                            vliegenraam = waarde;
-                            break;
-                          case 'verbredingsprofielen':
-                            verbredingsprofielen = waarde;
-                            break;
-                          case 'koppelprofielen':
-                            koppelprofielen = waarde;
-                            break;
-                          case 'ventilatierooster':
-                            ventilatierooster = waarde;
-                            break;
-                          case 'hoekprofielen':
-                            hoekprofielen = waarde;
-                            break;
-                          case 'binnenafwerking':
-                            binnenafwerking = waarde;
-                            break;
-                          case 'rolluikkast':
-                            rolluikkast = waarde;
-                            break;
-                          case 'vensterbanken':
-                            vensterbanken = waarde;
-                            break;
-                          case 'afwerkingslatten':
-                            afwerkingslatten = waarde;
-                            break;
-                        }
-                      });
-                    },
+                    onChanged: _technischeKeuzeGewijzigd,
                   ),
                 ],
               ),

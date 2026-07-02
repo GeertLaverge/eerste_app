@@ -8,14 +8,20 @@ import 'sync/onedrive_sync_service.dart';
 
 import '../helpers/notities/notitie_model.dart';
 import '../helpers/notities/notitie_actie_model.dart';
+import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
+
   static const String _dagtaakTemplatesKey = 'dagtaak_templates';
+
   static const String _klantenFichesKey = 'klanten_fiches';
 
   static const String _notitiesKey = 'thimaco_notities';
+
   static const String _notitieActiesKey = 'thimaco_notitie_acties';
+
+  static const String _opmetingRaamOpvullingenKey = 'opmeting_raam_opvullingen';
 
   static Future<SharedPreferences> openBox() async {
     return SharedPreferences.getInstance();
@@ -32,17 +38,19 @@ class AppStorage {
 
   static Future<List<AgendaDagtaakTemplate>> laadDagtaakTemplates() async {
     final prefs = await openBox();
+
     final jsonString = prefs.getString(_dagtaakTemplatesKey);
 
-    if (jsonString == null || jsonString.isEmpty) return [];
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
 
     final lijst = jsonDecode(jsonString) as List<dynamic>;
 
     return lijst
         .map(
-          (item) => AgendaDagtaakTemplate.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) =>
+              AgendaDagtaakTemplate.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
   }
@@ -54,9 +62,7 @@ class AppStorage {
 
     await prefs.setString(
       _dagtaakTemplatesKey,
-      jsonEncode(
-        templates.map((template) => template.toJson()).toList(),
-      ),
+      jsonEncode(templates.map((template) => template.toJson()).toList()),
     );
 
     await _syncBackup();
@@ -73,10 +79,7 @@ class AppStorage {
     final prefs = await openBox();
 
     for (final entry in waarden.entries) {
-      await prefs.setBool(
-        'agenda_zicht_${soort}_${entry.key}',
-        entry.value,
-      );
+      await prefs.setBool('agenda_zicht_${soort}_${entry.key}', entry.value);
     }
 
     await _syncBackup();
@@ -103,9 +106,7 @@ class AppStorage {
   // NIEUWE AGENDA ITEMS
   // ------------------------------------------------------------
 
-  static Map<String, List<AgendaItem>> _decodeAgendaItems(
-    String? jsonString,
-  ) {
+  static Map<String, List<AgendaItem>> _decodeAgendaItems(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) {
       return {};
     }
@@ -114,11 +115,7 @@ class AppStorage {
 
     return data.map((datumKey, lijst) {
       final items = (lijst as List<dynamic>)
-          .map(
-            (item) => AgendaItem.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
+          .map((item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)))
           .toList();
 
       return MapEntry(datumKey, items);
@@ -129,22 +126,17 @@ class AppStorage {
     Map<String, List<AgendaItem>> itemsPerDag,
   ) {
     final data = itemsPerDag.map((datumKey, items) {
-      return MapEntry(
-        datumKey,
-        items.map((item) => item.toJson()).toList(),
-      );
+      return MapEntry(datumKey, items.map((item) => item.toJson()).toList());
     });
 
     return jsonEncode(data);
   }
 
   static Future<Map<String, List<AgendaItem>>>
-      laadAgendaItemsNieuwVoorSync() async {
+  laadAgendaItemsNieuwVoorSync() async {
     final prefs = await openBox();
 
-    return _decodeAgendaItems(
-      prefs.getString(_agendaItemsNieuwKey),
-    );
+    return _decodeAgendaItems(prefs.getString(_agendaItemsNieuwKey));
   }
 
   static Future<Map<String, List<AgendaItem>>> laadAgendaItemsNieuw() async {
@@ -195,6 +187,7 @@ class AppStorage {
 
   static Future<List<Map<String, dynamic>>> laadKlantenFiches() async {
     final prefs = await openBox();
+
     final jsonString = prefs.getString(_klantenFichesKey);
 
     if (jsonString == null || jsonString.isEmpty) {
@@ -203,11 +196,7 @@ class AppStorage {
 
     final lijst = jsonDecode(jsonString) as List<dynamic>;
 
-    return lijst
-        .map(
-          (item) => Map<String, dynamic>.from(item),
-        )
-        .toList();
+    return lijst.map((item) => Map<String, dynamic>.from(item)).toList();
   }
 
   static Future<void> bewaarKlantenFiches(
@@ -215,10 +204,7 @@ class AppStorage {
   ) async {
     final prefs = await openBox();
 
-    await prefs.setString(
-      _klantenFichesKey,
-      jsonEncode(klanten),
-    );
+    await prefs.setString(_klantenFichesKey, jsonEncode(klanten));
 
     await _syncBackup();
   }
@@ -228,26 +214,19 @@ class AppStorage {
   ) async {
     final prefs = await openBox();
 
-    await prefs.setString(
-      _klantenFichesKey,
-      jsonEncode(klanten),
-    );
+    await prefs.setString(_klantenFichesKey, jsonEncode(klanten));
   }
 
   // ------------------------------------------------------------
   // NOTITIES
   // ------------------------------------------------------------
 
-  static Future<void> bewaarNotities(
-    List<NotitieModel> notities,
-  ) async {
+  static Future<void> bewaarNotities(List<NotitieModel> notities) async {
     final prefs = await openBox();
 
     await prefs.setString(
       _notitiesKey,
-      jsonEncode(
-        notities.map((n) => n.toJson()).toList(),
-      ),
+      jsonEncode(notities.map((notitie) => notitie.toJson()).toList()),
     );
 
     await _syncBackup();
@@ -255,6 +234,7 @@ class AppStorage {
 
   static Future<List<NotitieModel>> laadNotities() async {
     final prefs = await openBox();
+
     final jsonString = prefs.getString(_notitiesKey);
 
     if (jsonString == null || jsonString.isEmpty) {
@@ -264,11 +244,7 @@ class AppStorage {
     final lijst = jsonDecode(jsonString) as List<dynamic>;
 
     return lijst
-        .map(
-          (item) => NotitieModel.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
-        )
+        .map((item) => NotitieModel.fromJson(Map<String, dynamic>.from(item)))
         .toList();
   }
 
@@ -279,9 +255,7 @@ class AppStorage {
 
     await prefs.setString(
       _notitieActiesKey,
-      jsonEncode(
-        acties.map((a) => a.toJson()).toList(),
-      ),
+      jsonEncode(acties.map((actie) => actie.toJson()).toList()),
     );
 
     await _syncBackup();
@@ -289,6 +263,7 @@ class AppStorage {
 
   static Future<List<NotitieActieModel>> laadNotitieActies() async {
     final prefs = await openBox();
+
     final jsonString = prefs.getString(_notitieActiesKey);
 
     if (jsonString == null || jsonString.isEmpty) {
@@ -299,10 +274,67 @@ class AppStorage {
 
     return lijst
         .map(
-          (item) => NotitieActieModel.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) => NotitieActieModel.fromJson(Map<String, dynamic>.from(item)),
         )
         .toList();
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING RAAM - OPVULLINGEN
+  // ------------------------------------------------------------
+
+  static Future<List<OpmetingRaamOpvullingModel>>
+  laadOpmetingRaamOpvullingen() async {
+    final prefs = await openBox();
+
+    final jsonString = prefs.getString(_opmetingRaamOpvullingenKey);
+
+    if (jsonString == null || jsonString.isEmpty) {
+      return [];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! List) {
+        return [];
+      }
+
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => OpmetingRaamOpvullingModel.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((item) => item.naam.trim().isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<void> bewaarOpmetingRaamOpvullingen(
+    List<OpmetingRaamOpvullingModel> opvullingen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingRaamOpvullingenKey,
+      jsonEncode(opvullingen.map((opvulling) => opvulling.toJson()).toList()),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingRaamOpvullingenVoorSync(
+    List<OpmetingRaamOpvullingModel> opvullingen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingRaamOpvullingenKey,
+      jsonEncode(opvullingen.map((opvulling) => opvulling.toJson()).toList()),
+    );
   }
 }

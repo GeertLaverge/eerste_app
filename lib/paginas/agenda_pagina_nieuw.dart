@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../helpers/Agenda/agenda_bewerk_service.dart';
@@ -27,26 +29,29 @@ import '../helpers/Agenda/agenda_weekdag_balk.dart';
 import '../helpers/Agenda/agenda_weergave_type.dart';
 import '../helpers/Agenda/agenda_melding_service.dart';
 import '../helpers/app_storage.dart';
-import 'jaar_planning_pagina_nieuw.dart';
-import '../paginas/klanten_fiche_pagina.dart';
 import '../helpers/klanten/fiche/klantenfiche_repository.dart';
 import '../helpers/Agenda/agenda_tijd_picker.dart';
 import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
+import '../paginas/klanten_fiche_pagina.dart';
+import 'jaar_planning_pagina_nieuw.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
   const AgendaPaginaNieuw({super.key});
 
   @override
-  State<AgendaPaginaNieuw> createState() => _AgendaPaginaNieuwState();
+  State<AgendaPaginaNieuw> createState() {
+    return _AgendaPaginaNieuwState();
+  }
 }
 
 class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   AgendaSelectieState selectie = AgendaSelectieState.nieuw();
 
   AgendaFilterState filters = const AgendaFilterState();
+
   AgendaVerplaatsState verplaatsState = const AgendaVerplaatsState();
 
   Map<String, List<AgendaItem>> agendaItems = {};
@@ -55,9 +60,17 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   AgendaWeergaveType agendaWeergave = AgendaWeergaveType.details;
 
+  int _laatsteVerwerkteDownloadVersie = 0;
+  bool _agendaHerladenNaSync = false;
+  bool _agendaNogmaalsHerladenNaSync = false;
+
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
 
     laadAlles().then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,8 +81,63 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+
     agendaScroll.dispose();
+
     super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_agendaHerladenNaSync) {
+      _agendaNogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    unawaited(_herlaadAgendaNaAchtergrondSync());
+  }
+
+  Future<void> _herlaadAgendaNaAchtergrondSync() async {
+    if (_agendaHerladenNaSync) {
+      _agendaNogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _agendaHerladenNaSync = true;
+
+    try {
+      do {
+        _agendaNogmaalsHerladenNaSync = false;
+
+        final geladenItems = await AgendaRepository.laadItems();
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          agendaItems = geladenItems;
+        });
+      } while (_agendaNogmaalsHerladenNaSync && mounted);
+    } finally {
+      _agendaHerladenNaSync = false;
+
+      if (_agendaNogmaalsHerladenNaSync && mounted) {
+        _agendaNogmaalsHerladenNaSync = false;
+
+        unawaited(_herlaadAgendaNaAchtergrondSync());
+      }
+    }
   }
 
   Future<void> laadAlles() async {
@@ -78,7 +146,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   void scrollNaarVandaag() {
-    if (!agendaScroll.hasClients) return;
+    if (!agendaScroll.hasClients) {
+      return;
+    }
 
     final vorigeMaand = DateTime(
       selectie.focusMaand.year,
@@ -103,7 +173,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     final weekIndexVandaag = vandaag.difference(eersteRasterDag).inDays ~/ 7;
 
-    final maandTitelHoogte = 36.0;
+    const maandTitelHoogte = 36.0;
+
     final weekHoogte = agendaWeergave == AgendaWeergaveType.symbolen
         ? 92.0
         : 118.0;
@@ -130,7 +201,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   Future<void> laadAgendaItems() async {
     final geladenItems = await AgendaRepository.laadItems();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       agendaItems = geladenItems;
@@ -140,7 +213,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   Future<void> laadFilters() async {
     final waarden = await AppStorage.laadAgendaFilters(soort: 'detail');
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       filters = AgendaFilterState(
@@ -216,7 +291,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!agendaScroll.hasClients) return;
+      if (!agendaScroll.hasClients) {
+        return;
+      }
 
       final veiligePositie = oudeScrollPositie.clamp(
         agendaScroll.position.minScrollExtent,
@@ -256,7 +333,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     final oudeDag = verplaatsState.oudeDag;
     final item = verplaatsState.item;
 
-    if (oudeDag == null || item == null) return;
+    if (oudeDag == null || item == null) {
+      return;
+    }
 
     final foutmelding = AgendaVerplaatsService.kanItemVerplaatsen(
       oudeDag: oudeDag,
@@ -269,6 +348,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
       );
+
       return;
     }
 
@@ -283,7 +363,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     await AgendaMeldingService.planMelding(dag: nieuweDag, item: item);
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       agendaItems = nieuweItems;
@@ -300,7 +382,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   }
 
   Future<void> openItem(DateTime dag, AgendaItem item) async {
-    if (verplaatsState.actief) return;
+    if (verplaatsState.actief) {
+      return;
+    }
 
     final geopend = await AgendaKlantFicheOpenHelper.openAlsKlantPlanning(
       context: context,
@@ -310,7 +394,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     if (geopend) {
       await laadAgendaItems();
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {});
 
@@ -327,15 +413,19 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       geplandeItems: itemsVanGeselecteerdeDag(agendaItems),
     );
 
-    if (resultaat == null) return;
+    if (resultaat == null) {
+      return;
+    }
 
     if (resultaat == 'verplaatsen') {
       startVerplaatsen(oudeDag: dag, item: item);
+
       return;
     }
 
     if (resultaat == 'verwijderen') {
       await AgendaMeldingService.verwijderMelding(dag: dag, item: item);
+
       if (item.type == 'planning' ||
           item.type == 'opvolging' ||
           item.type == 'nadienst') {
@@ -350,7 +440,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         itemsPerDag: agendaItems,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         agendaItems = Map<String, List<AgendaItem>>.from(
@@ -382,6 +474,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
         );
+
         return;
       }
 
@@ -396,7 +489,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
       await AgendaMeldingService.planMelding(dag: dag, item: resultaat);
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         agendaItems = nieuweItems;
@@ -419,7 +514,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     final gekozenType = await AgendaTypeKeuzePopup.open(context);
 
-    if (gekozenType == null) return;
+    if (gekozenType == null) {
+      return;
+    }
 
     if (gekozenType == 'verlof') {
       final nieuwItem = await showDialog<AgendaItem>(
@@ -429,7 +526,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         },
       );
 
-      if (nieuwItem == null) return;
+      if (nieuwItem == null) {
+        return;
+      }
 
       final nieuweItems = await AgendaRepository.voegToe(
         dag: selectie.geselecteerdeDag,
@@ -437,7 +536,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         itemsPerDag: agendaItems,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         agendaItems = nieuweItems;
@@ -461,7 +562,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         },
       );
 
-      if (nieuwItem == null) return;
+      if (nieuwItem == null) {
+        return;
+      }
 
       final nieuweItems = await AgendaRepository.voegToe(
         dag: selectie.geselecteerdeDag,
@@ -469,7 +572,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         itemsPerDag: agendaItems,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         agendaItems = nieuweItems;
@@ -500,7 +605,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         },
       );
 
-      if (nieuwItem == null) return;
+      if (nieuwItem == null) {
+        return;
+      }
 
       final foutmelding = AgendaToevoegService.kanItemToevoegen(
         dag: selectie.geselecteerdeDag,
@@ -529,7 +636,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         item: nieuwItem,
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       setState(() {
         agendaItems = nieuweItems;
@@ -554,7 +663,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     final nieuweFilters = await AgendaFilterPopup.open(context, filters);
 
-    if (nieuweFilters == null) return;
+    if (nieuweFilters == null) {
+      return;
+    }
 
     setState(() {
       filters = nieuweFilters;
@@ -586,9 +697,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
             AgendaVerplaatsBalk(item: verplaatsState.item!),
           AgendaTopBalk(
             focusMaand: selectie.focusMaand,
-            onTerug: () async {
-              await SyncNavigatieHelper.terugNaarHomeMetDownload(
-                context: context,
+            onTerug: () {
+              unawaited(
+                SyncNavigatieHelper.terugNaarHomeMetDownload(context: context),
               );
             },
             onUpload: () async {
@@ -623,9 +734,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     weergave: agendaWeergave,
                     onDagKlik: selecteerDag,
                     onItemTap: openItem,
-                    onItemSleep: (dag, item) async {
-                      // Niet meer gebruiken.
-                    },
+                    onItemSleep: (dag, item) async {},
                     onItemDrop: (nieuweDag, item, oudeDag) async {
                       if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
                         oudeDag,
@@ -638,12 +747,17 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                               itemsPerDag: agendaItems,
                             );
 
-                        if (nieuweItems == null) return;
+                        if (nieuweItems == null) {
+                          return;
+                        }
 
-                        if (!mounted) return;
+                        if (!mounted) {
+                          return;
+                        }
 
                         setState(() {
                           agendaItems = nieuweItems;
+
                           selectie = selectie.kiesDag(nieuweDag);
                         });
 
@@ -656,6 +770,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
                         return;
                       }
+
                       final nieuweItems =
                           await AgendaSleepAfhandeling.verwerkDrop(
                             context: context,
@@ -665,7 +780,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                             itemsPerDag: agendaItems,
                           );
 
-                      if (nieuweItems == null) return;
+                      if (nieuweItems == null) {
+                        return;
+                      }
 
                       await AgendaMeldingService.verwijderMelding(
                         dag: oudeDag,
@@ -677,10 +794,13 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                         item: item,
                       );
 
-                      if (!mounted) return;
+                      if (!mounted) {
+                        return;
+                      }
 
                       setState(() {
                         agendaItems = nieuweItems;
+
                         selectie = selectie.kiesDag(nieuweDag);
                       });
 
@@ -725,7 +845,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                   itemsPerDag: agendaItems,
                 );
 
-                if (!mounted) return;
+                if (!mounted) {
+                  return;
+                }
 
                 setState(() {
                   agendaItems = nieuweItems;
@@ -762,6 +884,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     onTap: () {
                       setState(() {
                         agendaWeergave = AgendaWeergaveType.symbolen;
+
                         scrollNaarVandaagNaLayout();
                       });
                     },
@@ -772,6 +895,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     onTap: () {
                       setState(() {
                         agendaWeergave = AgendaWeergaveType.details;
+
                         scrollNaarVandaagNaLayout();
                       });
                     },
@@ -780,12 +904,11 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                     tekst: 'Jaaragenda',
                     actief: false,
                     onTap: () async {
-                      await SyncNavigatieHelper.downloadVanafPagina(
-                        context: context,
-                      );
-
-                      if (!context.mounted) return;
-
+                      /*
+                       * Geen download meer vóór de
+                       * navigatie. De jaaragenda opent
+                       * direct met lokale gegevens.
+                       */
                       final resultaat = await Navigator.push<Object>(
                         context,
                         MaterialPageRoute(
@@ -795,7 +918,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
                       await laadAgendaItems();
 
-                      if (!mounted) return;
+                      if (!mounted) {
+                        return;
+                      }
 
                       setState(() {
                         agendaWeergave = AgendaWeergaveType.details;

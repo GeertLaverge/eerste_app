@@ -20,23 +20,35 @@ class OneDriveSyncService {
 
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
+
+  static bool _downloadBezig = false;
+  static bool _fotoDownloadBezig = false;
+
   static String laatsteSyncActie = 'Nog geen sync uitgevoerd';
 
   static Future<void> registreerLokaleWijziging() async {
     final prefs = await SharedPreferences.getInstance();
+
     await prefs.setBool(_lokaleWijzigingOpenstaandKey, true);
   }
 
-  Future<String> uploadBackup() async {
+  /// Handmatige upload gebruikt standaard ook de foto's.
+  ///
+  /// Automatische upload moet [uploadFotos] op false zetten,
+  /// zodat de app tijdens het werken niet alle fotobestanden
+  /// opnieuw moet verwerken.
+  Future<String> uploadBackup({bool uploadFotos = true}) async {
     try {
       final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         laatsteSyncActie = 'Upload niet uitgevoerd: geen silent token';
+
         return token;
       }
 
       final prefs = await SharedPreferences.getInstance();
+
       final backupDatum = DateTime.now().toIso8601String();
 
       const url =
@@ -54,7 +66,9 @@ class OneDriveSyncService {
       }
 
       Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) return {};
+        if (jsonString == null || jsonString.isEmpty) {
+          return {};
+        }
 
         final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
@@ -81,7 +95,9 @@ class OneDriveSyncService {
       }
 
       List<KlantenficheModel> decodeKlanten(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) return [];
+        if (jsonString == null || jsonString.isEmpty) {
+          return [];
+        }
 
         final lijst = jsonDecode(jsonString) as List<dynamic>;
 
@@ -123,7 +139,7 @@ class OneDriveSyncService {
         cloudKlanten,
       );
 
-      final backup = {
+      final backup = <String, dynamic>{
         'backupDatum': backupDatum,
         'agendaItems': encodeAgenda(mergedAgenda),
         'dagtaakTemplates': prefs.getString('dagtaak_templates'),
@@ -131,6 +147,7 @@ class OneDriveSyncService {
         'klantenFiches': encodeKlanten(mergedKlanten),
         'notities': prefs.getString('thimaco_notities'),
         'notitieActies': prefs.getString('thimaco_notitie_acties'),
+        'opmetingRaamOpvullingen': prefs.getString('opmeting_raam_opvullingen'),
       };
 
       final response = await http.put(
@@ -143,7 +160,9 @@ class OneDriveSyncService {
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        return 'BACKUP_FOUT ${response.statusCode}\n${response.body}';
+        return 'BACKUP_FOUT '
+            '${response.statusCode}\n'
+            '${response.body}';
       }
 
       await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
@@ -152,18 +171,26 @@ class OneDriveSyncService {
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
 
-      final fotoResultaat = await _uploadKlantenFotos(token);
+      String fotoResultaat = 'FOTOS_OVERGESLAGEN';
 
-      await prefs.setString(_backupDatumKey, backupDatum);
-      await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
-
-      laatsteSyncActie = 'Merge upload uitgevoerd';
-
-      if (!fotoResultaat.startsWith('FOTOS_OK')) {
-        return 'BACKUP_OK_FOTOS_LATER\n$fotoResultaat';
+      if (uploadFotos) {
+        fotoResultaat = await _uploadKlantenFotos(token);
       }
 
-      return 'BACKUP_OK';
+      await prefs.setString(_backupDatumKey, backupDatum);
+
+      await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
+
+      laatsteSyncActie = uploadFotos
+          ? 'Merge upload met foto’s uitgevoerd'
+          : 'Snelle merge upload zonder foto’s uitgevoerd';
+
+      if (uploadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
+        return 'BACKUP_OK_FOTOS_LATER\n'
+            '$fotoResultaat';
+      }
+
+      return uploadFotos ? 'BACKUP_OK' : 'BACKUP_OK_ZONDER_FOTOS';
     } catch (e) {
       return 'BACKUP_EXCEPTION: $e';
     }
@@ -172,24 +199,38 @@ class OneDriveSyncService {
   Future<String> _uploadKlantenFotos(String token) async {
     try {
       final appMap = await getApplicationDocumentsDirectory();
+
       final fotosMap = Directory('${appMap.path}/klanten_fotos');
 
       if (!await fotosMap.exists()) {
-        await _uploadFotoManifest(token: token, bestanden: []);
+        await _uploadFotoManifest(
+          token: token,
+          bestanden: <Map<String, dynamic>>[],
+        );
+
         return 'FOTOS_OK_GEEN_FOTOS';
       }
 
-      final bestanden = <Map<String, String>>[];
+      final bestanden = <Map<String, dynamic>>[];
+
       final entities = fotosMap.listSync(recursive: true, followLinks: false);
 
       for (final entity in entities) {
-        if (entity is! File) continue;
+        if (entity is! File) {
+          continue;
+        }
 
         final relatiefPad = entity.path
             .replaceFirst('${fotosMap.path}/', '')
             .replaceAll('\\', '/');
 
-        bestanden.add({'pad': relatiefPad});
+        final stat = await entity.stat();
+
+        bestanden.add(<String, dynamic>{
+          'pad': relatiefPad,
+          'grootte': stat.size,
+          'gewijzigdOp': stat.modified.toUtc().toIso8601String(),
+        });
 
         final encodedPad = _encodeOneDrivePath('klanten_fotos/$relatiefPad');
 
@@ -208,7 +249,9 @@ class OneDriveSyncService {
         );
 
         if (response.statusCode != 200 && response.statusCode != 201) {
-          return 'FOTOS_UPLOAD_FOUT ${response.statusCode}\n${response.body}';
+          return 'FOTOS_UPLOAD_FOUT '
+              '${response.statusCode}\n'
+              '${response.body}';
         }
       }
 
@@ -222,9 +265,9 @@ class OneDriveSyncService {
 
   Future<void> _uploadFotoManifest({
     required String token,
-    required List<Map<String, String>> bestanden,
+    required List<Map<String, dynamic>> bestanden,
   }) async {
-    final manifest = {
+    final manifest = <String, dynamic>{
       'datum': DateTime.now().toIso8601String(),
       'bestanden': bestanden,
     };
@@ -242,6 +285,8 @@ class OneDriveSyncService {
     );
   }
 
+  /// Automatische upload verzendt alleen de lichte
+  /// gegevensbackup. Foto's gebeuren bij een handmatige upload.
   Future<void> uploadBackupOpAchtergrond() async {
     if (_backupBezig) {
       _backupOpnieuwNodig = true;
@@ -251,7 +296,7 @@ class OneDriveSyncService {
     _backupBezig = true;
 
     try {
-      await uploadBackup();
+      await uploadBackup(uploadFotos: false);
     } catch (_) {
       // Geen crash veroorzaken bij achtergrondsync.
     } finally {
@@ -260,11 +305,26 @@ class OneDriveSyncService {
 
     if (_backupOpnieuwNodig) {
       _backupOpnieuwNodig = false;
+
       await uploadBackupOpAchtergrond();
     }
   }
 
-  Future<String> downloadBackupMetToken(String token) async {
+  /// Downloadt de gewone appgegevens.
+  ///
+  /// Bij automatische synchronisatie blijft [downloadFotos]
+  /// false. Alleen een bewuste handmatige download zet dit
+  /// op true.
+  Future<String> downloadBackupMetToken(
+    String token, {
+    bool downloadFotos = false,
+  }) async {
+    if (_downloadBezig) {
+      return 'FOUT_IMPORT_BEZIG';
+    }
+
+    _downloadBezig = true;
+
     try {
       if (token.startsWith('FOUT')) {
         return token;
@@ -279,14 +339,19 @@ class OneDriveSyncService {
       );
 
       if (response.statusCode != 200) {
-        return 'IMPORT_FOUT ${response.statusCode}\n${response.body}';
+        return 'IMPORT_FOUT '
+            '${response.statusCode}\n'
+            '${response.body}';
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
+
       final prefs = await SharedPreferences.getInstance();
 
       Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) return {};
+        if (jsonString == null || jsonString.isEmpty) {
+          return {};
+        }
 
         final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
@@ -302,7 +367,9 @@ class OneDriveSyncService {
       }
 
       List<KlantenficheModel> decodeKlanten(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) return [];
+        if (jsonString == null || jsonString.isEmpty) {
+          return [];
+        }
 
         final lijst = jsonDecode(jsonString) as List<dynamic>;
 
@@ -358,73 +425,201 @@ class OneDriveSyncService {
         await prefs.setString('thimaco_notitie_acties', data['notitieActies']);
       }
 
+      if (data['opmetingRaamOpvullingen'] is String) {
+        await prefs.setString(
+          'opmeting_raam_opvullingen',
+          data['opmetingRaamOpvullingen'],
+        );
+      }
+
       if (data['backupDatum'] is String) {
         await prefs.setString(_backupDatumKey, data['backupDatum']);
       }
 
-      await _downloadKlantenFotos(token);
+      String fotoResultaat = 'FOTOS_OVERGESLAGEN';
 
-      laatsteSyncActie = 'Download met login-token uitgevoerd';
+      if (downloadFotos) {
+        fotoResultaat = await _downloadKlantenFotos(token);
+      }
 
-      return 'IMPORT_OK';
+      laatsteSyncActie = downloadFotos
+          ? 'Download met foto’s uitgevoerd'
+          : 'Snelle download zonder foto’s uitgevoerd';
+
+      if (downloadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
+        return 'IMPORT_OK_FOTOS_LATER\n'
+            '$fotoResultaat';
+      }
+
+      return downloadFotos ? 'IMPORT_OK' : 'IMPORT_OK_ZONDER_FOTOS';
     } catch (e) {
       return 'IMPORT_EXCEPTION: $e';
+    } finally {
+      _downloadBezig = false;
     }
   }
 
-  Future<void> _downloadKlantenFotos(String token) async {
-    const manifestUrl =
-        'https://graph.microsoft.com/v1.0/me/drive/special/approot:/klanten_fotos_manifest.json:/content';
-
-    final manifestResponse = await http.get(
-      Uri.parse(manifestUrl),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (manifestResponse.statusCode != 200) {
-      return;
+  Future<String> _downloadKlantenFotos(String token) async {
+    if (_fotoDownloadBezig) {
+      return 'FOTOS_BEZIG';
     }
 
-    final manifest = jsonDecode(manifestResponse.body) as Map<String, dynamic>;
-    final bestanden = manifest['bestanden'];
+    _fotoDownloadBezig = true;
 
-    if (bestanden is! List) return;
+    try {
+      const manifestUrl =
+          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/klanten_fotos_manifest.json:/content';
 
-    final appMap = await getApplicationDocumentsDirectory();
-    final fotosMap = Directory('${appMap.path}/klanten_fotos');
-
-    if (!await fotosMap.exists()) {
-      await fotosMap.create(recursive: true);
-    }
-
-    for (final item in bestanden) {
-      if (item is! Map) continue;
-
-      final pad = item['pad'];
-
-      if (pad is! String || pad.trim().isEmpty) continue;
-
-      final encodedPad = _encodeOneDrivePath('klanten_fotos/$pad');
-
-      final url =
-          'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$encodedPad:/content';
-
-      final response = await http.get(
-        Uri.parse(url),
+      final manifestResponse = await http.get(
+        Uri.parse(manifestUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      if (response.statusCode != 200) continue;
-
-      final lokaalBestand = File('${fotosMap.path}/$pad');
-      final parent = lokaalBestand.parent;
-
-      if (!await parent.exists()) {
-        await parent.create(recursive: true);
+      if (manifestResponse.statusCode != 200) {
+        return 'FOTOS_OK_GEEN_MANIFEST';
       }
 
-      await lokaalBestand.writeAsBytes(response.bodyBytes, flush: true);
+      final manifest =
+          jsonDecode(manifestResponse.body) as Map<String, dynamic>;
+
+      final bestanden = manifest['bestanden'];
+
+      if (bestanden is! List) {
+        return 'FOTOS_OK_LEEG_MANIFEST';
+      }
+
+      final appMap = await getApplicationDocumentsDirectory();
+
+      final fotosMap = Directory('${appMap.path}/klanten_fotos');
+
+      if (!await fotosMap.exists()) {
+        await fotosMap.create(recursive: true);
+      }
+
+      var gedownload = 0;
+      var overgeslagen = 0;
+
+      for (final item in bestanden) {
+        if (item is! Map) {
+          continue;
+        }
+
+        final pad = item['pad'];
+
+        if (pad is! String || pad.trim().isEmpty) {
+          continue;
+        }
+
+        final lokaalBestand = File('${fotosMap.path}/$pad');
+
+        final remoteGrootte = _leesManifestGrootte(item['grootte']);
+
+        final remoteGewijzigdOp = _leesManifestDatum(item['gewijzigdOp']);
+
+        final isOngewijzigd = await _isLokaalFotoOngewijzigd(
+          bestand: lokaalBestand,
+          remoteGrootte: remoteGrootte,
+          remoteGewijzigdOp: remoteGewijzigdOp,
+        );
+
+        if (isOngewijzigd) {
+          overgeslagen++;
+          continue;
+        }
+
+        final encodedPad = _encodeOneDrivePath('klanten_fotos/$pad');
+
+        final url =
+            'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$encodedPad:/content';
+
+        final response = await http.get(
+          Uri.parse(url),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+
+        if (response.statusCode != 200) {
+          continue;
+        }
+
+        final parent = lokaalBestand.parent;
+
+        if (!await parent.exists()) {
+          await parent.create(recursive: true);
+        }
+
+        await lokaalBestand.writeAsBytes(response.bodyBytes, flush: false);
+
+        if (remoteGewijzigdOp != null) {
+          try {
+            await lokaalBestand.setLastModified(remoteGewijzigdOp.toLocal());
+          } catch (_) {
+            // Datum instellen is alleen een optimalisatie.
+          }
+        }
+
+        gedownload++;
+      }
+
+      return 'FOTOS_OK '
+          'GEDOWNLOAD $gedownload '
+          'OVERGESLAGEN $overgeslagen';
+    } catch (e) {
+      return 'FOTOS_EXCEPTION: $e';
+    } finally {
+      _fotoDownloadBezig = false;
     }
+  }
+
+  Future<bool> _isLokaalFotoOngewijzigd({
+    required File bestand,
+    required int? remoteGrootte,
+    required DateTime? remoteGewijzigdOp,
+  }) async {
+    if (!await bestand.exists()) {
+      return false;
+    }
+
+    if (remoteGrootte == null) {
+      return false;
+    }
+
+    final stat = await bestand.stat();
+
+    if (stat.size != remoteGrootte) {
+      return false;
+    }
+
+    if (remoteGewijzigdOp == null) {
+      return true;
+    }
+
+    final verschilInSeconden = stat.modified
+        .toUtc()
+        .difference(remoteGewijzigdOp.toUtc())
+        .inSeconds
+        .abs();
+
+    return verschilInSeconden <= 2;
+  }
+
+  int? _leesManifestGrootte(dynamic waarde) {
+    if (waarde is int) {
+      return waarde;
+    }
+
+    if (waarde is num) {
+      return waarde.round();
+    }
+
+    return int.tryParse(waarde?.toString() ?? '');
+  }
+
+  DateTime? _leesManifestDatum(dynamic waarde) {
+    if (waarde is! String || waarde.trim().isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(waarde);
   }
 
   String _encodeOneDrivePath(String pad) {
@@ -433,6 +628,7 @@ class OneDriveSyncService {
 
   Future<String?> lokaleBackupDatum() async {
     final prefs = await SharedPreferences.getInstance();
+
     return prefs.getString(_backupDatumKey);
   }
 
@@ -459,6 +655,7 @@ class OneDriveSyncService {
       }
 
       final data = jsonDecode(response.body);
+
       return data['backupDatum'];
     } catch (_) {
       return null;
@@ -469,7 +666,9 @@ class OneDriveSyncService {
     final prefs = await SharedPreferences.getInstance();
 
     final lokaal = await lokaleBackupDatum();
+
     final oneDrive = await oneDriveBackupDatum();
+
     final openstaand = prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
 
     return '''
@@ -485,6 +684,12 @@ $openstaand
 BACKUP BEZIG:
 $_backupBezig
 
+DOWNLOAD BEZIG:
+$_downloadBezig
+
+FOTODOWNLOAD BEZIG:
+$_fotoDownloadBezig
+
 LAATSTE SYNC ACTIE:
 $laatsteSyncActie
 ''';
@@ -495,7 +700,9 @@ $laatsteSyncActie
 
     if (_backupBezig) {
       _backupOpnieuwNodig = true;
+
       laatsteSyncActie = 'Upload bezig, geen download uitgevoerd';
+
       return 'SYNC_UPLOAD_BEZIG';
     }
 
@@ -514,6 +721,7 @@ $laatsteSyncActie
       if (lokaleWijzigingOpenstaand) {
         laatsteSyncActie =
             'Lokale wijziging openstaand, maar geen OneDrive login';
+
         return 'SYNC_GEEN_ONEDRIVE_LOGIN_UPLOAD_OVERGESLAGEN';
       }
 
@@ -521,50 +729,58 @@ $laatsteSyncActie
     }
 
     if (lokaleWijzigingOpenstaand) {
-      laatsteSyncActie = 'Lokale wijziging openstaand, upload uitgevoerd';
-      return await uploadBackup();
+      laatsteSyncActie =
+          'Lokale wijziging openstaand, snelle upload uitgevoerd';
+
+      return uploadBackup(uploadFotos: false);
     }
 
     if (lokaleDatumString == null) {
-      laatsteSyncActie = 'Geen lokale datum, download uitgevoerd';
+      laatsteSyncActie = 'Geen lokale datum, snelle download uitgevoerd';
 
       final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
+
         return token;
       }
 
-      return await downloadBackupMetToken(token);
+      return downloadBackupMetToken(token, downloadFotos: false);
     }
 
     final lokaleDatum = DateTime.tryParse(lokaleDatumString);
+
     final oneDriveDatum = DateTime.tryParse(oneDriveDatumString);
 
     if (lokaleDatum == null || oneDriveDatum == null) {
       laatsteSyncActie = 'Datumfout, geen sync uitgevoerd';
+
       return 'SYNC_DATUM_FOUT';
     }
 
     if (oneDriveDatum.isAfter(lokaleDatum)) {
-      laatsteSyncActie = 'OneDrive nieuwer, download uitgevoerd';
+      laatsteSyncActie = 'OneDrive nieuwer, snelle download uitgevoerd';
 
       final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
+
         return token;
       }
 
-      return await downloadBackupMetToken(token);
+      return downloadBackupMetToken(token, downloadFotos: false);
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
-      laatsteSyncActie = 'Lokaal nieuwer, merge upload uitgevoerd';
-      return await uploadBackup();
+      laatsteSyncActie = 'Lokaal nieuwer, snelle merge upload uitgevoerd';
+
+      return uploadBackup(uploadFotos: false);
     }
 
     laatsteSyncActie = 'Geen wijziging, niets uitgevoerd';
+
     return 'SYNC_OK_GEEN_WIJZIGING';
   }
 }
