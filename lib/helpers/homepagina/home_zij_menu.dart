@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../paginas/klanten_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
-import '../../paginas/opmeting_raam_pagina.dart';
+import '../../paginas/opmeting_pagina.dart';
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
@@ -91,7 +91,7 @@ class HomeZijMenu extends StatelessWidget {
         if (titel == 'Opmeting') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const OpmetingRaamPagina()),
+            MaterialPageRoute(builder: (_) => const OpmetingPagina()),
           );
           return;
         }

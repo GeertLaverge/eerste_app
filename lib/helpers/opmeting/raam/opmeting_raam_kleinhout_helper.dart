@@ -173,6 +173,26 @@ class OpmetingRaamKleinhoutHelper {
         .where((vlak) => nieuweGevuldeVlakIds.contains(vlak.id))
         .toList();
 
+    if (beschikbareNieuweVlakken.isEmpty) {
+      return <OpmetingRaamKleinhout>[];
+    }
+
+    /*
+     * De referentievlakken omvatten alle oude en nieuwe
+     * glasvlakken. Daardoor kunnen de posities als fracties
+     * tussen 0 en 1 vergeleken worden.
+     *
+     * Dit blijft correct wanneer het tekenvlak van liggend
+     * naar staand of van staand naar liggend verandert.
+     */
+    final oudeReferentie = _omsluitendeRechthoek(
+      oudeVulvlakken.map((vlak) => vlak.vlak),
+    );
+
+    final nieuweReferentie = _omsluitendeRechthoek(
+      nieuweVulvlakken.map((vlak) => vlak.vlak),
+    );
+
     final gebruikteNieuweVlakIds = <String>{};
     final resultaat = <OpmetingRaamKleinhout>[];
 
@@ -184,6 +204,8 @@ class OpmetingRaamKleinhoutHelper {
         oudVlak: oudVlak,
         nieuweVulvlakken: beschikbareNieuweVlakken,
         gebruikteNieuweVlakIds: gebruikteNieuweVlakIds,
+        oudeReferentie: oudeReferentie,
+        nieuweReferentie: nieuweReferentie,
       );
 
       if (nieuwVlak == null) {
@@ -192,6 +214,13 @@ class OpmetingRaamKleinhoutHelper {
 
       gebruikteNieuweVlakIds.add(nieuwVlak.id);
 
+      /*
+       * copyWith behoudt de oorspronkelijke kleinhout-ID,
+       * het type, het patroon, de aantallen, de hoogte en
+       * de profielbreedte.
+       *
+       * Alleen de koppeling met het nieuwe vlak verandert.
+       */
       resultaat.add(
         bestaand.copyWith(
           vlakId: nieuwVlak.id,
@@ -212,6 +241,8 @@ class OpmetingRaamKleinhoutHelper {
     required OpmetingRaamVulvlak? oudVlak,
     required List<OpmetingRaamVulvlak> nieuweVulvlakken,
     required Set<String> gebruikteNieuweVlakIds,
+    required Rect? oudeReferentie,
+    required Rect? nieuweReferentie,
   }) {
     final vrijeVlakken = nieuweVulvlakken
         .where((vlak) => !gebruikteNieuweVlakIds.contains(vlak.id))
@@ -221,12 +252,21 @@ class OpmetingRaamKleinhoutHelper {
       return null;
     }
 
+    /*
+     * Een identieke vlak-ID is altijd de eerste keuze.
+     * Bij een gewone schermrotatie blijven de IDs normaal
+     * ongewijzigd.
+     */
     for (final vlak in vrijeVlakken) {
       if (vlak.id == bestaand.vlakId) {
         return vlak;
       }
     }
 
+    /*
+     * Daarna zoeken we eerst binnen hetzelfde kader- of
+     * vleugelwerkvlak.
+     */
     var kandidaten = vrijeVlakken
         .where((vlak) => vlak.werkvlakId == bestaand.werkvlakId)
         .toList();
@@ -244,11 +284,27 @@ class OpmetingRaamKleinhoutHelper {
     }
 
     kandidaten.sort((eerste, tweede) {
-      final eersteScore = _berekenVlakScore(oudVlak.vlak, eerste.vlak);
+      final eersteScore = _berekenVlakScore(
+        oudVlak: oudVlak.vlak,
+        nieuwVlak: eerste.vlak,
+        oudeReferentie: oudeReferentie,
+        nieuweReferentie: nieuweReferentie,
+      );
 
-      final tweedeScore = _berekenVlakScore(oudVlak.vlak, tweede.vlak);
+      final tweedeScore = _berekenVlakScore(
+        oudVlak: oudVlak.vlak,
+        nieuwVlak: tweede.vlak,
+        oudeReferentie: oudeReferentie,
+        nieuweReferentie: nieuweReferentie,
+      );
 
-      return tweedeScore.compareTo(eersteScore);
+      final scoreVergelijking = tweedeScore.compareTo(eersteScore);
+
+      if (scoreVergelijking != 0) {
+        return scoreVergelijking;
+      }
+
+      return eerste.id.compareTo(tweede.id);
     });
 
     return kandidaten.first;
@@ -275,6 +331,7 @@ class OpmetingRaamKleinhoutHelper {
     }
 
     final legenda = <OpmetingRaamKleinhoutLegendaItem>[];
+
     var nummer = 1;
 
     for (final groep in groepen.values) {
@@ -420,7 +477,7 @@ class OpmetingRaamKleinhoutHelper {
       return;
     }
 
-    final horizontaleY = (vlak.bottom - (hoogteInMm * pixelsPerMm))
+    final horizontaleY = (vlak.top + (hoogteInMm * pixelsPerMm))
         .clamp(minimumY, maximumY)
         .toDouble();
 
@@ -558,7 +615,9 @@ class OpmetingRaamKleinhoutHelper {
           ..style = PaintingStyle.stroke;
 
         canvas.drawRect(profiel, vulling);
+
         canvas.drawRect(profiel, rand);
+
         break;
 
       case OpmetingRaamKleinhoutType.opGlasSteelLook:
@@ -572,7 +631,9 @@ class OpmetingRaamKleinhoutHelper {
           ..style = PaintingStyle.stroke;
 
         canvas.drawRect(profiel, vulling);
+
         canvas.drawRect(profiel, rand);
+
         break;
 
       case OpmetingRaamKleinhoutType.inGlas:
@@ -590,6 +651,7 @@ class OpmetingRaamKleinhoutHelper {
           ..strokeWidth = 0.6;
 
         canvas.drawRect(profiel, vulling);
+
         canvas.drawRect(profiel, rand);
 
         if (horizontaal) {
@@ -622,10 +684,76 @@ class OpmetingRaamKleinhoutHelper {
         '${kleinhout.horizontaleHoogteMm?.toStringAsFixed(1) ?? ''}';
   }
 
-  static double _berekenVlakScore(Rect oudVlak, Rect nieuwVlak) {
+  /// Vergelijkt oude en nieuwe glasvlakken relatief binnen
+  /// hun volledige raamblok.
+  ///
+  /// Daardoor blijft de score bruikbaar wanneer het scherm
+  /// van verhouding of oriëntatie verandert.
+  static double _berekenVlakScore({
+    required Rect oudVlak,
+    required Rect nieuwVlak,
+    required Rect? oudeReferentie,
+    required Rect? nieuweReferentie,
+  }) {
+    final genormaliseerdOudVlak = _normaliseerRect(
+      vlak: oudVlak,
+      referentie: oudeReferentie,
+    );
+
+    final genormaliseerdNieuwVlak = _normaliseerRect(
+      vlak: nieuwVlak,
+      referentie: nieuweReferentie,
+    );
+
+    if (genormaliseerdOudVlak == null || genormaliseerdNieuwVlak == null) {
+      return _berekenRuweVlakScore(oudVlak, nieuwVlak);
+    }
+
+    final randVerschil =
+        (genormaliseerdOudVlak.left - genormaliseerdNieuwVlak.left).abs() +
+        (genormaliseerdOudVlak.right - genormaliseerdNieuwVlak.right).abs() +
+        (genormaliseerdOudVlak.top - genormaliseerdNieuwVlak.top).abs() +
+        (genormaliseerdOudVlak.bottom - genormaliseerdNieuwVlak.bottom).abs();
+
+    final randScore = 1 - (randVerschil / 4).clamp(0.0, 1.0).toDouble();
+
+    final middenAfstand =
+        (genormaliseerdOudVlak.center - genormaliseerdNieuwVlak.center)
+            .distance;
+
+    const maximaleGenormaliseerdeAfstand = 1.4142135623730951;
+
+    final middenScore =
+        1 -
+        (middenAfstand / maximaleGenormaliseerdeAfstand)
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    final breedteScore =
+        1 -
+        (genormaliseerdOudVlak.width - genormaliseerdNieuwVlak.width)
+            .abs()
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    final hoogteScore =
+        1 -
+        (genormaliseerdOudVlak.height - genormaliseerdNieuwVlak.height)
+            .abs()
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    return randScore * 0.50 +
+        middenScore * 0.25 +
+        breedteScore * 0.125 +
+        hoogteScore * 0.125;
+  }
+
+  static double _berekenRuweVlakScore(Rect oudVlak, Rect nieuwVlak) {
     final overlap = _overlapOppervlakte(oudVlak, nieuwVlak);
 
     final oudeOppervlakte = _oppervlakte(oudVlak);
+
     final nieuweOppervlakte = _oppervlakte(nieuwVlak);
 
     final overlapScore = oudeOppervlakte > 0 && nieuweOppervlakte > 0
@@ -643,7 +771,54 @@ class OpmetingRaamKleinhoutHelper {
     final middenScore =
         1 - (middenAfstand / maximaleAfstand).clamp(0.0, 1.0).toDouble();
 
-    return (overlapScore * 10) + middenScore;
+    return overlapScore * 10 + middenScore;
+  }
+
+  static Rect? _omsluitendeRechthoek(Iterable<Rect> vlakken) {
+    Rect? resultaat;
+
+    for (final vlak in vlakken) {
+      if (!_isGeldigVlak(vlak)) {
+        continue;
+      }
+
+      resultaat = resultaat == null ? vlak : resultaat.expandToInclude(vlak);
+    }
+
+    return resultaat;
+  }
+
+  static Rect? _normaliseerRect({
+    required Rect vlak,
+    required Rect? referentie,
+  }) {
+    if (!_isGeldigVlak(vlak) ||
+        referentie == null ||
+        !_isGeldigVlak(referentie)) {
+      return null;
+    }
+
+    final links = ((vlak.left - referentie.left) / referentie.width)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    final rechts = ((vlak.right - referentie.left) / referentie.width)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    final boven = ((vlak.top - referentie.top) / referentie.height)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    final onder = ((vlak.bottom - referentie.top) / referentie.height)
+        .clamp(0.0, 1.0)
+        .toDouble();
+
+    if (rechts <= links || onder <= boven) {
+      return null;
+    }
+
+    return Rect.fromLTRB(links, boven, rechts, onder);
   }
 
   static double _overlapOppervlakte(Rect eerste, Rect tweede) {
@@ -663,10 +838,19 @@ class OpmetingRaamKleinhoutHelper {
   }
 
   static double _oppervlakte(Rect vlak) {
-    if (vlak.width <= 0 || vlak.height <= 0) {
+    if (!_isGeldigVlak(vlak)) {
       return 0;
     }
 
     return vlak.width * vlak.height;
+  }
+
+  static bool _isGeldigVlak(Rect vlak) {
+    return vlak.left.isFinite &&
+        vlak.top.isFinite &&
+        vlak.right.isFinite &&
+        vlak.bottom.isFinite &&
+        vlak.width > 0 &&
+        vlak.height > 0;
   }
 }

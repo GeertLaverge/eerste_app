@@ -2,12 +2,13 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'Agenda/agenda_item.dart';
 import 'Agenda/agenda_dagtaak_template.dart';
+import 'Agenda/agenda_item.dart';
 import 'sync/onedrive_sync_service.dart';
 
-import '../helpers/notities/notitie_model.dart';
 import '../helpers/notities/notitie_actie_model.dart';
+import '../helpers/notities/notitie_model.dart';
+import 'opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 
 class AppStorage {
@@ -22,6 +23,8 @@ class AppStorage {
   static const String _notitieActiesKey = 'thimaco_notitie_acties';
 
   static const String _opmetingRaamOpvullingenKey = 'opmeting_raam_opvullingen';
+
+  static const String _opmetingRaamKeuzemenusKey = 'opmeting_raam_keuzemenus';
 
   static Future<SharedPreferences> openBox() async {
     return SharedPreferences.getInstance();
@@ -336,5 +339,103 @@ class AppStorage {
       _opmetingRaamOpvullingenKey,
       jsonEncode(opvullingen.map((opvulling) => opvulling.toJson()).toList()),
     );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING RAAM - INSTELBARE KEUZEMENU'S
+  // ------------------------------------------------------------
+
+  static Future<List<OpmetingRaamKeuzeMenu>>
+  laadOpmetingRaamKeuzemenus() async {
+    final prefs = await openBox();
+
+    final jsonString = prefs.getString(_opmetingRaamKeuzemenusKey);
+
+    if (jsonString == null || jsonString.isEmpty) {
+      return <OpmetingRaamKeuzeMenu>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! List) {
+        return <OpmetingRaamKeuzeMenu>[];
+      }
+
+      final menus = decoded
+          .whereType<Map>()
+          .map(
+            (item) =>
+                OpmetingRaamKeuzeMenu.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .where(
+            (menu) => menu.id.trim().isNotEmpty && menu.titel.trim().isNotEmpty,
+          )
+          .map((menu) => menu.metGeldigeGeenOptie())
+          .toList();
+
+      _sorteerOpmetingRaamKeuzemenus(menus);
+
+      return menus;
+    } catch (_) {
+      return <OpmetingRaamKeuzeMenu>[];
+    }
+  }
+
+  static Future<void> bewaarOpmetingRaamKeuzemenus(
+    List<OpmetingRaamKeuzeMenu> menus,
+  ) async {
+    final prefs = await openBox();
+
+    final genormaliseerdeMenus = _normaliseerOpmetingRaamKeuzemenus(menus);
+
+    await prefs.setString(
+      _opmetingRaamKeuzemenusKey,
+      jsonEncode(genormaliseerdeMenus.map((menu) => menu.toJson()).toList()),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingRaamKeuzemenusVoorSync(
+    List<OpmetingRaamKeuzeMenu> menus,
+  ) async {
+    final prefs = await openBox();
+
+    final genormaliseerdeMenus = _normaliseerOpmetingRaamKeuzemenus(menus);
+
+    await prefs.setString(
+      _opmetingRaamKeuzemenusKey,
+      jsonEncode(genormaliseerdeMenus.map((menu) => menu.toJson()).toList()),
+    );
+  }
+
+  static List<OpmetingRaamKeuzeMenu> _normaliseerOpmetingRaamKeuzemenus(
+    Iterable<OpmetingRaamKeuzeMenu> menus,
+  ) {
+    final resultaat = menus
+        .where(
+          (menu) => menu.id.trim().isNotEmpty && menu.titel.trim().isNotEmpty,
+        )
+        .map((menu) => menu.metGeldigeGeenOptie())
+        .toList();
+
+    _sorteerOpmetingRaamKeuzemenus(resultaat);
+
+    return resultaat;
+  }
+
+  static void _sorteerOpmetingRaamKeuzemenus(
+    List<OpmetingRaamKeuzeMenu> menus,
+  ) {
+    menus.sort((eerste, tweede) {
+      final volgordeVergelijking = eerste.volgorde.compareTo(tweede.volgorde);
+
+      if (volgordeVergelijking != 0) {
+        return volgordeVergelijking;
+      }
+
+      return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
+    });
   }
 }

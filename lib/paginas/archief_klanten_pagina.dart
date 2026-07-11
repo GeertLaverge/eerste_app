@@ -119,9 +119,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
               onPressed: () => Navigator.pop(context, true),
               child: const Text(
                 'Verwijderen',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
+                style: TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -149,9 +147,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => KlantenFichePagina(
-          bestaandeFiche: klant,
-        ),
+        builder: (_) => KlantenFichePagina(bestaandeFiche: klant),
       ),
     );
 
@@ -188,15 +184,11 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(0xFFE5E7EB),
-                  ),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(0xFFE5E7EB),
-                  ),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                 ),
               ),
             ),
@@ -235,9 +227,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
                       color: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: const BorderSide(
-                          color: Color(0xFFE5E7EB),
-                        ),
+                        side: const BorderSide(color: Color(0xFFE5E7EB)),
                       ),
                       child: ListTile(
                         onTap: () {
@@ -245,9 +235,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
                         },
                         title: Text(
                           klant.naam.isEmpty ? 'Naamloos' : klant.naam,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         subtitle: Text(
                           klant.datumAfgewerkt.isEmpty
@@ -282,9 +270,7 @@ class _ArchiefKlantenPaginaState extends State<ArchiefKlantenPagina> {
                               value: 'verwijderen',
                               child: Text(
                                 'Definitief verwijderen',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                ),
+                                style: TextStyle(color: Colors.red),
                               ),
                             ),
                           ],

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'opmeting_raam_keuzeveld.dart';
+import 'opmeting_raam_technische_keuze_rij.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_vulling_helper.dart';
+import 'opmeting_raam_extra_item_menu.dart';
+import 'opmeting_raam_technisch_item_model.dart';
 
 class OpmetingRaamTechnischeKeuzes extends StatefulWidget {
   const OpmetingRaamTechnischeKeuzes({
@@ -62,23 +64,71 @@ class _OpmetingRaamTechnischeKeuzesState
   bool _opvullingenOpen = false;
   bool _kleinhoutenOpen = false;
 
+  final List<OpmetingRaamTechnischItemModel> _extraItems =
+      <OpmetingRaamTechnischItemModel>[];
+
+  Future<void> _openExtraItemMenu() async {
+    final nieuwItem = await OpmetingRaamExtraItemMenu.toon(context);
+
+    if (!mounted || nieuwItem == null) {
+      return;
+    }
+
+    setState(() {
+      _extraItems.add(nieuwItem);
+    });
+  }
+
+  void _wijzigExtraItemKeuze(int index, String nieuweKeuze) {
+    if (index < 0 || index >= _extraItems.length) {
+      return;
+    }
+
+    setState(() {
+      _extraItems[index] = _extraItems[index].copyWith(
+        gekozenSoort: nieuweKeuze,
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
       decoration: _kaartDecoratie(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'TECHNISCHE KEUZES',
-            style: TextStyle(
-              color: groen,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'TECHNISCHE KEUZES',
+                  style: TextStyle(
+                    color: groen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: IconButton(
+                  tooltip: 'Extra technisch item toevoegen',
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: _openExtraItemMenu,
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    size: 21,
+                    color: groen,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           _keuze(
             'vleugelprofiel',
             'Vleugelprofiel',
@@ -173,6 +223,19 @@ class _OpmetingRaamTechnischeKeuzesState
             widget.afwerkingslatten,
             const ['Geen', 'Links', 'Rechts', 'Boven', 'Onder', 'Rondom'],
           ),
+          ..._extraItems.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+
+            return OpmetingRaamTechnischeKeuzeRij(
+              titel: item.titel,
+              soorten: item.soorten,
+              gekozenSoort: item.gekozenSoort,
+              onGewijzigd: (nieuweKeuze) {
+                _wijzigExtraItemKeuze(index, nieuweKeuze);
+              },
+            );
+          }),
         ],
       ),
     );
@@ -503,16 +566,13 @@ class _OpmetingRaamTechnischeKeuzesState
   }
 
   Widget _keuze(String veld, String titel, String waarde, List<String> keuzes) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: OpmetingRaamKeuzeveld(
-        titel: titel,
-        waarde: waarde,
-        keuzes: keuzes,
-        onGekozen: (nieuweWaarde) {
-          widget.onChanged(veld, nieuweWaarde);
-        },
-      ),
+    return OpmetingRaamTechnischeKeuzeRij(
+      titel: titel,
+      soorten: keuzes,
+      gekozenSoort: waarde,
+      onGewijzigd: (String nieuweWaarde) {
+        widget.onChanged(veld, nieuweWaarde);
+      },
     );
   }
 

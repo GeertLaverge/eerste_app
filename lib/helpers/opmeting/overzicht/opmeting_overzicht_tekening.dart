@@ -1,0 +1,86 @@
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../raam/opmeting_raam_tekenvlak_painter.dart';
+import 'opmeting_overzicht_model.dart';
+
+class OpmetingOverzichtTekening extends CustomPainter {
+  const OpmetingOverzichtTekening({required this.item});
+
+  final OpmetingOverzichtRaamItem item;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final data = item.tekeningData;
+
+    final virtueleGrootte = _virtueleTekeningGrootte(item);
+    final schaal = math.min(
+      size.width / virtueleGrootte.width,
+      size.height / virtueleGrootte.height,
+    );
+    final dx = (size.width - virtueleGrootte.width * schaal) / 2;
+    final dy = (size.height - virtueleGrootte.height * schaal) / 2;
+
+    final painter = OpmetingRaamTekenvlakPainter(
+      breedteMm: item.raammaatBreedteMm,
+      hoogteMm: item.raammaatHoogteMm,
+      geselecteerdeLijn: null,
+      previewPunt: null,
+      tStijlen: data.tStijlen,
+      tStijlenPerKader: data.tStijlenPerKader,
+      vleugels: data.vleugels,
+      vleugelsPerKader: data.vleugelsPerKader,
+      vulvlakken: data.vulvlakken,
+      vulvlakkenPerKader: data.vulvlakkenPerKader,
+      vullingToewijzingen: data.vullingToewijzingen,
+      vullingToewijzingenPerKader: data.vullingToewijzingenPerKader,
+      geselecteerdeVulvlakIds: const <String>{},
+      geselecteerdeVulvlakIdsPerKader: const <String, Set<String>>{},
+      kleinhouten: data.kleinhouten,
+      kleinhoutenPerKader: data.kleinhoutenPerKader,
+      geselecteerdeKleinhoutVlakIds: const <String>{},
+      geselecteerdeKleinhoutVlakIdsPerKader: const <String, Set<String>>{},
+      technischeTekeningen: data.technischeTekeningen,
+      technischeTekeningenPerKader: data.technischeTekeningenPerKader,
+      technischeTekeningenPerKaderGroep: data.technischeTekeningenPerKaderGroep,
+      technischeKaderGroepen: data.technischeKaderGroepen,
+      geselecteerdeKaderIds: const <String>{},
+      kaderSamenstelling: item.kaderSamenstelling,
+      actiefKaderId: '__overzicht_geen_actief_kader__',
+    );
+
+    canvas.save();
+    canvas.translate(dx, dy);
+    canvas.scale(schaal);
+    painter.paint(canvas, virtueleGrootte);
+    canvas.restore();
+  }
+
+  Size _virtueleTekeningGrootte(OpmetingOverzichtRaamItem item) {
+    final data = item.tekeningData;
+
+    if (data.heeftTekenvlakGrootte) {
+      return Size(data.tekenvlakBreedtePx, data.tekenvlakHoogtePx);
+    }
+
+    final verhouding = item.raammaatHoogteMm <= 0
+        ? 1.65
+        : item.raammaatBreedteMm / item.raammaatHoogteMm;
+
+    if (verhouding >= 2.0) {
+      return const Size(1100, 560);
+    }
+
+    if (verhouding <= 0.8) {
+      return const Size(720, 760);
+    }
+
+    return const Size(920, 620);
+  }
+
+  @override
+  bool shouldRepaint(covariant OpmetingOverzichtTekening oldDelegate) {
+    return !identical(item, oldDelegate.item);
+  }
+}

@@ -263,15 +263,6 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       );
     }
 
-    if (gekozenType == 'verlof') {
-      nieuwItem = await showDialog<AgendaItem>(
-        context: context,
-        builder: (context) {
-          return const AgendaVerlofPopup();
-        },
-      );
-    }
-
     if (gekozenType == 'dagtaak') {
       nieuwItem = await showDialog<AgendaItem>(
         context: context,
@@ -281,6 +272,15 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
             geplandeItems:
                 agendaItems[AgendaDatumHelper.datumKey(geselecteerdeDag)] ?? [],
           );
+        },
+      );
+    }
+
+    if (gekozenType == 'verlof') {
+      nieuwItem = await showDialog<AgendaItem>(
+        context: context,
+        builder: (context) {
+          return const AgendaVerlofPopup();
         },
       );
     }
@@ -359,11 +359,15 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   int weekNummer(DateTime datum) {
-    final donderdag = datum.add(Duration(days: 4 - datum.weekday));
+    final normaleDatum = DateTime(datum.year, datum.month, datum.day);
 
-    final eersteDonderdag = DateTime(donderdag.year, 1, 4);
+    final donderdag = normaleDatum.add(
+      Duration(days: DateTime.thursday - normaleDatum.weekday),
+    );
 
-    return 1 + donderdag.difference(eersteDonderdag).inDays ~/ 7;
+    final eersteDagVanIsoJaar = DateTime(donderdag.year, 1, 1);
+
+    return 1 + (donderdag.difference(eersteDagVanIsoJaar).inDays ~/ 7);
   }
 
   double maandBreedte(

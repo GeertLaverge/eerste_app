@@ -1,125 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../../app_storage.dart';
-import 'opmeting_raam_kader_helper.dart';
-import 'opmeting_raam_kleinhout_helper.dart';
-import 'opmeting_raam_kleinhout_menu.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
-import 'opmeting_raam_opvulling_menu.dart';
 import 'opmeting_raam_opvulling_model.dart';
-import 'opmeting_raam_tekenvlak_acties.dart';
-import 'opmeting_raam_tekenvlak_maat_wijziging.dart';
-import 'opmeting_raam_tekenvlak_menus.dart';
-import 'opmeting_raam_tekenvlak_painter.dart';
-import 'opmeting_raam_tstijl_helper.dart';
-import 'opmeting_raam_tstijl_verplaats_helper.dart';
+import 'opmeting_raam_tekenvlak_controller.dart';
+import 'opmeting_raam_tekenvlak_geschiedenis.dart';
 import 'opmeting_raam_vulling_helper.dart';
+import 'opmeting_raam_zwevende_menus_controller.dart';
+import 'opmeting_raam_menu_overlay.dart';
+import 'opmeting_raam_schaal_controller.dart';
+import 'opmeting_raam_schaal_aanpassing_helper.dart';
+import 'opmeting_raam_legenda_melding_controller.dart';
+import 'opmeting_raam_tekening_opschoning_helper.dart';
+import 'opmeting_raam_opvulling_laad_helper.dart';
+import 'opmeting_raam_menu_zichtbaarheid_controller.dart';
+import 'opmeting_raam_tstijl_verplaatsing_actie_helper.dart';
+import 'opmeting_raam_opvulling_actie_helper.dart';
+import 'opmeting_raam_kleinhout_actie_helper.dart';
+import 'opmeting_raam_tstijl_actie_helper.dart';
+import 'opmeting_raam_tstijl_helper.dart';
+import 'opmeting_raam_vleugel_actie_helper.dart';
+import 'opmeting_raam_vleugel_helper.dart';
+import 'opmeting_raam_vlak_helper.dart';
+import 'opmeting_raam_kleinhout_instellingen_helper.dart';
+import 'opmeting_raam_kleinhout_helper.dart';
+import 'opmeting_raam_tekenvlak_weergave_status_helper.dart';
+import 'opmeting_raam_vulvlak_berekening_helper.dart';
+import 'opmeting_raam_tekenvlak_tekenlaag.dart';
+import 'opmeting_raam_tekenvlak_overzicht_data_helper.dart';
+import 'opmeting_raam_tekenvlak_schaal_data_helper.dart';
+import 'opmeting_raam_snackbar_helper.dart';
+import 'opmeting_raam_tekenvlak_kader.dart';
+import 'menus/opmeting_raam_kader_menus.dart';
+import 'opmeting_raam_keuzemenu_model.dart';
+import 'opmeting_raam_kader_helper.dart';
+import 'opmeting_raam_technische_layout_helper.dart';
+import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
+import '../kader_samenstelling/opmeting_kader_samenstelling_layout_helper.dart';
+import '../kader_samenstelling/opmeting_kader_samenstelling_teken_helper.dart';
+import '../overzicht/opmeting_overzicht_model.dart';
 
-class OpmetingRaamTekenvlakController extends ChangeNotifier {
-  Object? _eigenaar;
-
-  VoidCallback? _ongedaanMakenActie;
-  VoidCallback? _herstellenActie;
-
-  bool _kanOngedaanMaken = false;
-  bool _kanHerstellen = false;
-
-  bool get kanOngedaanMaken => _kanOngedaanMaken;
-
-  bool get kanHerstellen => _kanHerstellen;
-
-  void ongedaanMaken() {
-    if (!_kanOngedaanMaken) {
-      return;
-    }
-
-    _ongedaanMakenActie?.call();
-  }
-
-  void herstellen() {
-    if (!_kanHerstellen) {
-      return;
-    }
-
-    _herstellenActie?.call();
-  }
-
-  void _koppel({
-    required Object eigenaar,
-    required VoidCallback onOngedaanMaken,
-    required VoidCallback onHerstellen,
-    required bool kanOngedaanMaken,
-    required bool kanHerstellen,
-  }) {
-    _eigenaar = eigenaar;
-    _ongedaanMakenActie = onOngedaanMaken;
-    _herstellenActie = onHerstellen;
-
-    _pasStatusAan(
-      kanOngedaanMaken: kanOngedaanMaken,
-      kanHerstellen: kanHerstellen,
-    );
-  }
-
-  void _werkStatusBij({
-    required Object eigenaar,
-    required bool kanOngedaanMaken,
-    required bool kanHerstellen,
-  }) {
-    if (!identical(_eigenaar, eigenaar)) {
-      return;
-    }
-
-    _pasStatusAan(
-      kanOngedaanMaken: kanOngedaanMaken,
-      kanHerstellen: kanHerstellen,
-    );
-  }
-
-  void _ontkoppel({required Object eigenaar}) {
-    if (!identical(_eigenaar, eigenaar)) {
-      return;
-    }
-
-    _eigenaar = null;
-    _ongedaanMakenActie = null;
-    _herstellenActie = null;
-
-    _pasStatusAan(kanOngedaanMaken: false, kanHerstellen: false);
-  }
-
-  void _pasStatusAan({
-    required bool kanOngedaanMaken,
-    required bool kanHerstellen,
-  }) {
-    if (_kanOngedaanMaken == kanOngedaanMaken &&
-        _kanHerstellen == kanHerstellen) {
-      return;
-    }
-
-    _kanOngedaanMaken = kanOngedaanMaken;
-    _kanHerstellen = kanHerstellen;
-
-    notifyListeners();
-  }
-}
-
-class _OpmetingRaamTekeningMoment {
-  const _OpmetingRaamTekeningMoment({
-    required this.tStijlen,
-    required this.vleugels,
-    required this.vullingToewijzingen,
-    required this.kleinhouten,
-  });
-
-  final List<OpmetingRaamTStijl> tStijlen;
-  final List<OpmetingRaamVleugel> vleugels;
-
-  final List<OpmetingRaamVullingToewijzing> vullingToewijzingen;
-
-  final List<OpmetingRaamKleinhout> kleinhouten;
-}
+export 'opmeting_raam_tekenvlak_controller.dart';
 
 class OpmetingRaamTekenvlak extends StatefulWidget {
   const OpmetingRaamTekenvlak({
@@ -135,6 +57,18 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
     this.controller,
     this.onOpvullingenGewijzigd,
     this.onKleinhoutenGewijzigd,
+    this.kaderSamenstelling,
+    this.onKaderSamenstellingGewijzigd,
+    this.onGeselecteerdeKaderIdsGewijzigd,
+    this.onOverzichtTekeningGewijzigd,
+    this.beginTekeningData,
+    this.technischeTekeningen =
+        const <OpmetingRaamTechnischeTekeningInstelling>[],
+    this.technischeTekeningenPerKader =
+        const <String, List<OpmetingRaamTechnischeTekeningInstelling>>{},
+    this.technischeTekeningenPerKaderGroep =
+        const <String, List<OpmetingRaamTechnischeTekeningInstelling>>{},
+    this.technischeKaderGroepen = const <String, Set<String>>{},
   });
 
   final int breedteMm;
@@ -156,6 +90,27 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
   final ValueChanged<List<OpmetingRaamKleinhoutLegendaItem>>?
   onKleinhoutenGewijzigd;
 
+  final OpmetingKaderSamenstelling? kaderSamenstelling;
+
+  final ValueChanged<OpmetingKaderSamenstelling>? onKaderSamenstellingGewijzigd;
+
+  final ValueChanged<Set<String>>? onGeselecteerdeKaderIdsGewijzigd;
+
+  final ValueChanged<OpmetingOverzichtTekeningData>?
+  onOverzichtTekeningGewijzigd;
+
+  final OpmetingOverzichtTekeningData? beginTekeningData;
+
+  final List<OpmetingRaamTechnischeTekeningInstelling> technischeTekeningen;
+
+  final Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
+  technischeTekeningenPerKader;
+
+  final Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
+  technischeTekeningenPerKaderGroep;
+
+  final Map<String, Set<String>> technischeKaderGroepen;
+
   @override
   State<OpmetingRaamTekenvlak> createState() {
     return _OpmetingRaamTekenvlakState();
@@ -163,8 +118,6 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
 }
 
 class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
-  static const int _maximumAantalGeschiedenisStappen = 50;
-
   OpmetingRaamLijn? _geselecteerdeLijn;
 
   String _positieType = 'mm';
@@ -203,84 +156,162 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   final TextEditingController _kleinhoutAantalVerticaalController =
       TextEditingController(text: '2');
 
-  final List<_OpmetingRaamTekeningMoment> _ongedaanGeschiedenis =
-      <_OpmetingRaamTekeningMoment>[];
+  final OpmetingRaamTekenvlakGeschiedenis _geschiedenis =
+      OpmetingRaamTekenvlakGeschiedenis(maximumAantalStappen: 50);
 
-  final List<_OpmetingRaamTekeningMoment> _herstelGeschiedenis =
-      <_OpmetingRaamTekeningMoment>[];
+  final Map<String, List<OpmetingRaamTStijl>> _tStijlenPerKader =
+      <String, List<OpmetingRaamTStijl>>{};
 
-  final GlobalKey _tStijlMenuKey = GlobalKey();
-  final GlobalKey _opvullingMenuKey = GlobalKey();
-  final GlobalKey _kleinhoutMenuKey = GlobalKey();
+  final Map<String, List<OpmetingRaamVleugel>> _vleugelsPerKader =
+      <String, List<OpmetingRaamVleugel>>{};
+
+  final Map<String, List<OpmetingRaamVullingToewijzing>>
+  _vullingToewijzingenPerKader =
+      <String, List<OpmetingRaamVullingToewijzing>>{};
+
+  final Map<String, Set<String>> _geselecteerdeVulvlakIdsPerKader =
+      <String, Set<String>>{};
+
+  final Map<String, List<OpmetingRaamKleinhout>> _kleinhoutenPerKader =
+      <String, List<OpmetingRaamKleinhout>>{};
+
+  final Map<String, Set<String>> _geselecteerdeKleinhoutVlakIdsPerKader =
+      <String, Set<String>>{};
+
+  String? _actiefTStijlKaderId;
+  String? _actiefVleugelKaderId;
+  String? _actiefOpvullingKaderId;
+  String? _actiefKleinhoutKaderId;
+
+  bool _kaderSelectieOnderdrukt = false;
+
+  final Set<String> _geselecteerdeKaderIds = <String>{};
+
+  String _laatsteOverzichtTekeningSignatuur = '';
+
+  final TextEditingController _kaderBreedteController = TextEditingController();
+  final TextEditingController _kaderHoogteController = TextEditingController();
+
+  final FocusNode _kaderBreedteFocusNode = FocusNode();
+  final FocusNode _kaderHoogteFocusNode = FocusNode();
+
+  Offset _kaderMenuPositie = const Offset(24, 120);
+  String? _laatsteKaderMenuKaderId;
+
+  final TextEditingController _toevoegKaderBreedteController =
+      TextEditingController(text: '300');
+  final TextEditingController _toevoegKaderHoogteController =
+      TextEditingController(text: '300');
+  final TextEditingController _toevoegKaderVrijeOffsetController =
+      TextEditingController(text: '0');
+
+  final FocusNode _toevoegKaderBreedteFocusNode = FocusNode();
+  final FocusNode _toevoegKaderHoogteFocusNode = FocusNode();
+  final FocusNode _toevoegKaderVrijeOffsetFocusNode = FocusNode();
+
+  Offset _kaderToevoegMenuPositie = const Offset(340, 120);
+  String? _toevoegKaderId;
+  String? _toevoegAnkerKaderId;
+  OpmetingKaderZijde? _toevoegKaderZijde;
+  OpmetingKaderUitlijning? _toevoegKaderUitlijning;
+
+  final OpmetingRaamZwevendeMenusController _zwevendeMenus =
+      OpmetingRaamZwevendeMenusController();
 
   bool _opvullingenLaden = true;
   String? _geselecteerdeOpvullingId;
 
-  Offset _vleugelMenuPositie = const Offset(12, 12);
-  Offset _tStijlMenuPositie = const Offset(12, 12);
-  Offset _opvullingMenuPositie = const Offset(12, 12);
-  Offset _kleinhoutMenuPositie = const Offset(12, 12);
+  final OpmetingRaamMenuZichtbaarheidController _menuZichtbaarheid =
+      OpmetingRaamMenuZichtbaarheidController();
 
-  bool _vleugelMenuZichtbaar = true;
-  bool _tStijlMenuZichtbaar = true;
-  bool _opvullingMenuZichtbaar = true;
-  bool _kleinhoutMenuZichtbaar = true;
+  final OpmetingRaamSchaalController _schaalController =
+      OpmetingRaamSchaalController();
 
-  int _laatsteGeldigeBreedteMm = 0;
-  int _laatsteGeldigeHoogteMm = 0;
-  int _kaderMaatWijzigingVersie = 0;
-
-  Size _laatsteTekenvlakGrootte = Size.zero;
-
-  bool _opvullingMeldingGepland = false;
-  bool _eersteOpvullingMeldingGepland = false;
-
-  bool _kleinhoutMeldingGepland = false;
-  bool _eersteKleinhoutMeldingGepland = false;
+  late final OpmetingRaamLegendaMeldingController _legendaMeldingen;
 
   bool get _kanOngedaanMaken {
-    return _ongedaanGeschiedenis.isNotEmpty;
+    return _geschiedenis.kanOngedaanMaken;
   }
 
   bool get _kanHerstellen {
-    return _herstelGeschiedenis.isNotEmpty;
+    return _geschiedenis.kanHerstellen;
   }
 
-  bool get _bestaandeTStijlGeselecteerd {
-    return (_geselecteerdeLijn?.id ?? '').startsWith('tstijl_');
+  bool get _isTekenToolActief {
+    return widget.actieveTool == 'tstijl' ||
+        widget.actieveTool == 'vleugel' ||
+        widget.actieveTool == 'opvulling' ||
+        widget.actieveTool == 'kleinhout';
+  }
+
+  String? get _actiefKaderIdVoorWeergave {
+    if (_bruikbareKaderSamenstelling == null) {
+      return null;
+    }
+
+    if (_kaderSelectieOnderdrukt ||
+        widget.actieveTool == 'opvulling' ||
+        widget.actieveTool == 'kleinhout') {
+      return '';
+    }
+
+    return widget.kaderSamenstelling?.actiefKaderId;
   }
 
   Set<String> get _gevuldeVlakIds {
     return _vullingToewijzingen.map((toewijzing) => toewijzing.vlakId).toSet();
   }
 
-  bool get _kleinhoutSelectieHeeftKleinhouten {
-    return _geselecteerdeKleinhoutVlakIds.any(
-      (vlakId) => _kleinhouten.any((kleinhout) => kleinhout.vlakId == vlakId),
+  void _laadBeginTekeningData() {
+    OpmetingRaamTekenvlakOverzichtDataHelper.laadBeginTekeningData(
+      data: widget.beginTekeningData,
+      tStijlen: _tStijlen,
+      tStijlenPerKader: _tStijlenPerKader,
+      vleugels: _vleugels,
+      vleugelsPerKader: _vleugelsPerKader,
+      vullingToewijzingen: _vullingToewijzingen,
+      vullingToewijzingenPerKader: _vullingToewijzingenPerKader,
+      kleinhouten: _kleinhouten,
+      kleinhoutenPerKader: _kleinhoutenPerKader,
     );
-  }
-
-  bool get _kleinhoutSelectieIsVolledigGevuld {
-    if (_geselecteerdeKleinhoutVlakIds.isEmpty) {
-      return false;
-    }
-
-    final gevuldeIds = _gevuldeVlakIds;
-
-    return _geselecteerdeKleinhoutVlakIds.every(gevuldeIds.contains);
   }
 
   @override
   void initState() {
     super.initState();
 
-    if (widget.breedteMm > 0 && widget.hoogteMm > 0) {
-      _laatsteGeldigeBreedteMm = widget.breedteMm;
-      _laatsteGeldigeHoogteMm = widget.hoogteMm;
-    }
+    _laadBeginTekeningData();
+
+    _legendaMeldingen = OpmetingRaamLegendaMeldingController(
+      isMounted: () => mounted,
+      actueleTekenvlakGrootte: _actueleTekenvlakGrootte,
+      bepaalVulvlakken: _bepaalVulvlakken,
+      vullingToewijzingen: () => _vullingToewijzingen,
+      kleinhouten: () => _kleinhouten,
+      opvullingCallback: () => widget.onOpvullingenGewijzigd,
+      kleinhoutCallback: () => widget.onKleinhoutenGewijzigd,
+    );
+
+    _schaalController.initialiseer(
+      breedteMm: widget.breedteMm,
+      hoogteMm: widget.hoogteMm,
+    );
+
+    _actiefTStijlKaderId = 'basis';
+    _actiefVleugelKaderId = 'basis';
+    _actiefOpvullingKaderId = 'basis';
+    _actiefKleinhoutKaderId = 'basis';
 
     _koppelController(widget.controller);
     _laadOpvullingen();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      _zwevendeMenus.toonOverlay();
+    });
   }
 
   @override
@@ -288,29 +319,52 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     super.didUpdateWidget(oldWidget);
 
     if (!identical(oldWidget.controller, widget.controller)) {
-      oldWidget.controller?._ontkoppel(eigenaar: this);
-
+      oldWidget.controller?.ontkoppel(eigenaar: this);
       _koppelController(widget.controller);
     }
 
     _verwerkToolWijziging(oldWidget);
     _verwerkMenuOpenSignalen(oldWidget);
-    _verwerkKaderMaatWijziging();
+    _verwerkKaderSamenstellingWijziging(oldWidget);
+
+    _schaalController.werkMatenBij(
+      breedteMm: _bruikbareKaderSamenstelling == null
+          ? widget.breedteMm
+          : _effectieveBreedteMm,
+      hoogteMm: _bruikbareKaderSamenstelling == null
+          ? widget.hoogteMm
+          : _effectieveHoogteMm,
+      onAanpassen: _voerVolledigeSchaalAanpassingUit,
+    );
   }
 
   @override
   void dispose() {
-    widget.controller?._ontkoppel(eigenaar: this);
+    _schaalController.dispose();
+
+    widget.controller?.ontkoppel(eigenaar: this);
 
     _kleinhoutHorizontaleHoogteController.dispose();
     _kleinhoutAantalHorizontaalController.dispose();
     _kleinhoutAantalVerticaalController.dispose();
 
+    _kaderBreedteController.dispose();
+    _kaderHoogteController.dispose();
+    _kaderBreedteFocusNode.dispose();
+    _kaderHoogteFocusNode.dispose();
+
+    _toevoegKaderBreedteController.dispose();
+    _toevoegKaderHoogteController.dispose();
+    _toevoegKaderVrijeOffsetController.dispose();
+    _toevoegKaderBreedteFocusNode.dispose();
+    _toevoegKaderHoogteFocusNode.dispose();
+    _toevoegKaderVrijeOffsetFocusNode.dispose();
+
     super.dispose();
   }
 
   void _koppelController(OpmetingRaamTekenvlakController? controller) {
-    controller?._koppel(
+    controller?.koppel(
       eigenaar: this,
       onOngedaanMaken: _ongedaanMaken,
       onHerstellen: _herstellen,
@@ -320,15 +374,76 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   void _werkGeschiedenisStatusBij() {
-    widget.controller?._werkStatusBij(
+    widget.controller?.werkStatusBij(
       eigenaar: this,
       kanOngedaanMaken: _kanOngedaanMaken,
       kanHerstellen: _kanHerstellen,
     );
   }
 
-  _OpmetingRaamTekeningMoment _maakGeschiedenisMoment() {
-    return _OpmetingRaamTekeningMoment(
+  void _wisTekeningSelecties() {
+    _geselecteerdeLijn = null;
+    _geselecteerdeVulvlakIds.clear();
+    _geselecteerdeKleinhoutVlakIds.clear();
+  }
+
+  void _vervangVulvlakSelectie(Iterable<String> vlakIds) {
+    _geselecteerdeVulvlakIds
+      ..clear()
+      ..addAll(vlakIds);
+  }
+
+  void _vervangKleinhoutVlakSelectie(Iterable<String> vlakIds) {
+    _geselecteerdeKleinhoutVlakIds
+      ..clear()
+      ..addAll(vlakIds);
+  }
+
+  void _vervangTStijlen(Iterable<OpmetingRaamTStijl> tStijlen) {
+    _tStijlen
+      ..clear()
+      ..addAll(tStijlen);
+  }
+
+  void _vervangVleugels(Iterable<OpmetingRaamVleugel> vleugels) {
+    _vleugels
+      ..clear()
+      ..addAll(vleugels);
+  }
+
+  void _vervangVullingToewijzingen(
+    Iterable<OpmetingRaamVullingToewijzing> toewijzingen,
+  ) {
+    _vullingToewijzingen
+      ..clear()
+      ..addAll(toewijzingen);
+  }
+
+  void _vervangKleinhouten(Iterable<OpmetingRaamKleinhout> kleinhouten) {
+    _kleinhouten
+      ..clear()
+      ..addAll(kleinhouten);
+  }
+
+  void _planAlleLegendaMeldingen() {
+    _legendaMeldingen.planOpvullingMelding();
+    _legendaMeldingen.planKleinhoutMelding();
+  }
+
+  void _vervangVolledigeTekening({
+    required Iterable<OpmetingRaamTStijl> tStijlen,
+    required Iterable<OpmetingRaamVleugel> vleugels,
+    required Iterable<OpmetingRaamVullingToewijzing> vullingToewijzingen,
+    required Iterable<OpmetingRaamKleinhout> kleinhouten,
+  }) {
+    _vervangTStijlen(tStijlen);
+    _vervangVleugels(vleugels);
+    _vervangVullingToewijzingen(vullingToewijzingen);
+    _vervangKleinhouten(kleinhouten);
+  }
+
+  OpmetingRaamTekeningMoment _maakGeschiedenisMoment() {
+    return OpmetingRaamTekeningMoment(
       tStijlen: List<OpmetingRaamTStijl>.unmodifiable(_tStijlen),
       vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
       vullingToewijzingen: List<OpmetingRaamVullingToewijzing>.unmodifiable(
@@ -339,130 +454,88 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   void _bewaarVoorWijziging() {
-    _ongedaanGeschiedenis.add(_maakGeschiedenisMoment());
-
-    if (_ongedaanGeschiedenis.length > _maximumAantalGeschiedenisStappen) {
-      _ongedaanGeschiedenis.removeAt(0);
-    }
-
-    _herstelGeschiedenis.clear();
-
+    _geschiedenis.bewaarVoorWijziging(_maakGeschiedenisMoment());
     _werkGeschiedenisStatusBij();
   }
 
   void _wisGeschiedenis() {
-    if (_ongedaanGeschiedenis.isEmpty && _herstelGeschiedenis.isEmpty) {
+    if (!_geschiedenis.heeftGeschiedenis) {
       return;
     }
 
-    _ongedaanGeschiedenis.clear();
-    _herstelGeschiedenis.clear();
+    _geschiedenis.wis();
+    _werkGeschiedenisStatusBij();
+  }
+
+  void _pasGeschiedenisMomentToe(OpmetingRaamTekeningMoment? moment) {
+    if (moment == null) {
+      return;
+    }
+
+    setState(() {
+      _herstelTekeningMoment(moment);
+    });
 
     _werkGeschiedenisStatusBij();
+    _planAlleLegendaMeldingen();
   }
 
   void _ongedaanMaken() {
-    if (_ongedaanGeschiedenis.isEmpty) {
-      return;
-    }
+    final vorigMoment = _geschiedenis.ongedaanMaken(
+      huidigMoment: _maakGeschiedenisMoment(),
+    );
 
-    final huidigMoment = _maakGeschiedenisMoment();
-    final vorigMoment = _ongedaanGeschiedenis.removeLast();
-
-    _herstelGeschiedenis.add(huidigMoment);
-
-    setState(() {
-      _herstelTekeningMoment(vorigMoment);
-    });
-
-    _werkGeschiedenisStatusBij();
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _pasGeschiedenisMomentToe(vorigMoment);
   }
 
   void _herstellen() {
-    if (_herstelGeschiedenis.isEmpty) {
-      return;
-    }
+    final volgendMoment = _geschiedenis.herstellen(
+      huidigMoment: _maakGeschiedenisMoment(),
+    );
 
-    final huidigMoment = _maakGeschiedenisMoment();
-    final volgendMoment = _herstelGeschiedenis.removeLast();
-
-    _ongedaanGeschiedenis.add(huidigMoment);
-
-    setState(() {
-      _herstelTekeningMoment(volgendMoment);
-    });
-
-    _werkGeschiedenisStatusBij();
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _pasGeschiedenisMomentToe(volgendMoment);
   }
 
-  void _herstelTekeningMoment(_OpmetingRaamTekeningMoment moment) {
-    _tStijlen
-      ..clear()
-      ..addAll(moment.tStijlen);
+  void _herstelTekeningMoment(OpmetingRaamTekeningMoment moment) {
+    _vervangVolledigeTekening(
+      tStijlen: moment.tStijlen,
+      vleugels: moment.vleugels,
+      vullingToewijzingen: moment.vullingToewijzingen,
+      kleinhouten: moment.kleinhouten,
+    );
 
-    _vleugels
-      ..clear()
-      ..addAll(moment.vleugels);
-
-    _vullingToewijzingen
-      ..clear()
-      ..addAll(moment.vullingToewijzingen);
-
-    _kleinhouten
-      ..clear()
-      ..addAll(moment.kleinhouten);
-
-    _geselecteerdeLijn = null;
-    _geselecteerdeVulvlakIds.clear();
-    _geselecteerdeKleinhoutVlakIds.clear();
-
+    _wisTekeningSelecties();
     _schoonVullingEnKleinhoutenOp();
   }
 
   Future<void> _laadOpvullingen() async {
-    if (mounted) {
-      setState(() {
-        _opvullingenLaden = true;
-      });
+    if (!mounted) {
+      return;
     }
 
-    try {
-      final geladenOpvullingen = await AppStorage.laadOpmetingRaamOpvullingen();
+    setState(() {
+      _opvullingenLaden = true;
+    });
 
-      if (!mounted) {
-        return;
-      }
+    final resultaat = await OpmetingRaamOpvullingLaadHelper.laad(
+      huidigeGeselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+    );
 
-      final huidigeKeuzeBestaat = geladenOpvullingen.any(
-        (opvulling) => opvulling.id == _geselecteerdeOpvullingId,
-      );
+    if (!mounted) {
+      return;
+    }
 
-      setState(() {
+    setState(() {
+      if (resultaat != null) {
         _opvullingen
           ..clear()
-          ..addAll(geladenOpvullingen);
+          ..addAll(resultaat.opvullingen);
 
-        if (!huidigeKeuzeBestaat) {
-          _geselecteerdeOpvullingId = geladenOpvullingen.isEmpty
-              ? null
-              : geladenOpvullingen.first.id;
-        }
-
-        _opvullingenLaden = false;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
+        _geselecteerdeOpvullingId = resultaat.geselecteerdeOpvullingId;
       }
 
-      setState(() {
-        _opvullingenLaden = false;
-      });
-    }
+      _opvullingenLaden = false;
+    });
   }
 
   void _verwerkToolWijziging(OpmetingRaamTekenvlak oldWidget) {
@@ -472,305 +545,1162 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     _geselecteerdeLijn = null;
 
+    if (_isTekenToolActief) {
+      _kaderSelectieOnderdrukt = true;
+    }
+
     if (widget.actieveTool != 'opvulling') {
       _geselecteerdeVulvlakIds.clear();
+      _geselecteerdeVulvlakIdsPerKader.clear();
     }
 
     if (widget.actieveTool != 'kleinhout') {
       _geselecteerdeKleinhoutVlakIds.clear();
+      _geselecteerdeKleinhoutVlakIdsPerKader.clear();
     }
 
-    if (widget.actieveTool == 'tstijl') {
-      _tStijlMenuZichtbaar = true;
-    }
+    final opvullingenLaden = _menuZichtbaarheid.verwerkToolWijziging(
+      oudeTool: oldWidget.actieveTool,
+      nieuweTool: widget.actieveTool,
+    );
 
-    if (widget.actieveTool == 'vleugel') {
-      _vleugelMenuZichtbaar = true;
-    }
-
-    if (widget.actieveTool == 'opvulling') {
-      _opvullingMenuZichtbaar = true;
+    if (opvullingenLaden) {
       _laadOpvullingen();
-    }
-
-    if (widget.actieveTool == 'kleinhout') {
-      _kleinhoutMenuZichtbaar = true;
     }
   }
 
   void _verwerkMenuOpenSignalen(OpmetingRaamTekenvlak oldWidget) {
-    final vleugelSignaalGewijzigd =
-        oldWidget.vleugelMenuOpenSignaal != widget.vleugelMenuOpenSignaal;
+    final opvullingenLaden = _menuZichtbaarheid.verwerkMenuOpenSignalen(
+      actieveTool: widget.actieveTool,
+      oudVleugelSignaal: oldWidget.vleugelMenuOpenSignaal,
+      nieuwVleugelSignaal: widget.vleugelMenuOpenSignaal,
+      oudTStijlSignaal: oldWidget.tStijlMenuOpenSignaal,
+      nieuwTStijlSignaal: widget.tStijlMenuOpenSignaal,
+      oudOpvullingSignaal: oldWidget.opvullingMenuOpenSignaal,
+      nieuwOpvullingSignaal: widget.opvullingMenuOpenSignaal,
+      oudKleinhoutSignaal: oldWidget.kleinhoutMenuOpenSignaal,
+      nieuwKleinhoutSignaal: widget.kleinhoutMenuOpenSignaal,
+    );
 
-    if (widget.actieveTool == 'vleugel' && vleugelSignaalGewijzigd) {
-      _vleugelMenuZichtbaar = true;
-    }
-
-    final tStijlSignaalGewijzigd =
-        oldWidget.tStijlMenuOpenSignaal != widget.tStijlMenuOpenSignaal;
-
-    if (widget.actieveTool == 'tstijl' && tStijlSignaalGewijzigd) {
-      _tStijlMenuZichtbaar = true;
-    }
-
-    final opvullingSignaalGewijzigd =
-        oldWidget.opvullingMenuOpenSignaal != widget.opvullingMenuOpenSignaal;
-
-    if (widget.actieveTool == 'opvulling' && opvullingSignaalGewijzigd) {
-      _opvullingMenuZichtbaar = true;
+    if (opvullingenLaden) {
       _laadOpvullingen();
     }
-
-    final kleinhoutSignaalGewijzigd =
-        oldWidget.kleinhoutMenuOpenSignaal != widget.kleinhoutMenuOpenSignaal;
-
-    if (widget.actieveTool == 'kleinhout' && kleinhoutSignaalGewijzigd) {
-      _kleinhoutMenuZichtbaar = true;
-    }
   }
 
-  void _verwerkKaderMaatWijziging() {
-    if (widget.breedteMm <= 0 || widget.hoogteMm <= 0) {
-      _kaderMaatWijzigingVersie++;
-      return;
-    }
+  void _verwerkKaderSamenstellingWijziging(OpmetingRaamTekenvlak oldWidget) {
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    if (_laatsteGeldigeBreedteMm <= 0 || _laatsteGeldigeHoogteMm <= 0) {
-      _laatsteGeldigeBreedteMm = widget.breedteMm;
-
-      _laatsteGeldigeHoogteMm = widget.hoogteMm;
-
-      return;
-    }
-
-    if (_laatsteGeldigeBreedteMm == widget.breedteMm &&
-        _laatsteGeldigeHoogteMm == widget.hoogteMm) {
-      return;
-    }
-
-    final oudeBreedteMm = _laatsteGeldigeBreedteMm;
-
-    final oudeHoogteMm = _laatsteGeldigeHoogteMm;
-
-    final nieuweBreedteMm = widget.breedteMm;
-    final nieuweHoogteMm = widget.hoogteMm;
-
-    final versie = ++_kaderMaatWijzigingVersie;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || versie != _kaderMaatWijzigingVersie) {
-        return;
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      if (_actiefTStijlKaderId != 'basis' ||
+          _actiefVleugelKaderId != 'basis' ||
+          _actiefOpvullingKaderId != 'basis' ||
+          _actiefKleinhoutKaderId != 'basis') {
+        _actiefTStijlKaderId = 'basis';
+        _actiefVleugelKaderId = 'basis';
+        _actiefOpvullingKaderId = 'basis';
+        _actiefKleinhoutKaderId = 'basis';
+        _wisTekeningSelecties();
       }
 
-      final aangepast = _pasTekeningAanNieuweKaderMaten(
-        oudeBreedteMm: oudeBreedteMm,
-        oudeHoogteMm: oudeHoogteMm,
-        nieuweBreedteMm: nieuweBreedteMm,
-        nieuweHoogteMm: nieuweHoogteMm,
-      );
+      return;
+    }
 
-      if (aangepast) {
-        _laatsteGeldigeBreedteMm = nieuweBreedteMm;
+    final geldigeKaderIds = samenstelling.kaders
+        .map((kader) => kader.id)
+        .where((id) => id.trim().isNotEmpty)
+        .toSet();
 
-        _laatsteGeldigeHoogteMm = nieuweHoogteMm;
-      }
-    });
+    if (geldigeKaderIds.isEmpty) {
+      return;
+    }
+
+    _normaliseerTStijlBasisKader();
+    _normaliseerVleugelBasisKader();
+
+    final huidigeTStijlKaderId = _huidigTStijlKaderId;
+    final huidigeVleugelKaderId = _huidigVleugelKaderId;
+
+    if (geldigeKaderIds.contains(huidigeTStijlKaderId)) {
+      _tStijlenPerKader[huidigeTStijlKaderId] =
+          List<OpmetingRaamTStijl>.unmodifiable(_tStijlen);
+    }
+
+    if (geldigeKaderIds.contains(huidigeVleugelKaderId)) {
+      _vleugelsPerKader[huidigeVleugelKaderId] =
+          List<OpmetingRaamVleugel>.unmodifiable(_vleugels);
+    }
+
+    if (geldigeKaderIds.contains(_huidigOpvullingKaderId)) {
+      _bewaarOpvullingVoorActiefKader();
+    }
+
+    if (geldigeKaderIds.contains(_huidigKleinhoutKaderId)) {
+      _bewaarKleinhoutenVoorActiefKader();
+    }
+
+    _schaalKaderDataBijMaatwijzigingen(
+      oudeSamenstelling: _bruikbareSamenstellingVan(
+        oldWidget.kaderSamenstelling,
+      ),
+      nieuweSamenstelling: samenstelling,
+    );
+
+    _verwijderDataVanNietBestaandeKaders(geldigeKaderIds);
+
+    final nieuwActiefKaderId =
+        geldigeKaderIds.contains(samenstelling.actiefKaderId)
+        ? samenstelling.actiefKaderId
+        : samenstelling.kaders.first.id;
+
+    _geselecteerdeKaderIds.removeWhere((id) => !geldigeKaderIds.contains(id));
+
+    if (_geselecteerdeKaderIds.isEmpty) {
+      _geselecteerdeKaderIds.add(nieuwActiefKaderId);
+    }
+
+    _actiefTStijlKaderId = nieuwActiefKaderId;
+    _actiefVleugelKaderId = nieuwActiefKaderId;
+
+    if (!geldigeKaderIds.contains(_huidigOpvullingKaderId)) {
+      _actiefOpvullingKaderId = nieuwActiefKaderId;
+      _laadOpvullingVoorKader(nieuwActiefKaderId);
+    }
+
+    if (!geldigeKaderIds.contains(_huidigKleinhoutKaderId)) {
+      _actiefKleinhoutKaderId = nieuwActiefKaderId;
+      _laadKleinhoutenVoorKader(nieuwActiefKaderId);
+    }
+
+    _laadTStijlenVoorKader(nieuwActiefKaderId);
+    _laadVleugelsVoorKader(nieuwActiefKaderId);
   }
 
-  Size? _actueleTekenvlakGrootte() {
-    if (_laatsteTekenvlakGrootte.width <= 0 ||
-        _laatsteTekenvlakGrootte.height <= 0 ||
-        !_laatsteTekenvlakGrootte.width.isFinite ||
-        !_laatsteTekenvlakGrootte.height.isFinite) {
+  OpmetingKaderSamenstelling? _bruikbareSamenstellingVan(
+    OpmetingKaderSamenstelling? samenstelling,
+  ) {
+    if (samenstelling == null) {
       return null;
     }
 
-    return _laatsteTekenvlakGrootte;
-  }
-
-  void _planOpvullingMelding() {
-    if (_opvullingMeldingGepland) {
-      return;
+    if (samenstelling.kaders.isEmpty) {
+      return null;
     }
 
-    _opvullingMeldingGepland = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _opvullingMeldingGepland = false;
-
-      if (!mounted) {
-        return;
-      }
-
-      final callback = widget.onOpvullingenGewijzigd;
-
-      final size = _actueleTekenvlakGrootte();
-
-      if (callback == null || size == null) {
-        return;
-      }
-
-      final vulvlakken = _bepaalVulvlakken(size);
-
-      final legenda = OpmetingRaamVullingHelper.bepaalLegenda(
-        vulvlakken: vulvlakken,
-        toewijzingen: _vullingToewijzingen,
-      );
-
-      callback(List<OpmetingRaamVullingLegendaItem>.unmodifiable(legenda));
-    });
+    return samenstelling;
   }
 
-  void _planKleinhoutMelding() {
-    if (_kleinhoutMeldingGepland) {
-      return;
-    }
-
-    _kleinhoutMeldingGepland = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _kleinhoutMeldingGepland = false;
-
-      if (!mounted) {
-        return;
-      }
-
-      final callback = widget.onKleinhoutenGewijzigd;
-
-      final size = _actueleTekenvlakGrootte();
-
-      if (callback == null || size == null) {
-        return;
-      }
-
-      final vulvlakken = _bepaalVulvlakken(size);
-
-      final legenda = OpmetingRaamKleinhoutHelper.bepaalLegenda(
-        vulvlakken: vulvlakken,
-        kleinhouten: _kleinhouten,
-      );
-
-      callback(List<OpmetingRaamKleinhoutLegendaItem>.unmodifiable(legenda));
-    });
-  }
-
-  bool _pasTekeningAanNieuweKaderMaten({
-    required int oudeBreedteMm,
-    required int oudeHoogteMm,
-    required int nieuweBreedteMm,
-    required int nieuweHoogteMm,
+  void _schaalKaderDataBijMaatwijzigingen({
+    required OpmetingKaderSamenstelling? oudeSamenstelling,
+    required OpmetingKaderSamenstelling nieuweSamenstelling,
   }) {
-    final size = _actueleTekenvlakGrootte();
+    OpmetingRaamTekenvlakSchaalDataHelper.schaalKaderDataBijMaatwijzigingen(
+      oudeSamenstelling: oudeSamenstelling,
+      nieuweSamenstelling: nieuweSamenstelling,
+      size: _actueleTekenvlakGrootte(),
+      tStijlenPerKader: _tStijlenPerKader,
+      vleugelsPerKader: _vleugelsPerKader,
+    );
+  }
 
-    if (size == null) {
-      return false;
+  void _verwijderDataVanNietBestaandeKaders(Set<String> geldigeKaderIds) {
+    bool isOngeldig(String kaderId) {
+      return kaderId != 'basis' && !geldigeKaderIds.contains(kaderId);
     }
 
-    final oudeVulvlakken = _bepaalVulvlakken(size);
+    _tStijlenPerKader.removeWhere((kaderId, _) => isOngeldig(kaderId));
+    _vleugelsPerKader.removeWhere((kaderId, _) => isOngeldig(kaderId));
+    _vullingToewijzingenPerKader.removeWhere(
+      (kaderId, _) => isOngeldig(kaderId),
+    );
+    _geselecteerdeVulvlakIdsPerKader.removeWhere(
+      (kaderId, _) => isOngeldig(kaderId),
+    );
+    _kleinhoutenPerKader.removeWhere((kaderId, _) => isOngeldig(kaderId));
+    _geselecteerdeKleinhoutVlakIdsPerKader.removeWhere(
+      (kaderId, _) => isOngeldig(kaderId),
+    );
+  }
 
-    final resultaat =
-        OpmetingRaamTekenvlakMaatWijziging.pasTekeningAanNieuweKaderMaten(
-          tekenvlakGrootte: size,
-          oudeBreedteMm: oudeBreedteMm,
-          oudeHoogteMm: oudeHoogteMm,
-          nieuweBreedteMm: nieuweBreedteMm,
-          nieuweHoogteMm: nieuweHoogteMm,
-          bestaandeTStijlen: _tStijlen,
-          bestaandeVleugels: _vleugels,
-        );
-
-    if (resultaat == null) {
-      return false;
-    }
-
-    final nieuweVulvlakken = _bepaalVulvlakkenVoor(
+  void _registreerTekenvlakGrootte(Size size) {
+    _schaalController.registreerTekenvlakGrootte(
       size: size,
-      tStijlen: resultaat.tStijlen,
-      vleugels: resultaat.vleugels,
-      breedteMm: nieuweBreedteMm,
-      hoogteMm: nieuweHoogteMm,
+      breedteMm: _bruikbareKaderSamenstelling == null
+          ? widget.breedteMm
+          : _effectieveBreedteMm,
+      hoogteMm: _bruikbareKaderSamenstelling == null
+          ? widget.hoogteMm
+          : _effectieveHoogteMm,
+      onAanpassen: _voerVolledigeSchaalAanpassingUit,
+    );
+  }
+
+  void _voerVolledigeSchaalAanpassingUit() {
+    if (!mounted) {
+      return;
+    }
+
+    final wijziging = _schaalController.huidigeWijziging;
+
+    if (wijziging == null) {
+      return;
+    }
+
+    if (_bruikbareKaderSamenstelling != null) {
+      _schaalController.bevestigWijziging(wijziging);
+      return;
+    }
+
+    final resultaat = OpmetingRaamSchaalAanpassingHelper.bereken(
+      wijziging: wijziging,
+      bestaandeTStijlen: _tStijlen,
+      bestaandeVleugels: _vleugels,
+      bestaandeVullingToewijzingen: _vullingToewijzingen,
+      bestaandeKleinhouten: _kleinhouten,
     );
 
-    final nieuweKleinhouten =
-        OpmetingRaamKleinhoutHelper.herkoppelKleinhoutenNaVlakWijziging(
-          oudeVulvlakken: oudeVulvlakken,
-          nieuweVulvlakken: nieuweVulvlakken,
-          bestaandeKleinhouten: _kleinhouten,
-          nieuweGevuldeVlakIds: _gevuldeVlakIds,
-        );
+    if (resultaat == null) {
+      return;
+    }
 
     setState(() {
-      _tStijlen
-        ..clear()
-        ..addAll(resultaat.tStijlen);
+      _vervangVolledigeTekening(
+        tStijlen: resultaat.tStijlen,
+        vleugels: resultaat.vleugels,
+        vullingToewijzingen: resultaat.vullingToewijzingen,
+        kleinhouten: resultaat.kleinhouten,
+      );
 
-      _vleugels
-        ..clear()
-        ..addAll(resultaat.vleugels);
-
-      _kleinhouten
-        ..clear()
-        ..addAll(nieuweKleinhouten);
-
-      _geselecteerdeLijn = null;
-      _geselecteerdeVulvlakIds.clear();
-      _geselecteerdeKleinhoutVlakIds.clear();
-
-      _schoonVullingEnKleinhoutenOp();
+      _wisTekeningSelecties();
     });
 
+    _schaalController.bevestigWijziging(wijziging);
+
     _wisGeschiedenis();
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _planAlleLegendaMeldingen();
+  }
+
+  Size? _actueleTekenvlakGrootte() {
+    return _schaalController.actueleTekenvlakGrootte;
+  }
+
+  OpmetingKaderSamenstelling? get _bruikbareKaderSamenstelling {
+    final samenstelling = widget.kaderSamenstelling;
+
+    if (samenstelling == null) {
+      return null;
+    }
+
+    if (samenstelling.kaders.isEmpty) {
+      return null;
+    }
+
+    return samenstelling;
+  }
+
+  OpmetingKaderSamenstellingLayoutResultaat? get _kaderSamenstellingLayout {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return null;
+    }
+
+    return OpmetingKaderSamenstellingLayoutHelper.bereken(
+      kaders: samenstelling.kaders,
+    );
+  }
+
+  int get _effectieveBreedteMm {
+    return _kaderSamenstellingLayout?.breedteMm ?? widget.breedteMm;
+  }
+
+  int get _effectieveHoogteMm {
+    return _kaderSamenstellingLayout?.hoogteMm ?? widget.hoogteMm;
+  }
+
+  Rect _totaleKaderSamenstellingRect(Size size) {
+    return OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: _effectieveBreedteMm,
+      hoogteMm: _effectieveHoogteMm,
+    );
+  }
+
+  Rect _werkRectVoorKader({
+    required Size size,
+    required OpmetingKaderDeel kader,
+  }) {
+    return OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: kader.breedteMm,
+      hoogteMm: kader.hoogteMm,
+    );
+  }
+
+  OpmetingKaderDeel? _zoekKaderVoorId(String kaderId) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return null;
+    }
+
+    for (final kader in samenstelling.kaders) {
+      if (kader.id == kaderId) {
+        return kader;
+      }
+    }
+
+    return null;
+  }
+
+  OpmetingKaderDeel? get _actiefTStijlKader {
+    return _zoekKaderVoorId(_huidigTStijlKaderId);
+  }
+
+  int get _actiefTStijlBreedteMm {
+    return _actiefTStijlKader?.breedteMm ?? widget.breedteMm;
+  }
+
+  int get _actiefTStijlHoogteMm {
+    return _actiefTStijlKader?.hoogteMm ?? widget.hoogteMm;
+  }
+
+  OpmetingKaderDeel? get _actiefVleugelKader {
+    return _zoekKaderVoorId(_huidigVleugelKaderId);
+  }
+
+  int get _actiefVleugelBreedteMm {
+    return _actiefVleugelKader?.breedteMm ?? widget.breedteMm;
+  }
+
+  int get _actiefVleugelHoogteMm {
+    return _actiefVleugelKader?.hoogteMm ?? widget.hoogteMm;
+  }
+
+  int get _actiefWerkBreedteMm {
+    if (widget.actieveTool == 'vleugel') {
+      return _actiefVleugelBreedteMm;
+    }
+
+    if (widget.actieveTool == 'tstijl') {
+      return _actiefTStijlBreedteMm;
+    }
+
+    return widget.breedteMm;
+  }
+
+  int get _actiefWerkHoogteMm {
+    if (widget.actieveTool == 'vleugel') {
+      return _actiefVleugelHoogteMm;
+    }
+
+    if (widget.actieveTool == 'tstijl') {
+      return _actiefTStijlHoogteMm;
+    }
+
+    return widget.hoogteMm;
+  }
+
+  Map<String, List<OpmetingRaamTStijl>> _tStijlenPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.lijstMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _tStijlenPerKader,
+      actieveKaderId: _huidigTStijlKaderId,
+      actieveLijst: _tStijlen,
+    );
+  }
+
+  Map<String, List<OpmetingRaamVleugel>> _vleugelsPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.lijstMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _vleugelsPerKader,
+      actieveKaderId: _huidigVleugelKaderId,
+      actieveLijst: _vleugels,
+    );
+  }
+
+  Map<String, List<OpmetingRaamVullingToewijzing>>
+  _vullingToewijzingenPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.lijstMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _vullingToewijzingenPerKader,
+    );
+  }
+
+  Map<String, Set<String>> _geselecteerdeVulvlakIdsPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.setMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _geselecteerdeVulvlakIdsPerKader,
+    );
+  }
+
+  Map<String, List<OpmetingRaamKleinhout>> _kleinhoutenPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.lijstMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _kleinhoutenPerKader,
+    );
+  }
+
+  Map<String, Set<String>>
+  _geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave() {
+    return OpmetingRaamTekenvlakOverzichtDataHelper.setMapVoorWeergave(
+      heeftSamenstelling: _bruikbareKaderSamenstelling != null,
+      bewaardePerKader: _geselecteerdeKleinhoutVlakIdsPerKader,
+    );
+  }
+
+  String get _huidigOpvullingKaderId {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (_actiefOpvullingKaderId != null && _actiefOpvullingKaderId != 'basis') {
+      return _actiefOpvullingKaderId!;
+    }
+
+    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
+      return samenstelling.kaders.first.id;
+    }
+
+    return 'basis';
+  }
+
+  String get _huidigKleinhoutKaderId {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (_actiefKleinhoutKaderId != null && _actiefKleinhoutKaderId != 'basis') {
+      return _actiefKleinhoutKaderId!;
+    }
+
+    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
+      return samenstelling.kaders.first.id;
+    }
+
+    return 'basis';
+  }
+
+  String get _huidigTStijlKaderId {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (_actiefTStijlKaderId != null && _actiefTStijlKaderId != 'basis') {
+      return _actiefTStijlKaderId!;
+    }
+
+    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
+      return samenstelling.kaders.first.id;
+    }
+
+    return 'basis';
+  }
+
+  String get _huidigVleugelKaderId {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (_actiefVleugelKaderId != null && _actiefVleugelKaderId != 'basis') {
+      return _actiefVleugelKaderId!;
+    }
+
+    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
+      return samenstelling.kaders.first.id;
+    }
+
+    return 'basis';
+  }
+
+  void _normaliseerTStijlBasisKader() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      return;
+    }
+
+    final eersteKaderId = samenstelling.kaders.first.id;
+    final oudeBasisTStijlen = _tStijlenPerKader.remove('basis');
+
+    if (oudeBasisTStijlen != null &&
+        !_tStijlenPerKader.containsKey(eersteKaderId)) {
+      _tStijlenPerKader[eersteKaderId] = List<OpmetingRaamTStijl>.unmodifiable(
+        oudeBasisTStijlen,
+      );
+    }
+
+    if (_actiefTStijlKaderId == null || _actiefTStijlKaderId == 'basis') {
+      _actiefTStijlKaderId = eersteKaderId;
+    }
+  }
+
+  void _normaliseerVleugelBasisKader() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      return;
+    }
+
+    final eersteKaderId = samenstelling.kaders.first.id;
+    final oudeBasisVleugels = _vleugelsPerKader.remove('basis');
+
+    if (oudeBasisVleugels != null &&
+        !_vleugelsPerKader.containsKey(eersteKaderId)) {
+      _vleugelsPerKader[eersteKaderId] = List<OpmetingRaamVleugel>.unmodifiable(
+        oudeBasisVleugels,
+      );
+    }
+
+    if (_actiefVleugelKaderId == null || _actiefVleugelKaderId == 'basis') {
+      _actiefVleugelKaderId = eersteKaderId;
+    }
+  }
+
+  void _bewaarTStijlenVoorActiefKader() {
+    _normaliseerTStijlBasisKader();
+
+    final kaderId = _huidigTStijlKaderId;
+
+    _tStijlenPerKader[kaderId] = List<OpmetingRaamTStijl>.unmodifiable(
+      _tStijlen,
+    );
+  }
+
+  void _bewaarVleugelsVoorActiefKader() {
+    _normaliseerVleugelBasisKader();
+
+    final kaderId = _huidigVleugelKaderId;
+
+    _vleugelsPerKader[kaderId] = List<OpmetingRaamVleugel>.unmodifiable(
+      _vleugels,
+    );
+  }
+
+  void _laadTStijlenVoorKader(String kaderId) {
+    final tStijlen = _tStijlenPerKader[kaderId];
+
+    _vervangTStijlen(<OpmetingRaamTStijl>[
+      ...(tStijlen ?? const <OpmetingRaamTStijl>[]),
+    ]);
+    _wisTekeningSelecties();
+  }
+
+  void _laadVleugelsVoorKader(String kaderId) {
+    final vleugels = _vleugelsPerKader[kaderId];
+
+    _vervangVleugels(<OpmetingRaamVleugel>[
+      ...(vleugels ?? const <OpmetingRaamVleugel>[]),
+    ]);
+    _wisTekeningSelecties();
+  }
+
+  void _bewaarOpvullingVoorActiefKader() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return;
+    }
+
+    final kaderId = _actiefOpvullingKaderId;
+
+    if (kaderId == null || kaderId == 'basis') {
+      return;
+    }
+
+    final kaderBestaat = samenstelling.kaders.any((kader) {
+      return kader.id == kaderId;
+    });
+
+    if (!kaderBestaat) {
+      return;
+    }
+
+    if (!_vullingToewijzingenPerKader.containsKey(kaderId) &&
+        _vullingToewijzingen.isNotEmpty) {
+      _vullingToewijzingenPerKader[kaderId] =
+          List<OpmetingRaamVullingToewijzing>.unmodifiable(
+            _vullingToewijzingen,
+          );
+    }
+
+    if (_geselecteerdeVulvlakIds.isNotEmpty) {
+      _geselecteerdeVulvlakIdsPerKader[kaderId] = Set<String>.unmodifiable(
+        _geselecteerdeVulvlakIds,
+      );
+    }
+  }
+
+  void _bewaarKleinhoutenVoorActiefKader() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return;
+    }
+
+    final kaderId = _actiefKleinhoutKaderId;
+
+    if (kaderId == null || kaderId == 'basis') {
+      return;
+    }
+
+    final kaderBestaat = samenstelling.kaders.any((kader) {
+      return kader.id == kaderId;
+    });
+
+    if (!kaderBestaat) {
+      return;
+    }
+
+    if (!_kleinhoutenPerKader.containsKey(kaderId) && _kleinhouten.isNotEmpty) {
+      _kleinhoutenPerKader[kaderId] = List<OpmetingRaamKleinhout>.unmodifiable(
+        _kleinhouten,
+      );
+    }
+
+    if (_geselecteerdeKleinhoutVlakIds.isNotEmpty) {
+      _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] =
+          Set<String>.unmodifiable(_geselecteerdeKleinhoutVlakIds);
+    }
+  }
+
+  void _laadOpvullingVoorKader(String kaderId) {
+    _vervangVullingToewijzingen(
+      _vullingToewijzingenPerKader[kaderId] ??
+          const <OpmetingRaamVullingToewijzing>[],
+    );
+
+    _vervangVulvlakSelectie(
+      _geselecteerdeVulvlakIdsPerKader[kaderId] ?? const <String>{},
+    );
+  }
+
+  void _laadKleinhoutenVoorKader(String kaderId) {
+    _vervangKleinhouten(
+      _kleinhoutenPerKader[kaderId] ?? const <OpmetingRaamKleinhout>[],
+    );
+
+    _vervangKleinhoutVlakSelectie(
+      _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] ?? const <String>{},
+    );
+  }
+
+  List<OpmetingRaamVullingToewijzing> _vullingToewijzingenVoorKader(
+    String kaderId,
+  ) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return List<OpmetingRaamVullingToewijzing>.unmodifiable(
+        _vullingToewijzingen,
+      );
+    }
+
+    return List<OpmetingRaamVullingToewijzing>.unmodifiable(
+      _vullingToewijzingenPerKader[kaderId] ??
+          const <OpmetingRaamVullingToewijzing>[],
+    );
+  }
+
+  List<OpmetingRaamKleinhout> _kleinhoutenVoorKader(String kaderId) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return List<OpmetingRaamKleinhout>.unmodifiable(_kleinhouten);
+    }
+
+    return List<OpmetingRaamKleinhout>.unmodifiable(
+      _kleinhoutenPerKader[kaderId] ?? const <OpmetingRaamKleinhout>[],
+    );
+  }
+
+  Set<String> _gevuldeVlakIdsVoorKader(String kaderId) {
+    return Set<String>.unmodifiable(
+      _vullingToewijzingenVoorKader(
+        kaderId,
+      ).map((toewijzing) => toewijzing.vlakId),
+    );
+  }
+
+  void _activeerKaderVoorTStijl({
+    required String kaderId,
+    required OpmetingKaderSamenstelling samenstelling,
+  }) {
+    _normaliseerTStijlBasisKader();
+
+    final huidigeKaderId = _huidigTStijlKaderId;
+
+    if (huidigeKaderId != kaderId) {
+      setState(() {
+        _tStijlenPerKader[huidigeKaderId] =
+            List<OpmetingRaamTStijl>.unmodifiable(_tStijlen);
+
+        _actiefTStijlKaderId = kaderId;
+        _kaderSelectieOnderdrukt = false;
+        _laadTStijlenVoorKader(kaderId);
+      });
+    }
+
+    if (samenstelling.actiefKaderId != kaderId) {
+      widget.onKaderSamenstellingGewijzigd?.call(
+        samenstelling.copyWith(actiefKaderId: kaderId),
+      );
+    }
+  }
+
+  void _activeerKaderVoorVleugel({
+    required String kaderId,
+    required OpmetingKaderSamenstelling samenstelling,
+  }) {
+    _normaliseerTStijlBasisKader();
+    _normaliseerVleugelBasisKader();
+
+    final huidigeTStijlKaderId = _huidigTStijlKaderId;
+    final huidigeVleugelKaderId = _huidigVleugelKaderId;
+
+    if (huidigeTStijlKaderId != kaderId || huidigeVleugelKaderId != kaderId) {
+      setState(() {
+        _tStijlenPerKader[huidigeTStijlKaderId] =
+            List<OpmetingRaamTStijl>.unmodifiable(_tStijlen);
+
+        _vleugelsPerKader[huidigeVleugelKaderId] =
+            List<OpmetingRaamVleugel>.unmodifiable(_vleugels);
+
+        _actiefTStijlKaderId = kaderId;
+        _actiefVleugelKaderId = kaderId;
+        _kaderSelectieOnderdrukt = false;
+
+        _laadTStijlenVoorKader(kaderId);
+        _laadVleugelsVoorKader(kaderId);
+      });
+    }
+
+    if (samenstelling.actiefKaderId != kaderId) {
+      widget.onKaderSamenstellingGewijzigd?.call(
+        samenstelling.copyWith(actiefKaderId: kaderId),
+      );
+    }
+  }
+
+  OpmetingKaderDeel? _kaderVoorPuntInSamenstelling({
+    required Offset basisPunt,
+    required Size size,
+  }) {
+    final samenstelling = widget.kaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      return null;
+    }
+
+    if (samenstelling.kaders.length == 1) {
+      final kader = samenstelling.kaders.first;
+      final rect = OpmetingRaamKaderHelper.buitenKader(
+        size: size,
+        breedteMm: kader.breedteMm,
+        hoogteMm: kader.hoogteMm,
+      );
+
+      return rect.contains(basisPunt) ? kader : null;
+    }
+
+    final tekenGebied = _totaleKaderSamenstellingRect(size);
+
+    final weergave = OpmetingKaderSamenstellingTekenHelper.berekenWeergave(
+      tekenGebied: tekenGebied,
+      samenstelling: samenstelling,
+    );
+
+    for (final kader in weergave.layout.kaders.reversed) {
+      final rect = weergave.rectVoorKaderId(kader.id);
+
+      if (rect == null) {
+        continue;
+      }
+
+      if (rect.contains(basisPunt)) {
+        return kader;
+      }
+    }
+
+    return null;
+  }
+
+  bool get _ctrlOfCommandIngedrukt {
+    final ingedrukteToetsen = HardwareKeyboard.instance.logicalKeysPressed;
+
+    return ingedrukteToetsen.contains(LogicalKeyboardKey.controlLeft) ||
+        ingedrukteToetsen.contains(LogicalKeyboardKey.controlRight) ||
+        ingedrukteToetsen.contains(LogicalKeyboardKey.metaLeft) ||
+        ingedrukteToetsen.contains(LogicalKeyboardKey.metaRight);
+  }
+
+  void _meldGeselecteerdeKadersAanPagina() {
+    widget.onGeselecteerdeKaderIdsGewijzigd?.call(
+      Set<String>.unmodifiable(_geselecteerdeKaderIds),
+    );
+  }
+
+  bool _selecteerKaderViaTekening({
+    required Offset basisPunt,
+    required Size size,
+  }) {
+    final samenstelling = widget.kaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      return false;
+    }
+
+    final aangekliktKader = _kaderVoorPuntInSamenstelling(
+      basisPunt: basisPunt,
+      size: size,
+    );
+
+    if (aangekliktKader == null) {
+      return false;
+    }
+
+    if (_bruikbareKaderSamenstelling == null) {
+      final kaderId = aangekliktKader.id;
+
+      setState(() {
+        _geselecteerdeKaderIds
+          ..clear()
+          ..add(kaderId);
+        _kaderSelectieOnderdrukt = false;
+      });
+
+      _meldGeselecteerdeKadersAanPagina();
+
+      if (samenstelling.actiefKaderId != kaderId) {
+        widget.onKaderSamenstellingGewijzigd?.call(
+          samenstelling.copyWith(actiefKaderId: kaderId),
+        );
+      }
+
+      _synchroniseerKaderMenuVelden(
+        kader: aangekliktKader,
+        forceer: widget.actieveTool == 'kader',
+      );
+
+      return true;
+    }
+
+    _normaliseerTStijlBasisKader();
+    _normaliseerVleugelBasisKader();
+
+    final huidigeTStijlKaderId = _huidigTStijlKaderId;
+    final huidigeVleugelKaderId = _huidigVleugelKaderId;
+    final kaderId = aangekliktKader.id;
+
+    final nieuweSelectie = <String>{..._geselecteerdeKaderIds};
+
+    final meerdereKadersSelecteren =
+        _ctrlOfCommandIngedrukt || widget.actieveTool == 'kadergroep';
+
+    if (meerdereKadersSelecteren) {
+      if (nieuweSelectie.contains(kaderId)) {
+        nieuweSelectie.remove(kaderId);
+      } else {
+        nieuweSelectie.add(kaderId);
+      }
+
+      if (nieuweSelectie.isEmpty) {
+        nieuweSelectie.add(kaderId);
+      }
+    } else {
+      nieuweSelectie
+        ..clear()
+        ..add(kaderId);
+    }
+
+    setState(() {
+      if (huidigeTStijlKaderId != kaderId) {
+        _tStijlenPerKader[huidigeTStijlKaderId] =
+            List<OpmetingRaamTStijl>.unmodifiable(_tStijlen);
+      }
+
+      if (huidigeVleugelKaderId != kaderId) {
+        _vleugelsPerKader[huidigeVleugelKaderId] =
+            List<OpmetingRaamVleugel>.unmodifiable(_vleugels);
+      }
+
+      _actiefTStijlKaderId = kaderId;
+      _actiefVleugelKaderId = kaderId;
+      _actiefOpvullingKaderId = kaderId;
+      _actiefKleinhoutKaderId = kaderId;
+      _kaderSelectieOnderdrukt = false;
+
+      _geselecteerdeKaderIds
+        ..clear()
+        ..addAll(nieuweSelectie);
+
+      _laadTStijlenVoorKader(kaderId);
+      _laadVleugelsVoorKader(kaderId);
+      _laadOpvullingVoorKader(kaderId);
+      _laadKleinhoutenVoorKader(kaderId);
+
+      _geselecteerdeLijn = null;
+    });
+
+    _meldGeselecteerdeKadersAanPagina();
+
+    if (samenstelling.actiefKaderId != kaderId) {
+      widget.onKaderSamenstellingGewijzigd?.call(
+        samenstelling.copyWith(actiefKaderId: kaderId),
+      );
+    }
+
+    _synchroniseerKaderMenuVelden(
+      kader: aangekliktKader,
+      forceer: widget.actieveTool == 'kader',
+    );
 
     return true;
   }
 
+  Offset? _puntVoorKader({
+    required Offset basisPunt,
+    required Size size,
+    required String kaderId,
+  }) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return basisPunt;
+    }
+
+    final kader = _zoekKaderVoorId(kaderId);
+
+    if (kader == null) {
+      return null;
+    }
+
+    final tekenGebied = _totaleKaderSamenstellingRect(size);
+
+    final kaderRect = OpmetingKaderSamenstellingTekenHelper.rectVoorKaderId(
+      tekenGebied: tekenGebied,
+      samenstelling: samenstelling,
+      kaderId: kaderId,
+    );
+
+    if (kaderRect == null) {
+      return null;
+    }
+
+    if (!kaderRect.contains(basisPunt)) {
+      return null;
+    }
+
+    final enkelKaderRect = _werkRectVoorKader(size: size, kader: kader);
+
+    final lokaleX =
+        enkelKaderRect.left +
+        ((basisPunt.dx - kaderRect.left) / kaderRect.width) *
+            enkelKaderRect.width;
+
+    final lokaleY =
+        enkelKaderRect.top +
+        ((basisPunt.dy - kaderRect.top) / kaderRect.height) *
+            enkelKaderRect.height;
+
+    return Offset(lokaleX, lokaleY);
+  }
+
   List<OpmetingRaamVulvlak> _bepaalVulvlakken(Size size) {
-    return _bepaalVulvlakkenVoor(
-      size: size,
+    return OpmetingRaamVulvlakBerekeningHelper.bereken(
+      tekenvlakGrootte: size,
+      breedteMm: _actiefWerkBreedteMm,
+      hoogteMm: _actiefWerkHoogteMm,
       tStijlen: _tStijlen,
       vleugels: _vleugels,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
     );
   }
 
-  List<OpmetingRaamVulvlak> _bepaalVulvlakkenVoor({
+  List<OpmetingRaamVulvlak> _bepaalVulvlakkenVoorKader({
     required Size size,
-    required List<OpmetingRaamTStijl> tStijlen,
-    required List<OpmetingRaamVleugel> vleugels,
-    int? breedteMm,
-    int? hoogteMm,
+    required String kaderId,
   }) {
-    return OpmetingRaamTekenvlakActies.bepaalVulvlakken(
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return _bepaalVulvlakken(size);
+    }
+
+    final kader = _zoekKaderVoorId(kaderId);
+
+    if (kader == null) {
+      return const <OpmetingRaamVulvlak>[];
+    }
+
+    final kaderTStijlen = kaderId == _huidigTStijlKaderId
+        ? _tStijlen
+        : _tStijlenPerKader[kaderId] ?? const <OpmetingRaamTStijl>[];
+
+    final kaderVleugels = kaderId == _huidigVleugelKaderId
+        ? _vleugels
+        : _vleugelsPerKader[kaderId] ?? const <OpmetingRaamVleugel>[];
+
+    return OpmetingRaamVulvlakBerekeningHelper.bereken(
       tekenvlakGrootte: size,
-      breedteMm: breedteMm ?? widget.breedteMm,
-      hoogteMm: hoogteMm ?? widget.hoogteMm,
-      tStijlen: tStijlen,
-      vleugels: vleugels,
+      breedteMm: kader.breedteMm,
+      hoogteMm: kader.hoogteMm,
+      tStijlen: kaderTStijlen,
+      vleugels: kaderVleugels,
+    );
+  }
+
+  Map<String, List<OpmetingRaamVulvlak>> _vulvlakkenPerKaderVoorWeergave(
+    Size size,
+  ) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return const <String, List<OpmetingRaamVulvlak>>{};
+    }
+
+    final resultaat = <String, List<OpmetingRaamVulvlak>>{};
+
+    for (final kader in samenstelling.kaders) {
+      resultaat[kader.id] = List<OpmetingRaamVulvlak>.unmodifiable(
+        _bepaalVulvlakkenVoorKader(size: size, kaderId: kader.id),
+      );
+    }
+
+    return Map<String, List<OpmetingRaamVulvlak>>.unmodifiable(resultaat);
+  }
+
+  OpmetingRaamTechnischeLayout _berekenTechnischeLayout(Size size) {
+    final breedteMm = _effectieveBreedteMm;
+    final hoogteMm = _effectieveHoogteMm;
+
+    final totaleMaatRect = OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+
+    return OpmetingRaamTechnischeLayoutHelper.bereken(
+      totaleMaatRect: totaleMaatRect,
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+      technischeTekeningen: widget.technischeTekeningen,
     );
   }
 
   void _klikTekenvlak(TapDownDetails details) {
+    final size = _actueleTekenvlakGrootte();
+
+    if (size == null) {
+      return;
+    }
+
+    late final Offset basisPunt;
+
+    if (_bruikbareKaderSamenstelling == null) {
+      final technischeLayout = _berekenTechnischeLayout(size);
+
+      if (!technischeLayout.bevatRaamPunt(details.localPosition)) {
+        return;
+      }
+
+      basisPunt = technischeLayout.naarBasisPunt(details.localPosition);
+    } else {
+      basisPunt = details.localPosition;
+    }
+
+    if (widget.actieveTool == 'tstijl') {
+      final samenstelling = _bruikbareKaderSamenstelling;
+
+      if (samenstelling == null) {
+        _selecteerTStijlStartLijn(basisPunt);
+        return;
+      }
+
+      final aangekliktKader = _kaderVoorPuntInSamenstelling(
+        basisPunt: basisPunt,
+        size: size,
+      );
+
+      if (aangekliktKader == null) {
+        return;
+      }
+
+      final werkPunt = _puntVoorKader(
+        basisPunt: basisPunt,
+        size: size,
+        kaderId: aangekliktKader.id,
+      );
+
+      if (werkPunt == null) {
+        return;
+      }
+
+      _activeerKaderVoorTStijl(
+        kaderId: aangekliktKader.id,
+        samenstelling: samenstelling,
+      );
+
+      _selecteerTStijlStartLijn(werkPunt);
+      return;
+    }
+
+    if (widget.actieveTool == 'vleugel') {
+      final samenstelling = _bruikbareKaderSamenstelling;
+
+      if (samenstelling == null) {
+        _pasVleugelToe(basisPunt);
+        return;
+      }
+
+      final aangekliktKader = _kaderVoorPuntInSamenstelling(
+        basisPunt: basisPunt,
+        size: size,
+      );
+
+      if (aangekliktKader == null) {
+        return;
+      }
+
+      final werkPunt = _puntVoorKader(
+        basisPunt: basisPunt,
+        size: size,
+        kaderId: aangekliktKader.id,
+      );
+
+      if (werkPunt == null) {
+        return;
+      }
+
+      _activeerKaderVoorVleugel(
+        kaderId: aangekliktKader.id,
+        samenstelling: samenstelling,
+      );
+
+      _pasVleugelToe(werkPunt);
+      return;
+    }
+
     switch (widget.actieveTool) {
       case 'opvulling':
-        _selecteerVulvlak(details.localPosition);
+        _selecteerVulvlak(basisPunt);
         return;
 
       case 'kleinhout':
-        _selecteerKleinhoutVlak(details.localPosition);
+        _selecteerKleinhoutVlak(basisPunt);
         return;
 
-      case 'vleugel':
-        _pasVleugelToe(details.localPosition);
+      case 'kader':
+        _selecteerKaderViaTekening(basisPunt: basisPunt, size: size);
         return;
 
-      case 'tstijl':
-        _selecteerTStijlStartLijn(details.localPosition);
+      case 'kadertoevoegen':
+        final aangekliktKader = _kaderVoorPuntInSamenstelling(
+          basisPunt: basisPunt,
+          size: size,
+        );
+
+        if (aangekliktKader != null && aangekliktKader.id != _toevoegKaderId) {
+          _toevoegAnkerKaderId = aangekliktKader.id;
+        }
+
+        if (_selecteerKaderViaTekening(basisPunt: basisPunt, size: size)) {
+          _tekenOfWijzigToevoegKader();
+        }
         return;
 
       default:
+        _selecteerKaderViaTekening(basisPunt: basisPunt, size: size);
         return;
     }
   }
@@ -782,13 +1712,58 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final vulvlakken = _bepaalVulvlakken(size);
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    final resultaat = OpmetingRaamTekenvlakActies.wisselVulvlakSelectie(
-      punt: punt,
+    if (samenstelling == null) {
+      final resultaat = OpmetingRaamOpvullingActieHelper.wisselSelectie(
+        punt: punt,
+        vulvlakken: _bepaalVulvlakken(size),
+        huidigeGeselecteerdeVlakIds: _geselecteerdeVulvlakIds,
+        toewijzingen: _vullingToewijzingen,
+        opvullingen: _opvullingen,
+        huidigeGeselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+      );
+
+      if (!resultaat.vlakGevonden) {
+        return;
+      }
+
+      setState(() {
+        _vervangVulvlakSelectie(resultaat.geselecteerdeVlakIds);
+        _geselecteerdeOpvullingId = resultaat.geselecteerdeOpvullingId;
+      });
+
+      return;
+    }
+
+    final aangekliktKader = _kaderVoorPuntInSamenstelling(
+      basisPunt: punt,
+      size: size,
+    );
+
+    if (aangekliktKader == null) {
+      return;
+    }
+
+    final werkPunt = _puntVoorKader(
+      basisPunt: punt,
+      size: size,
+      kaderId: aangekliktKader.id,
+    );
+
+    if (werkPunt == null) {
+      return;
+    }
+
+    final kaderId = aangekliktKader.id;
+    final vulvlakken = _bepaalVulvlakkenVoorKader(size: size, kaderId: kaderId);
+
+    final resultaat = OpmetingRaamOpvullingActieHelper.wisselSelectie(
+      punt: werkPunt,
       vulvlakken: vulvlakken,
-      huidigeGeselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-      toewijzingen: _vullingToewijzingen,
+      huidigeGeselecteerdeVlakIds:
+          _geselecteerdeVulvlakIdsPerKader[kaderId] ?? const <String>{},
+      toewijzingen: _vullingToewijzingenVoorKader(kaderId),
       opvullingen: _opvullingen,
       huidigeGeselecteerdeOpvullingId: _geselecteerdeOpvullingId,
     );
@@ -798,12 +1773,155 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     setState(() {
-      _geselecteerdeVulvlakIds
-        ..clear()
-        ..addAll(resultaat.geselecteerdeVulvlakIds);
+      _actiefOpvullingKaderId = kaderId;
+
+      _vervangVullingToewijzingen(_vullingToewijzingenVoorKader(kaderId));
+      _vervangVulvlakSelectie(resultaat.geselecteerdeVlakIds);
+
+      _geselecteerdeVulvlakIdsPerKader[kaderId] = Set<String>.unmodifiable(
+        resultaat.geselecteerdeVlakIds,
+      );
 
       _geselecteerdeOpvullingId = resultaat.geselecteerdeOpvullingId;
     });
+  }
+
+  Set<String> _samengevoegdeKleinhoutSelectie() {
+    final selectie = <String>{..._geselecteerdeKleinhoutVlakIds};
+
+    for (final vlakIds in _geselecteerdeKleinhoutVlakIdsPerKader.values) {
+      selectie.addAll(vlakIds);
+    }
+
+    return Set<String>.unmodifiable(selectie);
+  }
+
+  int _aantalGeselecteerdeVulvlakkenVoorMenu() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return _geselecteerdeVulvlakIds.length;
+    }
+
+    var totaal = 0;
+
+    for (final selectie in _geselecteerdeVulvlakIdsPerKader.values) {
+      totaal += selectie.length;
+    }
+
+    return totaal;
+  }
+
+  int _aantalGeselecteerdeKleinhoutVlakkenVoorMenu() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return _geselecteerdeKleinhoutVlakIds.length;
+    }
+
+    var totaal = 0;
+
+    for (final selectie in _geselecteerdeKleinhoutVlakIdsPerKader.values) {
+      totaal += selectie.length;
+    }
+
+    return totaal;
+  }
+
+  int _totaalAantalVulvlakkenVoorMenu(List<OpmetingRaamVulvlak> vulvlakken) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+    final size = _actueleTekenvlakGrootte();
+
+    if (samenstelling == null || size == null) {
+      return vulvlakken.length;
+    }
+
+    var totaal = 0;
+
+    for (final kader in samenstelling.kaders) {
+      totaal += _bepaalVulvlakkenVoorKader(
+        size: size,
+        kaderId: kader.id,
+      ).length;
+    }
+
+    return totaal;
+  }
+
+  int _totaalAantalGevuldeKleinhoutVlakkenVoorMenu(
+    OpmetingRaamTekenvlakWeergaveStatus weergaveStatus,
+  ) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return weergaveStatus.totaalAantalGevuldeVlakken;
+    }
+
+    var totaal = 0;
+
+    for (final kader in samenstelling.kaders) {
+      totaal += _gevuldeVlakIdsVoorKader(kader.id).length;
+    }
+
+    return totaal;
+  }
+
+  bool _kleinhoutSelectieIsVolledigGevuldVoorMenu(
+    OpmetingRaamTekenvlakWeergaveStatus weergaveStatus,
+  ) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return weergaveStatus.kleinhoutSelectieIsVolledigGevuld;
+    }
+
+    if (_aantalGeselecteerdeKleinhoutVlakkenVoorMenu() == 0) {
+      return false;
+    }
+
+    for (final entry in _geselecteerdeKleinhoutVlakIdsPerKader.entries) {
+      if (entry.value.isEmpty) {
+        continue;
+      }
+
+      final gevuldeVlakIds = _gevuldeVlakIdsVoorKader(entry.key);
+
+      for (final vlakId in entry.value) {
+        if (!gevuldeVlakIds.contains(vlakId)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  bool _kleinhoutSelectieHeeftKleinhoutenVoorMenu(
+    OpmetingRaamTekenvlakWeergaveStatus weergaveStatus,
+  ) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      return weergaveStatus.kleinhoutSelectieHeeftKleinhouten;
+    }
+
+    for (final entry in _geselecteerdeKleinhoutVlakIdsPerKader.entries) {
+      if (entry.value.isEmpty) {
+        continue;
+      }
+
+      final kleinhoutVlakIds = _kleinhoutenVoorKader(
+        entry.key,
+      ).map((kleinhout) => kleinhout.vlakId).toSet();
+
+      for (final vlakId in entry.value) {
+        if (kleinhoutVlakIds.contains(vlakId)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   void _selecteerKleinhoutVlak(Offset punt) {
@@ -813,119 +1931,261 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final vulvlakken = _bepaalVulvlakken(size);
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    final vulvlak = OpmetingRaamVullingHelper.vindVulvlak(
-      punt: punt,
-      vulvlakken: vulvlakken,
-    );
+    if (samenstelling == null) {
+      final oudeSelectie = Set<String>.from(_geselecteerdeKleinhoutVlakIds);
 
-    if (vulvlak == null) {
-      return;
-    }
-
-    if (!_gevuldeVlakIds.contains(vulvlak.id)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Kleinhouten kunnen alleen geplaatst worden wanneer het glasvlak een opvulling heeft.',
-          ),
-          backgroundColor: Color(0xFFB45309),
-        ),
+      final resultaat = OpmetingRaamOpvullingActieHelper.wisselSelectie(
+        punt: punt,
+        vulvlakken: _bepaalVulvlakken(size),
+        huidigeGeselecteerdeVlakIds: oudeSelectie,
+        toewijzingen: _vullingToewijzingen,
+        opvullingen: _opvullingen,
+        huidigeGeselecteerdeOpvullingId: _geselecteerdeOpvullingId,
       );
 
+      if (!resultaat.vlakGevonden) {
+        return;
+      }
+
+      final toegevoegdeVlakIds = resultaat.geselecteerdeVlakIds.where(
+        (vlakId) => !oudeSelectie.contains(vlakId),
+      );
+
+      final gevuld = _gevuldeVlakIds;
+      final bevatLeegNieuwVlak = toegevoegdeVlakIds.any(
+        (vlakId) => !gevuld.contains(vlakId),
+      );
+
+      if (bevatLeegNieuwVlak) {
+        OpmetingRaamSnackBarHelper.toonWaarschuwing(
+          context,
+          'Voeg eerst een opvulling toe aan dit vlak.',
+        );
+        return;
+      }
+
+      final selectie = resultaat.geselecteerdeVlakIds
+          .where((vlakId) => gevuld.contains(vlakId))
+          .toSet();
+
+      setState(() {
+        _vervangKleinhoutVlakSelectie(selectie);
+
+        if (selectie.isNotEmpty) {
+          _laadKleinhoutInstellingenVoorVlak(selectie.last);
+        }
+
+        _menuZichtbaarheid.toonKleinhoutMenu();
+      });
+
       return;
     }
 
-    final wordtToegevoegd = !_geselecteerdeKleinhoutVlakIds.contains(
-      vulvlak.id,
+    final aangekliktKader = _kaderVoorPuntInSamenstelling(
+      basisPunt: punt,
+      size: size,
     );
 
-    setState(() {
-      if (wordtToegevoegd) {
-        _geselecteerdeKleinhoutVlakIds.add(vulvlak.id);
+    if (aangekliktKader == null) {
+      return;
+    }
 
-        _laadKleinhoutInstellingenVoorVlak(vulvlak.id);
+    final werkPunt = _puntVoorKader(
+      basisPunt: punt,
+      size: size,
+      kaderId: aangekliktKader.id,
+    );
+
+    if (werkPunt == null) {
+      return;
+    }
+
+    final kaderId = aangekliktKader.id;
+    final vulvlakken = _bepaalVulvlakkenVoorKader(size: size, kaderId: kaderId);
+
+    final oudeSelectie = Set<String>.from(
+      _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] ?? const <String>{},
+    );
+
+    final resultaat = OpmetingRaamOpvullingActieHelper.wisselSelectie(
+      punt: werkPunt,
+      vulvlakken: vulvlakken,
+      huidigeGeselecteerdeVlakIds: oudeSelectie,
+      toewijzingen: _vullingToewijzingenVoorKader(kaderId),
+      opvullingen: _opvullingen,
+      huidigeGeselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+    );
+
+    if (!resultaat.vlakGevonden) {
+      return;
+    }
+
+    final gevuldeVlakIds = _gevuldeVlakIdsVoorKader(kaderId);
+    final toegevoegdeVlakIds = resultaat.geselecteerdeVlakIds.where(
+      (vlakId) => !oudeSelectie.contains(vlakId),
+    );
+
+    final bevatLeegNieuwVlak = toegevoegdeVlakIds.any(
+      (vlakId) => !gevuldeVlakIds.contains(vlakId),
+    );
+
+    if (bevatLeegNieuwVlak) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(
+        context,
+        'Voeg eerst een opvulling toe aan dit vlak.',
+      );
+      return;
+    }
+
+    final selectie = resultaat.geselecteerdeVlakIds
+        .where((vlakId) => gevuldeVlakIds.contains(vlakId))
+        .toSet();
+
+    setState(() {
+      _actiefKleinhoutKaderId = kaderId;
+
+      _vervangKleinhouten(_kleinhoutenVoorKader(kaderId));
+      _vervangKleinhoutVlakSelectie(selectie);
+
+      if (selectie.isEmpty) {
+        _geselecteerdeKleinhoutVlakIdsPerKader.remove(kaderId);
       } else {
-        _geselecteerdeKleinhoutVlakIds.remove(vulvlak.id);
+        _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] =
+            Set<String>.unmodifiable(selectie);
       }
 
-      _kleinhoutMenuZichtbaar = true;
+      final totaleSelectie = _samengevoegdeKleinhoutSelectie();
+      _vervangKleinhoutVlakSelectie(totaleSelectie);
+
+      if (selectie.isNotEmpty) {
+        _laadKleinhoutInstellingenVoorVlak(selectie.last);
+      }
+
+      _menuZichtbaarheid.toonKleinhoutMenu();
     });
   }
 
   void _laadKleinhoutInstellingenVoorVlak(String vlakId) {
-    OpmetingRaamKleinhout? bestaand;
+    final instellingen = OpmetingRaamKleinhoutInstellingenHelper.laadVoorVlak(
+      vlakId: vlakId,
+      kleinhouten: _kleinhouten,
+    );
 
-    for (final kleinhout in _kleinhouten) {
-      if (kleinhout.vlakId == vlakId) {
-        bestaand = kleinhout;
-        break;
-      }
-    }
-
-    if (bestaand == null) {
+    if (instellingen == null) {
       return;
     }
 
-    _geselecteerdKleinhoutType = bestaand.type;
+    _geselecteerdKleinhoutType = instellingen.type;
+    _geselecteerdKleinhoutPatroon = instellingen.patroon;
 
-    _geselecteerdKleinhoutPatroon = bestaand.patroon;
+    _kleinhoutAantalHorizontaalController.text =
+        instellingen.aantalHorizontaalTekst;
 
-    _kleinhoutAantalHorizontaalController.text = bestaand
-        .effectiefAantalHorizontaal
-        .toString();
-
-    _kleinhoutAantalVerticaalController.text = bestaand.effectiefAantalVerticaal
-        .toString();
+    _kleinhoutAantalVerticaalController.text =
+        instellingen.aantalVerticaalTekst;
 
     _kleinhoutHorizontaleHoogteController.text =
-        bestaand.horizontaleHoogteMm == null
-        ? ''
-        : _formatteerMaat(bestaand.horizontaleHoogteMm!);
+        instellingen.horizontaleHoogteTekst;
   }
 
-  String _formatteerMaat(double waarde) {
-    if (waarde == waarde.roundToDouble()) {
-      return waarde.round().toString();
+  void _verwerkOpvullingWijziging({
+    required bool actieBeschikbaar,
+    required bool gewijzigd,
+    required Iterable<OpmetingRaamVullingToewijzing> toewijzingen,
+  }) {
+    if (!actieBeschikbaar) {
+      return;
     }
 
-    return waarde.toStringAsFixed(1);
+    if (!gewijzigd) {
+      setState(() {
+        _geselecteerdeVulvlakIds.clear();
+      });
+
+      return;
+    }
+
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangVullingToewijzingen(toewijzingen);
+      _geselecteerdeVulvlakIds.clear();
+      _schoonKleinhoutenOp();
+    });
+
+    _planAlleLegendaMeldingen();
   }
 
   void _pasOpvullingToe() {
     final size = _actueleTekenvlakGrootte();
 
-    if (size == null || _geselecteerdeVulvlakIds.isEmpty) {
+    if (size == null) {
       return;
     }
 
-    final opvulling = OpmetingRaamTekenvlakActies.vindGeselecteerdeOpvulling(
-      opvullingen: _opvullingen,
-      geselecteerdeOpvullingId: _geselecteerdeOpvullingId,
-    );
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    if (opvulling == null) {
+    if (samenstelling == null) {
+      final resultaat = OpmetingRaamOpvullingActieHelper.pasToe(
+        vulvlakken: _bepaalVulvlakken(size),
+        geselecteerdeVlakIds: _geselecteerdeVulvlakIds,
+        bestaandeToewijzingen: _vullingToewijzingen,
+        opvullingen: _opvullingen,
+        geselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+      );
+
+      _verwerkOpvullingWijziging(
+        actieBeschikbaar: resultaat.actieBeschikbaar,
+        gewijzigd: resultaat.gewijzigd,
+        toewijzingen: resultaat.toewijzingen,
+      );
+
       return;
     }
 
-    final vulvlakken = _bepaalVulvlakken(size);
+    final kaderIds = _geselecteerdeVulvlakIdsPerKader.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
 
-    final nieuweToewijzingen = OpmetingRaamTekenvlakActies.pasOpvullingToe(
-      vulvlakken: vulvlakken,
-      geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-      bestaandeToewijzingen: _vullingToewijzingen,
-      opvulling: opvulling,
-    );
+    if (kaderIds.isEmpty) {
+      return;
+    }
 
-    final gewijzigd = !_zelfdeVullingToewijzingen(
-      _vullingToewijzingen,
-      nieuweToewijzingen,
-    );
+    var heeftWijziging = false;
+    final nieuweToewijzingenPerKader =
+        <String, List<OpmetingRaamVullingToewijzing>>{};
 
-    if (!gewijzigd) {
+    for (final kaderId in kaderIds) {
+      final selectie =
+          _geselecteerdeVulvlakIdsPerKader[kaderId] ?? const <String>{};
+
+      if (selectie.isEmpty) {
+        continue;
+      }
+
+      final resultaat = OpmetingRaamOpvullingActieHelper.pasToe(
+        vulvlakken: _bepaalVulvlakkenVoorKader(size: size, kaderId: kaderId),
+        geselecteerdeVlakIds: selectie,
+        bestaandeToewijzingen: _vullingToewijzingenVoorKader(kaderId),
+        opvullingen: _opvullingen,
+        geselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        return;
+      }
+
+      nieuweToewijzingenPerKader[kaderId] = resultaat.toewijzingen;
+      heeftWijziging = heeftWijziging || resultaat.gewijzigd;
+    }
+
+    if (!heeftWijziging) {
       setState(() {
         _geselecteerdeVulvlakIds.clear();
+        _geselecteerdeVulvlakIdsPerKader.clear();
       });
 
       return;
@@ -934,78 +2194,105 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     _bewaarVoorWijziging();
 
     setState(() {
-      _vullingToewijzingen
-        ..clear()
-        ..addAll(nieuweToewijzingen);
+      for (final entry in nieuweToewijzingenPerKader.entries) {
+        _vullingToewijzingenPerKader[entry.key] =
+            List<OpmetingRaamVullingToewijzing>.unmodifiable(entry.value);
+      }
 
       _geselecteerdeVulvlakIds.clear();
+      _geselecteerdeVulvlakIdsPerKader.clear();
 
-      _schoonKleinhoutenOp();
+      final actiefKaderId = _actiefOpvullingKaderId;
+
+      if (actiefKaderId != null &&
+          _vullingToewijzingenPerKader.containsKey(actiefKaderId)) {
+        _vervangVullingToewijzingen(
+          _vullingToewijzingenPerKader[actiefKaderId] ??
+              const <OpmetingRaamVullingToewijzing>[],
+        );
+      }
     });
 
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _planAlleLegendaMeldingen();
   }
 
   void _verwijderOpvullingUitSelectie() {
-    if (_geselecteerdeVulvlakIds.isEmpty) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      final resultaat = OpmetingRaamOpvullingActieHelper.verwijder(
+        geselecteerdeVlakIds: _geselecteerdeVulvlakIds,
+        bestaandeToewijzingen: _vullingToewijzingen,
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        return;
+      }
+
+      _verwerkOpvullingWijziging(
+        actieBeschikbaar: resultaat.actieBeschikbaar,
+        gewijzigd: resultaat.gewijzigd,
+        toewijzingen: resultaat.toewijzingen,
+      );
+
       return;
     }
 
-    final nieuweToewijzingen =
-        OpmetingRaamTekenvlakActies.verwijderOpvullingUitSelectie(
-          bestaandeToewijzingen: _vullingToewijzingen,
-          geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-        );
+    final kaderIds = _geselecteerdeVulvlakIdsPerKader.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
 
-    final gewijzigd = !_zelfdeVullingToewijzingen(
-      _vullingToewijzingen,
-      nieuweToewijzingen,
-    );
+    if (kaderIds.isEmpty) {
+      return;
+    }
 
-    if (!gewijzigd) {
-      setState(() {
-        _geselecteerdeVulvlakIds.clear();
-      });
+    var heeftWijziging = false;
+    final nieuweToewijzingenPerKader =
+        <String, List<OpmetingRaamVullingToewijzing>>{};
 
+    for (final kaderId in kaderIds) {
+      final resultaat = OpmetingRaamOpvullingActieHelper.verwijder(
+        geselecteerdeVlakIds:
+            _geselecteerdeVulvlakIdsPerKader[kaderId] ?? const <String>{},
+        bestaandeToewijzingen: _vullingToewijzingenVoorKader(kaderId),
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        continue;
+      }
+
+      nieuweToewijzingenPerKader[kaderId] = resultaat.toewijzingen;
+      heeftWijziging = heeftWijziging || resultaat.gewijzigd;
+    }
+
+    if (!heeftWijziging) {
       return;
     }
 
     _bewaarVoorWijziging();
 
     setState(() {
-      _vullingToewijzingen
-        ..clear()
-        ..addAll(nieuweToewijzingen);
+      for (final entry in nieuweToewijzingenPerKader.entries) {
+        _vullingToewijzingenPerKader[entry.key] =
+            List<OpmetingRaamVullingToewijzing>.unmodifiable(entry.value);
+      }
 
       _geselecteerdeVulvlakIds.clear();
+      _geselecteerdeVulvlakIdsPerKader.clear();
 
-      _schoonKleinhoutenOp();
+      final actiefKaderId = _actiefOpvullingKaderId;
+
+      if (actiefKaderId != null &&
+          _vullingToewijzingenPerKader.containsKey(actiefKaderId)) {
+        _vervangVullingToewijzingen(
+          _vullingToewijzingenPerKader[actiefKaderId] ??
+              const <OpmetingRaamVullingToewijzing>[],
+        );
+      }
     });
 
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
-  }
-
-  bool _zelfdeVullingToewijzingen(
-    List<OpmetingRaamVullingToewijzing> eerste,
-    List<OpmetingRaamVullingToewijzing> tweede,
-  ) {
-    if (eerste.length != tweede.length) {
-      return false;
-    }
-
-    for (var index = 0; index < eerste.length; index++) {
-      final eersteItem = eerste[index];
-      final tweedeItem = tweede[index];
-
-      if (eersteItem.vlakId != tweedeItem.vlakId ||
-          eersteItem.opvullingId != tweedeItem.opvullingId) {
-        return false;
-      }
-    }
-
-    return true;
+    _planAlleLegendaMeldingen();
   }
 
   void _selecteerAlleVulvlakken() {
@@ -1015,26 +2302,44 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final vulvlakken = _bepaalVulvlakken(size);
-
-    final selectie = OpmetingRaamTekenvlakActies.selecteerAlleVulvlakken(
-      vulvlakken,
-    );
+    final samenstelling = _bruikbareKaderSamenstelling;
 
     setState(() {
-      _geselecteerdeVulvlakIds
-        ..clear()
-        ..addAll(selectie);
+      if (samenstelling == null) {
+        final selectie = OpmetingRaamOpvullingActieHelper.selecteerAlles(
+          _bepaalVulvlakken(size),
+        );
+
+        _vervangVulvlakSelectie(selectie);
+        return;
+      }
+
+      _geselecteerdeVulvlakIds.clear();
+      _geselecteerdeVulvlakIdsPerKader.clear();
+
+      for (final kader in samenstelling.kaders) {
+        final selectie = OpmetingRaamOpvullingActieHelper.selecteerAlles(
+          _bepaalVulvlakkenVoorKader(size: size, kaderId: kader.id),
+        );
+
+        if (selectie.isNotEmpty) {
+          _geselecteerdeVulvlakIdsPerKader[kader.id] = Set<String>.unmodifiable(
+            selectie,
+          );
+        }
+      }
     });
   }
 
   void _wisVulvlakSelectie() {
-    if (_geselecteerdeVulvlakIds.isEmpty) {
+    if (_geselecteerdeVulvlakIds.isEmpty &&
+        _geselecteerdeVulvlakIdsPerKader.values.every((set) => set.isEmpty)) {
       return;
     }
 
     setState(() {
       _geselecteerdeVulvlakIds.clear();
+      _geselecteerdeVulvlakIdsPerKader.clear();
     });
   }
 
@@ -1045,218 +2350,297 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final bestaandeVlakIds = _bepaalVulvlakken(
-      size,
-    ).map((vlak) => vlak.id).toSet();
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    final selectie = _gevuldeVlakIds.where(bestaandeVlakIds.contains).toSet();
+    if (samenstelling == null) {
+      final selectie =
+          OpmetingRaamKleinhoutActieHelper.selecteerAlleGevuldeVlakken(
+            vulvlakken: _bepaalVulvlakken(size),
+            gevuldeVlakIds: _gevuldeVlakIds,
+          );
 
-    setState(() {
-      _geselecteerdeKleinhoutVlakIds
-        ..clear()
-        ..addAll(selectie);
+      setState(() {
+        _vervangKleinhoutVlakSelectie(selectie);
 
-      if (selectie.isNotEmpty) {
-        _laadKleinhoutInstellingenVoorVlak(selectie.first);
-      }
-    });
-  }
+        if (selectie.isNotEmpty) {
+          _laadKleinhoutInstellingenVoorVlak(selectie.first);
+        }
+      });
 
-  void _wisKleinhoutSelectie() {
-    if (_geselecteerdeKleinhoutVlakIds.isEmpty) {
       return;
     }
 
     setState(() {
       _geselecteerdeKleinhoutVlakIds.clear();
+      _geselecteerdeKleinhoutVlakIdsPerKader.clear();
+
+      String? eersteSelectie;
+      String? eersteKaderId;
+
+      for (final kader in samenstelling.kaders) {
+        final selectie =
+            OpmetingRaamKleinhoutActieHelper.selecteerAlleGevuldeVlakken(
+              vulvlakken: _bepaalVulvlakkenVoorKader(
+                size: size,
+                kaderId: kader.id,
+              ),
+              gevuldeVlakIds: _gevuldeVlakIdsVoorKader(kader.id),
+            );
+
+        if (selectie.isNotEmpty) {
+          _geselecteerdeKleinhoutVlakIdsPerKader[kader.id] =
+              Set<String>.unmodifiable(selectie);
+          eersteSelectie ??= selectie.first;
+          eersteKaderId ??= kader.id;
+        }
+      }
+
+      if (eersteKaderId != null) {
+        _actiefKleinhoutKaderId = eersteKaderId;
+        _vervangKleinhouten(_kleinhoutenVoorKader(eersteKaderId!));
+        _vervangKleinhoutVlakSelectie(
+          _geselecteerdeKleinhoutVlakIdsPerKader[eersteKaderId] ??
+              const <String>{},
+        );
+      }
+
+      if (eersteSelectie != null) {
+        _laadKleinhoutInstellingenVoorVlak(eersteSelectie!);
+      }
     });
+  }
+
+  void _wisKleinhoutSelectie() {
+    if (_geselecteerdeKleinhoutVlakIds.isEmpty &&
+        _geselecteerdeKleinhoutVlakIdsPerKader.values.every(
+          (set) => set.isEmpty,
+        )) {
+      return;
+    }
+
+    setState(() {
+      _geselecteerdeKleinhoutVlakIds.clear();
+      _geselecteerdeKleinhoutVlakIdsPerKader.clear();
+    });
+  }
+
+  void _verwerkKleinhoutWijziging({
+    required bool gewijzigd,
+    required Iterable<OpmetingRaamKleinhout> kleinhouten,
+  }) {
+    if (!gewijzigd) {
+      return;
+    }
+
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangKleinhouten(kleinhouten);
+    });
+
+    _legendaMeldingen.planKleinhoutMelding();
   }
 
   void _pasKleinhoutenToe() {
     final size = _actueleTekenvlakGrootte();
 
-    if (size == null ||
-        _geselecteerdeKleinhoutVlakIds.isEmpty ||
-        !_kleinhoutSelectieIsVolledigGevuld) {
+    if (size == null) {
       return;
     }
 
-    final aantalHorizontaal =
-        int.tryParse(_kleinhoutAantalHorizontaalController.text.trim()) ?? 0;
+    final samenstelling = _bruikbareKaderSamenstelling;
 
-    final aantalVerticaal =
-        int.tryParse(_kleinhoutAantalVerticaalController.text.trim()) ?? 0;
-
-    double? horizontaleHoogteMm;
-
-    if (_geselecteerdKleinhoutPatroon ==
-        OpmetingRaamKleinhoutPatroon.bovenverdeling) {
-      horizontaleHoogteMm = double.tryParse(
-        _kleinhoutHorizontaleHoogteController.text.trim().replaceAll(',', '.'),
+    if (samenstelling == null) {
+      final resultaat = OpmetingRaamKleinhoutActieHelper.pasToe(
+        tekenvlakGrootte: size,
+        breedteMm: widget.breedteMm,
+        hoogteMm: widget.hoogteMm,
+        vulvlakken: _bepaalVulvlakken(size),
+        geselecteerdeVlakIds: _geselecteerdeKleinhoutVlakIds,
+        gevuldeVlakIds: _gevuldeVlakIds,
+        bestaandeKleinhouten: _kleinhouten,
+        type: _geselecteerdKleinhoutType,
+        patroon: _geselecteerdKleinhoutPatroon,
+        aantalHorizontaalTekst: _kleinhoutAantalHorizontaalController.text,
+        aantalVerticaalTekst: _kleinhoutAantalVerticaalController.text,
+        horizontaleHoogteTekst: _kleinhoutHorizontaleHoogteController.text,
       );
 
-      if (horizontaleHoogteMm == null || horizontaleHoogteMm <= 0) {
-        _toonKleinhoutFout(
-          'Vul een geldige hoogte in voor het horizontale kleinhout.',
-        );
+      if (!resultaat.actieBeschikbaar) {
         return;
       }
 
-      final maximumHoogte = _kleinsteGeselecteerdeVlakHoogteMm(size);
+      final foutmelding = resultaat.foutmelding;
 
-      if (maximumHoogte != null && horizontaleHoogteMm >= maximumHoogte) {
-        _toonKleinhoutFout(
-          'De hoogte van het horizontale kleinhout moet kleiner zijn dan de hoogte van het glasvlak.',
-        );
+      if (foutmelding != null) {
+        OpmetingRaamSnackBarHelper.toonFout(context, foutmelding);
         return;
       }
-    } else {
-      if (aantalHorizontaal <= 0 && aantalVerticaal <= 0) {
-        _toonKleinhoutFout(
-          'Vul minstens één horizontaal of verticaal kleinhout in.',
-        );
-        return;
-      }
-    }
 
-    if (aantalHorizontaal < 0 || aantalVerticaal < 0) {
-      _toonKleinhoutFout('Het aantal kleinhouten kan niet negatief zijn.');
+      _verwerkKleinhoutWijziging(
+        gewijzigd: resultaat.gewijzigd,
+        kleinhouten: resultaat.kleinhouten,
+      );
+
       return;
     }
 
-    final vulvlakken = _bepaalVulvlakken(size);
+    final kaderIds = _geselecteerdeKleinhoutVlakIdsPerKader.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
 
-    final geselecteerdeVlakken = vulvlakken.where(
-      (vlak) => _geselecteerdeKleinhoutVlakIds.contains(vlak.id),
-    );
+    if (kaderIds.isEmpty) {
+      return;
+    }
 
-    final nieuweKleinhouten = OpmetingRaamKleinhoutHelper.pasKleinhoutenToe(
-      bestaandeKleinhouten: _kleinhouten,
-      geselecteerdeVlakken: geselecteerdeVlakken,
-      gevuldeVlakIds: _gevuldeVlakIds,
-      type: _geselecteerdKleinhoutType,
-      patroon: _geselecteerdKleinhoutPatroon,
-      aantalHorizontaal: aantalHorizontaal,
-      aantalVerticaal: aantalVerticaal,
-      horizontaleHoogteMm: horizontaleHoogteMm,
-    );
+    var heeftWijziging = false;
+    final nieuweKleinhoutenPerKader = <String, List<OpmetingRaamKleinhout>>{};
 
-    if (_zelfdeKleinhouten(_kleinhouten, nieuweKleinhouten)) {
+    for (final kaderId in kaderIds) {
+      final kader = _zoekKaderVoorId(kaderId);
+
+      if (kader == null) {
+        continue;
+      }
+
+      final resultaat = OpmetingRaamKleinhoutActieHelper.pasToe(
+        tekenvlakGrootte: size,
+        breedteMm: kader.breedteMm,
+        hoogteMm: kader.hoogteMm,
+        vulvlakken: _bepaalVulvlakkenVoorKader(size: size, kaderId: kaderId),
+        geselecteerdeVlakIds:
+            _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] ?? const <String>{},
+        gevuldeVlakIds: _gevuldeVlakIdsVoorKader(kaderId),
+        bestaandeKleinhouten: _kleinhoutenVoorKader(kaderId),
+        type: _geselecteerdKleinhoutType,
+        patroon: _geselecteerdKleinhoutPatroon,
+        aantalHorizontaalTekst: _kleinhoutAantalHorizontaalController.text,
+        aantalVerticaalTekst: _kleinhoutAantalVerticaalController.text,
+        horizontaleHoogteTekst: _kleinhoutHorizontaleHoogteController.text,
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        continue;
+      }
+
+      final foutmelding = resultaat.foutmelding;
+
+      if (foutmelding != null) {
+        OpmetingRaamSnackBarHelper.toonFout(context, foutmelding);
+        return;
+      }
+
+      nieuweKleinhoutenPerKader[kaderId] = resultaat.kleinhouten;
+      heeftWijziging = heeftWijziging || resultaat.gewijzigd;
+    }
+
+    if (!heeftWijziging) {
       return;
     }
 
     _bewaarVoorWijziging();
 
     setState(() {
-      _kleinhouten
-        ..clear()
-        ..addAll(nieuweKleinhouten);
+      for (final entry in nieuweKleinhoutenPerKader.entries) {
+        _kleinhoutenPerKader[entry.key] =
+            List<OpmetingRaamKleinhout>.unmodifiable(entry.value);
+      }
+
+      _geselecteerdeKleinhoutVlakIds.clear();
+      _geselecteerdeKleinhoutVlakIdsPerKader.clear();
+
+      final actiefKaderId = _actiefKleinhoutKaderId;
+
+      if (actiefKaderId != null) {
+        if (_kleinhoutenPerKader.containsKey(actiefKaderId)) {
+          _vervangKleinhouten(
+            _kleinhoutenPerKader[actiefKaderId] ??
+                const <OpmetingRaamKleinhout>[],
+          );
+        }
+      }
     });
 
-    _planKleinhoutMelding();
-  }
-
-  double? _kleinsteGeselecteerdeVlakHoogteMm(Size size) {
-    if (widget.hoogteMm <= 0) {
-      return null;
-    }
-
-    final buitenKader = OpmetingRaamKaderHelper.buitenKader(
-      size: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
-    );
-
-    if (buitenKader.height <= 0) {
-      return null;
-    }
-
-    final pixelsPerMm = buitenKader.height / widget.hoogteMm;
-
-    if (pixelsPerMm <= 0) {
-      return null;
-    }
-
-    final geselecteerdeVlakken = _bepaalVulvlakken(
-      size,
-    ).where((vlak) => _geselecteerdeKleinhoutVlakIds.contains(vlak.id));
-
-    double? kleinsteHoogte;
-
-    for (final vlak in geselecteerdeVlakken) {
-      final hoogteMm = vlak.vlak.height / pixelsPerMm;
-
-      if (kleinsteHoogte == null || hoogteMm < kleinsteHoogte) {
-        kleinsteHoogte = hoogteMm;
-      }
-    }
-
-    return kleinsteHoogte;
+    _legendaMeldingen.planKleinhoutMelding();
   }
 
   void _verwijderGeselecteerdeKleinhouten() {
-    if (_geselecteerdeKleinhoutVlakIds.isEmpty) {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null) {
+      final resultaat = OpmetingRaamKleinhoutActieHelper.verwijder(
+        geselecteerdeVlakIds: _geselecteerdeKleinhoutVlakIds,
+        bestaandeKleinhouten: _kleinhouten,
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        return;
+      }
+
+      _verwerkKleinhoutWijziging(
+        gewijzigd: resultaat.gewijzigd,
+        kleinhouten: resultaat.kleinhouten,
+      );
+
       return;
     }
 
-    final nieuweKleinhouten =
-        OpmetingRaamKleinhoutHelper.verwijderKleinhoutenUitVlakken(
-          bestaandeKleinhouten: _kleinhouten,
-          vlakIds: _geselecteerdeKleinhoutVlakIds,
-        );
+    final kaderIds = _geselecteerdeKleinhoutVlakIdsPerKader.entries
+        .where((entry) => entry.value.isNotEmpty)
+        .map((entry) => entry.key)
+        .toList();
 
-    if (_zelfdeKleinhouten(_kleinhouten, nieuweKleinhouten)) {
+    if (kaderIds.isEmpty) {
+      return;
+    }
+
+    var heeftWijziging = false;
+    final nieuweKleinhoutenPerKader = <String, List<OpmetingRaamKleinhout>>{};
+
+    for (final kaderId in kaderIds) {
+      final resultaat = OpmetingRaamKleinhoutActieHelper.verwijder(
+        geselecteerdeVlakIds:
+            _geselecteerdeKleinhoutVlakIdsPerKader[kaderId] ?? const <String>{},
+        bestaandeKleinhouten: _kleinhoutenVoorKader(kaderId),
+      );
+
+      if (!resultaat.actieBeschikbaar) {
+        continue;
+      }
+
+      nieuweKleinhoutenPerKader[kaderId] = resultaat.kleinhouten;
+      heeftWijziging = heeftWijziging || resultaat.gewijzigd;
+    }
+
+    if (!heeftWijziging) {
       return;
     }
 
     _bewaarVoorWijziging();
 
     setState(() {
-      _kleinhouten
-        ..clear()
-        ..addAll(nieuweKleinhouten);
+      for (final entry in nieuweKleinhoutenPerKader.entries) {
+        _kleinhoutenPerKader[entry.key] =
+            List<OpmetingRaamKleinhout>.unmodifiable(entry.value);
+      }
+
+      _geselecteerdeKleinhoutVlakIds.clear();
+      _geselecteerdeKleinhoutVlakIdsPerKader.clear();
+
+      final actiefKaderId = _actiefKleinhoutKaderId;
+
+      if (actiefKaderId != null) {
+        if (_kleinhoutenPerKader.containsKey(actiefKaderId)) {
+          _vervangKleinhouten(
+            _kleinhoutenPerKader[actiefKaderId] ??
+                const <OpmetingRaamKleinhout>[],
+          );
+        }
+      }
     });
 
-    _planKleinhoutMelding();
-  }
-
-  bool _zelfdeKleinhouten(
-    List<OpmetingRaamKleinhout> eerste,
-    List<OpmetingRaamKleinhout> tweede,
-  ) {
-    if (eerste.length != tweede.length) {
-      return false;
-    }
-
-    for (var index = 0; index < eerste.length; index++) {
-      final eersteItem = eerste[index];
-      final tweedeItem = tweede[index];
-
-      if (eersteItem.id != tweedeItem.id ||
-          eersteItem.vlakId != tweedeItem.vlakId ||
-          eersteItem.werkvlakId != tweedeItem.werkvlakId ||
-          eersteItem.type != tweedeItem.type ||
-          eersteItem.patroon != tweedeItem.patroon ||
-          eersteItem.effectiefAantalHorizontaal !=
-              tweedeItem.effectiefAantalHorizontaal ||
-          eersteItem.effectiefAantalVerticaal !=
-              tweedeItem.effectiefAantalVerticaal ||
-          eersteItem.horizontaleHoogteMm != tweedeItem.horizontaleHoogteMm ||
-          eersteItem.breedteMm != tweedeItem.breedteMm) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  void _toonKleinhoutFout(String melding) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(melding),
-        backgroundColor: const Color(0xFFDC2626),
-      ),
-    );
+    _legendaMeldingen.planKleinhoutMelding();
   }
 
   void _schoonVullingEnKleinhoutenOp() {
@@ -1268,21 +2652,18 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     final vulvlakken = _bepaalVulvlakken(size);
 
-    final resultaat = OpmetingRaamTekenvlakActies.schoonVullingToewijzingenOp(
+    final resultaat = OpmetingRaamTekeningOpschoningHelper.schoonAllesOp(
       huidigeVulvlakken: vulvlakken,
-      bestaandeToewijzingen: _vullingToewijzingen,
+      bestaandeVullingToewijzingen: _vullingToewijzingen,
       geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
+      bestaandeKleinhouten: _kleinhouten,
+      geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
     );
 
-    _vullingToewijzingen
-      ..clear()
-      ..addAll(resultaat.toewijzingen);
-
-    _geselecteerdeVulvlakIds
-      ..clear()
-      ..addAll(resultaat.geselecteerdeVulvlakIds);
-
-    _schoonKleinhoutenOp(vulvlakken: vulvlakken);
+    _vervangVullingToewijzingen(resultaat.vullingToewijzingen);
+    _vervangVulvlakSelectie(resultaat.geselecteerdeVulvlakIds);
+    _vervangKleinhouten(resultaat.kleinhouten);
+    _vervangKleinhoutVlakSelectie(resultaat.geselecteerdeKleinhoutVlakIds);
   }
 
   void _schoonKleinhoutenOp({List<OpmetingRaamVulvlak>? vulvlakken}) {
@@ -1294,29 +2675,15 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     final huidigeVulvlakken = vulvlakken ?? _bepaalVulvlakken(size);
 
-    var opgeschoond =
-        OpmetingRaamKleinhoutHelper.verwijderNietBestaandeKleinhouten(
-          bestaandeKleinhouten: _kleinhouten,
-          huidigeVulvlakken: huidigeVulvlakken,
-        );
-
-    opgeschoond =
-        OpmetingRaamKleinhoutHelper.verwijderKleinhoutenZonderOpvulling(
-          bestaandeKleinhouten: opgeschoond,
-          gevuldeVlakIds: _gevuldeVlakIds,
-        );
-
-    _kleinhouten
-      ..clear()
-      ..addAll(opgeschoond);
-
-    final bestaandeVlakIds = huidigeVulvlakken.map((vlak) => vlak.id).toSet();
-
-    _geselecteerdeKleinhoutVlakIds.removeWhere(
-      (vlakId) =>
-          !bestaandeVlakIds.contains(vlakId) ||
-          !_gevuldeVlakIds.contains(vlakId),
+    final resultaat = OpmetingRaamTekeningOpschoningHelper.schoonKleinhoutenOp(
+      huidigeVulvlakken: huidigeVulvlakken,
+      vullingToewijzingen: _vullingToewijzingen,
+      bestaandeKleinhouten: _kleinhouten,
+      geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
     );
+
+    _vervangKleinhouten(resultaat.kleinhouten);
+    _vervangKleinhoutVlakSelectie(resultaat.geselecteerdeVlakIds);
   }
 
   void _selecteerTStijlStartLijn(Offset punt) {
@@ -1326,11 +2693,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final lijn = OpmetingRaamTekenvlakActies.vindTStijlStartLijn(
+    final lijn = OpmetingRaamTStijlActieHelper.vindStartLijn(
       punt: punt,
       tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
       tStijlen: _tStijlen,
       vleugels: _vleugels,
     );
@@ -1339,17 +2706,69 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       _geselecteerdeLijn = lijn;
 
       if (lijn != null) {
-        _tStijlMenuZichtbaar = true;
+        _menuZichtbaarheid.toonTStijlMenu();
       }
     });
   }
 
+  void _meldOverzichtTekeningGewijzigd({
+    required Size tekenvlakGrootte,
+    required List<OpmetingRaamVulvlak> vulvlakken,
+    required Map<String, List<OpmetingRaamVulvlak>> vulvlakkenPerKader,
+    required Map<String, List<OpmetingRaamTStijl>> tStijlenPerKader,
+    required Map<String, List<OpmetingRaamVleugel>> vleugelsPerKader,
+    required Map<String, List<OpmetingRaamVullingToewijzing>>
+    vullingToewijzingenPerKader,
+    required Map<String, List<OpmetingRaamKleinhout>> kleinhoutenPerKader,
+  }) {
+    final callback = widget.onOverzichtTekeningGewijzigd;
+
+    if (callback == null) {
+      return;
+    }
+
+    final data = OpmetingRaamTekenvlakOverzichtDataHelper.maakTekeningData(
+      tekenvlakGrootte: tekenvlakGrootte,
+      tStijlen: _tStijlen,
+      tStijlenPerKader: tStijlenPerKader,
+      vleugels: _vleugels,
+      vleugelsPerKader: vleugelsPerKader,
+      vulvlakken: vulvlakken,
+      vulvlakkenPerKader: vulvlakkenPerKader,
+      vullingToewijzingen: _vullingToewijzingen,
+      vullingToewijzingenPerKader: vullingToewijzingenPerKader,
+      kleinhouten: _kleinhouten,
+      kleinhoutenPerKader: kleinhoutenPerKader,
+      technischeTekeningen: widget.technischeTekeningen,
+      technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
+      technischeTekeningenPerKaderGroep:
+          widget.technischeTekeningenPerKaderGroep,
+      technischeKaderGroepen: widget.technischeKaderGroepen,
+    );
+
+    final signatuur = data.wijzigingsSignatuur;
+
+    if (signatuur == _laatsteOverzichtTekeningSignatuur) {
+      return;
+    }
+
+    _laatsteOverzichtTekeningSignatuur = signatuur;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      callback(data);
+    });
+  }
+
   Offset? _previewPunt(Size size) {
-    return OpmetingRaamTekenvlakActies.bepaalTStijlPreviewPunt(
+    return OpmetingRaamTStijlActieHelper.bepaalPreviewPunt(
       geselecteerdeLijn: _geselecteerdeLijn,
       tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
       positieType: _positieType,
       positieTekst: widget.positieController.text,
     );
@@ -1362,211 +2781,119 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    if (_geselecteerdeTStijlHeeftVleugelsLangsBeideZijden(size)) {
-      return;
-    }
-
-    final stijl = OpmetingRaamTekenvlakActies.maakTStijl(
+    final resultaat = OpmetingRaamTStijlActieHelper.voegToe(
       geselecteerdeLijn: _geselecteerdeLijn,
       tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
       positieType: _positieType,
       positieTekst: widget.positieController.text,
       bestaandeTStijlen: _tStijlen,
-      vleugels: _vleugels,
+      bestaandeVleugels: _vleugels,
     );
 
-    if (stijl == null) {
+    if (!resultaat.gewijzigd) {
       return;
     }
 
     _bewaarVoorWijziging();
 
     setState(() {
-      _tStijlen.add(stijl);
+      _vervangTStijlen(resultaat.tStijlen);
 
-      _geselecteerdeLijn = null;
-      _geselecteerdeVulvlakIds.clear();
-      _geselecteerdeKleinhoutVlakIds.clear();
+      _bewaarTStijlenVoorActiefKader();
 
+      _wisTekeningSelecties();
       _schoonVullingEnKleinhoutenOp();
     });
 
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _planAlleLegendaMeldingen();
   }
 
   void _verplaatsGeselecteerdeTStijl() {
-    final index = OpmetingRaamTekenvlakActies.indexVanGeselecteerdeTStijlLijn(
-      _geselecteerdeLijn,
-    );
-
     final size = _actueleTekenvlakGrootte();
 
-    if (index == null || size == null) {
+    if (size == null) {
       return;
     }
 
-    final oudeVulvlakken = _bepaalVulvlakken(size);
-
-    final resultaat = OpmetingRaamTStijlVerplaatsHelper.verplaatsTStijl(
+    final resultaat = OpmetingRaamTStijlVerplaatsingActieHelper.verplaats(
+      geselecteerdeLijn: _geselecteerdeLijn,
       tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
-      tStijlIndex: index,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
       positieType: _positieType,
       positieTekst: widget.positieController.text,
       bestaandeTStijlen: _tStijlen,
       bestaandeVleugels: _vleugels,
       bestaandeVullingToewijzingen: _vullingToewijzingen,
+      bestaandeKleinhouten: _kleinhouten,
     );
 
     if (!resultaat.gewijzigd) {
-      final foutmelding = resultaat.foutmelding?.trim();
-
-      if (foutmelding != null && foutmelding.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(foutmelding),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
-      }
-
-      return;
-    }
-
-    final nieuweVulvlakken = _bepaalVulvlakkenVoor(
-      size: size,
-      tStijlen: resultaat.tStijlen,
-      vleugels: resultaat.vleugels,
-    );
-
-    final nieuweGevuldeVlakIds = resultaat.vullingToewijzingen
-        .map((toewijzing) => toewijzing.vlakId)
-        .toSet();
-
-    final nieuweKleinhouten =
-        OpmetingRaamKleinhoutHelper.herkoppelKleinhoutenNaVlakWijziging(
-          oudeVulvlakken: oudeVulvlakken,
-          nieuweVulvlakken: nieuweVulvlakken,
-          bestaandeKleinhouten: _kleinhouten,
-          nieuweGevuldeVlakIds: nieuweGevuldeVlakIds,
-        );
-
-    _bewaarVoorWijziging();
-
-    setState(() {
-      _tStijlen
-        ..clear()
-        ..addAll(resultaat.tStijlen);
-
-      _vleugels
-        ..clear()
-        ..addAll(resultaat.vleugels);
-
-      _vullingToewijzingen
-        ..clear()
-        ..addAll(resultaat.vullingToewijzingen);
-
-      _kleinhouten
-        ..clear()
-        ..addAll(nieuweKleinhouten);
-
-      _geselecteerdeLijn = null;
-      _geselecteerdeVulvlakIds.clear();
-      _geselecteerdeKleinhoutVlakIds.clear();
-    });
-
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
-  }
-
-  void _wisTStijlVanGeselecteerdeLijn() {
-    final index = OpmetingRaamTekenvlakActies.indexVanGeselecteerdeTStijlLijn(
-      _geselecteerdeLijn,
-    );
-
-    final size = _actueleTekenvlakGrootte();
-
-    if (index == null || size == null) {
-      return;
-    }
-
-    if (_geselecteerdeTStijlHeeftVleugelsLangsBeideZijden(size)) {
-      return;
-    }
-
-    final magWissen = OpmetingRaamTekenvlakActies.magTStijlWissen(
-      index: index,
-      tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
-      tStijlen: _tStijlen,
-    );
-
-    if (!magWissen) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Deze T-stijl kan niet gewist worden omdat er een andere T-stijl op aansluit.',
-          ),
-          backgroundColor: Colors.red,
-        ),
+      OpmetingRaamSnackBarHelper.toonFoutIndienAanwezig(
+        context,
+        resultaat.foutmelding,
       );
 
       return;
     }
 
-    final nieuweTStijlen = OpmetingRaamTekenvlakActies.verwijderTStijl(
-      index: index,
-      tStijlen: _tStijlen,
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangVolledigeTekening(
+        tStijlen: resultaat.tStijlen,
+        vleugels: resultaat.vleugels,
+        vullingToewijzingen: resultaat.vullingToewijzingen,
+        kleinhouten: resultaat.kleinhouten,
+      );
+
+      _bewaarTStijlenVoorActiefKader();
+
+      _wisTekeningSelecties();
+    });
+
+    _planAlleLegendaMeldingen();
+  }
+
+  void _wisTStijlVanGeselecteerdeLijn() {
+    final size = _actueleTekenvlakGrootte();
+
+    if (size == null) {
+      return;
+    }
+
+    final resultaat = OpmetingRaamTStijlActieHelper.verwijder(
+      geselecteerdeLijn: _geselecteerdeLijn,
+      tekenvlakGrootte: size,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
+      bestaandeTStijlen: _tStijlen,
+      bestaandeVleugels: _vleugels,
     );
+
+    if (!resultaat.gewijzigd) {
+      OpmetingRaamSnackBarHelper.toonFoutIndienAanwezig(
+        context,
+        resultaat.foutmelding,
+      );
+
+      return;
+    }
 
     _bewaarVoorWijziging();
 
     setState(() {
-      _tStijlen
-        ..clear()
-        ..addAll(nieuweTStijlen);
+      _vervangTStijlen(resultaat.tStijlen);
 
-      _geselecteerdeLijn = null;
-      _geselecteerdeVulvlakIds.clear();
-      _geselecteerdeKleinhoutVlakIds.clear();
+      _bewaarTStijlenVoorActiefKader();
 
+      _wisTekeningSelecties();
       _schoonVullingEnKleinhoutenOp();
     });
 
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
-  }
-
-  bool _geselecteerdeTStijlHeeftVleugelsLangsBeideZijden(
-    Size tekenvlakGrootte,
-  ) {
-    final index = OpmetingRaamTekenvlakActies.indexVanGeselecteerdeTStijlLijn(
-      _geselecteerdeLijn,
-    );
-
-    if (index == null || index < 0 || index >= _tStijlen.length) {
-      return false;
-    }
-
-    final buitenKader = OpmetingRaamKaderHelper.buitenKader(
-      size: tekenvlakGrootte,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
-    );
-
-    return OpmetingRaamTStijlHelper.heeftVleugelLangsBeideZijden(
-      tStijlIndex: index,
-      tStijlen: _tStijlen,
-      vleugels: _vleugels,
-      buitenKader: buitenKader,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
-    );
+    _planAlleLegendaMeldingen();
   }
 
   void _pasVleugelToe(Offset punt) {
@@ -1576,14 +2903,16 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final resultaat = OpmetingRaamTekenvlakActies.pasVleugelToe(
+    final resultaat = OpmetingRaamVleugelActieHelper.pasToe(
       punt: punt,
       tekenvlakGrootte: size,
-      breedteMm: widget.breedteMm,
-      hoogteMm: widget.hoogteMm,
+      breedteMm: _actiefVleugelBreedteMm,
+      hoogteMm: _actiefVleugelHoogteMm,
       geselecteerdVleugelType: _geselecteerdVleugelType,
       bestaandeTStijlen: _tStijlen,
       bestaandeVleugels: _vleugels,
+      bestaandeVullingToewijzingen: _vullingToewijzingen,
+      bestaandeKleinhouten: _kleinhouten,
     );
 
     if (!resultaat.gewijzigd) {
@@ -1593,556 +2922,626 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     _bewaarVoorWijziging();
 
     setState(() {
-      _tStijlen
-        ..clear()
-        ..addAll(resultaat.tStijlen);
+      _vervangVolledigeTekening(
+        tStijlen: resultaat.tStijlen,
+        vleugels: resultaat.vleugels,
+        vullingToewijzingen: resultaat.vullingToewijzingen,
+        kleinhouten: resultaat.kleinhouten,
+      );
 
-      _vleugels
-        ..clear()
-        ..addAll(resultaat.vleugels);
+      _bewaarTStijlenVoorActiefKader();
+      _bewaarVleugelsVoorActiefKader();
 
       _geselecteerdeLijn = null;
-      _geselecteerdeVulvlakIds.clear();
-      _geselecteerdeKleinhoutVlakIds.clear();
 
-      _schoonVullingEnKleinhoutenOp();
+      _vervangVulvlakSelectie(resultaat.geselecteerdeVulvlakIds);
+      _vervangKleinhoutVlakSelectie(resultaat.geselecteerdeKleinhoutVlakIds);
     });
 
-    _planOpvullingMelding();
-    _planKleinhoutMelding();
+    _planAlleLegendaMeldingen();
   }
 
-  void _verplaatsVleugelMenu({
+  void _voerMenuWijzigingUit(VoidCallback wijziging) {
+    setState(wijziging);
+  }
+
+  void _sluitTStijlMenu() {
+    _voerMenuWijzigingUit(_menuZichtbaarheid.sluitTStijlMenu);
+  }
+
+  void _sluitVleugelMenu() {
+    _voerMenuWijzigingUit(_menuZichtbaarheid.sluitVleugelMenu);
+  }
+
+  void _sluitOpvullingMenu() {
+    _voerMenuWijzigingUit(_menuZichtbaarheid.sluitOpvullingMenu);
+  }
+
+  void _sluitKleinhoutMenu() {
+    _voerMenuWijzigingUit(_menuZichtbaarheid.sluitKleinhoutMenu);
+  }
+
+  void _wijzigPositieType(String waarde) {
+    setState(() {
+      _positieType = waarde;
+    });
+  }
+
+  void _verversTStijlMaat() {
+    setState(() {});
+  }
+
+  void _wijzigVleugelType(OpmetingRaamVleugelType type) {
+    setState(() {
+      _geselecteerdVleugelType = type;
+    });
+  }
+
+  void _wijzigGeselecteerdeOpvulling(String? opvullingId) {
+    setState(() {
+      _geselecteerdeOpvullingId = opvullingId;
+    });
+  }
+
+  void _wijzigKleinhoutType(OpmetingRaamKleinhoutType type) {
+    setState(() {
+      _geselecteerdKleinhoutType = type;
+    });
+  }
+
+  void _wijzigKleinhoutPatroon(OpmetingRaamKleinhoutPatroon patroon) {
+    setState(() {
+      _geselecteerdKleinhoutPatroon = patroon;
+    });
+  }
+
+  void _verversKleinhoutWaarde() {
+    setState(() {});
+  }
+
+  void _verplaatsMenu({
+    required String menuId,
     required DragUpdateDetails details,
-    required Size tekenvlakGrootte,
+    required BuildContext overlayContext,
+    required Size schermGrootte,
     required Size menuGrootte,
   }) {
-    final nieuwePositie = OpmetingRaamTekenvlakActies.verplaatsVleugelMenu(
-      huidigePositie: _vleugelMenuPositie,
-      verplaatsing: details.delta,
-      tekenvlakGrootte: tekenvlakGrootte,
+    final gewijzigd = _zwevendeMenus.verplaatsMenu(
+      menuId: menuId,
+      details: details,
+      overlayContext: overlayContext,
+      schermGrootte: schermGrootte,
       menuGrootte: menuGrootte,
     );
 
-    setState(() {
-      _vleugelMenuPositie = nieuwePositie;
-    });
+    if (!gewijzigd || !mounted) {
+      return;
+    }
+
+    setState(() {});
   }
 
-  Size _meetMenuGrootte({
-    required GlobalKey menuKey,
-    required double standaardBreedte,
+  OpmetingKaderDeel? get _actiefKaderVoorKaderMenu {
+    final samenstelling = widget.kaderSamenstelling;
+
+    if (samenstelling == null) {
+      return null;
+    }
+
+    final actiefKader = samenstelling.actiefKader;
+
+    if (actiefKader != null) {
+      return actiefKader;
+    }
+
+    if (samenstelling.kaders.isNotEmpty) {
+      return samenstelling.kaders.first;
+    }
+
+    return null;
+  }
+
+  void _synchroniseerKaderMenuVelden({
+    OpmetingKaderDeel? kader,
+    bool forceer = false,
   }) {
-    final menuContext = menuKey.currentContext;
+    final actiefKader = kader ?? _actiefKaderVoorKaderMenu;
 
-    final renderObject = menuContext?.findRenderObject();
+    if (actiefKader == null) {
+      _laatsteKaderMenuKaderId = null;
+      return;
+    }
 
-    if (renderObject is RenderBox && renderObject.hasSize) {
-      final gemetenGrootte = renderObject.size;
+    final kaderGewijzigd = _laatsteKaderMenuKaderId != actiefKader.id;
 
-      if (gemetenGrootte.width > 0 &&
-          gemetenGrootte.height > 0 &&
-          gemetenGrootte.width.isFinite &&
-          gemetenGrootte.height.isFinite) {
-        return gemetenGrootte;
+    if (forceer || kaderGewijzigd || !_kaderBreedteFocusNode.hasFocus) {
+      _kaderBreedteController.text = actiefKader.breedteMm.toString();
+    }
+
+    if (forceer || kaderGewijzigd || !_kaderHoogteFocusNode.hasFocus) {
+      _kaderHoogteController.text = actiefKader.hoogteMm.toString();
+    }
+
+    _laatsteKaderMenuKaderId = actiefKader.id;
+  }
+
+  int? _leesKaderMenuMaat(String tekst) {
+    final waarde = double.tryParse(tekst.trim().replaceAll(',', '.'));
+
+    if (waarde == null) {
+      return null;
+    }
+
+    return waarde.round();
+  }
+
+  void _pasActieveKaderMatenToe() {
+    final samenstelling = widget.kaderSamenstelling;
+    final actiefKader = _actiefKaderVoorKaderMenu;
+
+    if (samenstelling == null || actiefKader == null) {
+      OpmetingRaamSnackBarHelper.toonFout(
+        context,
+        'Selecteer eerst een kader in de tekening.',
+      );
+      return;
+    }
+
+    final breedteMm = _leesKaderMenuMaat(_kaderBreedteController.text);
+    final hoogteMm = _leesKaderMenuMaat(_kaderHoogteController.text);
+
+    if (breedteMm == null || breedteMm <= 0) {
+      OpmetingRaamSnackBarHelper.toonFout(
+        context,
+        'Vul een geldige kaderbreedte in.',
+      );
+      return;
+    }
+
+    if (hoogteMm == null || hoogteMm <= 0) {
+      OpmetingRaamSnackBarHelper.toonFout(
+        context,
+        'Vul een geldige kaderhoogte in.',
+      );
+      return;
+    }
+
+    final nieuweKaders =
+        OpmetingKaderSamenstellingLayoutHelper.wijzigKaderAfmetingen(
+          kaders: samenstelling.kaders,
+          kaderId: actiefKader.id,
+          breedteMm: breedteMm,
+          hoogteMm: hoogteMm,
+        );
+
+    widget.onKaderSamenstellingGewijzigd?.call(
+      samenstelling.copyWith(
+        kaders: nieuweKaders,
+        actiefKaderId: actiefKader.id,
+      ),
+    );
+
+    _synchroniseerKaderMenuVelden(
+      kader: actiefKader.copyWith(breedteMm: breedteMm, hoogteMm: hoogteMm),
+      forceer: true,
+    );
+  }
+
+  Widget _bouwKaderWijzigMenuOverlay() {
+    final actiefKader = _actiefKaderVoorKaderMenu;
+
+    if (actiefKader == null) {
+      return const SizedBox.shrink();
+    }
+
+    _synchroniseerKaderMenuVelden(kader: actiefKader);
+
+    return OpmetingRaamKaderWijzigMenuOverlay(
+      actiefKader: actiefKader,
+      positie: _kaderMenuPositie,
+      onPositieGewijzigd: (positie) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _kaderMenuPositie = positie;
+        });
+      },
+      breedteController: _kaderBreedteController,
+      hoogteController: _kaderHoogteController,
+      breedteFocusNode: _kaderBreedteFocusNode,
+      hoogteFocusNode: _kaderHoogteFocusNode,
+      onBewaren: _pasActieveKaderMatenToe,
+    );
+  }
+
+  OpmetingKaderDeel? get _ankerKaderVoorToevoegMenu {
+    final samenstelling = widget.kaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      return null;
+    }
+
+    OpmetingKaderDeel? zoek(String? kaderId) {
+      if (kaderId == null || kaderId.trim().isEmpty) {
+        return null;
+      }
+
+      for (final kader in samenstelling.kaders) {
+        if (kader.id == kaderId && kader.id != _toevoegKaderId) {
+          return kader;
+        }
+      }
+
+      return null;
+    }
+
+    final ankerUitState = zoek(_toevoegAnkerKaderId);
+
+    if (ankerUitState != null) {
+      return ankerUitState;
+    }
+
+    final actiefKader = samenstelling.actiefKader;
+
+    if (actiefKader != null && actiefKader.id != _toevoegKaderId) {
+      return actiefKader;
+    }
+
+    for (final kader in samenstelling.kaders) {
+      if (kader.id != _toevoegKaderId) {
+        return kader;
       }
     }
 
-    return Size(standaardBreedte, 38);
+    return samenstelling.kaders.first;
   }
 
-  Offset _begrensVerplaatsbaarMenu({
-    required Offset positie,
-    required Size tekenvlakGrootte,
-    required Size menuGrootte,
-  }) {
-    final maximaleX = tekenvlakGrootte.width > menuGrootte.width
-        ? tekenvlakGrootte.width - menuGrootte.width
-        : 0.0;
+  int? _leesToevoegKaderMaat(String tekst) {
+    final waarde = double.tryParse(tekst.trim().replaceAll(',', '.'));
 
-    final effectieveHoogte = menuGrootte.height > 38
-        ? menuGrootte.height
-        : 38.0;
+    if (waarde == null) {
+      return null;
+    }
 
-    final maximaleY = tekenvlakGrootte.height > effectieveHoogte
-        ? tekenvlakGrootte.height - effectieveHoogte
-        : 0.0;
-
-    return Offset(
-      positie.dx.clamp(0.0, maximaleX).toDouble(),
-      positie.dy.clamp(0.0, maximaleY).toDouble(),
-    );
+    return waarde.round();
   }
 
-  void _verplaatsTStijlMenu({
-    required DragUpdateDetails details,
-    required Size tekenvlakGrootte,
+  int? _leesToevoegKaderOffset() {
+    return _leesToevoegKaderMaat(_toevoegKaderVrijeOffsetController.text);
+  }
+
+  OpmetingKaderDeel? _bestaandToevoegKader(
+    OpmetingKaderSamenstelling samenstelling,
+  ) {
+    final kaderId = _toevoegKaderId;
+
+    if (kaderId == null) {
+      return null;
+    }
+
+    for (final kader in samenstelling.kaders) {
+      if (kader.id == kaderId) {
+        return kader;
+      }
+    }
+
+    return null;
+  }
+
+  void _selecteerToevoegKaderPositie({
+    required OpmetingKaderZijde zijde,
+    required OpmetingKaderUitlijning uitlijning,
   }) {
-    final menuGrootte = _meetMenuGrootte(
-      menuKey: _tStijlMenuKey,
-      standaardBreedte: 260,
-    );
-
-    final nieuwePositie = _begrensVerplaatsbaarMenu(
-      positie: Offset(
-        _tStijlMenuPositie.dx + details.delta.dx,
-        _tStijlMenuPositie.dy + details.delta.dy,
-      ),
-      tekenvlakGrootte: tekenvlakGrootte,
-      menuGrootte: menuGrootte,
-    );
-
     setState(() {
-      _tStijlMenuPositie = nieuwePositie;
+      _toevoegKaderZijde = zijde;
+      _toevoegKaderUitlijning = uitlijning;
     });
+
+    _tekenOfWijzigToevoegKader();
   }
 
-  void _verplaatsOpvullingMenu({
-    required DragUpdateDetails details,
-    required Size tekenvlakGrootte,
-    required double menuBreedte,
-  }) {
-    final menuGrootte = _meetMenuGrootte(
-      menuKey: _opvullingMenuKey,
-      standaardBreedte: menuBreedte,
-    );
-
-    final nieuwePositie = _begrensVerplaatsbaarMenu(
-      positie: Offset(
-        _opvullingMenuPositie.dx + details.delta.dx,
-        _opvullingMenuPositie.dy + details.delta.dy,
-      ),
-      tekenvlakGrootte: tekenvlakGrootte,
-      menuGrootte: menuGrootte,
-    );
-
+  void _activeerToevoegVrijePositie(OpmetingKaderZijde zijde) {
     setState(() {
-      _opvullingMenuPositie = nieuwePositie;
+      _toevoegKaderZijde = zijde;
+      _toevoegKaderUitlijning = OpmetingKaderUitlijning.vrij;
     });
+
+    _tekenOfWijzigToevoegKader();
   }
 
-  void _verplaatsKleinhoutMenu({
-    required DragUpdateDetails details,
-    required Size tekenvlakGrootte,
-    required double menuBreedte,
-  }) {
-    final menuGrootte = _meetMenuGrootte(
-      menuKey: _kleinhoutMenuKey,
-      standaardBreedte: menuBreedte,
+  void _tekenOfWijzigToevoegKader() {
+    final samenstelling = widget.kaderSamenstelling;
+    final ankerKader = _ankerKaderVoorToevoegMenu;
+    final zijde = _toevoegKaderZijde;
+    final uitlijning = _toevoegKaderUitlijning;
+
+    if (samenstelling == null || ankerKader == null) {
+      OpmetingRaamSnackBarHelper.toonFout(
+        context,
+        'Er is geen kader beschikbaar om tegen te koppelen.',
+      );
+      return;
+    }
+
+    if (zijde == null || uitlijning == null) {
+      return;
+    }
+
+    final breedteMm = _leesToevoegKaderMaat(
+      _toevoegKaderBreedteController.text,
     );
 
-    final nieuwePositie = _begrensVerplaatsbaarMenu(
-      positie: Offset(
-        _kleinhoutMenuPositie.dx + details.delta.dx,
-        _kleinhoutMenuPositie.dy + details.delta.dy,
+    final hoogteMm = _leesToevoegKaderMaat(_toevoegKaderHoogteController.text);
+
+    if (breedteMm == null || breedteMm <= 0) {
+      return;
+    }
+
+    if (hoogteMm == null || hoogteMm <= 0) {
+      return;
+    }
+
+    var vrijeOffsetMm = 0;
+
+    if (uitlijning == OpmetingKaderUitlijning.vrij) {
+      final offset = _leesToevoegKaderOffset();
+
+      if (offset == null) {
+        return;
+      }
+
+      vrijeOffsetMm = offset;
+    }
+
+    final bestaandKader = _bestaandToevoegKader(samenstelling);
+    final kaderId =
+        bestaandKader?.id ??
+        _toevoegKaderId ??
+        'kader_${DateTime.now().microsecondsSinceEpoch}';
+
+    final basisKaders = samenstelling.kaders.where((kader) {
+      return kader.id != kaderId;
+    }).toList();
+
+    final ankerBestaat = basisKaders.any((kader) {
+      return kader.id == ankerKader.id;
+    });
+
+    if (!ankerBestaat) {
+      return;
+    }
+
+    final nieuwKader = OpmetingKaderDeel(
+      id: kaderId,
+      naam: bestaandKader?.naam ?? 'Kader ${basisKaders.length + 1}',
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+
+    final nieuweKaders = OpmetingKaderSamenstellingLayoutHelper.voegKaderToe(
+      bestaandeKaders: basisKaders,
+      nieuwKader: nieuwKader,
+      gekoppeldAanKaderId: ankerKader.id,
+      zijde: zijde,
+      uitlijning: uitlijning,
+      vrijeOffsetMm: vrijeOffsetMm,
+    );
+
+    _toevoegKaderId = kaderId;
+    _toevoegAnkerKaderId = ankerKader.id;
+
+    widget.onKaderSamenstellingGewijzigd?.call(
+      samenstelling.copyWith(
+        kaders: nieuweKaders,
+        actiefKaderId: ankerKader.id,
       ),
-      tekenvlakGrootte: tekenvlakGrootte,
-      menuGrootte: menuGrootte,
     );
-
-    setState(() {
-      _kleinhoutMenuPositie = nieuwePositie;
-    });
   }
 
-  Widget _verplaatsbaarMenu({
-    required GlobalKey menuKey,
-    required double breedte,
-    required String titel,
-    required ValueChanged<DragUpdateDetails> onVerslepen,
-    required VoidCallback onSluiten,
-    required Widget child,
+  Widget _bouwKaderToevoegMenuOverlay() {
+    final ankerKader = _ankerKaderVoorToevoegMenu;
+
+    if (widget.kaderSamenstelling == null || ankerKader == null) {
+      return const SizedBox.shrink();
+    }
+
+    return OpmetingRaamKaderToevoegMenuOverlay(
+      ankerKader: ankerKader,
+      positie: _kaderToevoegMenuPositie,
+      onPositieGewijzigd: (positie) {
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _kaderToevoegMenuPositie = positie;
+        });
+      },
+      geselecteerdeZijde: _toevoegKaderZijde,
+      geselecteerdeUitlijning: _toevoegKaderUitlijning,
+      onPositieGekozen: _selecteerToevoegKaderPositie,
+      onVrijePositieActiveren: _activeerToevoegVrijePositie,
+      onKaderWijziging: _tekenOfWijzigToevoegKader,
+      breedteController: _toevoegKaderBreedteController,
+      hoogteController: _toevoegKaderHoogteController,
+      vrijeOffsetController: _toevoegKaderVrijeOffsetController,
+      breedteFocusNode: _toevoegKaderBreedteFocusNode,
+      hoogteFocusNode: _toevoegKaderHoogteFocusNode,
+      vrijeOffsetFocusNode: _toevoegKaderVrijeOffsetFocusNode,
+    );
+  }
+
+  Widget _bouwMenuOverlay({
+    required List<OpmetingRaamVulvlak> vulvlakken,
+    required OpmetingRaamTekenvlakWeergaveStatus weergaveStatus,
   }) {
-    return SizedBox(
-      key: menuKey,
-      width: breedte,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            height: 36,
-            decoration: BoxDecoration(
-              color: const Color(0xFF0B7A3B),
-              borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: const Color(0xFF086330)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return OpmetingRaamMenuOverlay(
+      actieveTool: widget.actieveTool,
+      zwevendeMenus: _zwevendeMenus,
+      heeftGeselecteerdeLijn: _geselecteerdeLijn != null,
+      bestaandeTStijlGeselecteerd: weergaveStatus.bestaandeTStijlGeselecteerd,
+      alleenVerplaatsenVoorGeselecteerdeTStijl:
+          weergaveStatus.alleenVerplaatsenVoorGeselecteerdeTStijl,
+      vleugelMenuZichtbaar: _menuZichtbaarheid.vleugelMenuZichtbaar,
+      tStijlMenuZichtbaar: _menuZichtbaarheid.tStijlMenuZichtbaar,
+      opvullingMenuZichtbaar: _menuZichtbaarheid.opvullingMenuZichtbaar,
+      kleinhoutMenuZichtbaar: _menuZichtbaarheid.kleinhoutMenuZichtbaar,
+      positieType: _positieType,
+      positieController: widget.positieController,
+      geselecteerdVleugelType: _geselecteerdVleugelType,
+      opvullingen: _opvullingen,
+      opvullingenLaden: _opvullingenLaden,
+      geselecteerdeOpvullingId: _geselecteerdeOpvullingId,
+      aantalGeselecteerdeVulvlakken: _aantalGeselecteerdeVulvlakkenVoorMenu(),
+      totaalAantalVlakken: _totaalAantalVulvlakkenVoorMenu(vulvlakken),
+      geselecteerdKleinhoutType: _geselecteerdKleinhoutType,
+      geselecteerdKleinhoutPatroon: _geselecteerdKleinhoutPatroon,
+      kleinhoutHorizontaleHoogteController:
+          _kleinhoutHorizontaleHoogteController,
+      kleinhoutAantalHorizontaalController:
+          _kleinhoutAantalHorizontaalController,
+      kleinhoutAantalVerticaalController: _kleinhoutAantalVerticaalController,
+      aantalGeselecteerdeKleinhoutVlakken:
+          _aantalGeselecteerdeKleinhoutVlakkenVoorMenu(),
+      totaalAantalGevuldeVlakken: _totaalAantalGevuldeKleinhoutVlakkenVoorMenu(
+        weergaveStatus,
+      ),
+      kleinhoutSelectieIsVolledigGevuld:
+          _kleinhoutSelectieIsVolledigGevuldVoorMenu(weergaveStatus),
+      kleinhoutSelectieHeeftKleinhouten:
+          _kleinhoutSelectieHeeftKleinhoutenVoorMenu(weergaveStatus),
+      onMenuVerslepen: _verplaatsMenu,
+      onTStijlMenuSluiten: _sluitTStijlMenu,
+      onVleugelMenuSluiten: _sluitVleugelMenu,
+      onOpvullingMenuSluiten: _sluitOpvullingMenu,
+      onKleinhoutMenuSluiten: _sluitKleinhoutMenu,
+      onPositieTypeGewijzigd: _wijzigPositieType,
+      onTStijlMaatGewijzigd: _verversTStijlMaat,
+      onTStijlToevoegen: _tStijlToevoegen,
+      onTStijlVerplaatsen: _verplaatsGeselecteerdeTStijl,
+      onTStijlWissen: _wisTStijlVanGeselecteerdeLijn,
+      onVleugelTypeGekozen: _wijzigVleugelType,
+      onOpvullingGekozen: _wijzigGeselecteerdeOpvulling,
+      onOpvullingToepassen: _pasOpvullingToe,
+      onOpvullingVerwijderen: _verwijderOpvullingUitSelectie,
+      onAlleVulvlakkenSelecteren: _selecteerAlleVulvlakken,
+      onVulvlakSelectieWissen: _wisVulvlakSelectie,
+      onKleinhoutTypeGewijzigd: _wijzigKleinhoutType,
+      onKleinhoutPatroonGewijzigd: _wijzigKleinhoutPatroon,
+      onKleinhoutWaardeGewijzigd: _verversKleinhoutWaarde,
+      onKleinhoutToepassen: _pasKleinhoutenToe,
+      onKleinhoutVerwijderen: _verwijderGeselecteerdeKleinhouten,
+      onAlleGevuldeKleinhoutVlakkenSelecteren:
+          _selecteerAlleGevuldeKleinhoutVlakken,
+      onKleinhoutSelectieWissen: _wisKleinhoutSelectie,
+    );
+  }
+
+  Widget _bouwTekenvlakInhoud(Size size) {
+    _registreerTekenvlakGrootte(size);
+
+    _legendaMeldingen.planEersteMeldingen();
+
+    final preview = _previewPunt(size);
+
+    final vulvlakken = _bepaalVulvlakken(size);
+
+    final vulvlakkenPerKaderVoorWeergave = _vulvlakkenPerKaderVoorWeergave(
+      size,
+    );
+
+    final tStijlenPerKaderVoorWeergave = _tStijlenPerKaderVoorWeergave();
+
+    final vleugelsPerKaderVoorWeergave = _vleugelsPerKaderVoorWeergave();
+
+    final vullingToewijzingenPerKaderVoorWeergave =
+        _vullingToewijzingenPerKaderVoorWeergave();
+
+    final geselecteerdeVulvlakIdsPerKaderVoorWeergave =
+        _geselecteerdeVulvlakIdsPerKaderVoorWeergave();
+
+    final kleinhoutenPerKaderVoorWeergave = _kleinhoutenPerKaderVoorWeergave();
+
+    final geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave =
+        _geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave();
+
+    final weergaveStatus = OpmetingRaamTekenvlakWeergaveStatusHelper.bereken(
+      tekenvlakGrootte: size,
+      breedteMm: widget.breedteMm,
+      hoogteMm: widget.hoogteMm,
+      geselecteerdeLijn: _geselecteerdeLijn,
+      tStijlen: _tStijlen,
+      vleugels: _vleugels,
+      vulvlakken: vulvlakken,
+      vullingToewijzingen: _vullingToewijzingen,
+      geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
+      kleinhouten: _kleinhouten,
+    );
+
+    _meldOverzichtTekeningGewijzigd(
+      tekenvlakGrootte: size,
+      vulvlakken: vulvlakken,
+      vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+      tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+      vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+      vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
+      kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+    );
+
+    return OverlayPortal(
+      controller: _zwevendeMenus.overlayController,
+      overlayChildBuilder: (_) {
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _bouwMenuOverlay(
+              vulvlakken: vulvlakken,
+              weergaveStatus: weergaveStatus,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.move,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onPanUpdate: onVerslepen,
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 4),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.drag_indicator,
-                              size: 19,
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                titel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.open_with,
-                              size: 17,
-                              color: Colors.white,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 3),
-                  child: IconButton(
-                    tooltip: 'Menu sluiten',
-                    visualDensity: VisualDensity.compact,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(
-                      minWidth: 30,
-                      minHeight: 30,
-                    ),
-                    onPressed: onSluiten,
-                    icon: const Icon(
-                      Icons.close,
-                      size: 20,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 5),
-          child,
-        ],
+            if (widget.actieveTool == 'kader') _bouwKaderWijzigMenuOverlay(),
+            if (widget.actieveTool == 'kadertoevoegen')
+              _bouwKaderToevoegMenuOverlay(),
+          ],
+        );
+      },
+      child: OpmetingRaamTekenvlakTekenlaag(
+        breedteMm: widget.breedteMm,
+        hoogteMm: widget.hoogteMm,
+        onTapDown: _klikTekenvlak,
+        geselecteerdeLijn: _geselecteerdeLijn,
+        previewPunt: preview,
+        tStijlen: _tStijlen,
+        tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+        vleugels: _vleugels,
+        vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+        vulvlakken: vulvlakken,
+        vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+        vullingToewijzingen: _vullingToewijzingen,
+        vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
+        geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
+        geselecteerdeVulvlakIdsPerKader:
+            geselecteerdeVulvlakIdsPerKaderVoorWeergave,
+        kleinhouten: _kleinhouten,
+        kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+        geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
+        geselecteerdeKleinhoutVlakIdsPerKader:
+            geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
+        technischeTekeningen: widget.technischeTekeningen,
+        technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
+        technischeTekeningenPerKaderGroep:
+            widget.technischeTekeningenPerKaderGroep,
+        technischeKaderGroepen: widget.technischeKaderGroepen,
+        geselecteerdeKaderIds: Set<String>.unmodifiable(_geselecteerdeKaderIds),
+        kaderSamenstelling: widget.kaderSamenstelling,
+        actiefKaderId: _actiefKaderIdVoorWeergave,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD1D5DB)),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final size = Size(constraints.maxWidth, constraints.maxHeight);
-
-          _laatsteTekenvlakGrootte = size;
-
-          if (!_eersteOpvullingMeldingGepland) {
-            _eersteOpvullingMeldingGepland = true;
-
-            _planOpvullingMelding();
-          }
-
-          if (!_eersteKleinhoutMeldingGepland) {
-            _eersteKleinhoutMeldingGepland = true;
-
-            _planKleinhoutMelding();
-          }
-
-          final preview = _previewPunt(size);
-
-          final vulvlakken = _bepaalVulvlakken(size);
-
-          final alleenVerplaatsenVoorGeselecteerdeTStijl =
-              _bestaandeTStijlGeselecteerd &&
-              _geselecteerdeTStijlHeeftVleugelsLangsBeideZijden(size);
-
-          final vleugelMenuGrootte =
-              OpmetingRaamTekenvlakActies.berekenVleugelMenuGrootte(size);
-
-          final vleugelMenuPositie =
-              OpmetingRaamTekenvlakActies.begrensVleugelMenuPositie(
-                positie: _vleugelMenuPositie,
-                tekenvlakGrootte: size,
-                menuGrootte: vleugelMenuGrootte,
-              );
-
-          final beschikbareOpvullingMenuBreedte = size.width > 24
-              ? size.width - 24
-              : size.width;
-
-          final opvullingMenuBreedte = beschikbareOpvullingMenuBreedte
-              .clamp(220.0, 310.0)
-              .toDouble();
-
-          final kleinhoutMenuBreedte = beschikbareOpvullingMenuBreedte
-              .clamp(280.0, 320.0)
-              .toDouble();
-
-          final tStijlMenuGrootte = _meetMenuGrootte(
-            menuKey: _tStijlMenuKey,
-            standaardBreedte: 260,
-          );
-
-          final tStijlMenuPositie = _begrensVerplaatsbaarMenu(
-            positie: _tStijlMenuPositie,
-            tekenvlakGrootte: size,
-            menuGrootte: tStijlMenuGrootte,
-          );
-
-          final opvullingMenuGrootte = _meetMenuGrootte(
-            menuKey: _opvullingMenuKey,
-            standaardBreedte: opvullingMenuBreedte,
-          );
-
-          final opvullingMenuPositie = _begrensVerplaatsbaarMenu(
-            positie: _opvullingMenuPositie,
-            tekenvlakGrootte: size,
-            menuGrootte: opvullingMenuGrootte,
-          );
-
-          final kleinhoutMenuGrootte = _meetMenuGrootte(
-            menuKey: _kleinhoutMenuKey,
-            standaardBreedte: kleinhoutMenuBreedte,
-          );
-
-          final kleinhoutMenuPositie = _begrensVerplaatsbaarMenu(
-            positie: _kleinhoutMenuPositie,
-            tekenvlakGrootte: size,
-            menuGrootte: kleinhoutMenuGrootte,
-          );
-
-          final maximaleKleinhoutMenuHoogte = size.height > 70
-              ? size.height - 70
-              : size.height;
-
-          final totaalAantalGevuldeVlakken = vulvlakken
-              .where((vlak) => _gevuldeVlakIds.contains(vlak.id))
-              .length;
-
-          return Stack(
-            clipBehavior: Clip.hardEdge,
-            children: [
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTapDown: _klikTekenvlak,
-                  child: CustomPaint(
-                    painter: OpmetingRaamTekenvlakPainter(
-                      breedteMm: widget.breedteMm,
-                      hoogteMm: widget.hoogteMm,
-                      geselecteerdeLijn: _geselecteerdeLijn,
-                      previewPunt: preview,
-                      tStijlen: _tStijlen,
-                      vleugels: _vleugels,
-                      vulvlakken: vulvlakken,
-                      vullingToewijzingen: _vullingToewijzingen,
-                      geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-                      kleinhouten: _kleinhouten,
-                      geselecteerdeKleinhoutVlakIds:
-                          _geselecteerdeKleinhoutVlakIds,
-                    ),
-                    child: const SizedBox.expand(),
-                  ),
-                ),
-              ),
-              if (widget.actieveTool == 'tstijl' &&
-                  _geselecteerdeLijn != null &&
-                  _tStijlMenuZichtbaar)
-                Positioned(
-                  left: tStijlMenuPositie.dx,
-                  top: tStijlMenuPositie.dy,
-                  child: _verplaatsbaarMenu(
-                    menuKey: _tStijlMenuKey,
-                    breedte: 260,
-                    titel: 'T-stijlmenu verplaatsen',
-                    onVerslepen: (details) {
-                      _verplaatsTStijlMenu(
-                        details: details,
-                        tekenvlakGrootte: size,
-                      );
-                    },
-                    onSluiten: () {
-                      setState(() {
-                        _tStijlMenuZichtbaar = false;
-                      });
-                    },
-                    child: OpmetingRaamTStijlMenu(
-                      positieType: _positieType,
-                      positieController: widget.positieController,
-                      toonToevoegKnop:
-                          !alleenVerplaatsenVoorGeselecteerdeTStijl,
-                      toonWisKnop:
-                          _bestaandeTStijlGeselecteerd &&
-                          !alleenVerplaatsenVoorGeselecteerdeTStijl,
-                      toonVerplaatsKnop: _bestaandeTStijlGeselecteerd,
-                      onPositieTypeGewijzigd: (waarde) {
-                        setState(() {
-                          _positieType = waarde;
-                        });
-                      },
-                      onMaatGewijzigd: (_) {
-                        setState(() {});
-                      },
-                      onToevoegen: _tStijlToevoegen,
-                      onVerplaatsen: _verplaatsGeselecteerdeTStijl,
-                      onWissen: _wisTStijlVanGeselecteerdeLijn,
-                    ),
-                  ),
-                ),
-              if (widget.actieveTool == 'vleugel' && _vleugelMenuZichtbaar)
-                Positioned(
-                  left: vleugelMenuPositie.dx,
-                  top: vleugelMenuPositie.dy,
-                  child: OpmetingRaamVleugelMenu(
-                    menuGrootte: vleugelMenuGrootte,
-                    geselecteerdType: _geselecteerdVleugelType,
-                    onTypeGekozen: (type) {
-                      setState(() {
-                        _geselecteerdVleugelType = type;
-                      });
-                    },
-                    onSluiten: () {
-                      setState(() {
-                        _vleugelMenuZichtbaar = false;
-                      });
-                    },
-                    onVerslepen: (details) {
-                      _verplaatsVleugelMenu(
-                        details: details,
-                        tekenvlakGrootte: size,
-                        menuGrootte: vleugelMenuGrootte,
-                      );
-                    },
-                  ),
-                ),
-              if (widget.actieveTool == 'opvulling' && _opvullingMenuZichtbaar)
-                Positioned(
-                  left: opvullingMenuPositie.dx,
-                  top: opvullingMenuPositie.dy,
-                  child: _verplaatsbaarMenu(
-                    menuKey: _opvullingMenuKey,
-                    breedte: opvullingMenuBreedte,
-                    titel: 'Opvulmenu verplaatsen',
-                    onVerslepen: (details) {
-                      _verplaatsOpvullingMenu(
-                        details: details,
-                        tekenvlakGrootte: size,
-                        menuBreedte: opvullingMenuBreedte,
-                      );
-                    },
-                    onSluiten: () {
-                      setState(() {
-                        _opvullingMenuZichtbaar = false;
-                      });
-                    },
-                    child: OpmetingRaamOpvullingMenu(
-                      opvullingen: _opvullingen,
-                      isLaden: _opvullingenLaden,
-                      geselecteerdeOpvullingId: _geselecteerdeOpvullingId,
-                      aantalGeselecteerdeVlakken:
-                          _geselecteerdeVulvlakIds.length,
-                      totaalAantalVlakken: vulvlakken.length,
-                      onOpvullingGekozen: (opvullingId) {
-                        setState(() {
-                          _geselecteerdeOpvullingId = opvullingId;
-                        });
-                      },
-                      onToepassen: _pasOpvullingToe,
-                      onOpvullingVerwijderen: _verwijderOpvullingUitSelectie,
-                      onAllesSelecteren: _selecteerAlleVulvlakken,
-                      onSelectieWissen: _wisVulvlakSelectie,
-                    ),
-                  ),
-                ),
-              if (widget.actieveTool == 'kleinhout' && _kleinhoutMenuZichtbaar)
-                Positioned(
-                  left: kleinhoutMenuPositie.dx,
-                  top: kleinhoutMenuPositie.dy,
-                  child: _verplaatsbaarMenu(
-                    menuKey: _kleinhoutMenuKey,
-                    breedte: kleinhoutMenuBreedte,
-                    titel: 'Kleinhoutmenu verplaatsen',
-                    onVerslepen: (details) {
-                      _verplaatsKleinhoutMenu(
-                        details: details,
-                        tekenvlakGrootte: size,
-                        menuBreedte: kleinhoutMenuBreedte,
-                      );
-                    },
-                    onSluiten: () {
-                      setState(() {
-                        _kleinhoutMenuZichtbaar = false;
-                      });
-                    },
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: maximaleKleinhoutMenuHoogte,
-                      ),
-                      child: SingleChildScrollView(
-                        child: OpmetingRaamKleinhoutMenu(
-                          geselecteerdType: _geselecteerdKleinhoutType,
-                          geselecteerdPatroon: _geselecteerdKleinhoutPatroon,
-                          horizontaleHoogteController:
-                              _kleinhoutHorizontaleHoogteController,
-                          aantalHorizontaalController:
-                              _kleinhoutAantalHorizontaalController,
-                          aantalVerticaalController:
-                              _kleinhoutAantalVerticaalController,
-                          aantalGeselecteerdeVlakken:
-                              _geselecteerdeKleinhoutVlakIds.length,
-                          totaalAantalGevuldeVlakken:
-                              totaalAantalGevuldeVlakken,
-                          selectieKanKleinhoutenKrijgen:
-                              _kleinhoutSelectieIsVolledigGevuld,
-                          selectieHeeftKleinhouten:
-                              _kleinhoutSelectieHeeftKleinhouten,
-                          onTypeGewijzigd: (type) {
-                            setState(() {
-                              _geselecteerdKleinhoutType = type;
-                            });
-                          },
-                          onPatroonGewijzigd: (patroon) {
-                            setState(() {
-                              _geselecteerdKleinhoutPatroon = patroon;
-                            });
-                          },
-                          onWaardeGewijzigd: () {
-                            setState(() {});
-                          },
-                          onToepassen: _pasKleinhoutenToe,
-                          onVerwijderen: _verwijderGeselecteerdeKleinhouten,
-                          onAlleGevuldeVlakkenSelecteren:
-                              _selecteerAlleGevuldeKleinhoutVlakken,
-                          onSelectieWissen: _wisKleinhoutSelectie,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
+    return OpmetingRaamTekenvlakKader(inhoudBuilder: _bouwTekenvlakInhoud);
   }
 }

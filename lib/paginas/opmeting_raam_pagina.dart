@@ -1,15 +1,31 @@
 import 'package:flutter/material.dart';
 
-import '../helpers/opmeting/raam/opmeting_raam_basis_maten.dart';
+import '../helpers/app_storage.dart';
+import '../helpers/opmeting/raam/opmeting_raam_keuzemenu_model.dart';
+import '../helpers/opmeting/raam/opmeting_raam_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
+import '../helpers/opmeting/raam/opmeting_raam_kleinhout_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_notities.dart';
-import '../helpers/opmeting/raam/opmeting_raam_technische_keuzes.dart';
-import '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart';
 import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
+import '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart';
 import '../helpers/opmeting/raam/opmeting_raam_vulling_helper.dart';
+import '../helpers/opmeting/raam/opmeting_raam_technische_keuzes_paneel.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_menu_helper.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_menu_beheer_helper.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_maten_helper.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_conflict_helper.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_selectie_helper.dart';
+import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_formulier_layout.dart';
+import 'package:eerste_app/helpers/opmeting/raam/overzicht/opmeting_raam_overzicht_builder.dart';
+import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_model.dart';
+import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_layout_helper.dart';
+import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
-  const OpmetingRaamPagina({super.key});
+  const OpmetingRaamPagina({super.key, this.klantNaam, this.bestaandeOpmeting});
+
+  final String? klantNaam;
+  final OpmetingOverzichtRaamItem? bestaandeOpmeting;
 
   @override
   State<OpmetingRaamPagina> createState() {
@@ -39,7 +55,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   );
 
   final TextEditingController slagOnderController = TextEditingController(
-    text: '20',
+    text: '0',
   );
 
   final TextEditingController binnenTabletController = TextEditingController(
@@ -64,25 +80,78 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   int opvullingMenuOpenSignaal = 0;
   int kleinhoutMenuOpenSignaal = 0;
 
-  String vleugelprofiel = 'Classic';
-  String dorpel = 'Standaard';
-  String binnenkastprofiel = '4047';
-  String rolluik = 'Geen';
-  String vliegenraam = 'Geen';
-  String verbredingsprofielen = 'Niet gebruikt';
-  String koppelprofielen = 'Niet gebruikt';
-  String ventilatierooster = 'Geen';
-  String hoekprofielen = 'Geen';
-  String binnenafwerking = 'Geen';
-  String rolluikkast = 'Geen';
-  String vensterbanken = 'Geen';
-  String afwerkingslatten = 'Geen';
-
   List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen =
       <OpmetingRaamVullingLegendaItem>[];
 
   List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten =
       <OpmetingRaamKleinhoutLegendaItem>[];
+
+  List<OpmetingRaamKeuzeMenu> _keuzemenus = <OpmetingRaamKeuzeMenu>[];
+  late OpmetingKaderSamenstelling _kaderSamenstelling;
+
+  final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
+  _keuzeSelectiesPerKader = <String, Map<String, OpmetingRaamKeuzeSelectie>>{};
+
+  Set<String> _geselecteerdeKaderIdsVoorKeuzes = <String>{};
+
+  OpmetingOverzichtTekeningData? _overzichtTekeningData;
+
+  bool _keuzemenusLaden = true;
+  bool _keuzemenusBewaren = false;
+  bool _menuBeheerOntgrendeld = false;
+  bool _opvullingenOpen = false;
+  bool _kleinhoutenOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final bestaandeOpmeting = widget.bestaandeOpmeting;
+
+    if (bestaandeOpmeting == null) {
+      _kaderSamenstelling = OpmetingKaderSamenstelling.basis(
+        breedteMm: raammaatBreedte,
+        hoogteMm: raammaatHoogte,
+        slagLinksMm: _waarde(slagLinksController).round(),
+        slagRechtsMm: _waarde(slagRechtsController).round(),
+        slagBovenMm: _waarde(slagBovenController).round(),
+        slagOnderMm: 0,
+      );
+    } else {
+      _zetControllerTekst(
+        dagmaatBreedteController,
+        bestaandeOpmeting.dagmaatBreedteMm,
+      );
+      _zetControllerTekst(
+        dagmaatHoogteController,
+        bestaandeOpmeting.dagmaatHoogteMm,
+      );
+      _zetControllerTekst(
+        slagLinksController,
+        bestaandeOpmeting.kaderSamenstelling.slagLinksMm,
+      );
+      _zetControllerTekst(
+        slagRechtsController,
+        bestaandeOpmeting.kaderSamenstelling.slagRechtsMm,
+      );
+      _zetControllerTekst(
+        slagBovenController,
+        bestaandeOpmeting.kaderSamenstelling.slagBovenMm,
+      );
+      _zetControllerTekst(slagOnderController, 0);
+      notitiesController.text = bestaandeOpmeting.notities;
+
+      _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling.copyWith(
+        slagOnderMm: 0,
+      );
+      _overzichtTekeningData = bestaandeOpmeting.tekeningData;
+      _keuzeSelectiesPerKader.addAll(
+        _kopieKeuzeSelecties(bestaandeOpmeting.keuzeSelectiesPerKader),
+      );
+    }
+
+    _laadKeuzemenus();
+  }
 
   @override
   void dispose() {
@@ -106,30 +175,128 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   double _waarde(TextEditingController controller) {
-    return double.tryParse(controller.text.trim().replaceAll(',', '.')) ?? 0;
+    return OpmetingRaamMatenHelper.waarde(controller);
+  }
+
+  Map<String, Map<String, OpmetingRaamKeuzeSelectie>> _kopieKeuzeSelecties(
+    Map<String, Map<String, OpmetingRaamKeuzeSelectie>> bron,
+  ) {
+    return OpmetingRaamKeuzeMenuHelper.kopieKeuzeSelecties(bron);
+  }
+
+  void _zetControllerTekst(TextEditingController controller, int waarde) {
+    OpmetingRaamMatenHelper.zetControllerTekst(controller, waarde);
+  }
+
+  String get _actiefKaderIdVoorKeuzes {
+    return OpmetingRaamKeuzeSelectieHelper.actiefKaderIdVoorKeuzes(
+      kaderSamenstelling: _kaderSamenstelling,
+    );
+  }
+
+  String get _actieveKeuzeSleutel {
+    return OpmetingRaamKeuzeSelectieHelper.actieveKeuzeSleutel(
+      kaderSamenstelling: _kaderSamenstelling,
+      geselecteerdeKaderIdsVoorKeuzes: _geselecteerdeKaderIdsVoorKeuzes,
+    );
+  }
+
+  Map<String, OpmetingRaamKeuzeSelectie> _selectiesVoorKader(String kaderId) {
+    return OpmetingRaamKeuzeSelectieHelper.selectiesVoorSleutel(
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+      sleutel: kaderId,
+    );
+  }
+
+  Map<String, OpmetingRaamKeuzeSelectie> get _actieveKeuzeSelecties {
+    return _selectiesVoorKader(_actieveKeuzeSleutel);
+  }
+
+  void _verwijderKeuzeSelectiesVanNietBestaandeKaders() {
+    _geselecteerdeKaderIdsVoorKeuzes =
+        OpmetingRaamKeuzeSelectieHelper.verwijderKeuzeSelectiesVanNietBestaandeKaders(
+          kaderSamenstelling: _kaderSamenstelling,
+          keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+          geselecteerdeKaderIdsVoorKeuzes: _geselecteerdeKaderIdsVoorKeuzes,
+        );
+  }
+
+  void _verwerkGeselecteerdeKadersVoorKeuzes(Set<String> kaderIds) {
+    setState(() {
+      _geselecteerdeKaderIdsVoorKeuzes = kaderIds;
+      _normaliseerKeuzeSelecties();
+    });
+  }
+
+  void _verwerkOverzichtTekeningData(OpmetingOverzichtTekeningData data) {
+    _overzichtTekeningData = data;
+  }
+
+  void _vulMaatveldenMetActiefKader(OpmetingKaderSamenstelling samenstelling) {
+    OpmetingRaamMatenHelper.vulMaatveldenMetActiefKader(
+      samenstelling: samenstelling,
+      dagmaatBreedteController: dagmaatBreedteController,
+      dagmaatHoogteController: dagmaatHoogteController,
+      slagLinksController: slagLinksController,
+      slagRechtsController: slagRechtsController,
+      slagBovenController: slagBovenController,
+      slagOnderController: slagOnderController,
+    );
   }
 
   int get raammaatBreedte {
-    return (_waarde(dagmaatBreedteController) +
-            _waarde(slagLinksController) +
-            _waarde(slagRechtsController))
-        .round();
+    return OpmetingRaamMatenHelper.berekenRaammaatBreedte(
+      dagmaatBreedteController: dagmaatBreedteController,
+      slagLinksController: slagLinksController,
+      slagRechtsController: slagRechtsController,
+    );
   }
 
   int get raammaatHoogte {
-    return (_waarde(dagmaatHoogteController) +
-            _waarde(slagBovenController) +
-            _waarde(slagOnderController))
-        .round();
+    return OpmetingRaamMatenHelper.berekenRaammaatHoogte(
+      dagmaatHoogteController: dagmaatHoogteController,
+      slagBovenController: slagBovenController,
+    );
   }
 
   int get verschilTablet {
-    return (_waarde(buitenTabletController) - _waarde(binnenTabletController))
-        .round();
+    return OpmetingRaamMatenHelper.berekenVerschilTablet(
+      binnenTabletController: binnenTabletController,
+      buitenTabletController: buitenTabletController,
+    );
   }
 
   void _herbereken() {
-    setState(() {});
+    setState(() {
+      _kaderSamenstelling = OpmetingRaamMatenHelper.herberekenSamenstelling(
+        huidigeSamenstelling: _kaderSamenstelling,
+        raammaatBreedte: raammaatBreedte,
+        raammaatHoogte: raammaatHoogte,
+        slagLinksController: slagLinksController,
+        slagRechtsController: slagRechtsController,
+        slagBovenController: slagBovenController,
+        slagOnderController: slagOnderController,
+      );
+    });
+  }
+
+  void _wijzigKaderSamenstelling(
+    OpmetingKaderSamenstelling nieuweSamenstelling,
+  ) {
+    final herberekendeSamenstelling = nieuweSamenstelling.copyWith(
+      slagOnderMm: 0,
+      kaders: OpmetingKaderSamenstellingLayoutHelper.herberekenGekoppeldeKaders(
+        kaders: nieuweSamenstelling.kaders,
+      ),
+    );
+
+    setState(() {
+      _kaderSamenstelling = herberekendeSamenstelling;
+      _verwijderKeuzeSelectiesVanNietBestaandeKaders();
+      _normaliseerKeuzeSelecties();
+    });
+
+    _vulMaatveldenMetActiefKader(herberekendeSamenstelling);
   }
 
   void _toolGekozen(String tool) {
@@ -247,197 +414,471 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     return true;
   }
 
+  Future<void> _laadKeuzemenus() async {
+    setState(() {
+      _keuzemenusLaden = true;
+    });
+
+    try {
+      final geladenMenus = await AppStorage.laadOpmetingRaamKeuzemenus();
+
+      final opgeschoondeMenus = _verwijderOngeldigeNietCombineerbareKoppelingen(
+        geladenMenus,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _keuzemenus
+          ..clear()
+          ..addAll(opgeschoondeMenus);
+
+        _normaliseerKeuzeSelecties();
+
+        _keuzemenusLaden = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _keuzemenusLaden = false;
+      });
+
+      _toonMelding('De keuzemenu’s konden niet worden geladen.', fout: true);
+    }
+  }
+
+  List<OpmetingRaamKeuzeMenu> _verwijderOngeldigeNietCombineerbareKoppelingen(
+    List<OpmetingRaamKeuzeMenu> menus,
+  ) {
+    return OpmetingRaamKeuzeMenuHelper.verwijderOngeldigeNietCombineerbareKoppelingen(
+      menus,
+    );
+  }
+
+  Future<void> _bewaarKeuzemenus(
+    List<OpmetingRaamKeuzeMenu> nieuweMenus,
+  ) async {
+    final opgeschoondeMenus = _verwijderOngeldigeNietCombineerbareKoppelingen(
+      nieuweMenus,
+    );
+
+    final gesorteerdeMenus = OpmetingRaamKeuzeMenuHelper.sorteerMenus(
+      opgeschoondeMenus,
+    );
+
+    setState(() {
+      _keuzemenus
+        ..clear()
+        ..addAll(gesorteerdeMenus);
+
+      _normaliseerKeuzeSelecties();
+
+      _keuzemenusBewaren = true;
+    });
+
+    try {
+      await AppStorage.bewaarOpmetingRaamKeuzemenus(gesorteerdeMenus);
+    } catch (_) {
+      if (mounted) {
+        _toonMelding('De keuzemenu’s konden niet worden bewaard.', fout: true);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _keuzemenusBewaren = false;
+        });
+      }
+    }
+  }
+
+  void _normaliseerKeuzeSelecties() {
+    _geselecteerdeKaderIdsVoorKeuzes =
+        OpmetingRaamKeuzeSelectieHelper.normaliseerKeuzeSelecties(
+          kaderSamenstelling: _kaderSamenstelling,
+          keuzemenus: _keuzemenus,
+          keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+          geselecteerdeKaderIdsVoorKeuzes: _geselecteerdeKaderIdsVoorKeuzes,
+        );
+  }
+
+  OpmetingRaamKeuzeSelectie _selectieVoorMenu(OpmetingRaamKeuzeMenu menu) {
+    return OpmetingRaamKeuzeSelectieHelper.selectieVoorMenu(
+      selecties: _actieveKeuzeSelecties,
+      menu: menu,
+    );
+  }
+
+  OpmetingRaamKeuzeOptie _optieVoorSelectie(OpmetingRaamKeuzeMenu menu) {
+    return OpmetingRaamKeuzeSelectieHelper.optieVoorSelectie(
+      selecties: _actieveKeuzeSelecties,
+      menu: menu,
+    );
+  }
+
+  List<OpmetingRaamTechnischeTekeningInstelling>
+  _actieveTechnischeTekeningenVoorKader(String kaderId) {
+    return OpmetingRaamKeuzeSelectieHelper.actieveTechnischeTekeningenVoorSleutel(
+      sleutel: kaderId,
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+      keuzemenus: _keuzemenus,
+    );
+  }
+
+  Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
+  _technischeTekeningenPerKader() {
+    return OpmetingRaamKeuzeSelectieHelper.technischeTekeningenPerKader(
+      kaderSamenstelling: _kaderSamenstelling,
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+      keuzemenus: _keuzemenus,
+    );
+  }
+
+  Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
+  _technischeTekeningenPerKaderGroep() {
+    return OpmetingRaamKeuzeSelectieHelper.technischeTekeningenPerKaderGroep(
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+      keuzemenus: _keuzemenus,
+    );
+  }
+
+  Map<String, Set<String>> _technischeKaderGroepen() {
+    return OpmetingRaamKeuzeSelectieHelper.technischeKaderGroepen(
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+    );
+  }
+
+  Future<void> _kiesOptie(OpmetingRaamKeuzeMenu menu, String optieId) async {
+    OpmetingRaamKeuzeOptie? gevondenOptie;
+
+    for (final optie in menu.opties) {
+      if (optie.id == optieId) {
+        gevondenOptie = optie;
+        break;
+      }
+    }
+
+    if (gevondenOptie == null) {
+      return;
+    }
+
+    final gekozenOptie = gevondenOptie;
+
+    setState(() {
+      _actieveKeuzeSelecties[menu.id] = OpmetingRaamKeuzeSelectie(
+        menuId: menu.id,
+        optieId: gekozenOptie.id,
+        extraWaarden: _standaardExtraWaarden(gekozenOptie),
+      );
+    });
+
+    /*
+     * Bij "Geen" hoeft geen controle uitgevoerd
+     * te worden.
+     */
+    if (gekozenOptie.isGeenKeuze) {
+      return;
+    }
+
+    final conflicten = OpmetingRaamKeuzeConflictHelper.zoekConflicten(
+      keuzemenus: _keuzemenus,
+      keuzeSelecties: _actieveKeuzeSelecties,
+      gekozenMenu: menu,
+      gekozenOptie: gekozenOptie,
+    );
+
+    if (conflicten.isEmpty || !mounted) {
+      return;
+    }
+
+    await OpmetingRaamKeuzeConflictHelper.toonWaarschuwing(
+      context: context,
+      gekozenMenu: menu,
+      gekozenOptie: gekozenOptie,
+      conflicten: conflicten,
+    );
+  }
+
+  Map<String, dynamic> _standaardExtraWaarden(OpmetingRaamKeuzeOptie optie) {
+    return OpmetingRaamKeuzeMenuHelper.standaardExtraWaarden(optie);
+  }
+
+  void _werkExtraWaardeBij({
+    required OpmetingRaamKeuzeMenu menu,
+    required String veldId,
+    required dynamic waarde,
+  }) {
+    final selectie = _selectieVoorMenu(menu);
+
+    final nieuweExtraWaarden = Map<String, dynamic>.from(selectie.extraWaarden);
+
+    nieuweExtraWaarden[veldId] = waarde;
+
+    setState(() {
+      _actieveKeuzeSelecties[menu.id] = selectie.copyWith(
+        extraWaarden: nieuweExtraWaarden,
+      );
+    });
+  }
+
+  Future<void> _wisselBeheerSlot() async {
+    final nieuweWaarde =
+        await OpmetingRaamMenuBeheerHelper.vraagBeheerSlotWissel(
+          context: context,
+          menuBeheerOntgrendeld: _menuBeheerOntgrendeld,
+        );
+
+    if (nieuweWaarde == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _menuBeheerOntgrendeld = nieuweWaarde;
+    });
+  }
+
+  Future<void> _voegMenuToe() async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.voegMenuToe(
+      context: context,
+      keuzemenus: _keuzemenus,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _bewerkTechnischMenu(OpmetingRaamKeuzeMenu menu) async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.bewerkTechnischMenu(
+      context: context,
+      keuzemenus: _keuzemenus,
+      menu: menu,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _verwijderMenu(OpmetingRaamKeuzeMenu menu) async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.verwijderMenu(
+      context: context,
+      keuzemenus: _keuzemenus,
+      menu: menu,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _verplaatsMenu(OpmetingRaamKeuzeMenu menu, int richting) async {
+    final nieuweMenus = OpmetingRaamMenuBeheerHelper.verplaatsMenu(
+      keuzemenus: _keuzemenus,
+      menu: menu,
+      richting: richting,
+    );
+
+    if (nieuweMenus == null) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
   Future<void> _opslaan() async {
+    final aantalIngevuldeKeuzes = _keuzemenus.where((menu) {
+      final optie = _optieVoorSelectie(menu);
+
+      return !optie.isGeenKeuze;
+    }).length;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opmeting raam voorlopig lokaal getest.'),
-        backgroundColor: Color(0xFF0B7A3B),
+      SnackBar(
+        content: Text(
+          'Opmeting raam voorlopig lokaal getest. '
+          '$aantalIngevuldeKeuzes technische keuze(s) ingevuld.',
+        ),
+        backgroundColor: const Color(0xFF0B7A3B),
       ),
     );
   }
 
-  void _technischeKeuzeGewijzigd(String veld, String waarde) {
-    setState(() {
-      switch (veld) {
-        case 'vleugelprofiel':
-          vleugelprofiel = waarde;
-          break;
+  Future<void> _voegOpmetingToeAanOverzicht() async {
+    Navigator.pop(context, _maakOverzichtItem());
+  }
 
-        case 'dorpel':
-          dorpel = waarde;
-          break;
+  Future<void> _vraagToevoegenAanOverzichtBijTerug() async {
+    final keuze = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Opmeting toevoegen aan overzicht?'),
+          content: const Text(
+            'Deze raamopmeting is nog niet toegevoegd aan het overzicht. Wilt u deze opmeting toevoegen?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, 'niet_toevoegen');
+              },
+              child: const Text('Niet toevoegen'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, 'verder_bewerken');
+              },
+              child: const Text('Verder bewerken'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'toevoegen');
+              },
+              child: const Text('Toevoegen'),
+            ),
+          ],
+        );
+      },
+    );
 
-        case 'binnenkastprofiel':
-          binnenkastprofiel = waarde;
-          break;
+    if (!mounted || keuze == null || keuze == 'verder_bewerken') {
+      return;
+    }
 
-        case 'rolluik':
-          rolluik = waarde;
-          break;
+    if (keuze == 'toevoegen') {
+      Navigator.pop(context, _maakOverzichtItem());
+      return;
+    }
 
-        case 'vliegenraam':
-          vliegenraam = waarde;
-          break;
+    Navigator.pop(context);
+  }
 
-        case 'verbredingsprofielen':
-          verbredingsprofielen = waarde;
-          break;
+  OpmetingOverzichtRaamItem _maakOverzichtItem() {
+    return OpmetingRaamOverzichtBuilder.maak(
+      klantNaam: widget.klantNaam?.trim() ?? '',
+      dagmaatBreedteMm: _waarde(dagmaatBreedteController).round(),
+      dagmaatHoogteMm: _waarde(dagmaatHoogteController).round(),
+      raammaatBreedteMm: raammaatBreedte,
+      raammaatHoogteMm: raammaatHoogte,
+      kaderSamenstelling: _kaderSamenstelling,
+      beginTekeningData: _overzichtTekeningData,
+      actieveTechnischeTekeningen: _actieveTechnischeTekeningenVoorKader(
+        _actieveKeuzeSleutel,
+      ),
+      technischeTekeningenPerKader: _technischeTekeningenPerKader(),
+      technischeTekeningenPerKaderGroep: _technischeTekeningenPerKaderGroep(),
+      technischeKaderGroepen: _technischeKaderGroepen(),
+      keuzeSelectiesPerKader: _keuzeSelectiesPerKader,
+      keuzemenus: _keuzemenus,
+      gekozenOpvullingen: gekozenOpvullingen,
+      gekozenKleinhouten: gekozenKleinhouten,
+      notities: notitiesController.text.trim(),
+    );
+  }
 
-        case 'koppelprofielen':
-          koppelprofielen = waarde;
-          break;
-
-        case 'ventilatierooster':
-          ventilatierooster = waarde;
-          break;
-
-        case 'hoekprofielen':
-          hoekprofielen = waarde;
-          break;
-
-        case 'binnenafwerking':
-          binnenafwerking = waarde;
-          break;
-
-        case 'rolluikkast':
-          rolluikkast = waarde;
-          break;
-
-        case 'vensterbanken':
-          vensterbanken = waarde;
-          break;
-
-        case 'afwerkingslatten':
-          afwerkingslatten = waarde;
-          break;
-      }
-    });
+  void _toonMelding(String tekst, {bool fout = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(tekst),
+        backgroundColor: fout
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF0B7A3B),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0B7A3B),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: const Text(
-          'Opmeting raam',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.add)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.copy_outlined)),
-          IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline)),
-          Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: ElevatedButton(
-              onPressed: _opslaan,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0B7A3B),
-              ),
-              child: const Text('Opslaan'),
-            ),
-          ),
-        ],
-      ),
-      body: Row(
-        children: [
-          Expanded(
-            flex: 50,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: OpmetingRaamTekenvlak(
-                      breedteMm: raammaatBreedte,
-                      hoogteMm: raammaatHoogte,
-                      actieveTool: actieveTool,
-                      vleugelMenuOpenSignaal: vleugelMenuOpenSignaal,
-                      tStijlMenuOpenSignaal: tStijlMenuOpenSignaal,
-                      opvullingMenuOpenSignaal: opvullingMenuOpenSignaal,
-                      kleinhoutMenuOpenSignaal: kleinhoutMenuOpenSignaal,
-                      positieController: positieController,
-                      controller: tekenvlakController,
-                      onOpvullingenGewijzigd: _verwerkOpvullingen,
-                      onKleinhoutenGewijzigd: _verwerkKleinhouten,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  AnimatedBuilder(
-                    animation: tekenvlakController,
-                    builder: (context, child) {
-                      return OpmetingRaamToolbalk(
-                        actieveTool: actieveTool,
-                        onToolGekozen: _toolGekozen,
-                        kanOngedaanMaken: tekenvlakController.kanOngedaanMaken,
-                        kanHerstellen: tekenvlakController.kanHerstellen,
-                        onOngedaanMaken: tekenvlakController.ongedaanMaken,
-                        onHerstellen: tekenvlakController.herstellen,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  OpmetingRaamNotities(controller: notitiesController),
-                ],
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 50,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
-              child: ListView(
-                children: [
-                  OpmetingRaamBasisMaten(
-                    dagmaatHoogteController: dagmaatHoogteController,
-                    dagmaatBreedteController: dagmaatBreedteController,
-                    slagLinksController: slagLinksController,
-                    slagRechtsController: slagRechtsController,
-                    slagBovenController: slagBovenController,
-                    slagOnderController: slagOnderController,
-                    binnenTabletController: binnenTabletController,
-                    buitenTabletController: buitenTabletController,
-                    raammaatBreedte: raammaatBreedte,
-                    raammaatHoogte: raammaatHoogte,
-                    verschilTablet: verschilTablet,
-                    onChanged: _herbereken,
-                  ),
-                  const SizedBox(height: 10),
-                  OpmetingRaamTechnischeKeuzes(
-                    vleugelprofiel: vleugelprofiel,
-                    dorpel: dorpel,
-                    opvullingen: gekozenOpvullingen,
-                    kleinhouten: gekozenKleinhouten,
-                    binnenkastprofiel: binnenkastprofiel,
-                    rolluik: rolluik,
-                    vliegenraam: vliegenraam,
-                    verbredingsprofielen: verbredingsprofielen,
-                    koppelprofielen: koppelprofielen,
-                    ventilatierooster: ventilatierooster,
-                    hoekprofielen: hoekprofielen,
-                    binnenafwerking: binnenafwerking,
-                    rolluikkast: rolluikkast,
-                    vensterbanken: vensterbanken,
-                    afwerkingslatten: afwerkingslatten,
-                    onChanged: _technischeKeuzeGewijzigd,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+    final technischeTekeningen = _actieveTechnischeTekeningenVoorKader(
+      _actieveKeuzeSleutel,
+    );
+
+    final technischeTekeningenPerKader = _technischeTekeningenPerKader();
+
+    final technischeTekeningenPerKaderGroep =
+        _technischeTekeningenPerKaderGroep();
+
+    final technischeKaderGroepen = _technischeKaderGroepen();
+
+    return OpmetingRaamFormulierLayout(
+      klantNaam: widget.klantNaam,
+      onTerug: _vraagToevoegenAanOverzichtBijTerug,
+      onToevoegen: _voegOpmetingToeAanOverzicht,
+      onOpslaan: _opslaan,
+      dagmaatHoogteController: dagmaatHoogteController,
+      dagmaatBreedteController: dagmaatBreedteController,
+      slagLinksController: slagLinksController,
+      slagRechtsController: slagRechtsController,
+      slagBovenController: slagBovenController,
+      slagOnderController: slagOnderController,
+      binnenTabletController: binnenTabletController,
+      buitenTabletController: buitenTabletController,
+      raammaatBreedte: raammaatBreedte,
+      raammaatHoogte: raammaatHoogte,
+      verschilTablet: verschilTablet,
+      onMatenGewijzigd: _herbereken,
+      tekenvlakController: tekenvlakController,
+      actieveTool: actieveTool,
+      vleugelMenuOpenSignaal: vleugelMenuOpenSignaal,
+      tStijlMenuOpenSignaal: tStijlMenuOpenSignaal,
+      opvullingMenuOpenSignaal: opvullingMenuOpenSignaal,
+      kleinhoutMenuOpenSignaal: kleinhoutMenuOpenSignaal,
+      positieController: positieController,
+      technischeTekeningen: technischeTekeningen,
+      technischeTekeningenPerKader: technischeTekeningenPerKader,
+      technischeTekeningenPerKaderGroep: technischeTekeningenPerKaderGroep,
+      technischeKaderGroepen: technischeKaderGroepen,
+      beginTekeningData: _overzichtTekeningData,
+      onGeselecteerdeKaderIdsGewijzigd: _verwerkGeselecteerdeKadersVoorKeuzes,
+      onOverzichtTekeningGewijzigd: _verwerkOverzichtTekeningData,
+      onOpvullingenGewijzigd: _verwerkOpvullingen,
+      onKleinhoutenGewijzigd: _verwerkKleinhouten,
+      kaderSamenstelling: _kaderSamenstelling,
+      onKaderSamenstellingGewijzigd: _wijzigKaderSamenstelling,
+      onToolGekozen: _toolGekozen,
+      notitiesController: notitiesController,
+      gekozenOpvullingen: gekozenOpvullingen,
+      gekozenKleinhouten: gekozenKleinhouten,
+      keuzemenus: _keuzemenus,
+      keuzemenusLaden: _keuzemenusLaden,
+      keuzemenusBewaren: _keuzemenusBewaren,
+      menuBeheerOntgrendeld: _menuBeheerOntgrendeld,
+      opvullingenOpen: _opvullingenOpen,
+      kleinhoutenOpen: _kleinhoutenOpen,
+      onOpvullingenOpenGewijzigd: (waarde) {
+        setState(() {
+          _opvullingenOpen = waarde;
+        });
+      },
+      onKleinhoutenOpenGewijzigd: (waarde) {
+        setState(() {
+          _kleinhoutenOpen = waarde;
+        });
+      },
+      geselecteerdeOptieIdVoorMenu: (menu) {
+        return _selectieVoorMenu(menu).optieId;
+      },
+      onOptieGekozen: _kiesOptie,
+      onMenuToevoegen: _voegMenuToe,
+      onBeheerSlotWisselen: _wisselBeheerSlot,
+      onMenuAanpassen: _bewerkTechnischMenu,
+      onMenuOmhoog: (menu) {
+        _verplaatsMenu(menu, -1);
+      },
+      onMenuOmlaag: (menu) {
+        _verplaatsMenu(menu, 1);
+      },
+      onMenuVerwijderen: _verwijderMenu,
     );
   }
 }

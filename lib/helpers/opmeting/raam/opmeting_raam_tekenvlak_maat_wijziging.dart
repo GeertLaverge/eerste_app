@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'opmeting_raam_kader_helper.dart';
@@ -19,6 +21,11 @@ class OpmetingRaamMaatWijzigingResultaat {
 class OpmetingRaamTekenvlakMaatWijziging {
   const OpmetingRaamTekenvlakMaatWijziging._();
 
+  /// Bestaande functie voor een wijziging van de raamafmetingen
+  /// terwijl het tekenvlak dezelfde grootte houdt.
+  ///
+  /// Deze functie blijft bestaan zodat de huidige aanroep in
+  /// opmeting_raam_tekenvlak.dart voorlopig blijft compileren.
   static OpmetingRaamMaatWijzigingResultaat? pasTekeningAanNieuweKaderMaten({
     required Size tekenvlakGrootte,
     required int oudeBreedteMm,
@@ -28,7 +35,41 @@ class OpmetingRaamTekenvlakMaatWijziging {
     required List<OpmetingRaamTStijl> bestaandeTStijlen,
     required List<OpmetingRaamVleugel> bestaandeVleugels,
   }) {
-    if (!_isGeldigeTekenvlakGrootte(tekenvlakGrootte)) {
+    return pasTekeningAanNieuwBlok(
+      oudeTekenvlakGrootte: tekenvlakGrootte,
+      nieuweTekenvlakGrootte: tekenvlakGrootte,
+      oudeBreedteMm: oudeBreedteMm,
+      oudeHoogteMm: oudeHoogteMm,
+      nieuweBreedteMm: nieuweBreedteMm,
+      nieuweHoogteMm: nieuweHoogteMm,
+      bestaandeTStijlen: bestaandeTStijlen,
+      bestaandeVleugels: bestaandeVleugels,
+    );
+  }
+
+  /// Algemene schaalfunctie voor het volledige raamblok.
+  ///
+  /// Deze functie wordt gebruikt wanneer:
+  ///
+  /// - de raamhoogte verandert;
+  /// - de raambreedte verandert;
+  /// - het tekenvlak groter of kleiner wordt;
+  /// - de iPad van liggend naar staand draait;
+  /// - de iPad van staand naar liggend draait.
+  ///
+  /// Alle bestaande ID's worden behouden.
+  static OpmetingRaamMaatWijzigingResultaat? pasTekeningAanNieuwBlok({
+    required Size oudeTekenvlakGrootte,
+    required Size nieuweTekenvlakGrootte,
+    required int oudeBreedteMm,
+    required int oudeHoogteMm,
+    required int nieuweBreedteMm,
+    required int nieuweHoogteMm,
+    required List<OpmetingRaamTStijl> bestaandeTStijlen,
+    required List<OpmetingRaamVleugel> bestaandeVleugels,
+  }) {
+    if (!_isGeldigeTekenvlakGrootte(oudeTekenvlakGrootte) ||
+        !_isGeldigeTekenvlakGrootte(nieuweTekenvlakGrootte)) {
       return null;
     }
 
@@ -40,7 +81,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
     }
 
     final oudeBuitenKader = OpmetingRaamKaderHelper.buitenKader(
-      size: tekenvlakGrootte,
+      size: oudeTekenvlakGrootte,
       breedteMm: oudeBreedteMm,
       hoogteMm: oudeHoogteMm,
     );
@@ -52,7 +93,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
     );
 
     final nieuweBuitenKader = OpmetingRaamKaderHelper.buitenKader(
-      size: tekenvlakGrootte,
+      size: nieuweTekenvlakGrootte,
       breedteMm: nieuweBreedteMm,
       hoogteMm: nieuweHoogteMm,
     );
@@ -63,7 +104,10 @@ class OpmetingRaamTekenvlakMaatWijziging {
       hoogteMm: nieuweHoogteMm,
     );
 
-    if (!_isGeldigVlak(oudeBinnenKader) || !_isGeldigVlak(nieuweBinnenKader)) {
+    if (!_isGeldigVlak(oudeBuitenKader) ||
+        !_isGeldigVlak(oudeBinnenKader) ||
+        !_isGeldigVlak(nieuweBuitenKader) ||
+        !_isGeldigVlak(nieuweBinnenKader)) {
       return null;
     }
 
@@ -129,39 +173,60 @@ class OpmetingRaamTekenvlakMaatWijziging {
     final nieuweVleugels = <OpmetingRaamVleugel>[];
 
     for (final oudeVleugel in bestaandeVleugels) {
-      final oudBronVlak =
-          oudeBronVlakkenPerVleugel[oudeVleugel.id] ??
-          _vindHoofdVlakVoorVleugel(
-            vleugelVlak: oudeVleugel.vlak,
-            hoofdVlakken: oudeHoofdVlakken,
-            binnenKader: oudeBinnenKader,
-          ) ??
-          oudeVleugel.vlak;
+      final oudBronVlak = oudeBronVlakkenPerVleugel[oudeVleugel.id];
 
-      final nieuwHoofdVlak = _vindOvereenkomstigNieuwHoofdVlak(
-        oudHoofdVlak: oudBronVlak,
-        oudBinnenKader: oudeBinnenKader,
-        nieuwBinnenKader: nieuweBinnenKader,
-        nieuweHoofdVlakken: nieuweHoofdVlakken,
-      );
+      Rect nieuwVleugelVlak;
 
-      final doelVlak =
-          nieuwHoofdVlak ??
-          _begrensVlakBinnenKader(
-            vlak: _schaalRectTussenVlakken(
-              rect: oudBronVlak,
-              oudVlak: oudeBinnenKader,
-              nieuwVlak: nieuweBinnenKader,
-            ),
-            binnenKader: nieuweBinnenKader,
+      if (oudBronVlak != null) {
+        final nieuwHoofdVlak = _vindOvereenkomstigNieuwHoofdVlak(
+          oudHoofdVlak: oudBronVlak,
+          oudBinnenKader: oudeBinnenKader,
+          nieuwBinnenKader: nieuweBinnenKader,
+          nieuweHoofdVlakken: nieuweHoofdVlakken,
+        );
+
+        final doelVlak =
+            nieuwHoofdVlak ??
+            _begrensVlakBinnenKader(
+              vlak: _schaalRectTussenVlakken(
+                rect: oudBronVlak,
+                oudVlak: oudeBinnenKader,
+                nieuwVlak: nieuweBinnenKader,
+              ),
+              binnenKader: nieuweBinnenKader,
+            );
+
+        final berekendVleugelVlak = OpmetingRaamVleugelHelper.maakVleugelVlak(
+          vlak: doelVlak,
+          buitenKader: nieuweBuitenKader,
+          breedteMm: nieuweBreedteMm,
+          hoogteMm: nieuweHoogteMm,
+        );
+
+        if (_isGeldigVlak(berekendVleugelVlak)) {
+          nieuwVleugelVlak = berekendVleugelVlak;
+        } else {
+          nieuwVleugelVlak = _schaalVleugelRechtstreeks(
+            oudeVleugelVlak: oudeVleugel.vlak,
+            oudeBinnenKader: oudeBinnenKader,
+            nieuweBinnenKader: nieuweBinnenKader,
           );
-
-      final nieuwVleugelVlak = OpmetingRaamVleugelHelper.maakVleugelVlak(
-        vlak: doelVlak,
-        buitenKader: nieuweBuitenKader,
-        breedteMm: nieuweBreedteMm,
-        hoogteMm: nieuweHoogteMm,
-      );
+        }
+      } else {
+        /*
+         * Veiligheidsfallback:
+         *
+         * Wanneer het oorspronkelijke hoofdvlak niet meer
+         * gevonden wordt, mag de vleugel niet verdwijnen.
+         * Daarom schalen we de bestaande vleugel rechtstreeks
+         * mee als onderdeel van het volledige raamblok.
+         */
+        nieuwVleugelVlak = _schaalVleugelRechtstreeks(
+          oudeVleugelVlak: oudeVleugel.vlak,
+          oudeBinnenKader: oudeBinnenKader,
+          nieuweBinnenKader: nieuweBinnenKader,
+        );
+      }
 
       nieuweVleugels.add(
         OpmetingRaamVleugel(
@@ -202,45 +267,116 @@ class OpmetingRaamTekenvlakMaatWijziging {
 
     for (final entry in interneTStijlGroepen.entries) {
       final oudWerkvlak = oudeVleugelWerkvlakken[entry.key];
+
       final nieuwWerkvlak = nieuweVleugelWerkvlakken[entry.key];
 
-      if (oudWerkvlak == null ||
-          nieuwWerkvlak == null ||
-          !_isGeldigVlak(oudWerkvlak) ||
-          !_isGeldigVlak(nieuwWerkvlak)) {
+      if (oudWerkvlak != null &&
+          nieuwWerkvlak != null &&
+          _isGeldigVlak(oudWerkvlak) &&
+          _isGeldigVlak(nieuwWerkvlak)) {
+        final aangepasteGroep = _schaalTStijlGroep(
+          oudeStijlen: entry.value,
+          oudWerkvlak: oudWerkvlak,
+          nieuwWerkvlak: nieuwWerkvlak,
+          oudBuitenKader: oudeBuitenKader,
+          nieuwBuitenKader: nieuweBuitenKader,
+          oudeBreedteMm: oudeBreedteMm,
+          oudeHoogteMm: oudeHoogteMm,
+          nieuweBreedteMm: nieuweBreedteMm,
+          nieuweHoogteMm: nieuweHoogteMm,
+        );
+
+        for (final stijl in aangepasteGroep) {
+          aangepasteTStijlenPerId[stijl.id] = stijl;
+        }
+
         continue;
       }
 
-      final aangepasteGroep = _schaalTStijlGroep(
-        oudeStijlen: entry.value,
-        oudWerkvlak: oudWerkvlak,
-        nieuwWerkvlak: nieuwWerkvlak,
-        oudBuitenKader: oudeBuitenKader,
-        nieuwBuitenKader: nieuweBuitenKader,
-        oudeBreedteMm: oudeBreedteMm,
-        oudeHoogteMm: oudeHoogteMm,
-        nieuweBreedteMm: nieuweBreedteMm,
-        nieuweHoogteMm: nieuweHoogteMm,
-      );
-
-      for (final stijl in aangepasteGroep) {
-        aangepasteTStijlenPerId[stijl.id] = stijl;
+      /*
+       * Een interne T-stijl mag nooit verdwijnen doordat
+       * het bijbehorende vleugelwerkvlak tijdelijk niet
+       * gevonden wordt tijdens een schermrotatie.
+       *
+       * Daarom schalen we hem in dat geval als onderdeel
+       * van het volledige buitenkader.
+       */
+      for (final stijl in entry.value) {
+        aangepasteTStijlenPerId[stijl.id] = _schaalLosseTStijl(
+          stijl: stijl,
+          oudVlak: oudeBuitenKader,
+          nieuwVlak: nieuweBuitenKader,
+        );
       }
     }
 
     final nieuweAlleTStijlen = <OpmetingRaamTStijl>[];
 
+    /*
+     * De oorspronkelijke volgorde blijft behouden.
+     * Dat is belangrijk voor aansluitingen en vlak-ID's.
+     */
     for (final oudeStijl in bestaandeTStijlen) {
       final aangepasteStijl = aangepasteTStijlenPerId[oudeStijl.id];
 
       if (aangepasteStijl != null) {
         nieuweAlleTStijlen.add(aangepasteStijl);
+      } else {
+        /*
+         * Laatste veiligheid:
+         * geen enkele T-stijl mag verloren gaan.
+         */
+        nieuweAlleTStijlen.add(
+          _schaalLosseTStijl(
+            stijl: oudeStijl,
+            oudVlak: oudeBuitenKader,
+            nieuwVlak: nieuweBuitenKader,
+          ),
+        );
       }
     }
 
     return OpmetingRaamMaatWijzigingResultaat(
       tStijlen: nieuweAlleTStijlen,
       vleugels: nieuweVleugels,
+    );
+  }
+
+  static Rect _schaalVleugelRechtstreeks({
+    required Rect oudeVleugelVlak,
+    required Rect oudeBinnenKader,
+    required Rect nieuweBinnenKader,
+  }) {
+    return _begrensVlakBinnenKader(
+      vlak: _schaalRectTussenVlakken(
+        rect: oudeVleugelVlak,
+        oudVlak: oudeBinnenKader,
+        nieuwVlak: nieuweBinnenKader,
+      ),
+      binnenKader: nieuweBinnenKader,
+    );
+  }
+
+  static OpmetingRaamTStijl _schaalLosseTStijl({
+    required OpmetingRaamTStijl stijl,
+    required Rect oudVlak,
+    required Rect nieuwVlak,
+  }) {
+    return OpmetingRaamTStijl(
+      id: stijl.id,
+      richting: stijl.richting,
+      start: _schaalPuntTussenVlakken(
+        punt: stijl.start,
+        oudVlak: oudVlak,
+        nieuwVlak: nieuwVlak,
+      ),
+      einde: _schaalPuntTussenVlakken(
+        punt: stijl.einde,
+        oudVlak: oudVlak,
+        nieuwVlak: nieuwVlak,
+      ),
+      breedteMm: stijl.breedteMm,
+      werkvlakId: stijl.werkvlakId,
     );
   }
 
@@ -264,6 +400,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
       }
 
       final vleugelOppervlakte = _oppervlakte(vleugelVlak);
+
       final kandidaatOppervlakte = _oppervlakte(kandidaat);
 
       if (vleugelOppervlakte <= 0 || kandidaatOppervlakte <= 0) {
@@ -271,6 +408,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
       }
 
       final dekkingVleugel = overlap / vleugelOppervlakte;
+
       final dekkingKandidaat = overlap / kandidaatOppervlakte;
 
       final randAfwijking = _genormaliseerdeRandAfwijking(
@@ -354,8 +492,8 @@ class OpmetingRaamTekenvlakMaatWijziging {
           ? 0.0
           : 25.0;
 
-      final langsteZijde = nieuwBinnenKader.longestSide > 0
-          ? nieuwBinnenKader.longestSide
+      final langsteZijde = nieuwBinnenKader.size.longestSide > 0
+          ? nieuwBinnenKader.size.longestSide
           : 1.0;
 
       final middenAfstand =
@@ -524,13 +662,13 @@ class OpmetingRaamTekenvlakMaatWijziging {
   }
 
   static double _overlapOppervlakte(Rect eerste, Rect tweede) {
-    final links = eerste.left > tweede.left ? eerste.left : tweede.left;
+    final links = math.max(eerste.left, tweede.left);
 
-    final boven = eerste.top > tweede.top ? eerste.top : tweede.top;
+    final boven = math.max(eerste.top, tweede.top);
 
-    final rechts = eerste.right < tweede.right ? eerste.right : tweede.right;
+    final rechts = math.min(eerste.right, tweede.right);
 
-    final onder = eerste.bottom < tweede.bottom ? eerste.bottom : tweede.bottom;
+    final onder = math.min(eerste.bottom, tweede.bottom);
 
     if (rechts <= links || onder <= boven) {
       return 0;
@@ -604,6 +742,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
 
     for (var index = 0; index < oudeStijlen.length; index++) {
       final oudeStijl = oudeStijlen[index];
+
       final voorlopigeStijl = voorlopigeStijlen[index];
 
       final nieuweStart = _pasAansluitingAan(
@@ -671,9 +810,10 @@ class OpmetingRaamTekenvlakMaatWijziging {
     required int nieuweBreedteMm,
     required int nieuweHoogteMm,
   }) {
-    const tolerantie = 5.0;
+    final tolerantie = math.max(5.0, oudWerkvlak.size.shortestSide * 0.012);
 
     double besteAfstand = double.infinity;
+
     double? nieuweCoordinaat;
 
     void probeerAansluiting({

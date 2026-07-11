@@ -118,85 +118,8 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
         ),
         const SizedBox(height: 5),
         const Text(
-          'Tik op één of meerdere vlakken in het raam.',
+          'Tik op één of meerdere vlakken in het raam om ze te selecteren of te deselecteren.',
           style: TextStyle(fontSize: 11, color: tekstGrijs),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: aantalGeselecteerdeVlakken > 0
-                ? const Color(0xFFFFF7ED)
-                : const Color(0xFFF3F4F6),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: aantalGeselecteerdeVlakken > 0
-                  ? const Color(0xFFF97316)
-                  : const Color(0xFFE5E7EB),
-            ),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                aantalGeselecteerdeVlakken > 0
-                    ? Icons.check_box_outlined
-                    : Icons.check_box_outline_blank,
-                size: 18,
-                color: aantalGeselecteerdeVlakken > 0
-                    ? const Color(0xFFF97316)
-                    : tekstGrijs,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  aantalGeselecteerdeVlakken == 0
-                      ? 'Nog geen vlak geselecteerd'
-                      : '$aantalGeselecteerdeVlakken van '
-                            '$totaalAantalVlakken vlakken geselecteerd',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: aantalGeselecteerdeVlakken > 0
-                        ? FontWeight.w800
-                        : FontWeight.w500,
-                    color: aantalGeselecteerdeVlakken > 0
-                        ? const Color(0xFF9A3412)
-                        : tekstGrijs,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: totaalAantalVlakken > 0 ? onAllesSelecteren : null,
-                icon: const Icon(Icons.select_all, size: 17),
-                label: const Text('Alles', style: TextStyle(fontSize: 11)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: groen,
-                  side: const BorderSide(color: groen),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: aantalGeselecteerdeVlakken > 0
-                    ? onSelectieWissen
-                    : null,
-                icon: const Icon(Icons.deselect, size: 17),
-                label: const Text('Geen', style: TextStyle(fontSize: 11)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: tekstGrijs,
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                ),
-              ),
-            ),
-          ],
         ),
         const SizedBox(height: 10),
         if (opvullingen.isEmpty) _geenOpvullingen() else _opvullingKeuze(),
@@ -206,11 +129,8 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: kanToepassen ? onToepassen : null,
             icon: const Icon(Icons.format_color_fill, size: 18),
-            label: Text(
-              aantalGeselecteerdeVlakken <= 1
-                  ? 'Opvulling toepassen'
-                  : 'Opvulling toepassen op '
-                        '$aantalGeselecteerdeVlakken vlakken',
+            label: const Text(
+              'Geselecteerde vlakken opvullen',
               overflow: TextOverflow.ellipsis,
             ),
             style: ElevatedButton.styleFrom(

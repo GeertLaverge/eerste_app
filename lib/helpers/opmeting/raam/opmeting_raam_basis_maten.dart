@@ -47,10 +47,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.visible,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             ),
           ),
           const SizedBox(width: 6),
@@ -74,10 +71,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -88,16 +82,11 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   Widget _raammaatRegel() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFE7F6EC),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: const Color(0xFFB7E3C3),
-        ),
+        border: Border.all(color: const Color(0xFFB7E3C3)),
       ),
       child: Text(
         'Raammaat: $raammaatBreedte × $raammaatHoogte mm',
@@ -118,9 +107,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFE7F6EC),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: const Color(0xFFB7E3C3),
-          ),
+          border: Border.all(color: const Color(0xFFB7E3C3)),
         ),
         child: Row(
           children: [
@@ -243,9 +230,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     return BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color(0xFFE5E7EB),
-      ),
+      border: Border.all(color: const Color(0xFFE5E7EB)),
       boxShadow: [
         BoxShadow(
           color: Colors.black.withOpacity(0.035),
