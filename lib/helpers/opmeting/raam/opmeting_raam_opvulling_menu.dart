@@ -15,11 +15,20 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
     required this.onOpvullingVerwijderen,
     required this.onAllesSelecteren,
     required this.onSelectieWissen,
+    this.breedte = 300,
+    this.maxHoogte,
+    this.onSluiten,
+    this.onVerslepen,
   });
 
   static const Color groen = Color(0xFF0B7A3B);
-  static const Color rand = Color(0xFFD1D5DB);
+  static const Color lichtGroen = Color(0xFFE7F6EC);
+  static const Color rand = Color(0xFFE5E7EB);
+  static const Color tekstDonker = Color(0xFF111827);
   static const Color tekstGrijs = Color(0xFF6B7280);
+
+  final double breedte;
+  final double? maxHoogte;
 
   final List<OpmetingRaamOpvullingModel> opvullingen;
   final bool isLaden;
@@ -32,6 +41,9 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
   final VoidCallback onOpvullingVerwijderen;
   final VoidCallback onAllesSelecteren;
   final VoidCallback onSelectieWissen;
+
+  final VoidCallback? onSluiten;
+  final ValueChanged<DragUpdateDetails>? onVerslepen;
 
   OpmetingRaamOpvullingModel? get geselecteerdeOpvulling {
     for (final opvulling in opvullingen) {
@@ -54,11 +66,11 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 300,
-      padding: const EdgeInsets.all(12),
+      width: breedte,
+      constraints: BoxConstraints(maxHeight: maxHoogte ?? double.infinity),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.98),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: rand),
         boxShadow: [
           BoxShadow(
@@ -68,7 +80,59 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
           ),
         ],
       ),
-      child: isLaden ? _laadWeergave() : _menuInhoud(),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _kop(),
+          Flexible(child: isLaden ? _laadWeergave() : _menuInhoud()),
+        ],
+      ),
+    );
+  }
+
+  Widget _kop() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanUpdate: onVerslepen,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 9),
+        decoration: const BoxDecoration(
+          color: lichtGroen,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.format_color_fill_outlined,
+              size: 18,
+              color: groen,
+            ),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Opvulling',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Color(0xFF064E3B),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            if (onSluiten != null)
+              InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: onSluiten,
+                child: const Padding(
+                  padding: EdgeInsets.all(3),
+                  child: Icon(Icons.close_rounded, size: 18, color: groen),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -96,70 +160,144 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
   }
 
   Widget _menuInhoud() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Row(
-          children: [
-            Icon(Icons.format_color_fill_outlined, size: 20, color: groen),
-            SizedBox(width: 7),
-            Expanded(
-              child: Text(
-                'Opvulling',
-                style: TextStyle(
-                  color: groen,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w900,
-                ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Tik op één of meerdere vlakken in het raam.',
+            style: TextStyle(fontSize: 11, color: tekstGrijs),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: aantalGeselecteerdeVlakken > 0
+                  ? const Color(0xFFE7F6EC)
+                  : const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: aantalGeselecteerdeVlakken > 0 ? groen : rand,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 5),
-        const Text(
-          'Tik op één of meerdere vlakken in het raam om ze te selecteren of te deselecteren.',
-          style: TextStyle(fontSize: 11, color: tekstGrijs),
-        ),
-        const SizedBox(height: 10),
-        if (opvullingen.isEmpty) _geenOpvullingen() else _opvullingKeuze(),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: kanToepassen ? onToepassen : null,
-            icon: const Icon(Icons.format_color_fill, size: 18),
-            label: const Text(
-              'Geselecteerde vlakken opvullen',
-              overflow: TextOverflow.ellipsis,
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: groen,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: const Color(0xFFD1D5DB),
-              disabledForegroundColor: const Color(0xFF6B7280),
-              padding: const EdgeInsets.symmetric(vertical: 11),
-            ),
-          ),
-        ),
-        const SizedBox(height: 7),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: kanOpvullingVerwijderen ? onOpvullingVerwijderen : null,
-            icon: const Icon(Icons.format_color_reset_outlined, size: 18),
-            label: const Text(
-              'Opvulling uit selectie verwijderen',
-              overflow: TextOverflow.ellipsis,
-            ),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFDC2626),
-              side: const BorderSide(color: Color(0xFFDC2626)),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  aantalGeselecteerdeVlakken > 0
+                      ? Icons.check_box_outlined
+                      : Icons.check_box_outline_blank,
+                  size: 18,
+                  color: aantalGeselecteerdeVlakken > 0 ? groen : tekstGrijs,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    aantalGeselecteerdeVlakken == 0
+                        ? 'Nog geen vlak geselecteerd'
+                        : '$aantalGeselecteerdeVlakken van '
+                              '$totaalAantalVlakken vlakken geselecteerd',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: aantalGeselecteerdeVlakken > 0
+                          ? FontWeight.w800
+                          : FontWeight.w500,
+                      color: aantalGeselecteerdeVlakken > 0
+                          ? const Color(0xFF064E3B)
+                          : tekstGrijs,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: totaalAantalVlakken > 0 ? onAllesSelecteren : null,
+                  icon: const Icon(Icons.select_all, size: 17),
+                  label: const Text('Alles', style: TextStyle(fontSize: 11)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: groen,
+                    side: const BorderSide(color: groen),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: aantalGeselecteerdeVlakken > 0
+                      ? onSelectieWissen
+                      : null,
+                  icon: const Icon(Icons.deselect, size: 17),
+                  label: const Text('Geen', style: TextStyle(fontSize: 11)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: tekstGrijs,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (opvullingen.isEmpty) _geenOpvullingen() else _opvullingKeuze(),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: kanToepassen ? onToepassen : null,
+              icon: const Icon(Icons.format_color_fill, size: 18),
+              label: Text(
+                aantalGeselecteerdeVlakken <= 1
+                    ? 'Opvulling toepassen'
+                    : 'Opvulling toepassen op '
+                          '$aantalGeselecteerdeVlakken vlakken',
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: groen,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFD1D5DB),
+                disabledForegroundColor: const Color(0xFF6B7280),
+                padding: const EdgeInsets.symmetric(vertical: 11),
+              ),
+            ),
+          ),
+          const SizedBox(height: 5),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: kanOpvullingVerwijderen
+                  ? onOpvullingVerwijderen
+                  : null,
+              icon: Icon(
+                Icons.delete_outline,
+                size: 18,
+                color: kanOpvullingVerwijderen
+                    ? const Color(0xFFDC2626)
+                    : const Color(0xFF9CA3AF),
+              ),
+              label: Text(
+                'Opvulling uit selectie verwijderen',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: kanOpvullingVerwijderen ? tekstDonker : tekstGrijs,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
+                visualDensity: VisualDensity.compact,
+                alignment: Alignment.centerLeft,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -201,6 +339,9 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
         labelText: 'Kies een opvulling',
         isDense: true,
         border: OutlineInputBorder(),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: groen, width: 1.4),
+        ),
         contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
       child: DropdownButtonHideUnderline(
@@ -255,7 +396,7 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(5),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: rand),
       ),
       child: DecoratedBox(
         decoration: BoxDecoration(

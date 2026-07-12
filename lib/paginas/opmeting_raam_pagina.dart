@@ -109,13 +109,31 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     final bestaandeOpmeting = widget.bestaandeOpmeting;
 
     if (bestaandeOpmeting == null) {
+      final slagLinksMm = _waarde(slagLinksController).round();
+      final slagRechtsMm = _waarde(slagRechtsController).round();
+      final slagBovenMm = _waarde(slagBovenController).round();
+      final slagOnderMm = _waarde(slagOnderController).round();
+
+      final startRaammaatBreedte =
+          OpmetingRaamMatenHelper.berekenRaammaatBreedte(
+            dagmaatBreedteController: dagmaatBreedteController,
+            slagLinksController: slagLinksController,
+            slagRechtsController: slagRechtsController,
+          );
+
+      final startRaammaatHoogte = OpmetingRaamMatenHelper.berekenRaammaatHoogte(
+        dagmaatHoogteController: dagmaatHoogteController,
+        slagBovenController: slagBovenController,
+        slagOnderController: slagOnderController,
+      );
+
       _kaderSamenstelling = OpmetingKaderSamenstelling.basis(
-        breedteMm: raammaatBreedte,
-        hoogteMm: raammaatHoogte,
-        slagLinksMm: _waarde(slagLinksController).round(),
-        slagRechtsMm: _waarde(slagRechtsController).round(),
-        slagBovenMm: _waarde(slagBovenController).round(),
-        slagOnderMm: 0,
+        breedteMm: startRaammaatBreedte,
+        hoogteMm: startRaammaatHoogte,
+        slagLinksMm: slagLinksMm,
+        slagRechtsMm: slagRechtsMm,
+        slagBovenMm: slagBovenMm,
+        slagOnderMm: slagOnderMm,
       );
     } else {
       _zetControllerTekst(
@@ -138,12 +156,13 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         slagBovenController,
         bestaandeOpmeting.kaderSamenstelling.slagBovenMm,
       );
-      _zetControllerTekst(slagOnderController, 0);
+      _zetControllerTekst(
+        slagOnderController,
+        bestaandeOpmeting.kaderSamenstelling.slagOnderMm,
+      );
       notitiesController.text = bestaandeOpmeting.notities;
 
-      _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling.copyWith(
-        slagOnderMm: 0,
-      );
+      _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling;
       _overzichtTekeningData = bestaandeOpmeting.tekeningData;
       _keuzeSelectiesPerKader.addAll(
         _kopieKeuzeSelecties(bestaandeOpmeting.keuzeSelectiesPerKader),
@@ -245,7 +264,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   int get raammaatBreedte {
-    return OpmetingRaamMatenHelper.berekenRaammaatBreedte(
+    return OpmetingRaamMatenHelper.berekenRaammaatBreedteVoorSamenstellingOfVelden(
+      samenstelling: _kaderSamenstelling,
       dagmaatBreedteController: dagmaatBreedteController,
       slagLinksController: slagLinksController,
       slagRechtsController: slagRechtsController,
@@ -253,9 +273,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   int get raammaatHoogte {
-    return OpmetingRaamMatenHelper.berekenRaammaatHoogte(
+    return OpmetingRaamMatenHelper.berekenRaammaatHoogteVoorSamenstellingOfVelden(
+      samenstelling: _kaderSamenstelling,
       dagmaatHoogteController: dagmaatHoogteController,
       slagBovenController: slagBovenController,
+      slagOnderController: slagOnderController,
     );
   }
 
@@ -267,24 +289,30 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _herbereken() {
+    late final OpmetingKaderSamenstelling herberekendeSamenstelling;
+
     setState(() {
-      _kaderSamenstelling = OpmetingRaamMatenHelper.herberekenSamenstelling(
-        huidigeSamenstelling: _kaderSamenstelling,
-        raammaatBreedte: raammaatBreedte,
-        raammaatHoogte: raammaatHoogte,
-        slagLinksController: slagLinksController,
-        slagRechtsController: slagRechtsController,
-        slagBovenController: slagBovenController,
-        slagOnderController: slagOnderController,
-      );
+      herberekendeSamenstelling =
+          OpmetingRaamMatenHelper.herberekenSamenstelling(
+            huidigeSamenstelling: _kaderSamenstelling,
+            raammaatBreedte: raammaatBreedte,
+            raammaatHoogte: raammaatHoogte,
+            slagLinksController: slagLinksController,
+            slagRechtsController: slagRechtsController,
+            slagBovenController: slagBovenController,
+            slagOnderController: slagOnderController,
+          );
+
+      _kaderSamenstelling = herberekendeSamenstelling;
     });
+
+    _vulMaatveldenMetActiefKader(herberekendeSamenstelling);
   }
 
   void _wijzigKaderSamenstelling(
     OpmetingKaderSamenstelling nieuweSamenstelling,
   ) {
     final herberekendeSamenstelling = nieuweSamenstelling.copyWith(
-      slagOnderMm: 0,
       kaders: OpmetingKaderSamenstellingLayoutHelper.herberekenGekoppeldeKaders(
         kaders: nieuweSamenstelling.kaders,
       ),
@@ -553,33 +581,28 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   Future<void> _kiesOptie(OpmetingRaamKeuzeMenu menu, String optieId) async {
-    OpmetingRaamKeuzeOptie? gevondenOptie;
-
-    for (final optie in menu.opties) {
-      if (optie.id == optieId) {
-        gevondenOptie = optie;
-        break;
-      }
-    }
+    final gevondenOptie = menu.zoekOptie(optieId);
 
     if (gevondenOptie == null) {
       return;
     }
 
     final gekozenOptie = gevondenOptie;
+    final padIds = menu.padIdsVoorOptie(gekozenOptie.id);
 
     setState(() {
       _actieveKeuzeSelecties[menu.id] = OpmetingRaamKeuzeSelectie(
         menuId: menu.id,
         optieId: gekozenOptie.id,
+        padIds: padIds,
         extraWaarden: _standaardExtraWaarden(gekozenOptie),
       );
     });
 
     /*
-     * Bij "Geen" hoeft geen controle uitgevoerd
-     * te worden.
-     */
+   * Bij "Geen" hoeft geen controle uitgevoerd
+   * te worden.
+   */
     if (gekozenOptie.isGeenKeuze) {
       return;
     }
@@ -826,6 +849,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       raammaatBreedte: raammaatBreedte,
       raammaatHoogte: raammaatHoogte,
       verschilTablet: verschilTablet,
+      dagmatenVergrendeld: _kaderSamenstelling.kaders.length > 1,
       onMatenGewijzigd: _herbereken,
       tekenvlakController: tekenvlakController,
       actieveTool: actieveTool,

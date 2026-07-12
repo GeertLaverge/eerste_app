@@ -37,9 +37,92 @@ class OpmetingRaamMatenHelper {
   static int berekenRaammaatHoogte({
     required TextEditingController dagmaatHoogteController,
     required TextEditingController slagBovenController,
+    required TextEditingController slagOnderController,
   }) {
-    return (waarde(dagmaatHoogteController) + waarde(slagBovenController))
+    return (waarde(dagmaatHoogteController) +
+            waarde(slagBovenController) +
+            waarde(slagOnderController))
         .round();
+  }
+
+  static bool heeftMeerdereKaders(OpmetingKaderSamenstelling samenstelling) {
+    return samenstelling.kaders.length > 1;
+  }
+
+  static int totaleRaammaatBreedte(OpmetingKaderSamenstelling samenstelling) {
+    if (samenstelling.kaders.isEmpty) {
+      return 0;
+    }
+
+    final layout = OpmetingKaderSamenstellingLayoutHelper.bereken(
+      kaders: samenstelling.kaders,
+    );
+
+    return layout.breedteMm;
+  }
+
+  static int totaleRaammaatHoogte(OpmetingKaderSamenstelling samenstelling) {
+    if (samenstelling.kaders.isEmpty) {
+      return 0;
+    }
+
+    final layout = OpmetingKaderSamenstellingLayoutHelper.bereken(
+      kaders: samenstelling.kaders,
+    );
+
+    return layout.hoogteMm;
+  }
+
+  static int berekenRaammaatBreedteVoorSamenstellingOfVelden({
+    required OpmetingKaderSamenstelling samenstelling,
+    required TextEditingController dagmaatBreedteController,
+    required TextEditingController slagLinksController,
+    required TextEditingController slagRechtsController,
+  }) {
+    if (heeftMeerdereKaders(samenstelling)) {
+      return totaleRaammaatBreedte(samenstelling);
+    }
+
+    return berekenRaammaatBreedte(
+      dagmaatBreedteController: dagmaatBreedteController,
+      slagLinksController: slagLinksController,
+      slagRechtsController: slagRechtsController,
+    );
+  }
+
+  static int berekenRaammaatHoogteVoorSamenstellingOfVelden({
+    required OpmetingKaderSamenstelling samenstelling,
+    required TextEditingController dagmaatHoogteController,
+    required TextEditingController slagBovenController,
+    required TextEditingController slagOnderController,
+  }) {
+    if (heeftMeerdereKaders(samenstelling)) {
+      return totaleRaammaatHoogte(samenstelling);
+    }
+
+    return berekenRaammaatHoogte(
+      dagmaatHoogteController: dagmaatHoogteController,
+      slagBovenController: slagBovenController,
+      slagOnderController: slagOnderController,
+    );
+  }
+
+  static int dagmaatBreedteVoorSamenstelling(
+    OpmetingKaderSamenstelling samenstelling,
+  ) {
+    final slagBreedte = samenstelling.slagLinksMm + samenstelling.slagRechtsMm;
+    final dagmaat = totaleRaammaatBreedte(samenstelling) - slagBreedte;
+
+    return dagmaat < 0 ? 0 : dagmaat;
+  }
+
+  static int dagmaatHoogteVoorSamenstelling(
+    OpmetingKaderSamenstelling samenstelling,
+  ) {
+    final slagHoogte = samenstelling.slagBovenMm + samenstelling.slagOnderMm;
+    final dagmaat = totaleRaammaatHoogte(samenstelling) - slagHoogte;
+
+    return dagmaat < 0 ? 0 : dagmaat;
   }
 
   static int berekenVerschilTablet({
@@ -65,26 +148,33 @@ class OpmetingRaamMatenHelper {
       return;
     }
 
-    final slagBreedte = samenstelling.slagLinksMm + samenstelling.slagRechtsMm;
-    final slagHoogte = samenstelling.slagBovenMm;
+    final int dagmaatBreedte;
+    final int dagmaatHoogte;
 
-    final dagmaatBreedte = actiefKader.breedteMm - slagBreedte;
-    final dagmaatHoogte = actiefKader.hoogteMm - slagHoogte;
+    if (heeftMeerdereKaders(samenstelling)) {
+      dagmaatBreedte = dagmaatBreedteVoorSamenstelling(samenstelling);
+      dagmaatHoogte = dagmaatHoogteVoorSamenstelling(samenstelling);
+    } else {
+      final slagBreedte =
+          samenstelling.slagLinksMm + samenstelling.slagRechtsMm;
+      final slagHoogte = samenstelling.slagBovenMm + samenstelling.slagOnderMm;
 
-    zetControllerTekst(
-      dagmaatBreedteController,
-      dagmaatBreedte < 0 ? 0 : dagmaatBreedte,
-    );
+      final berekendeDagmaatBreedte = actiefKader.breedteMm - slagBreedte;
+      final berekendeDagmaatHoogte = actiefKader.hoogteMm - slagHoogte;
 
-    zetControllerTekst(
-      dagmaatHoogteController,
-      dagmaatHoogte < 0 ? 0 : dagmaatHoogte,
-    );
+      dagmaatBreedte = berekendeDagmaatBreedte < 0
+          ? 0
+          : berekendeDagmaatBreedte;
+      dagmaatHoogte = berekendeDagmaatHoogte < 0 ? 0 : berekendeDagmaatHoogte;
+    }
+
+    zetControllerTekst(dagmaatBreedteController, dagmaatBreedte);
+    zetControllerTekst(dagmaatHoogteController, dagmaatHoogte);
 
     zetControllerTekst(slagLinksController, samenstelling.slagLinksMm);
     zetControllerTekst(slagRechtsController, samenstelling.slagRechtsMm);
     zetControllerTekst(slagBovenController, samenstelling.slagBovenMm);
-    zetControllerTekst(slagOnderController, 0);
+    zetControllerTekst(slagOnderController, samenstelling.slagOnderMm);
   }
 
   static OpmetingKaderSamenstelling herberekenSamenstelling({
@@ -98,14 +188,13 @@ class OpmetingRaamMatenHelper {
   }) {
     final actiefKader = huidigeSamenstelling.actiefKader;
 
-    zetControllerTekst(slagOnderController, 0);
-
     final nieuweSlagLinksMm = waarde(slagLinksController).round();
     final nieuweSlagRechtsMm = waarde(slagRechtsController).round();
     final nieuweSlagBovenMm = waarde(slagBovenController).round();
-    const nieuweSlagOnderMm = 0;
+    final nieuweSlagOnderMm = waarde(slagOnderController).round();
 
-    final nieuweKaders = actiefKader == null
+    final nieuweKaders =
+        actiefKader == null || heeftMeerdereKaders(huidigeSamenstelling)
         ? huidigeSamenstelling.kaders
         : OpmetingKaderSamenstellingLayoutHelper.wijzigKaderAfmetingen(
             kaders: huidigeSamenstelling.kaders,

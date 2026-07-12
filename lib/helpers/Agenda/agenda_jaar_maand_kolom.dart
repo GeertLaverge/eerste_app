@@ -32,7 +32,8 @@ class AgendaJaarMaandKolom extends StatelessWidget {
     int maand,
     Map<String, List<AgendaItem>> agendaItemsData,
     AgendaFilterState actieveFilters,
-  ) maandBreedte;
+  )
+  maandBreedte;
 
   final void Function(DateTime dag) onDagGeselecteerd;
   final int Function(DateTime datum) weekNummer;
@@ -42,7 +43,30 @@ class AgendaJaarMaandKolom extends StatelessWidget {
     required DateTime nieuweDag,
     required AgendaItem item,
     required DateTime oudeDag,
-  }) onDropOpDag;
+  })
+  onDropOpDag;
+
+  static int _isoWeekNummer(DateTime datum) {
+    final dag = DateTime.utc(datum.year, datum.month, datum.day);
+
+    final donderdagVanDezeWeek = dag.add(
+      Duration(days: DateTime.thursday - dag.weekday),
+    );
+
+    final isoJaar = donderdagVanDezeWeek.year;
+
+    final vierJanuari = DateTime.utc(isoJaar, 1, 4);
+
+    final maandagVanWeek1 = vierJanuari.subtract(
+      Duration(days: vierJanuari.weekday - DateTime.monday),
+    );
+
+    final maandagVanDezeWeek = dag.subtract(
+      Duration(days: dag.weekday - DateTime.monday),
+    );
+
+    return 1 + (maandagVanDezeWeek.difference(maandagVanWeek1).inDays ~/ 7);
+  }
 
   static const List<String> maandNamen = [
     'Januari',
@@ -62,11 +86,7 @@ class AgendaJaarMaandKolom extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: maandBreedte(
-        maand,
-        agendaItemsData,
-        actieveFilters,
-      ),
+      width: maandBreedte(maand, agendaItemsData, actieveFilters),
       margin: const EdgeInsets.only(right: 8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -81,37 +101,58 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                 final eersteDag = DateTime(jaar, maand, 1);
                 final aantalDagen = DateTime(jaar, maand + 1, 0).day;
 
+                final weekIndex = index ~/ 7;
                 final weekDagIndex = index % 7;
                 final isWeekend = weekDagIndex == 5 || weekDagIndex == 6;
 
                 final dagNummer = index - (eersteDag.weekday - 1) + 1;
                 final bestaatDag = dagNummer >= 1 && dagNummer <= aantalDagen;
 
-                final datum =
-                    bestaatDag ? DateTime(jaar, maand, dagNummer) : null;
+                final eersteMaandagVanRaster = eersteDag.subtract(
+                  Duration(days: eersteDag.weekday - DateTime.monday),
+                );
+
+                final maandagVanDezeRij = eersteMaandagVanRaster.add(
+                  Duration(days: weekIndex * 7),
+                );
+
+                final maandagVanVolgendeRij = maandagVanDezeRij.add(
+                  const Duration(days: 7),
+                );
+
+                final eersteDagNummerVanRij =
+                    weekIndex * 7 - (eersteDag.weekday - 1) + 1;
+
+                final laatsteDagNummerVanRij = eersteDagNummerVanRij + 6;
+
+                final rijHeeftDagInDezeMaand =
+                    laatsteDagNummerVanRij >= 1 &&
+                    eersteDagNummerVanRij <= aantalDagen;
+
+                final datum = bestaatDag
+                    ? DateTime(jaar, maand, dagNummer)
+                    : null;
 
                 final isVandaag =
                     datum != null && AgendaDatumHelper.isVandaag(datum);
 
-                final isGeselecteerd = datum != null &&
-                    AgendaDatumHelper.zelfdeDag(
-                      datum,
-                      geselecteerdeDag,
-                    );
+                final isGeselecteerd =
+                    datum != null &&
+                    AgendaDatumHelper.zelfdeDag(datum, geselecteerdeDag);
 
-                final datumKey =
-                    datum == null ? null : AgendaDatumHelper.datumKey(datum);
+                final datumKey = datum == null
+                    ? null
+                    : AgendaDatumHelper.datumKey(datum);
 
                 final items = datumKey == null
                     ? <AgendaItem>[]
                     : (agendaItemsData[datumKey] ?? [])
-                        .where((item) => !item.isVerwijderd)
-                        .toList();
+                          .where((item) => !item.isVerwijderd)
+                          .toList();
 
-                final zichtbareItems = AgendaFilterHelper.gefilterdeItems(
-                      itemsPerDag: {
-                        if (datumKey != null) datumKey: items,
-                      },
+                final zichtbareItems =
+                    AgendaFilterHelper.gefilterdeItems(
+                      itemsPerDag: {if (datumKey != null) datumKey: items},
                       toonPlanning: actieveFilters.toonPlanning,
                       toonOpvolging: actieveFilters.toonOpvolging,
                       toonNadienst: actieveFilters.toonNadienst,
@@ -150,8 +191,8 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                           color: isHover
                               ? const Color(0xFFE7F6EC)
                               : isWeekend
-                                  ? const Color(0xFFEAEAEA)
-                                  : Colors.white,
+                              ? const Color(0xFFEAEAEA)
+                              : Colors.white,
                           child: Stack(
                             children: [
                               Align(
@@ -173,17 +214,17 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                                             color: isGeselecteerd
                                                 ? Colors.white
                                                 : isVandaag
-                                                    ? const Color(0xFF0B7A3B)
-                                                    : Colors.black87,
+                                                ? const Color(0xFF0B7A3B)
+                                                : Colors.black87,
                                             fontWeight:
                                                 isGeselecteerd || isVandaag
-                                                    ? FontWeight.w800
-                                                    : FontWeight.w700,
+                                                ? FontWeight.w800
+                                                : FontWeight.w700,
                                             fontSize: isGeselecteerd
                                                 ? 13
                                                 : isVandaag
-                                                    ? 13
-                                                    : 12,
+                                                ? 13
+                                                : 12,
                                           ),
                                         ),
                                       )
@@ -199,7 +240,8 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                                     child: Row(
                                       children: zichtbareItems.map((item) {
                                         return LongPressDraggable<
-                                            AgendaSleepData>(
+                                          AgendaSleepData
+                                        >(
                                           data: AgendaSleepData(
                                             oudeDag: datum!,
                                             item: item,
@@ -209,9 +251,9 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                                             child: Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 5,
-                                              ),
+                                                    horizontal: 8,
+                                                    vertical: 5,
+                                                  ),
                                               decoration: BoxDecoration(
                                                 color: const Color(0xFFE7F6EC),
                                                 borderRadius:
@@ -224,50 +266,45 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                                                   ),
                                                 ],
                                               ),
-                                              child: JaarItemBlok(
-                                                item: item,
-                                              ),
+                                              child: JaarItemBlok(item: item),
                                             ),
                                           ),
                                           childWhenDragging: Opacity(
                                             opacity: 0.35,
-                                            child: JaarItemBlok(
-                                              item: item,
-                                            ),
+                                            child: JaarItemBlok(item: item),
                                           ),
                                           child: InkWell(
                                             onTap: datum == null
                                                 ? null
-                                                : () => onItemOpenen(
-                                                      datum,
-                                                      item,
-                                                    ),
-                                            child: JaarItemBlok(
-                                              item: item,
-                                            ),
+                                                : () =>
+                                                      onItemOpenen(datum, item),
+                                            child: JaarItemBlok(item: item),
                                           ),
                                         );
                                       }).toList(),
                                     ),
                                   ),
                                 ),
-                              if (datum != null && datum.weekday == 7)
+                              if (weekDagIndex == 6 && rijHeeftDagInDezeMaand)
                                 Positioned(
                                   right: 2,
                                   bottom: 2,
                                   child: Container(
-                                    width: 20,
-                                    height: 20,
+                                    width: 22,
+                                    height: 22,
                                     alignment: Alignment.center,
                                     decoration: BoxDecoration(
+                                      color: Colors.white,
                                       shape: BoxShape.circle,
                                       border: Border.all(
                                         color: Colors.black87,
-                                        width: 1.4,
+                                        width: 1.3,
                                       ),
                                     ),
                                     child: Text(
-                                      '${weekNummer(datum)}',
+                                      '${_isoWeekNummer(maandagVanVolgendeRij)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.visible,
                                       style: const TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w900,

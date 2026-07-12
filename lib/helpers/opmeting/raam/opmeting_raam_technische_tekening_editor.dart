@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'opmeting_raam_keuzemenu_model.dart';
 
@@ -57,6 +58,14 @@ class OpmetingRaamTechnischeTekeningConcept {
     );
   }
 
+  factory OpmetingRaamTechnischeTekeningConcept.kopieVan(
+    OpmetingRaamTechnischeTekeningConcept bron,
+  ) {
+    return OpmetingRaamTechnischeTekeningConcept.vanInstelling(
+      bron.naarInstelling(),
+    );
+  }
+
   final String id;
 
   final TextEditingController breedteController;
@@ -107,7 +116,7 @@ class OpmetingRaamTechnischeTekeningConcept {
   }
 }
 
-class OpmetingRaamTechnischeTekeningEditor extends StatelessWidget {
+class OpmetingRaamTechnischeTekeningEditor extends StatefulWidget {
   const OpmetingRaamTechnischeTekeningEditor({
     super.key,
     required this.volgnummer,
@@ -121,297 +130,323 @@ class OpmetingRaamTechnischeTekeningEditor extends StatelessWidget {
   final VoidCallback onGewijzigd;
   final VoidCallback onVerwijderen;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFD1D5DB);
+  @override
+  State<OpmetingRaamTechnischeTekeningEditor> createState() {
+    return _OpmetingRaamTechnischeTekeningEditorState();
+  }
+}
+
+class _OpmetingRaamTechnischeTekeningEditorState
+    extends State<OpmetingRaamTechnischeTekeningEditor> {
+  static const Color groen = Color(0xFF0B7A3B);
+  static const Color lichtGroen = Color(0xFFE7F6EC);
+  static const Color rand = Color(0xFFD1D5DB);
+
+  OpmetingRaamTechnischeTekeningConcept get concept {
+    return widget.concept;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _rand),
+        border: Border.all(color: rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              Expanded(
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: lichtGroen,
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(color: groen),
+                ),
                 child: Text(
-                  'Rechthoek $volgnummer',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                  widget.volgnummer.toString(),
+                  style: const TextStyle(
+                    color: groen,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Extra rechthoekige tekening',
+                  style: TextStyle(
+                    color: Color(0xFF111827),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                  ),
                 ),
               ),
               IconButton(
                 tooltip: 'Rechthoek verwijderen',
                 visualDensity: VisualDensity.compact,
-                onPressed: onVerwijderen,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                onPressed: widget.onVerwijderen,
                 icon: const Icon(
                   Icons.delete_outline,
-                  color: Colors.red,
-                  size: 20,
+                  size: 19,
+                  color: Color(0xFFDC2626),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              SizedBox(
-                width: 245,
-                child: DropdownButtonFormField<OpmetingRaamTechnischeMaatKeuze>(
-                  initialValue: concept.breedteKeuze,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Breedte',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: OpmetingRaamTechnischeMaatKeuze.vasteMaat,
-                      child: Text('Vaste maat in mm'),
-                    ),
-                    DropdownMenuItem(
-                      value: OpmetingRaamTechnischeMaatKeuze.volledigeRaammaat,
-                      child: Text('Volledige raambreedte'),
-                    ),
-                  ],
-                  onChanged: (waarde) {
-                    if (waarde == null) return;
-
-                    concept.breedteKeuze = waarde;
-                    onGewijzigd();
-                  },
-                ),
+          _bouwMaatRij(
+            titel: 'Breedte',
+            waarde: concept.breedteKeuze,
+            vasteWaardeLabel: 'Breedte',
+            controller: concept.breedteController,
+            keuzes: const [
+              DropdownMenuItem(
+                value: OpmetingRaamTechnischeMaatKeuze.vasteMaat,
+                child: Text('Vaste maat'),
               ),
-              if (concept.breedteKeuze ==
-                  OpmetingRaamTechnischeMaatKeuze.vasteMaat)
-                SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: concept.breedteController,
-                    keyboardType: TextInputType.number,
+              DropdownMenuItem(
+                value: OpmetingRaamTechnischeMaatKeuze.volledigeRaammaat,
+                child: Text('Volledige raambreedte'),
+              ),
+            ],
+            onKeuzeGewijzigd: (waarde) {
+              setState(() {
+                concept.breedteKeuze = waarde;
+              });
+              widget.onGewijzigd();
+            },
+          ),
+          const SizedBox(height: 8),
+          _bouwMaatRij(
+            titel: 'Hoogte',
+            waarde: concept.hoogteKeuze,
+            vasteWaardeLabel: 'Hoogte',
+            controller: concept.hoogteController,
+            keuzes: const [
+              DropdownMenuItem(
+                value: OpmetingRaamTechnischeMaatKeuze.vasteMaat,
+                child: Text('Vaste maat'),
+              ),
+              DropdownMenuItem(
+                value: OpmetingRaamTechnischeMaatKeuze.volledigeRaammaat,
+                child: Text('Volledige raamhoogte'),
+              ),
+            ],
+            onKeuzeGewijzigd: (waarde) {
+              setState(() {
+                concept.hoogteKeuze = waarde;
+              });
+              widget.onGewijzigd();
+            },
+          ),
+          const SizedBox(height: 8),
+          _bouwTweeKolommen(
+            links: DropdownButtonFormField<OpmetingRaamTechnischePositie>(
+              value: concept.positie,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Positie',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: OpmetingRaamTechnischePositie.values.map((positie) {
+                return DropdownMenuItem(
+                  value: positie,
+                  child: Text(positie.label),
+                );
+              }).toList(),
+              onChanged: (waarde) {
+                if (waarde == null) {
+                  return;
+                }
+
+                setState(() {
+                  concept.positie = waarde;
+                });
+                widget.onGewijzigd();
+              },
+            ),
+            rechts: const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 8),
+          _bouwTweeKolommen(
+            links: DropdownButtonFormField<OpmetingRaamTechnischeMaatPlaatsing>(
+              value: concept.maatPlaatsing,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Plaatsing',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: OpmetingRaamTechnischeMaatPlaatsing.values.map((
+                plaatsing,
+              ) {
+                return DropdownMenuItem(
+                  value: plaatsing,
+                  child: Text(plaatsing.label),
+                );
+              }).toList(),
+              onChanged: (waarde) {
+                if (waarde == null) {
+                  return;
+                }
+
+                setState(() {
+                  concept.maatPlaatsing = waarde;
+                });
+                widget.onGewijzigd();
+              },
+            ),
+            rechts: TextField(
+              controller: concept.afstandController,
+              keyboardType: const TextInputType.numberWithOptions(signed: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'^-?\d*')),
+              ],
+              onChanged: (_) {
+                widget.onGewijzigd();
+              },
+              decoration: const InputDecoration(
+                labelText: 'Afstand tot raamkader',
+                suffixText: 'mm',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _bouwTweeKolommen(
+            links: DropdownButtonFormField<OpmetingRaamTechnischeInhoudType>(
+              value: concept.inhoudType,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Invulling',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              items: OpmetingRaamTechnischeInhoudType.values.map((type) {
+                return DropdownMenuItem(value: type, child: Text(type.label));
+              }).toList(),
+              onChanged: (waarde) {
+                if (waarde == null) {
+                  return;
+                }
+
+                setState(() {
+                  concept.inhoudType = waarde;
+                });
+                widget.onGewijzigd();
+              },
+            ),
+            rechts:
+                concept.inhoudType == OpmetingRaamTechnischeInhoudType.raster
+                ? DropdownButtonFormField<OpmetingRaamTechnischRasterPatroon>(
+                    value: concept.rasterPatroon,
+                    isExpanded: true,
                     decoration: const InputDecoration(
-                      labelText: 'Breedte',
-                      suffixText: 'mm',
+                      labelText: 'Rasterpatroon',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
-                  ),
-                ),
-              SizedBox(
-                width: 245,
-                child: DropdownButtonFormField<OpmetingRaamTechnischeMaatKeuze>(
-                  initialValue: concept.hoogteKeuze,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Hoogte',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: OpmetingRaamTechnischeMaatKeuze.vasteMaat,
-                      child: Text('Vaste maat in mm'),
-                    ),
-                    DropdownMenuItem(
-                      value: OpmetingRaamTechnischeMaatKeuze.volledigeRaammaat,
-                      child: Text('Volledige raamhoogte'),
-                    ),
-                  ],
-                  onChanged: (waarde) {
-                    if (waarde == null) return;
+                    items: OpmetingRaamTechnischRasterPatroon.values.map((
+                      patroon,
+                    ) {
+                      return DropdownMenuItem(
+                        value: patroon,
+                        child: Text(patroon.label),
+                      );
+                    }).toList(),
+                    onChanged: (waarde) {
+                      if (waarde == null) {
+                        return;
+                      }
 
-                    concept.hoogteKeuze = waarde;
-                    onGewijzigd();
-                  },
-                ),
-              ),
-              if (concept.hoogteKeuze ==
-                  OpmetingRaamTechnischeMaatKeuze.vasteMaat)
-                SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: concept.hoogteController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Hoogte',
-                      suffixText: 'mm',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-              SizedBox(
-                width: 215,
-                child: DropdownButtonFormField<OpmetingRaamTechnischePositie>(
-                  initialValue: concept.positie,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Positie',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: OpmetingRaamTechnischePositie.values
-                      .map(
-                        (positie) => DropdownMenuItem(
-                          value: positie,
-                          child: Text(positie.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (waarde) {
-                    if (waarde == null) return;
-
-                    concept.positie = waarde;
-                    onGewijzigd();
-                  },
-                ),
-              ),
-              SizedBox(
-                width: 245,
-                child:
-                    DropdownButtonFormField<
-                      OpmetingRaamTechnischeMaatPlaatsing
-                    >(
-                      initialValue: concept.maatPlaatsing,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Plaatsing',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      items: OpmetingRaamTechnischeMaatPlaatsing.values
-                          .map(
-                            (plaatsing) => DropdownMenuItem(
-                              value: plaatsing,
-                              child: Text(plaatsing.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (waarde) {
-                        if (waarde == null) return;
-
-                        concept.maatPlaatsing = waarde;
-                        onGewijzigd();
-                      },
-                    ),
-              ),
-              if (concept.maatPlaatsing ==
-                  OpmetingRaamTechnischeMaatPlaatsing.buitenDeRaammaat)
-                SizedBox(
-                  width: 210,
-                  child: TextField(
-                    controller: concept.afstandController,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      signed: true,
-                    ),
-                    decoration: const InputDecoration(
-                      labelText: 'Afstand tot raamkader',
-                      suffixText: 'mm',
-                      helperText: 'Negatief = over het raam',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                  ),
-                ),
-              SizedBox(
-                width: 215,
-                child:
-                    DropdownButtonFormField<OpmetingRaamTechnischeInhoudType>(
-                      initialValue: concept.inhoudType,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Invulling',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                      ),
-                      items: OpmetingRaamTechnischeInhoudType.values
-                          .map(
-                            (type) => DropdownMenuItem(
-                              value: type,
-                              child: Text(type.label),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (waarde) {
-                        if (waarde == null) return;
-
-                        concept.inhoudType = waarde;
-                        onGewijzigd();
-                      },
-                    ),
-              ),
-              if (concept.inhoudType == OpmetingRaamTechnischeInhoudType.raster)
-                SizedBox(
-                  width: 245,
-                  child:
-                      DropdownButtonFormField<
-                        OpmetingRaamTechnischRasterPatroon
-                      >(
-                        initialValue: concept.rasterPatroon,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Rasterpatroon',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        items: OpmetingRaamTechnischRasterPatroon.values
-                            .map(
-                              (patroon) => DropdownMenuItem(
-                                value: patroon,
-                                child: Text(patroon.label),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (waarde) {
-                          if (waarde == null) return;
-
-                          concept.rasterPatroon = waarde;
-                          onGewijzigd();
-                        },
-                      ),
-                ),
-              if (concept.inhoudType == OpmetingRaamTechnischeInhoudType.tekst)
-                SizedBox(
-                  width: 360,
-                  child: TextField(
+                      setState(() {
+                        concept.rasterPatroon = waarde;
+                      });
+                      widget.onGewijzigd();
+                    },
+                  )
+                : TextField(
                     controller: concept.tekstController,
-                    maxLines: 2,
+                    onChanged: (_) {
+                      widget.onGewijzigd();
+                    },
                     decoration: const InputDecoration(
-                      labelText: 'Tekst in rechthoek',
-                      hintText: 'Bijvoorbeeld: ventilatierooster',
+                      labelText: 'Tekst',
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _uitleg,
-            style: const TextStyle(color: Color(0xFF6B7280), fontSize: 11.5),
           ),
         ],
       ),
     );
   }
 
-  String get _uitleg {
-    if (concept.maatPlaatsing ==
-        OpmetingRaamTechnischeMaatPlaatsing.inDeRaammaat) {
-      return 'In de raammaat: deze rechthoek neemt ruimte van het '
-          'raamkader in. De totale opgegeven raammaat blijft gelijk.';
-    }
+  Widget _bouwMaatRij({
+    required String titel,
+    required OpmetingRaamTechnischeMaatKeuze waarde,
+    required String vasteWaardeLabel,
+    required TextEditingController controller,
+    required List<DropdownMenuItem<OpmetingRaamTechnischeMaatKeuze>> keuzes,
+    required ValueChanged<OpmetingRaamTechnischeMaatKeuze> onKeuzeGewijzigd,
+  }) {
+    return _bouwTweeKolommen(
+      links: DropdownButtonFormField<OpmetingRaamTechnischeMaatKeuze>(
+        value: waarde,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: titel,
+          border: const OutlineInputBorder(),
+          isDense: true,
+        ),
+        items: keuzes,
+        onChanged: (nieuweWaarde) {
+          if (nieuweWaarde == null) {
+            return;
+          }
 
-    return 'Buiten de raammaat: een positieve afstand maakt ruimte '
-        'tussen raam en rechthoek. Een negatieve afstand schuift de '
-        'rechthoek over het raamkader.';
+          onKeuzeGewijzigd(nieuweWaarde);
+        },
+      ),
+      rechts: waarde == OpmetingRaamTechnischeMaatKeuze.vasteMaat
+          ? TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              onChanged: (_) {
+                widget.onGewijzigd();
+              },
+              decoration: InputDecoration(
+                labelText: vasteWaardeLabel,
+                suffixText: 'mm',
+                border: const OutlineInputBorder(),
+                isDense: true,
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _bouwTweeKolommen({required Widget links, required Widget rechts}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: links),
+        const SizedBox(width: 8),
+        Expanded(child: rechts),
+      ],
+    );
   }
 }

@@ -87,11 +87,11 @@ class OpmetingRaamToolbalk extends StatelessWidget {
             ),
             _toolKnop(
               waarde: 'kadergroep',
-              label: 'Groeperen',
-              icoon: Icons.select_all_rounded,
+              label: 'Selecteren',
+              icoon: Icons.north_west_rounded,
               tooltip: _kadergroepActief
-                  ? 'Groeperen voor technische keuzes uitzetten'
-                  : 'Meerdere kaders groeperen voor technische keuzes',
+                  ? 'Selecteren uitzetten'
+                  : 'Kaders selecteren voor technische keuzes',
               breedte: 92,
               onTap: () {
                 onToolGekozen(_kadergroepActief ? 'lijn' : 'kadergroep');

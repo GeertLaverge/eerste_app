@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class OpmetingRaamBasisMaten extends StatelessWidget {
   const OpmetingRaamBasisMaten({
@@ -15,7 +16,14 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required this.raammaatHoogte,
     required this.verschilTablet,
     required this.onChanged,
+    this.dagmatenVergrendeld = false,
   });
+
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstDonker = Color(0xFF111827);
+  static const Color _tekstGrijs = Color(0xFF6B7280);
 
   final TextEditingController dagmaatHoogteController;
   final TextEditingController dagmaatBreedteController;
@@ -30,214 +38,271 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   final int raammaatHoogte;
   final int verschilTablet;
   final VoidCallback onChanged;
-
-  static const groen = Color(0xFF0B7A3B);
-
-  Widget _veld({
-    required String label,
-    required TextEditingController controller,
-    double veldBreedte = 58,
-    int maxLength = 4,
-  }) {
-    return Expanded(
-      child: Row(
-        children: [
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.visible,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-          ),
-          const SizedBox(width: 6),
-          SizedBox(
-            width: veldBreedte,
-            height: 30,
-            child: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              maxLength: maxLength,
-              onChanged: (_) => onChanged(),
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                counterText: '',
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 6,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _raammaatRegel() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE7F6EC),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFB7E3C3)),
-      ),
-      child: Text(
-        'Raammaat: $raammaatBreedte × $raammaatHoogte mm',
-        style: const TextStyle(
-          color: groen,
-          fontSize: 14,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
-    );
-  }
-
-  Widget _verschilRegel() {
-    return Expanded(
-      child: Container(
-        height: 30,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE7F6EC),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFFB7E3C3)),
-        ),
-        child: Row(
-          children: [
-            const Text(
-              'Verschil',
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: groen,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              '$verschilTablet',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-                color: groen,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  final bool dagmatenVergrendeld;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: _kaartDecoratie(),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _rand),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'AFMETINGEN',
-            style: TextStyle(
-              color: groen,
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
+          Container(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 9),
+            decoration: const BoxDecoration(
+              color: _lichtGroen,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.straighten_rounded, color: _groen, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Afmetingen',
+                    style: TextStyle(
+                      color: Color(0xFF064E3B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _veld(
-                label: 'Dagmaat breedte',
-                controller: dagmaatBreedteController,
-                veldBreedte: 62,
-              ),
-              const SizedBox(width: 16),
-              _veld(
-                label: 'Dagmaat hoogte',
-                controller: dagmaatHoogteController,
-                veldBreedte: 62,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _veld(
-                label: 'Slag Links',
-                controller: slagLinksController,
-                veldBreedte: 42,
-                maxLength: 3,
-              ),
-              const SizedBox(width: 8),
-              _veld(
-                label: 'Slag Rechts',
-                controller: slagRechtsController,
-                veldBreedte: 42,
-                maxLength: 3,
-              ),
-              const SizedBox(width: 8),
-              _veld(
-                label: 'Slag Boven',
-                controller: slagBovenController,
-                veldBreedte: 42,
-                maxLength: 3,
-              ),
-              const SizedBox(width: 8),
-              _veld(
-                label: 'Slag Onder',
-                controller: slagOnderController,
-                veldBreedte: 42,
-                maxLength: 3,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _raammaatRegel(),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _veld(
-                label: 'Binnen tablet',
-                controller: binnenTabletController,
-                veldBreedte: 46,
-                maxLength: 3,
-              ),
-              const SizedBox(width: 8),
-              _veld(
-                label: 'Buiten tablet',
-                controller: buitenTabletController,
-                veldBreedte: 46,
-                maxLength: 3,
-              ),
-              const SizedBox(width: 8),
-              _verschilRegel(),
-            ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _bouwResultaatKaart(),
+                const SizedBox(height: 10),
+                if (dagmatenVergrendeld) ...[
+                  _bouwInfoMelding(),
+                  const SizedBox(height: 10),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Dagmaat B',
+                        controller: dagmaatBreedteController,
+                        enabled: !dagmatenVergrendeld,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Dagmaat H',
+                        controller: dagmaatHoogteController,
+                        enabled: !dagmatenVergrendeld,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Slag L',
+                        controller: slagLinksController,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Slag R',
+                        controller: slagRechtsController,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Slag B',
+                        controller: slagBovenController,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Slag O',
+                        controller: slagOnderController,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Tablet binnen',
+                        controller: binnenTabletController,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Tablet buiten',
+                        controller: buitenTabletController,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Verschil tablet: $verschilTablet mm',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  BoxDecoration _kaartDecoratie() {
-    return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFE5E7EB)),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.035),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
+  Widget _bouwResultaatKaart() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _rand),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.aspect_ratio_rounded, size: 18, color: _groen),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Raammaat',
+                  style: TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '$raammaatBreedte × $raammaatHoogte mm',
+                  style: const TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwInfoMelding() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: _lichtGroen,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _groen.withOpacity(0.35)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.lock_outline_rounded, color: _groen, size: 17),
+          SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              'Meerdere kaders: dagmaten worden automatisch berekend op basis van de totale raammaat min de slag.',
+              style: TextStyle(
+                color: Color(0xFF064E3B),
+                fontSize: 10.8,
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwGetalVeld({
+    required String label,
+    required TextEditingController controller,
+    bool enabled = true,
+  }) {
+    return TextField(
+      controller: controller,
+      enabled: enabled,
+      cursorColor: _groen,
+      keyboardType: const TextInputType.numberWithOptions(
+        signed: false,
+        decimal: false,
+      ),
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      textAlign: TextAlign.center,
+      onChanged: (_) {
+        onChanged();
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        suffixText: 'mm',
+        isDense: true,
+        filled: !enabled,
+        fillColor: !enabled ? const Color(0xFFF3F4F6) : Colors.white,
+        labelStyle: const TextStyle(
+          color: _tekstGrijs,
+          fontWeight: FontWeight.w700,
         ),
-      ],
+        floatingLabelStyle: const TextStyle(
+          color: _groen,
+          fontWeight: FontWeight.w900,
+        ),
+        suffixStyle: const TextStyle(
+          color: _tekstGrijs,
+          fontWeight: FontWeight.w700,
+        ),
+        border: const OutlineInputBorder(),
+        enabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: _rand),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: _groen, width: 1.6),
+        ),
+        disabledBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Color(0xFFD1D5DB)),
+        ),
+      ),
+      style: TextStyle(
+        color: enabled ? _tekstDonker : _tekstGrijs,
+        fontWeight: FontWeight.w800,
+      ),
     );
   }
 }

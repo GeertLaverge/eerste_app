@@ -829,12 +829,346 @@ class OpmetingRaamKeuzeOptie {
   }
 }
 
+enum OpmetingRaamKeuzeMenuItemType { submenu, keuze }
+
+extension OpmetingRaamKeuzeMenuItemTypeExtension
+    on OpmetingRaamKeuzeMenuItemType {
+  String get opslagWaarde {
+    return name;
+  }
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamKeuzeMenuItemType.submenu:
+        return 'Submenu';
+
+      case OpmetingRaamKeuzeMenuItemType.keuze:
+        return 'Keuze';
+    }
+  }
+
+  static OpmetingRaamKeuzeMenuItemType vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final type in OpmetingRaamKeuzeMenuItemType.values) {
+      if (type.name == tekst) {
+        return type;
+      }
+    }
+
+    return OpmetingRaamKeuzeMenuItemType.keuze;
+  }
+}
+
+class OpmetingRaamKeuzeMenuItem {
+  const OpmetingRaamKeuzeMenuItem({
+    required this.id,
+    required this.naam,
+    required this.type,
+    this.optie,
+    this.kinderen = const <OpmetingRaamKeuzeMenuItem>[],
+    this.actief = true,
+  });
+
+  static const Object _optieOngewijzigd = Object();
+
+  final String id;
+  final String naam;
+  final OpmetingRaamKeuzeMenuItemType type;
+  final OpmetingRaamKeuzeOptie? optie;
+  final List<OpmetingRaamKeuzeMenuItem> kinderen;
+  final bool actief;
+
+  factory OpmetingRaamKeuzeMenuItem.submenu({
+    required String id,
+    required String naam,
+    List<OpmetingRaamKeuzeMenuItem> kinderen =
+        const <OpmetingRaamKeuzeMenuItem>[],
+    bool actief = true,
+  }) {
+    return OpmetingRaamKeuzeMenuItem(
+      id: id,
+      naam: naam,
+      type: OpmetingRaamKeuzeMenuItemType.submenu,
+      optie: null,
+      kinderen: kinderen,
+      actief: actief,
+    );
+  }
+
+  factory OpmetingRaamKeuzeMenuItem.keuze({
+    required OpmetingRaamKeuzeOptie optie,
+    bool actief = true,
+  }) {
+    return OpmetingRaamKeuzeMenuItem(
+      id: optie.id,
+      naam: optie.naam,
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
+      optie: optie,
+      kinderen: const <OpmetingRaamKeuzeMenuItem>[],
+      actief: actief,
+    );
+  }
+
+  bool get isSubmenu {
+    return type == OpmetingRaamKeuzeMenuItemType.submenu;
+  }
+
+  bool get isKeuze {
+    return type == OpmetingRaamKeuzeMenuItemType.keuze;
+  }
+
+  bool get heeftKinderen {
+    return kinderen.isNotEmpty;
+  }
+
+  String get weergaveNaam {
+    final optieNaam = optie?.naam.trim() ?? '';
+
+    if (isKeuze && optieNaam.isNotEmpty) {
+      return optieNaam;
+    }
+
+    return naam;
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> get actieveKinderen {
+    return List<OpmetingRaamKeuzeMenuItem>.unmodifiable(
+      kinderen.where((kind) => kind.actief),
+    );
+  }
+
+  List<OpmetingRaamKeuzeOptie> get alleKeuzeOpties {
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    void verzamel(OpmetingRaamKeuzeMenuItem item) {
+      if (item.isKeuze && item.optie != null) {
+        resultaat.add(item.optie!);
+      }
+
+      for (final kind in item.kinderen) {
+        verzamel(kind);
+      }
+    }
+
+    verzamel(this);
+
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  List<OpmetingRaamKeuzeOptie> get actieveKeuzeOpties {
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    void verzamel(OpmetingRaamKeuzeMenuItem item) {
+      if (!item.actief) {
+        return;
+      }
+
+      if (item.isKeuze && item.optie != null && item.optie!.actief) {
+        resultaat.add(item.optie!);
+      }
+
+      for (final kind in item.kinderen) {
+        verzamel(kind);
+      }
+    }
+
+    verzamel(this);
+
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  bool bevatOptieId(String optieId) {
+    if (isKeuze && optie?.id == optieId) {
+      return true;
+    }
+
+    for (final kind in kinderen) {
+      if (kind.bevatOptieId(optieId)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  OpmetingRaamKeuzeOptie? zoekOptie(String optieId) {
+    if (isKeuze && optie?.id == optieId) {
+      return optie;
+    }
+
+    for (final kind in kinderen) {
+      final gevonden = kind.zoekOptie(optieId);
+
+      if (gevonden != null) {
+        return gevonden;
+      }
+    }
+
+    return null;
+  }
+
+  List<String> padIdsVoorOptie(String optieId) {
+    final resultaat = <String>[];
+
+    bool zoek(OpmetingRaamKeuzeMenuItem item) {
+      resultaat.add(item.id);
+
+      if (item.isKeuze && item.optie?.id == optieId) {
+        return true;
+      }
+
+      for (final kind in item.kinderen) {
+        if (zoek(kind)) {
+          return true;
+        }
+      }
+
+      resultaat.removeLast();
+      return false;
+    }
+
+    if (zoek(this)) {
+      return List<String>.unmodifiable(resultaat);
+    }
+
+    return const <String>[];
+  }
+
+  List<String> padNamenVoorOptie(String optieId) {
+    final resultaat = <String>[];
+
+    bool zoek(OpmetingRaamKeuzeMenuItem item) {
+      resultaat.add(item.weergaveNaam);
+
+      if (item.isKeuze && item.optie?.id == optieId) {
+        return true;
+      }
+
+      for (final kind in item.kinderen) {
+        if (zoek(kind)) {
+          return true;
+        }
+      }
+
+      resultaat.removeLast();
+      return false;
+    }
+
+    if (zoek(this)) {
+      return List<String>.unmodifiable(resultaat);
+    }
+
+    return const <String>[];
+  }
+
+  OpmetingRaamKeuzeMenuItem copyWith({
+    String? id,
+    String? naam,
+    OpmetingRaamKeuzeMenuItemType? type,
+    Object? optie = _optieOngewijzigd,
+    List<OpmetingRaamKeuzeMenuItem>? kinderen,
+    bool? actief,
+  }) {
+    final nieuweType = type ?? this.type;
+
+    final nieuweOptie = identical(optie, _optieOngewijzigd)
+        ? this.optie
+        : optie as OpmetingRaamKeuzeOptie?;
+
+    return OpmetingRaamKeuzeMenuItem(
+      id: id ?? this.id,
+      naam: naam ?? this.naam,
+      type: nieuweType,
+      optie: nieuweType == OpmetingRaamKeuzeMenuItemType.keuze
+          ? nieuweOptie
+          : null,
+      kinderen: nieuweType == OpmetingRaamKeuzeMenuItemType.submenu
+          ? kinderen ?? this.kinderen
+          : const <OpmetingRaamKeuzeMenuItem>[],
+      actief: actief ?? this.actief,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'naam': naam,
+      'type': type.opslagWaarde,
+      'actief': actief,
+      'optie': optie?.toJson(),
+      'kinderen': kinderen.map((kind) => kind.toJson()).toList(),
+    };
+  }
+
+  factory OpmetingRaamKeuzeMenuItem.fromJson(Map<String, dynamic> json) {
+    final ruweKinderen = json['kinderen'];
+
+    final kinderen = ruweKinderen is List
+        ? ruweKinderen
+              .whereType<Map>()
+              .map(
+                (kind) => OpmetingRaamKeuzeMenuItem.fromJson(
+                  Map<String, dynamic>.from(kind),
+                ),
+              )
+              .toList()
+        : <OpmetingRaamKeuzeMenuItem>[];
+
+    final ruweOptie = json['optie'];
+
+    OpmetingRaamKeuzeOptie? optie;
+
+    if (ruweOptie is Map) {
+      optie = OpmetingRaamKeuzeOptie.fromJson(
+        Map<String, dynamic>.from(ruweOptie),
+      );
+    }
+
+    final heeftType = json.containsKey('type');
+    final type = heeftType
+        ? OpmetingRaamKeuzeMenuItemTypeExtension.vanOpslagWaarde(json['type'])
+        : kinderen.isNotEmpty
+        ? OpmetingRaamKeuzeMenuItemType.submenu
+        : OpmetingRaamKeuzeMenuItemType.keuze;
+
+    final id = json['id']?.toString() ?? optie?.id ?? '';
+    final naam = json['naam']?.toString() ?? optie?.naam ?? '';
+
+    if (type == OpmetingRaamKeuzeMenuItemType.keuze && optie == null) {
+      optie = OpmetingRaamKeuzeOptie(
+        id: id,
+        naam: naam,
+        uitvoerTekst: '',
+        isGeenKeuze: false,
+        tekenfunctie: OpmetingRaamTekenfunctie.geen,
+        technischeTekening: null,
+        technischeTekeningen:
+            const <OpmetingRaamTechnischeTekeningInstelling>[],
+        nietCombineerbaarMet: const <OpmetingRaamNietCombineerbareKeuze>[],
+      );
+    }
+
+    return OpmetingRaamKeuzeMenuItem(
+      id: id,
+      naam: naam,
+      type: type,
+      optie: type == OpmetingRaamKeuzeMenuItemType.keuze ? optie : null,
+      kinderen: type == OpmetingRaamKeuzeMenuItemType.submenu
+          ? kinderen
+          : const <OpmetingRaamKeuzeMenuItem>[],
+      actief: json['actief'] != false,
+    );
+  }
+}
+
 class OpmetingRaamKeuzeMenu {
   const OpmetingRaamKeuzeMenu({
     required this.id,
     required this.titel,
     required this.volgorde,
     required this.opties,
+    this.items = const <OpmetingRaamKeuzeMenuItem>[],
     this.actief = true,
   });
 
@@ -844,6 +1178,8 @@ class OpmetingRaamKeuzeMenu {
   final bool actief;
 
   final List<OpmetingRaamKeuzeOptie> opties;
+
+  final List<OpmetingRaamKeuzeMenuItem> items;
 
   factory OpmetingRaamKeuzeMenu.nieuw({
     required String id,
@@ -855,6 +1191,7 @@ class OpmetingRaamKeuzeMenu {
       titel: titel,
       volgorde: volgorde,
       opties: <OpmetingRaamKeuzeOptie>[OpmetingRaamKeuzeOptie.geen(menuId: id)],
+      items: const <OpmetingRaamKeuzeMenuItem>[],
     );
   }
 
@@ -865,11 +1202,84 @@ class OpmetingRaamKeuzeMenu {
       }
     }
 
+    for (final optie in alleOptiesUitItems) {
+      if (optie.isGeenKeuze) {
+        return optie;
+      }
+    }
+
     return OpmetingRaamKeuzeOptie.geen(menuId: id);
   }
 
+  List<OpmetingRaamKeuzeOptie> get alleOptiesUitItems {
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    for (final item in items) {
+      resultaat.addAll(item.alleKeuzeOpties);
+    }
+
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  List<OpmetingRaamKeuzeOptie> get actieveOptiesUitItems {
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    for (final item in items) {
+      resultaat.addAll(item.actieveKeuzeOpties);
+    }
+
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> get boomItems {
+    final resultaat = <OpmetingRaamKeuzeMenuItem>[];
+
+    if (items.isNotEmpty) {
+      resultaat.addAll(items);
+    } else {
+      resultaat.addAll(
+        opties.map((optie) => OpmetingRaamKeuzeMenuItem.keuze(optie: optie)),
+      );
+    }
+
+    final bevatGeen = resultaat.any((item) {
+      return item.bevatOptieId(geenOptie.id);
+    });
+
+    if (!bevatGeen) {
+      resultaat.insert(0, OpmetingRaamKeuzeMenuItem.keuze(optie: geenOptie));
+    }
+
+    return List<OpmetingRaamKeuzeMenuItem>.unmodifiable(resultaat);
+  }
+
   List<OpmetingRaamKeuzeOptie> get actieveOpties {
-    final resultaat = opties.where((optie) => optie.actief).toList();
+    final gebruikteIds = <String>{};
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    void voegToe(OpmetingRaamKeuzeOptie optie) {
+      if (!optie.actief) {
+        return;
+      }
+
+      if (!gebruikteIds.add(optie.id)) {
+        return;
+      }
+
+      resultaat.add(optie);
+    }
+
+    voegToe(geenOptie);
+
+    if (items.isNotEmpty) {
+      for (final optie in actieveOptiesUitItems) {
+        voegToe(optie);
+      }
+    } else {
+      for (final optie in opties) {
+        voegToe(optie);
+      }
+    }
 
     resultaat.sort((eerste, tweede) {
       if (eerste.isGeenKeuze && !tweede.isGeenKeuze) {
@@ -883,7 +1293,94 @@ class OpmetingRaamKeuzeMenu {
       return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
     });
 
-    return resultaat;
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  List<OpmetingRaamKeuzeOptie> get alleOptiesVoorOpslag {
+    final gebruikteIds = <String>{};
+    final resultaat = <OpmetingRaamKeuzeOptie>[];
+
+    void voegToe(OpmetingRaamKeuzeOptie optie) {
+      if (!gebruikteIds.add(optie.id)) {
+        return;
+      }
+
+      resultaat.add(optie);
+    }
+
+    for (final optie in opties) {
+      voegToe(optie);
+    }
+
+    for (final optie in alleOptiesUitItems) {
+      voegToe(optie);
+    }
+
+    if (!gebruikteIds.contains(geenOptie.id)) {
+      resultaat.insert(0, geenOptie);
+    }
+
+    return List<OpmetingRaamKeuzeOptie>.unmodifiable(resultaat);
+  }
+
+  OpmetingRaamKeuzeOptie? zoekOptie(String optieId) {
+    for (final item in items) {
+      final gevonden = item.zoekOptie(optieId);
+
+      if (gevonden != null) {
+        return gevonden;
+      }
+    }
+
+    for (final optie in opties) {
+      if (optie.id == optieId) {
+        return optie;
+      }
+    }
+
+    return null;
+  }
+
+  List<String> padIdsVoorOptie(String optieId) {
+    for (final item in boomItems) {
+      final pad = item.padIdsVoorOptie(optieId);
+
+      if (pad.isNotEmpty) {
+        return pad;
+      }
+    }
+
+    return const <String>[];
+  }
+
+  List<String> padNamenVoorOptie(String optieId) {
+    for (final item in boomItems) {
+      final pad = item.padNamenVoorOptie(optieId);
+
+      if (pad.isNotEmpty) {
+        return pad;
+      }
+    }
+
+    final optie = zoekOptie(optieId);
+
+    if (optie != null) {
+      return <String>[optie.naam];
+    }
+
+    return const <String>[];
+  }
+
+  String padTekstVoorOptie(String optieId) {
+    final pad = padNamenVoorOptie(
+      optieId,
+    ).where((deel) => deel.trim().isNotEmpty).toList();
+
+    if (pad.isEmpty) {
+      return '';
+    }
+
+    return pad.join(' > ');
   }
 
   OpmetingRaamKeuzeMenu metGeldigeGeenOptie() {
@@ -933,6 +1430,7 @@ class OpmetingRaamKeuzeMenu {
     int? volgorde,
     bool? actief,
     List<OpmetingRaamKeuzeOptie>? opties,
+    List<OpmetingRaamKeuzeMenuItem>? items,
   }) {
     return OpmetingRaamKeuzeMenu(
       id: id ?? this.id,
@@ -940,16 +1438,20 @@ class OpmetingRaamKeuzeMenu {
       volgorde: volgorde ?? this.volgorde,
       actief: actief ?? this.actief,
       opties: opties ?? this.opties,
+      items: items ?? this.items,
     );
   }
 
   Map<String, dynamic> toJson() {
+    final optiesVoorOpslag = alleOptiesVoorOpslag;
+
     return <String, dynamic>{
       'id': id,
       'titel': titel,
       'volgorde': volgorde,
       'actief': actief,
-      'opties': opties.map((optie) => optie.toJson()).toList(),
+      'opties': optiesVoorOpslag.map((optie) => optie.toJson()).toList(),
+      'items': items.map((item) => item.toJson()).toList(),
     };
   }
 
@@ -967,12 +1469,26 @@ class OpmetingRaamKeuzeMenu {
               .toList()
         : <OpmetingRaamKeuzeOptie>[];
 
+    final ruweItems = json['items'];
+
+    final items = ruweItems is List
+        ? ruweItems
+              .whereType<Map>()
+              .map(
+                (item) => OpmetingRaamKeuzeMenuItem.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList()
+        : <OpmetingRaamKeuzeMenuItem>[];
+
     final menu = OpmetingRaamKeuzeMenu(
       id: json['id']?.toString() ?? '',
       titel: json['titel']?.toString() ?? '',
       volgorde: _leesGeheelGetal(json['volgorde']),
       actief: json['actief'] != false,
       opties: opties,
+      items: items,
     );
 
     return menu.metGeldigeGeenOptie();
@@ -983,22 +1499,27 @@ class OpmetingRaamKeuzeSelectie {
   const OpmetingRaamKeuzeSelectie({
     required this.menuId,
     required this.optieId,
+    this.padIds = const <String>[],
     this.extraWaarden = const <String, dynamic>{},
   });
 
   final String menuId;
   final String optieId;
 
+  final List<String> padIds;
+
   final Map<String, dynamic> extraWaarden;
 
   OpmetingRaamKeuzeSelectie copyWith({
     String? menuId,
     String? optieId,
+    List<String>? padIds,
     Map<String, dynamic>? extraWaarden,
   }) {
     return OpmetingRaamKeuzeSelectie(
       menuId: menuId ?? this.menuId,
       optieId: optieId ?? this.optieId,
+      padIds: padIds ?? this.padIds,
       extraWaarden: extraWaarden ?? this.extraWaarden,
     );
   }
@@ -1007,6 +1528,7 @@ class OpmetingRaamKeuzeSelectie {
     return <String, dynamic>{
       'menuId': menuId,
       'optieId': optieId,
+      'padIds': padIds,
       'extraWaarden': extraWaarden,
     };
   }
@@ -1014,9 +1536,17 @@ class OpmetingRaamKeuzeSelectie {
   factory OpmetingRaamKeuzeSelectie.fromJson(Map<String, dynamic> json) {
     final ruweExtraWaarden = json['extraWaarden'];
 
+    final ruwePadIds = json['padIds'];
+
     return OpmetingRaamKeuzeSelectie(
       menuId: json['menuId']?.toString() ?? '',
       optieId: json['optieId']?.toString() ?? '',
+      padIds: ruwePadIds is List
+          ? ruwePadIds
+                .map((id) => id.toString())
+                .where((id) => id.trim().isNotEmpty)
+                .toList()
+          : const <String>[],
       extraWaarden: ruweExtraWaarden is Map
           ? Map<String, dynamic>.from(ruweExtraWaarden)
           : <String, dynamic>{},

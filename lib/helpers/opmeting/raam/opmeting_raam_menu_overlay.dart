@@ -346,51 +346,45 @@ class OpmetingRaamMenuOverlay extends StatelessWidget {
               top: opvullingMenuPositie.dy,
               child: Material(
                 type: MaterialType.transparency,
-                child: OpmetingRaamVerplaatsbaarMenu(
-                  menuKey: zwevendeMenus.opvullingMenuKey,
-                  breedte: opvullingMenuBreedte,
-                  titel: 'Opvulmenu verplaatsen',
-                  onSleepStart: (details) {
+                child: Listener(
+                  onPointerDown: (event) {
                     zwevendeMenus.startMenuSleep(
                       menuId: 'opvulling',
-                      globaleCursorPositie: details.globalPosition,
+                      globaleCursorPositie: event.position,
                       huidigeMenuPositie: opvullingMenuPositie,
                     );
                   },
-                  onVerslepen: (details) {
-                    onMenuVerslepen(
-                      menuId: 'opvulling',
-                      details: details,
-                      overlayContext: context,
-                      schermGrootte: schermGrootte,
-                      menuGrootte: opvullingMenuGrootte,
-                    );
-                  },
-                  onSleepEinde: (_) {
+                  onPointerUp: (_) {
                     zwevendeMenus.stopMenuSleep('opvulling');
                   },
-                  onSleepAnnuleren: () {
+                  onPointerCancel: (_) {
                     zwevendeMenus.stopMenuSleep('opvulling');
                   },
-                  onSluiten: onOpvullingMenuSluiten,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: maximaleMenuInhoudHoogte,
-                    ),
-                    child: SingleChildScrollView(
-                      child: OpmetingRaamOpvullingMenu(
-                        opvullingen: opvullingen,
-                        isLaden: opvullingenLaden,
-                        geselecteerdeOpvullingId: geselecteerdeOpvullingId,
-                        aantalGeselecteerdeVlakken:
-                            aantalGeselecteerdeVulvlakken,
-                        totaalAantalVlakken: totaalAantalVlakken,
-                        onOpvullingGekozen: onOpvullingGekozen,
-                        onToepassen: onOpvullingToepassen,
-                        onOpvullingVerwijderen: onOpvullingVerwijderen,
-                        onAllesSelecteren: onAlleVulvlakkenSelecteren,
-                        onSelectieWissen: onVulvlakSelectieWissen,
-                      ),
+                  child: KeyedSubtree(
+                    key: zwevendeMenus.opvullingMenuKey,
+                    child: OpmetingRaamOpvullingMenu(
+                      breedte: opvullingMenuBreedte,
+                      maxHoogte: maximaleMenuInhoudHoogte,
+                      opvullingen: opvullingen,
+                      isLaden: opvullingenLaden,
+                      geselecteerdeOpvullingId: geselecteerdeOpvullingId,
+                      aantalGeselecteerdeVlakken: aantalGeselecteerdeVulvlakken,
+                      totaalAantalVlakken: totaalAantalVlakken,
+                      onOpvullingGekozen: onOpvullingGekozen,
+                      onToepassen: onOpvullingToepassen,
+                      onOpvullingVerwijderen: onOpvullingVerwijderen,
+                      onAllesSelecteren: onAlleVulvlakkenSelecteren,
+                      onSelectieWissen: onVulvlakSelectieWissen,
+                      onSluiten: onOpvullingMenuSluiten,
+                      onVerslepen: (details) {
+                        onMenuVerslepen(
+                          menuId: 'opvulling',
+                          details: details,
+                          overlayContext: context,
+                          schermGrootte: schermGrootte,
+                          menuGrootte: opvullingMenuGrootte,
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -402,63 +396,58 @@ class OpmetingRaamMenuOverlay extends StatelessWidget {
               top: kleinhoutMenuPositie.dy,
               child: Material(
                 type: MaterialType.transparency,
-                child: OpmetingRaamVerplaatsbaarMenu(
-                  menuKey: zwevendeMenus.kleinhoutMenuKey,
-                  breedte: kleinhoutMenuBreedte,
-                  titel: 'Kleinhoutmenu verplaatsen',
-                  onSleepStart: (details) {
+                child: Listener(
+                  onPointerDown: (event) {
                     zwevendeMenus.startMenuSleep(
                       menuId: 'kleinhout',
-                      globaleCursorPositie: details.globalPosition,
+                      globaleCursorPositie: event.position,
                       huidigeMenuPositie: kleinhoutMenuPositie,
                     );
                   },
-                  onVerslepen: (details) {
-                    onMenuVerslepen(
-                      menuId: 'kleinhout',
-                      details: details,
-                      overlayContext: context,
-                      schermGrootte: schermGrootte,
-                      menuGrootte: kleinhoutMenuGrootte,
-                    );
-                  },
-                  onSleepEinde: (_) {
+                  onPointerUp: (_) {
                     zwevendeMenus.stopMenuSleep('kleinhout');
                   },
-                  onSleepAnnuleren: () {
+                  onPointerCancel: (_) {
                     zwevendeMenus.stopMenuSleep('kleinhout');
                   },
-                  onSluiten: onKleinhoutMenuSluiten,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: maximaleMenuInhoudHoogte,
-                    ),
-                    child: SingleChildScrollView(
-                      child: OpmetingRaamKleinhoutMenu(
-                        geselecteerdType: geselecteerdKleinhoutType,
-                        geselecteerdPatroon: geselecteerdKleinhoutPatroon,
-                        horizontaleHoogteController:
-                            kleinhoutHorizontaleHoogteController,
-                        aantalHorizontaalController:
-                            kleinhoutAantalHorizontaalController,
-                        aantalVerticaalController:
-                            kleinhoutAantalVerticaalController,
-                        aantalGeselecteerdeVlakken:
-                            aantalGeselecteerdeKleinhoutVlakken,
-                        totaalAantalGevuldeVlakken: totaalAantalGevuldeVlakken,
-                        selectieKanKleinhoutenKrijgen:
-                            kleinhoutSelectieIsVolledigGevuld,
-                        selectieHeeftKleinhouten:
-                            kleinhoutSelectieHeeftKleinhouten,
-                        onTypeGewijzigd: onKleinhoutTypeGewijzigd,
-                        onPatroonGewijzigd: onKleinhoutPatroonGewijzigd,
-                        onWaardeGewijzigd: onKleinhoutWaardeGewijzigd,
-                        onToepassen: onKleinhoutToepassen,
-                        onVerwijderen: onKleinhoutVerwijderen,
-                        onAlleGevuldeVlakkenSelecteren:
-                            onAlleGevuldeKleinhoutVlakkenSelecteren,
-                        onSelectieWissen: onKleinhoutSelectieWissen,
-                      ),
+                  child: KeyedSubtree(
+                    key: zwevendeMenus.kleinhoutMenuKey,
+                    child: OpmetingRaamKleinhoutMenu(
+                      breedte: kleinhoutMenuBreedte,
+                      maxHoogte: maximaleMenuInhoudHoogte,
+                      geselecteerdType: geselecteerdKleinhoutType,
+                      geselecteerdPatroon: geselecteerdKleinhoutPatroon,
+                      horizontaleHoogteController:
+                          kleinhoutHorizontaleHoogteController,
+                      aantalHorizontaalController:
+                          kleinhoutAantalHorizontaalController,
+                      aantalVerticaalController:
+                          kleinhoutAantalVerticaalController,
+                      aantalGeselecteerdeVlakken:
+                          aantalGeselecteerdeKleinhoutVlakken,
+                      totaalAantalGevuldeVlakken: totaalAantalGevuldeVlakken,
+                      selectieKanKleinhoutenKrijgen:
+                          kleinhoutSelectieIsVolledigGevuld,
+                      selectieHeeftKleinhouten:
+                          kleinhoutSelectieHeeftKleinhouten,
+                      onTypeGewijzigd: onKleinhoutTypeGewijzigd,
+                      onPatroonGewijzigd: onKleinhoutPatroonGewijzigd,
+                      onWaardeGewijzigd: onKleinhoutWaardeGewijzigd,
+                      onToepassen: onKleinhoutToepassen,
+                      onVerwijderen: onKleinhoutVerwijderen,
+                      onAlleGevuldeVlakkenSelecteren:
+                          onAlleGevuldeKleinhoutVlakkenSelecteren,
+                      onSelectieWissen: onKleinhoutSelectieWissen,
+                      onSluiten: onKleinhoutMenuSluiten,
+                      onVerslepen: (details) {
+                        onMenuVerslepen(
+                          menuId: 'kleinhout',
+                          details: details,
+                          overlayContext: context,
+                          schermGrootte: schermGrootte,
+                          menuGrootte: kleinhoutMenuGrootte,
+                        );
+                      },
                     ),
                   ),
                 ),

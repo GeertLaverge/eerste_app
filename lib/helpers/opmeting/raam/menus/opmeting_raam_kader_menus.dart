@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 
@@ -6,6 +7,12 @@ typedef OpmetingRaamKaderPositieGekozen =
     void Function({
       required OpmetingKaderZijde zijde,
       required OpmetingKaderUitlijning uitlijning,
+    });
+
+typedef OpmetingRaamKaderVrijePositieActiveren =
+    void Function({
+      required OpmetingKaderZijde zijde,
+      required OpmetingKaderUitlijning basisUitlijning,
     });
 
 class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
@@ -18,7 +25,9 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
     required this.hoogteController,
     required this.breedteFocusNode,
     required this.hoogteFocusNode,
-    required this.onBewaren,
+    required this.onMaatGewijzigd,
+    required this.onSluiten,
+    required this.onVerwijderen,
   });
 
   final OpmetingKaderDeel actiefKader;
@@ -31,7 +40,9 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
   final FocusNode breedteFocusNode;
   final FocusNode hoogteFocusNode;
 
-  final VoidCallback onBewaren;
+  final VoidCallback onMaatGewijzigd;
+  final VoidCallback onSluiten;
+  final VoidCallback onVerwijderen;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
@@ -39,7 +50,7 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
-  static const Size _menuGrootte = Size(300, 214);
+  static const Size _menuGrootte = Size(300, 188);
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +92,7 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                   onPositieGewijzigd(
                     _begrensMenuPositie(
                       context: context,
-                      positie: begrensdePositie + details.delta,
+                      positie: begrensdePositie + (details.delta * 2.0),
                       schermGrootte: schermGrootte,
                       menuGrootte: _menuGrootte,
                     ),
@@ -106,6 +117,8 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                       const Expanded(
                         child: Text(
                           'Kader wijzigen',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Color(0xFF064E3B),
                             fontSize: 13,
@@ -113,13 +126,16 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
-                        actiefKader.naam,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _groen,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: onSluiten,
+                        child: const Padding(
+                          padding: EdgeInsets.all(3),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: _groen,
+                          ),
                         ),
                       ),
                     ],
@@ -127,7 +143,7 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -149,16 +165,23 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                             controller: breedteController,
                             focusNode: breedteFocusNode,
                             keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
+                              signed: false,
+                              decimal: false,
                             ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Breedte kader',
                               suffixText: 'mm',
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
+                            onChanged: (_) {
+                              onMaatGewijzigd();
+                            },
                             onSubmitted: (_) {
-                              onBewaren();
+                              onMaatGewijzigd();
                             },
                           ),
                         ),
@@ -168,40 +191,68 @@ class OpmetingRaamKaderWijzigMenuOverlay extends StatelessWidget {
                             controller: hoogteController,
                             focusNode: hoogteFocusNode,
                             keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
+                              signed: false,
+                              decimal: false,
                             ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             decoration: const InputDecoration(
                               labelText: 'Hoogte kader',
                               suffixText: 'mm',
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
+                            onChanged: (_) {
+                              onMaatGewijzigd();
+                            },
                             onSubmitted: (_) {
-                              onBewaren();
+                              onMaatGewijzigd();
                             },
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 10),
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _groen,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(38),
-                      ),
-                      onPressed: onBewaren,
-                      icon: const Icon(Icons.save_outlined, size: 17),
-                      label: const Text('Kader bewaren'),
-                    ),
-                    const SizedBox(height: 7),
-                    const Text(
-                      'Tik op een kader in de tekening om een ander kader actief te maken.',
-                      style: TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Tik op een kader in de tekening om een ander kader actief te maken.',
+                            style: TextStyle(
+                              color: _tekstGrijs,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Tooltip(
+                          message: 'Kader wissen',
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(999),
+                            onTap: onVerwijderen,
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: _lichtGroen,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFCDEBD6),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 19,
+                                color: _groen,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -220,8 +271,10 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
     required this.ankerKader,
     required this.positie,
     required this.onPositieGewijzigd,
+    required this.onSluiten,
     required this.geselecteerdeZijde,
     required this.geselecteerdeUitlijning,
+    required this.geselecteerdeVrijeBasisUitlijning,
     required this.onPositieGekozen,
     required this.onVrijePositieActiveren,
     required this.onKaderWijziging,
@@ -236,12 +289,14 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
   final OpmetingKaderDeel ankerKader;
   final Offset positie;
   final ValueChanged<Offset> onPositieGewijzigd;
+  final VoidCallback onSluiten;
 
   final OpmetingKaderZijde? geselecteerdeZijde;
   final OpmetingKaderUitlijning? geselecteerdeUitlijning;
+  final OpmetingKaderUitlijning? geselecteerdeVrijeBasisUitlijning;
 
   final OpmetingRaamKaderPositieGekozen onPositieGekozen;
-  final ValueChanged<OpmetingKaderZijde> onVrijePositieActiveren;
+  final OpmetingRaamKaderVrijePositieActiveren onVrijePositieActiveren;
   final VoidCallback onKaderWijziging;
 
   final TextEditingController breedteController;
@@ -258,7 +313,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
-  static const Size _menuGrootte = Size(462, 560);
+  static const Size _menuGrootte = Size(410, 438);
 
   @override
   Widget build(BuildContext context) {
@@ -300,7 +355,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                   onPositieGewijzigd(
                     _begrensMenuPositie(
                       context: context,
-                      positie: begrensdePositie + details.delta,
+                      positie: begrensdePositie + (details.delta * 2.0),
                       schermGrootte: schermGrootte,
                       menuGrootte: _menuGrootte,
                     ),
@@ -332,13 +387,16 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
-                        'tegen ${ankerKader.naam}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: _groen,
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w800,
+                      InkWell(
+                        borderRadius: BorderRadius.circular(999),
+                        onTap: onSluiten,
+                        child: const Padding(
+                          padding: EdgeInsets.all(3),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: _groen,
+                          ),
                         ),
                       ),
                     ],
@@ -346,25 +404,16 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 11, 12, 12),
+                padding: const EdgeInsets.fromLTRB(10, 9, 10, 10),
                 child: SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Klik eerst op een positie. Het nieuwe kader wordt meteen getekend en past zich aan bij elke wijziging.',
-                        style: TextStyle(
-                          color: _tekstGrijs,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       _bouwZijdeBalk(
+                        context: context,
                         titel: 'Boven',
                         zijde: OpmetingKaderZijde.boven,
                         beginLabel: 'Links',
-                        vrijLabel: 'Vanaf links',
                         eindeLabel: 'Rechts',
                       ),
                       const SizedBox(height: 8),
@@ -372,6 +421,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           _bouwZijkantKolom(
+                            context: context,
                             titel: 'Links',
                             zijde: OpmetingKaderZijde.links,
                           ),
@@ -381,6 +431,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           _bouwZijkantKolom(
+                            context: context,
                             titel: 'Rechts',
                             zijde: OpmetingKaderZijde.rechts,
                           ),
@@ -388,13 +439,13 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       _bouwZijdeBalk(
+                        context: context,
                         titel: 'Onder',
                         zijde: OpmetingKaderZijde.onder,
                         beginLabel: 'Links',
-                        vrijLabel: 'Vanaf links',
                         eindeLabel: 'Rechts',
                       ),
-                      const SizedBox(height: 11),
+                      const SizedBox(height: 9),
                       Row(
                         children: [
                           Expanded(
@@ -403,8 +454,12 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                               focusNode: breedteFocusNode,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                    decimal: true,
+                                    signed: false,
+                                    decimal: false,
                                   ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               decoration: const InputDecoration(
                                 labelText: 'Breedte nieuw kader',
                                 suffixText: 'mm',
@@ -426,8 +481,12 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                               focusNode: hoogteFocusNode,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                    decimal: true,
+                                    signed: false,
+                                    decimal: false,
                                   ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
                               decoration: const InputDecoration(
                                 labelText: 'Hoogte nieuw kader',
                                 suffixText: 'mm',
@@ -466,7 +525,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
     return FilterChip(
       label: Text(label),
       selected: geselecteerd,
-      showCheckmark: true,
+      showCheckmark: false,
       selectedColor: _lichtGroen,
       side: BorderSide(color: geselecteerd ? _groen : _rand),
       labelStyle: TextStyle(
@@ -480,31 +539,108 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
     );
   }
 
-  Widget _bouwVrijVeld({
+  OpmetingKaderUitlijning _basisUitlijningVoorVrijVeld({
     required OpmetingKaderZijde zijde,
-    required String label,
+  }) {
+    if (geselecteerdeZijde != zijde) {
+      return OpmetingKaderUitlijning.begin;
+    }
+
+    if (geselecteerdeUitlijning == OpmetingKaderUitlijning.einde) {
+      return OpmetingKaderUitlijning.einde;
+    }
+
+    if (geselecteerdeUitlijning == OpmetingKaderUitlijning.vrij &&
+        geselecteerdeVrijeBasisUitlijning == OpmetingKaderUitlijning.einde) {
+      return OpmetingKaderUitlijning.einde;
+    }
+
+    return OpmetingKaderUitlijning.begin;
+  }
+
+  String _vrijVeldLabel({
+    required OpmetingKaderZijde zijde,
+    required OpmetingKaderUitlijning basisUitlijning,
+  }) {
+    if (zijde == OpmetingKaderZijde.boven ||
+        zijde == OpmetingKaderZijde.onder) {
+      return basisUitlijning == OpmetingKaderUitlijning.einde
+          ? 'Vanaf rechts'
+          : 'Vanaf links';
+    }
+
+    return basisUitlijning == OpmetingKaderUitlijning.einde
+        ? 'Vanaf onder'
+        : 'Vanaf boven';
+  }
+
+  Widget _bouwVrijVeld({
+    required BuildContext context,
+    required OpmetingKaderZijde zijde,
   }) {
     final geselecteerd =
         geselecteerdeZijde == zijde &&
         geselecteerdeUitlijning == OpmetingKaderUitlijning.vrij;
 
+    final basisUitlijning = _basisUitlijningVoorVrijVeld(zijde: zijde);
+    final label = _vrijVeldLabel(
+      zijde: zijde,
+      basisUitlijning: basisUitlijning,
+    );
+
+    if (!geselecteerd) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () {
+          onVrijePositieActiveren(
+            zijde: zijde,
+            basisUitlijning: basisUitlijning,
+          );
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!context.mounted) {
+              return;
+            }
+
+            FocusScope.of(context).requestFocus(vrijeOffsetFocusNode);
+          });
+        },
+        child: Container(
+          width: 86,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: _rand),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _tekstDonker,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
-      width: 118,
+      width: 98,
       child: TextField(
         controller: vrijeOffsetController,
         focusNode: vrijeOffsetFocusNode,
         keyboardType: const TextInputType.numberWithOptions(
-          signed: true,
-          decimal: true,
+          signed: false,
+          decimal: false,
         ),
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: InputDecoration(
           labelText: label,
           suffixText: 'mm',
-          prefixIcon: Icon(
-            geselecteerd ? Icons.check_box : Icons.check_box_outline_blank,
-            size: 17,
-            color: geselecteerd ? _groen : _tekstGrijs,
-          ),
           border: const OutlineInputBorder(),
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(
@@ -513,26 +649,40 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
           ),
         ),
         onTap: () {
-          onVrijePositieActiveren(zijde);
-        },
-        onChanged: (_) {
-          if (geselecteerdeZijde == zijde &&
-              geselecteerdeUitlijning == OpmetingKaderUitlijning.vrij) {
-            onKaderWijziging();
+          if (geselecteerdeZijde != zijde ||
+              geselecteerdeUitlijning != OpmetingKaderUitlijning.vrij ||
+              geselecteerdeVrijeBasisUitlijning != basisUitlijning) {
+            onVrijePositieActiveren(
+              zijde: zijde,
+              basisUitlijning: basisUitlijning,
+            );
           }
         },
+        onChanged: (_) {
+          if (geselecteerdeZijde != zijde ||
+              geselecteerdeUitlijning != OpmetingKaderUitlijning.vrij ||
+              geselecteerdeVrijeBasisUitlijning != basisUitlijning) {
+            onVrijePositieActiveren(
+              zijde: zijde,
+              basisUitlijning: basisUitlijning,
+            );
+            return;
+          }
+
+          onKaderWijziging();
+        },
         onSubmitted: (_) {
-          onVrijePositieActiveren(zijde);
+          onKaderWijziging();
         },
       ),
     );
   }
 
   Widget _bouwZijdeBalk({
+    required BuildContext context,
     required String titel,
     required OpmetingKaderZijde zijde,
     required String beginLabel,
-    required String vrijLabel,
     required String eindeLabel,
   }) {
     return Container(
@@ -565,7 +715,7 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
                 uitlijning: OpmetingKaderUitlijning.begin,
                 label: beginLabel,
               ),
-              _bouwVrijVeld(zijde: zijde, label: vrijLabel),
+              _bouwVrijVeld(context: context, zijde: zijde),
               _bouwPositieKnop(
                 zijde: zijde,
                 uitlijning: OpmetingKaderUitlijning.einde,
@@ -579,16 +729,17 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
   }
 
   Widget _bouwZijkantKolom({
+    required BuildContext context,
     required String titel,
     required OpmetingKaderZijde zijde,
   }) {
     return SizedBox(
-      width: 132,
+      width: 122,
       child: _bouwZijdeBalk(
+        context: context,
         titel: titel,
         zijde: zijde,
         beginLabel: 'Boven',
-        vrijLabel: 'Vanaf boven',
         eindeLabel: 'Onder',
       ),
     );
@@ -596,8 +747,8 @@ class OpmetingRaamKaderToevoegMenuOverlay extends StatelessWidget {
 
   Widget _bouwVoorbeeldRechthoek() {
     return Container(
-      width: 120,
-      height: 118,
+      width: 96,
+      height: 100,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,

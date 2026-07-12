@@ -367,7 +367,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
 
     final eersteDagVanIsoJaar = DateTime(donderdag.year, 1, 1);
 
-    return 1 + (donderdag.difference(eersteDagVanIsoJaar).inDays ~/ 7);
+    return (donderdag.difference(eersteDagVanIsoJaar).inDays ~/ 7) + 1;
   }
 
   double maandBreedte(

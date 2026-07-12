@@ -135,6 +135,7 @@ class OpmetingRaamKeuzeSelectieHelper {
         selecties[menu.id] = OpmetingRaamKeuzeSelectie(
           menuId: menu.id,
           optieId: menu.geenOptie.id,
+          padIds: const <String>[],
         );
       }
     }
@@ -171,6 +172,7 @@ class OpmetingRaamKeuzeSelectieHelper {
     return OpmetingRaamKeuzeSelectie(
       menuId: menu.id,
       optieId: menu.geenOptie.id,
+      padIds: const <String>[],
     );
   }
 
@@ -180,6 +182,12 @@ class OpmetingRaamKeuzeSelectieHelper {
   }) {
     final selectie = selectieVoorMenu(selecties: selecties, menu: menu);
 
+    final optieUitBoom = menu.zoekOptie(selectie.optieId);
+
+    if (optieUitBoom != null) {
+      return optieUitBoom;
+    }
+
     for (final optie in menu.opties) {
       if (optie.id == selectie.optieId) {
         return optie;
@@ -187,6 +195,32 @@ class OpmetingRaamKeuzeSelectieHelper {
     }
 
     return menu.geenOptie;
+  }
+
+  static String padTekstVoorSelectie({
+    required Map<String, OpmetingRaamKeuzeSelectie> selecties,
+    required OpmetingRaamKeuzeMenu menu,
+  }) {
+    final selectie = selectieVoorMenu(selecties: selecties, menu: menu);
+
+    if (selectie.optieId.trim().isEmpty ||
+        selectie.optieId == menu.geenOptie.id) {
+      return '';
+    }
+
+    final padTekst = menu.padTekstVoorOptie(selectie.optieId).trim();
+
+    if (padTekst.isNotEmpty && padTekst.toLowerCase() != 'geen') {
+      return padTekst;
+    }
+
+    final optie = optieVoorSelectie(selecties: selecties, menu: menu);
+
+    if (optie.isGeenKeuze) {
+      return '';
+    }
+
+    return optie.naam.trim();
   }
 
   static List<OpmetingRaamTechnischeTekeningInstelling>

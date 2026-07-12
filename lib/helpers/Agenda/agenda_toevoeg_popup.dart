@@ -55,6 +55,30 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
         widget.bestaandItem!.id.trim().isEmpty;
   }
 
+  String get formulierTitel {
+    if (type == 'dagtaak') {
+      return isBewerken ? 'Dagtaak wijzigen' : 'Dagtaak';
+    }
+
+    if (type == 'verlof') {
+      return isBewerken ? 'Verlof wijzigen' : 'Verlof';
+    }
+
+    return isBewerken ? 'Afspraak klant wijzigen' : 'Afspraak klant';
+  }
+
+  IconData get formulierIcoon {
+    if (type == 'dagtaak') {
+      return isBewerken ? Icons.edit_note_rounded : Icons.task_alt_rounded;
+    }
+
+    if (type == 'verlof') {
+      return isBewerken ? Icons.edit_calendar : Icons.beach_access_rounded;
+    }
+
+    return isBewerken ? Icons.edit_calendar : Icons.add_circle;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -83,17 +107,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       volledigeDag = item.volledigeDag;
 
       if (item.startUur != null && item.startMinuut != null) {
-        startTijd = TimeOfDay(
-          hour: item.startUur!,
-          minute: item.startMinuut!,
-        );
+        startTijd = TimeOfDay(hour: item.startUur!, minute: item.startMinuut!);
       }
 
       if (item.eindUur != null && item.eindMinuut != null) {
-        eindTijd = TimeOfDay(
-          hour: item.eindUur!,
-          minute: item.eindMinuut!,
-        );
+        eindTijd = TimeOfDay(hour: item.eindUur!, minute: item.eindMinuut!);
       }
       switch (item.meldingVoorafMinuten) {
         case 0:
@@ -295,10 +313,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     Navigator.pop(context, 'verwijderen');
   }
 
-  DropdownMenuItem<String> itemType(
-    String waarde,
-    String tekst,
-  ) {
+  DropdownMenuItem<String> itemType(String waarde, String tekst) {
     final kleur = AgendaKleurService.kleur(waarde);
 
     return DropdownMenuItem(
@@ -320,10 +335,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     );
   }
 
-  Widget veld(
-    TextEditingController controller,
-    String label,
-  ) {
+  Widget veld(TextEditingController controller, String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: TextField(
@@ -333,20 +345,13 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
           isDense: true,
           contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
           border: UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: Colors.grey.shade400,
-            ),
+            borderSide: BorderSide(color: Colors.grey.shade400),
           ),
           enabledBorder: UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: Colors.grey.shade400,
-            ),
+            borderSide: BorderSide(color: Colors.grey.shade400),
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: Color(0xFF0B7A3B),
-              width: 1.6,
-            ),
+            borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.6),
           ),
         ),
       ),
@@ -392,10 +397,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Color(0xFF0B7A3B),
-                  width: 1.6,
-                ),
+                borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.6),
               ),
             ),
           );
@@ -462,10 +464,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               focusedBorder: const UnderlineInputBorder(
-                borderSide: BorderSide(
-                  color: Color(0xFF0B7A3B),
-                  width: 1.6,
-                ),
+                borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.6),
               ),
             ),
           );
@@ -503,19 +502,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
         child: Container(
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
           decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.shade400,
-              ),
-            ),
+            border: Border(bottom: BorderSide(color: Colors.grey.shade400)),
           ),
           child: Row(
             children: [
-              Icon(
-                icoon,
-                color: const Color(0xFF0B7A3B),
-                size: 20,
-              ),
+              Icon(icoon, color: const Color(0xFF0B7A3B), size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -553,11 +544,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       child: Container(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: Colors.grey.shade400,
-            ),
-          ),
+          border: Border(bottom: BorderSide(color: Colors.grey.shade400)),
         ),
         child: Row(
           children: [
@@ -570,10 +557,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
             const Expanded(
               child: Text(
                 'Melding vooraf',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),
             DropdownButtonHideUnderline(
@@ -581,26 +565,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 value: meldingVooraf,
                 isDense: true,
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Geen',
-                    child: Text('Geen'),
-                  ),
-                  DropdownMenuItem(
-                    value: '15 min',
-                    child: Text('15 min'),
-                  ),
-                  DropdownMenuItem(
-                    value: '30 min',
-                    child: Text('30 min'),
-                  ),
-                  DropdownMenuItem(
-                    value: '1 uur',
-                    child: Text('1 uur'),
-                  ),
-                  DropdownMenuItem(
-                    value: '2 uur',
-                    child: Text('2 uur'),
-                  ),
+                  DropdownMenuItem(value: 'Geen', child: Text('Geen')),
+                  DropdownMenuItem(value: '15 min', child: Text('15 min')),
+                  DropdownMenuItem(value: '30 min', child: Text('30 min')),
+                  DropdownMenuItem(value: '1 uur', child: Text('1 uur')),
+                  DropdownMenuItem(value: '2 uur', child: Text('2 uur')),
                 ],
                 onChanged: (waarde) {
                   if (waarde == null) return;
@@ -644,10 +613,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 const SizedBox(width: 6),
                 const Text(
                   "Notitie's",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ],
             ),
@@ -769,19 +735,13 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                   const Text(
                     'Annuleren zonder toevoegen?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   const Text(
                     'Er is nog geen naam ingevuld.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(color: Colors.black54, fontSize: 14),
                   ),
                   const SizedBox(height: 18),
                   Row(
@@ -826,17 +786,10 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 28,
-        vertical: 24,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 460,
-        ),
+        constraints: const BoxConstraints(maxWidth: 460),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: SingleChildScrollView(
@@ -845,16 +798,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      isBewerken ? Icons.edit_calendar : Icons.add_circle,
-                      color: const Color(0xFF0B7A3B),
-                    ),
+                    Icon(formulierIcoon, color: const Color(0xFF0B7A3B)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        isBewerken
-                            ? 'Afspraak klant wijzigen'
-                            : 'Afspraak klant',
+                        formulierTitel,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -872,26 +820,16 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 veld(naamController, 'Naam klant'),
                 Row(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: veld(straatController, 'Straat'),
-                    ),
+                    Expanded(flex: 3, child: veld(straatController, 'Straat')),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: veld(huisNrController, 'Nr'),
-                    ),
+                    Expanded(child: veld(huisNrController, 'Nr')),
                   ],
                 ),
                 Row(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: gemeenteVeld(),
-                    ),
+                    Expanded(flex: 3, child: gemeenteVeld()),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: postcodeVeld(),
-                    ),
+                    Expanded(child: postcodeVeld()),
                   ],
                 ),
                 veld(gsmController, 'GSM'),
@@ -909,9 +847,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                   },
                   title: const Text(
                     'Volledige dag',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 if (!volledigeDag) ...[
@@ -938,10 +874,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.red,
-                      ),
+                      icon: const Icon(Icons.close, color: Colors.red),
                       label: const Text('Planning annuleren'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red,
@@ -960,9 +893,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                       backgroundColor: const Color(0xFF0B7A3B),
                       foregroundColor: Colors.white,
                     ),
-                    child: Text(
-                      isBewerken ? 'Opslaan' : 'Toevoegen',
-                    ),
+                    child: Text(isBewerken ? 'Opslaan' : 'Toevoegen'),
                   ),
                 ),
               ],

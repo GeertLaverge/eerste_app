@@ -227,6 +227,7 @@ class _OpmetingRaamOverzichtContext {
         }
 
         final waarde = _overzichtTekstVoorOptie(
+          menu: menu,
           optie: optie,
           selectie: selectie,
         );
@@ -316,7 +317,11 @@ class _OpmetingRaamOverzichtContext {
         continue;
       }
 
-      final waarde = _overzichtTekstVoorOptie(optie: optie, selectie: selectie);
+      final waarde = _overzichtTekstVoorOptie(
+        menu: menu,
+        optie: optie,
+        selectie: selectie,
+      );
 
       if (waarde.trim().isEmpty) {
         continue;
@@ -488,15 +493,28 @@ class _OpmetingRaamOverzichtContext {
   }
 
   String _overzichtTekstVoorOptie({
+    required OpmetingRaamKeuzeMenu menu,
     required OpmetingRaamKeuzeOptie optie,
     required OpmetingRaamKeuzeSelectie selectie,
   }) {
     final delen = <String>[];
 
-    if (optie.uitvoerTekst.trim().isNotEmpty) {
+    final padTekst = menu.padTekstVoorOptie(optie.id).trim();
+
+    if (padTekst.isNotEmpty && padTekst.toLowerCase() != 'geen') {
+      delen.add(padTekst);
+    } else if (optie.uitvoerTekst.trim().isNotEmpty) {
       delen.add(optie.uitvoerTekst.trim());
     } else if (optie.naam.trim().isNotEmpty) {
       delen.add(optie.naam.trim());
+    }
+
+    final uitvoerTekst = optie.uitvoerTekst.trim();
+
+    if (uitvoerTekst.isNotEmpty &&
+        uitvoerTekst != optie.naam.trim() &&
+        uitvoerTekst != padTekst) {
+      delen.add(uitvoerTekst);
     }
 
     for (final veld in optie.extraVelden) {

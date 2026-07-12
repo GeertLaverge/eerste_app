@@ -23,9 +23,7 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final aantalKolommen = menuGrootte.width >= 320 ? 3 : 2;
 
-    final geselecteerdIsDubbel =
-        geselecteerdType.isDubbel ||
-        geselecteerdType == OpmetingRaamVleugelType.vastDubbeleKader;
+    final geselecteerdIsDubbel = geselecteerdType.isDubbel;
 
     return Container(
       width: menuGrootte.width,
@@ -228,6 +226,12 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
   final VoidCallback? onVerplaatsen;
   final VoidCallback onWissen;
 
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstDonker = Color(0xFF111827);
+  static const Color _tekstGrijs = Color(0xFF6B7280);
+
   static const List<String> _positieKeuzes = [
     'mm',
     '1/2',
@@ -242,11 +246,10 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.98),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD1D5DB)),
+        border: Border.all(color: _rand),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.08),
@@ -258,92 +261,118 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'T-stijl',
-            style: TextStyle(
-              color: Color(0xFF0B7A3B),
-              fontWeight: FontWeight.w900,
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: const BoxDecoration(
+              color: _lichtGroen,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _positieKeuzes.map((waarde) {
-              return ChoiceChip(
-                label: Text(waarde),
-                selected: positieType == waarde,
-                onSelected: (_) {
-                  onPositieTypeGewijzigd(waarde);
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: positieController,
-            enabled: positieType == 'mm',
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textAlign: TextAlign.center,
-            onChanged: onMaatGewijzigd,
-            decoration: const InputDecoration(
-              labelText: 'Maat in mm',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Kaderlijn: meten vanaf buitenlijn. '
-            'T-stijl of vleugellijn: 0 mm = begin van de geselecteerde lijn.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-          ),
-          if (toonToevoegKnop) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onToevoegen,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('T-stijl toevoegen'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0B7A3B),
-                  foregroundColor: Colors.white,
+            child: const Row(
+              children: [
+                Icon(Icons.view_column_outlined, size: 18, color: _groen),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'T-stijl',
+                    style: TextStyle(
+                      color: Color(0xFF064E3B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-          if (toonVerplaatsKnop) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onVerplaatsen,
-                icon: const Icon(Icons.open_with, size: 18),
-                label: const Text('T-stijl verplaatsen'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  foregroundColor: Colors.white,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _positieKeuzes.map((waarde) {
+                    return ChoiceChip(
+                      label: Text(waarde),
+                      selected: positieType == waarde,
+                      onSelected: (_) {
+                        onPositieTypeGewijzigd(waarde);
+                      },
+                    );
+                  }).toList(),
                 ),
-              ),
-            ),
-          ],
-          if (toonWisKnop) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onWissen,
-                icon: const Icon(Icons.delete_outline, size: 18),
-                label: const Text('T-stijl wissen'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 8),
+                TextField(
+                  controller: positieController,
+                  enabled: positieType == 'mm',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  textAlign: TextAlign.center,
+                  onChanged: onMaatGewijzigd,
+                  decoration: const InputDecoration(
+                    labelText: 'Maat in mm',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Kaderlijn: meten vanaf buitenlijn. '
+                  'T-stijl of vleugellijn: 0 mm = begin van de geselecteerde lijn.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: _tekstGrijs),
+                ),
+                if (toonToevoegKnop) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onToevoegen,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('T-stijl toevoegen'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0B7A3B),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+                if (toonVerplaatsKnop) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onVerplaatsen,
+                      icon: const Icon(Icons.open_with, size: 18),
+                      label: const Text('T-stijl verplaatsen'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2563EB),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+                if (toonWisKnop) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onWissen,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('T-stijl wissen'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFDC2626),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -362,7 +391,7 @@ class _OpmetingRaamVleugelKeuzeTegel extends StatelessWidget {
   final VoidCallback onTap;
 
   bool get _isDubbel {
-    return type.isDubbel || type == OpmetingRaamVleugelType.vastDubbeleKader;
+    return type.isDubbel;
   }
 
   @override
@@ -484,12 +513,6 @@ class OpmetingRaamVleugelVoorbeeldPainter extends CustomPainter {
       return;
     }
 
-    if (type == OpmetingRaamVleugelType.vastDubbeleKader) {
-      _tekenVastDubbelVoorbeeld(canvas: canvas, vlak: voorbeeldVlak);
-
-      return;
-    }
-
     final voorbeeldVleugel = OpmetingRaamVleugel(
       id: 'voorbeeld',
       vlak: voorbeeldVlak,
@@ -521,74 +544,6 @@ class OpmetingRaamVleugelVoorbeeldPainter extends CustomPainter {
     canvas.drawLine(vlak.topLeft, vlak.bottomRight, wisLijn);
 
     canvas.drawLine(vlak.topRight, vlak.bottomLeft, wisLijn);
-  }
-
-  void _tekenVastDubbelVoorbeeld({required Canvas canvas, required Rect vlak}) {
-    final makelaarBreedte = (vlak.width * 0.06).clamp(2.0, 6.0).toDouble();
-
-    final halveMakelaar = makelaarBreedte / 2;
-
-    final linkerVlak = Rect.fromLTRB(
-      vlak.left,
-      vlak.top,
-      vlak.center.dx - halveMakelaar,
-      vlak.bottom,
-    );
-
-    final rechterVlak = Rect.fromLTRB(
-      vlak.center.dx + halveMakelaar,
-      vlak.top,
-      vlak.right,
-      vlak.bottom,
-    );
-
-    final linkerVleugel = OpmetingRaamVleugel(
-      id: 'voorbeeld_links',
-      vlak: linkerVlak,
-      type: OpmetingRaamVleugelType.vastDubbeleKader,
-    );
-
-    final rechterVleugel = OpmetingRaamVleugel(
-      id: 'voorbeeld_rechts',
-      vlak: rechterVlak,
-      type: OpmetingRaamVleugelType.vastDubbeleKader,
-    );
-
-    OpmetingRaamVleugelHelper.tekenVleugel(
-      canvas: canvas,
-      vleugel: linkerVleugel,
-      buitenKader: vlak,
-      breedteMm: 1000,
-      hoogteMm: 800,
-    );
-
-    OpmetingRaamVleugelHelper.tekenVleugel(
-      canvas: canvas,
-      vleugel: rechterVleugel,
-      buitenKader: vlak,
-      breedteMm: 1000,
-      hoogteMm: 800,
-    );
-
-    final makelaar = Rect.fromLTRB(
-      vlak.center.dx - halveMakelaar,
-      vlak.top,
-      vlak.center.dx + halveMakelaar,
-      vlak.bottom,
-    );
-
-    final vulling = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final lijn = Paint()
-      ..color = const Color(0xFF111827)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-
-    canvas.drawRect(makelaar, vulling);
-
-    canvas.drawRect(makelaar, lijn);
   }
 
   @override

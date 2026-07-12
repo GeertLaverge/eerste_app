@@ -30,6 +30,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.raammaatBreedte,
     required this.raammaatHoogte,
     required this.verschilTablet,
+    required this.dagmatenVergrendeld,
     required this.onMatenGewijzigd,
     required this.tekenvlakController,
     required this.actieveTool,
@@ -88,6 +89,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final int raammaatBreedte;
   final int raammaatHoogte;
   final int verschilTablet;
+  final bool dagmatenVergrendeld;
   final VoidCallback onMatenGewijzigd;
 
   final OpmetingRaamTekenvlakController tekenvlakController;
@@ -281,6 +283,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       raammaatBreedte: raammaatBreedte,
                       raammaatHoogte: raammaatHoogte,
                       verschilTablet: verschilTablet,
+                      dagmatenVergrendeld: dagmatenVergrendeld,
                       onChanged: onMatenGewijzigd,
                     ),
                     const SizedBox(height: 10),

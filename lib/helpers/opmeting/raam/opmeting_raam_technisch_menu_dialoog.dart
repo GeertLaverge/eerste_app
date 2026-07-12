@@ -16,15 +16,8 @@ class OpmetingRaamTechnischeSoortResultaat {
   final String id;
   final String naam;
 
-  /// Nieuwe opslagvorm met maximaal vier rechthoeken.
   final List<OpmetingRaamTechnischeTekeningInstelling> tekeningen;
-
-  /// Tijdelijke ondersteuning voor bestaande code die nog
-  /// één technische tekening doorgeeft.
   final OpmetingRaamTechnischeTekeningInstelling? _oudeTekening;
-
-  /// Andere keuzes waarmee deze keuze niet gecombineerd
-  /// mag worden.
   final List<OpmetingRaamNietCombineerbareKeuze> nietCombineerbaarMet;
 
   List<OpmetingRaamTechnischeTekeningInstelling> get alleTekeningen {
@@ -43,7 +36,6 @@ class OpmetingRaamTechnischeSoortResultaat {
     return const <OpmetingRaamTechnischeTekeningInstelling>[];
   }
 
-  /// Compatibiliteit met bestaande code.
   OpmetingRaamTechnischeTekeningInstelling get tekening {
     final bestaandeTekeningen = alleTekeningen;
 
@@ -60,12 +52,12 @@ class OpmetingRaamTechnischMenuResultaat {
     required this.titel,
     required this.soorten,
     required this.actief,
+    this.items = const <OpmetingRaamKeuzeMenuItem>[],
   });
 
   final String titel;
-
   final List<OpmetingRaamTechnischeSoortResultaat> soorten;
-
+  final List<OpmetingRaamKeuzeMenuItem> items;
   final bool actief;
 }
 
@@ -98,7 +90,7 @@ toonOpmetingRaamTechnischMenuDialoog({
           inputDecorationTheme: basisTheme.inputDecorationTheme.copyWith(
             floatingLabelStyle: const TextStyle(
               color: groen,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(color: groen, width: 2),
@@ -127,7 +119,6 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
   });
 
   final OpmetingRaamTechnischMenuResultaat? bestaandMenu;
-
   final List<OpmetingRaamBeschikbareNietCombineerbareKeuze>
   beschikbareNietCombineerbareKeuzes;
 
@@ -140,14 +131,14 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
 class _OpmetingRaamTechnischMenuDialoogState
     extends State<OpmetingRaamTechnischMenuDialoog> {
   static const Color groen = Color(0xFF0B7A3B);
+  static const Color lichtGroen = Color(0xFFE7F6EC);
   static const Color rand = Color(0xFFE5E7EB);
   static const Color achtergrond = Color(0xFFF9FAFB);
 
   late final TextEditingController _titelController;
 
-  final List<_TechnischeSoortConcept> _soorten = <_TechnischeSoortConcept>[];
+  final List<_TechnischMenuItemConcept> _items = <_TechnischMenuItemConcept>[];
 
-  bool _menuActief = true;
   String? _foutmelding;
 
   @override
@@ -158,16 +149,26 @@ class _OpmetingRaamTechnischMenuDialoogState
       text: widget.bestaandMenu?.titel ?? '',
     );
 
-    _menuActief = widget.bestaandMenu?.actief ?? true;
+    final bestaandeItems = widget.bestaandMenu?.items;
 
-    final bestaandeSoorten = widget.bestaandMenu?.soorten;
+    if (bestaandeItems != null && bestaandeItems.isNotEmpty) {
+      for (final item in bestaandeItems) {
+        if (item.isKeuze && item.optie?.isGeenKeuze == true) {
+          continue;
+        }
 
-    if (bestaandeSoorten != null && bestaandeSoorten.isNotEmpty) {
-      for (final soort in bestaandeSoorten) {
-        _soorten.add(_TechnischeSoortConcept.vanResultaat(soort));
+        _items.add(_TechnischMenuItemConcept.vanMenuItem(item));
       }
     } else {
-      _soorten.add(_TechnischeSoortConcept.nieuw());
+      final bestaandeSoorten = widget.bestaandMenu?.soorten;
+
+      if (bestaandeSoorten != null && bestaandeSoorten.isNotEmpty) {
+        for (final soort in bestaandeSoorten) {
+          _items.add(_TechnischMenuItemConcept.vanResultaat(soort));
+        }
+      } else {
+        _items.add(_TechnischMenuItemConcept.nieuweKeuze(ingeklapt: false));
+      }
     }
   }
 
@@ -175,66 +176,304 @@ class _OpmetingRaamTechnischMenuDialoogState
   void dispose() {
     _titelController.dispose();
 
-    for (final soort in _soorten) {
-      soort.dispose();
+    for (final item in _items) {
+      item.dispose();
     }
 
     super.dispose();
   }
 
-  void _voegSoortToe() {
+  static int _idTeller = 0;
+
+  String _nieuwId(String prefix) {
+    _idTeller++;
+
+    return '${prefix}_${DateTime.now().microsecondsSinceEpoch}_$_idTeller';
+  }
+
+  void _zetAllesIngeklapt(List<_TechnischMenuItemConcept> lijst) {
+    for (final item in lijst) {
+      item.ingeklapt = true;
+      _zetAllesIngeklapt(item.kinderen);
+    }
+  }
+
+  void _voegKeuzeToe({List<_TechnischMenuItemConcept>? doelLijst}) {
     setState(() {
-      _soorten.add(_TechnischeSoortConcept.nieuw());
+      final lijst = doelLijst ?? _items;
+
+      _zetAllesIngeklapt(_items);
+
+      lijst.add(
+        _TechnischMenuItemConcept.nieuweKeuze(
+          id: _nieuwId('soort'),
+          ingeklapt: false,
+        ),
+      );
 
       _foutmelding = null;
     });
   }
 
-  void _verwijderSoort(int index) {
-    if (index < 0 || index >= _soorten.length) {
+  void _voegSubmenuToe({List<_TechnischMenuItemConcept>? doelLijst}) {
+    setState(() {
+      final lijst = doelLijst ?? _items;
+
+      _zetAllesIngeklapt(_items);
+
+      lijst.add(
+        _TechnischMenuItemConcept.nieuwSubmenu(
+          id: _nieuwId('submenu'),
+          ingeklapt: false,
+        ),
+      );
+
+      _foutmelding = null;
+    });
+  }
+
+  void _kopieerItem({
+    required List<_TechnischMenuItemConcept> lijst,
+    required _TechnischMenuItemConcept item,
+  }) {
+    setState(() {
+      _zetAllesIngeklapt(_items);
+
+      final index = lijst.indexOf(item);
+      final kopie = _TechnischMenuItemConcept.kopieVan(item, nieuwId: _nieuwId);
+
+      kopie.ingeklapt = false;
+
+      if (index < 0 || index >= lijst.length - 1) {
+        lijst.add(kopie);
+      } else {
+        lijst.insert(index + 1, kopie);
+      }
+
+      _foutmelding = null;
+    });
+  }
+
+  void _verwijderItem({
+    required List<_TechnischMenuItemConcept> lijst,
+    required int index,
+  }) {
+    if (index < 0 || index >= lijst.length) {
       return;
     }
 
     setState(() {
-      final verwijderd = _soorten.removeAt(index);
-
+      final verwijderd = lijst.removeAt(index);
       verwijderd.dispose();
       _foutmelding = null;
     });
   }
 
-  void _voegTekeningToe(_TechnischeSoortConcept soort) {
-    if (soort.tekeningen.length >= 4) {
-      setState(() {
-        _foutmelding =
-            'Per soort kunnen maximaal vier rechthoeken '
-            'worden toegevoegd.';
-      });
-
+  void _voegTekeningToe(_TechnischMenuItemConcept item) {
+    if (item.tekeningen.length >= 4) {
+      _toonFout(
+        'Per keuze kunnen maximaal vier rechthoeken worden toegevoegd.',
+      );
       return;
     }
 
     setState(() {
-      soort.tekeningen.add(OpmetingRaamTechnischeTekeningConcept.nieuw());
-
+      item.tekeningen.add(OpmetingRaamTechnischeTekeningConcept.nieuw());
+      item.ingeklapt = false;
       _foutmelding = null;
     });
   }
 
   void _verwijderTekening({
-    required _TechnischeSoortConcept soort,
+    required _TechnischMenuItemConcept item,
     required int index,
   }) {
-    if (index < 0 || index >= soort.tekeningen.length) {
+    if (index < 0 || index >= item.tekeningen.length) {
       return;
     }
 
     setState(() {
-      final verwijderd = soort.tekeningen.removeAt(index);
-
+      final verwijderd = item.tekeningen.removeAt(index);
       verwijderd.dispose();
       _foutmelding = null;
     });
+  }
+
+  int _aantalKeuzes(List<_TechnischMenuItemConcept> items) {
+    var totaal = 0;
+
+    for (final item in items) {
+      if (item.isKeuze) {
+        totaal++;
+      }
+
+      totaal += _aantalKeuzes(item.kinderen);
+    }
+
+    return totaal;
+  }
+
+  String? _controleerItem({
+    required _TechnischMenuItemConcept item,
+    required List<String> pad,
+    required Set<String> gebruiktePaden,
+  }) {
+    final naam = item.naamController.text.trim();
+
+    if (naam.isEmpty) {
+      return item.isSubmenu
+          ? 'Vul een naam in bij een submenu.'
+          : 'Vul een naam in bij een keuze.';
+    }
+
+    if (naam.toLowerCase() == 'geen') {
+      return 'De keuze “Geen” wordt automatisch toegevoegd.';
+    }
+
+    final nieuwPad = <String>[...pad, naam];
+
+    if (item.isKeuze) {
+      final padSleutel = nieuwPad.join(' > ').toLowerCase();
+
+      if (!gebruiktePaden.add(padSleutel)) {
+        return 'De keuze “${nieuwPad.join(' > ')}” werd meer dan één keer ingevoerd.';
+      }
+
+      if (item.tekeningen.length > 4) {
+        return 'Bij “$naam” kunnen maximaal vier rechthoeken worden gebruikt.';
+      }
+
+      for (
+        var tekeningIndex = 0;
+        tekeningIndex < item.tekeningen.length;
+        tekeningIndex++
+      ) {
+        final tekening = item.tekeningen[tekeningIndex];
+        final nummer = tekeningIndex + 1;
+
+        if (tekening.breedteKeuze ==
+                OpmetingRaamTechnischeMaatKeuze.vasteMaat &&
+            tekening.breedteMm <= 0) {
+          return 'Vul bij “$naam”, rechthoek $nummer, een geldige breedte in.';
+        }
+
+        if (tekening.hoogteKeuze == OpmetingRaamTechnischeMaatKeuze.vasteMaat &&
+            tekening.hoogteMm <= 0) {
+          return 'Vul bij “$naam”, rechthoek $nummer, een geldige hoogte in.';
+        }
+
+        final afstandTekst = tekening.afstandController.text.trim();
+
+        if (afstandTekst.isNotEmpty && int.tryParse(afstandTekst) == null) {
+          return 'Vul bij “$naam”, rechthoek $nummer, een geldige afstand in. Negatieve waarden zijn toegestaan.';
+        }
+
+        if (tekening.inhoudType == OpmetingRaamTechnischeInhoudType.tekst &&
+            tekening.tekstController.text.trim().isEmpty) {
+          return 'Vul bij “$naam”, rechthoek $nummer, de tekst voor de rechthoek in.';
+        }
+      }
+    }
+
+    for (final kind in item.kinderen) {
+      final fout = _controleerItem(
+        item: kind,
+        pad: nieuwPad,
+        gebruiktePaden: gebruiktePaden,
+      );
+
+      if (fout != null) {
+        return fout;
+      }
+    }
+
+    return null;
+  }
+
+  OpmetingRaamKeuzeMenuItem _maakMenuItem(_TechnischMenuItemConcept item) {
+    final naam = item.naamController.text.trim();
+
+    if (item.isSubmenu) {
+      return OpmetingRaamKeuzeMenuItem.submenu(
+        id: item.id,
+        naam: naam,
+        kinderen: item.kinderen.map(_maakMenuItem).toList(),
+        actief: true,
+      );
+    }
+
+    return OpmetingRaamKeuzeMenuItem.keuze(
+      optie: _maakOptieVanItem(item),
+      actief: true,
+    );
+  }
+
+  OpmetingRaamKeuzeOptie _maakOptieVanItem(_TechnischMenuItemConcept item) {
+    final geldigeNietCombineerbareKeuzes =
+        <OpmetingRaamNietCombineerbareKeuze>[];
+    final gebruikteKoppelingen = <String>{};
+
+    for (final koppeling in item.nietCombineerbaarMet) {
+      if (!koppeling.isGeldig) {
+        continue;
+      }
+
+      if (koppeling.optieId == item.id) {
+        continue;
+      }
+
+      if (!gebruikteKoppelingen.add(koppeling.sleutel)) {
+        continue;
+      }
+
+      geldigeNietCombineerbareKeuzes.add(koppeling);
+    }
+
+    return OpmetingRaamKeuzeOptie(
+      id: item.id,
+      naam: item.naamController.text.trim(),
+      uitvoerTekst: '',
+      isGeenKeuze: false,
+      tekenfunctie: OpmetingRaamTekenfunctie.geen,
+      technischeTekeningen: item.tekeningen
+          .map((tekening) => tekening.naarInstelling())
+          .take(4)
+          .toList(),
+      nietCombineerbaarMet:
+          List<OpmetingRaamNietCombineerbareKeuze>.unmodifiable(
+            geldigeNietCombineerbareKeuzes,
+          ),
+      actief: true,
+    );
+  }
+
+  List<OpmetingRaamTechnischeSoortResultaat> _maakSoortenResultaat() {
+    final resultaten = <OpmetingRaamTechnischeSoortResultaat>[];
+
+    void verzamel(_TechnischMenuItemConcept item) {
+      if (item.isKeuze) {
+        final optie = _maakOptieVanItem(item);
+
+        resultaten.add(
+          OpmetingRaamTechnischeSoortResultaat(
+            id: optie.id,
+            naam: optie.naam,
+            tekeningen: optie.alleTechnischeTekeningen,
+            nietCombineerbaarMet: optie.nietCombineerbaarMet,
+          ),
+        );
+      }
+
+      for (final kind in item.kinderen) {
+        verzamel(kind);
+      }
+    }
+
+    for (final item in _items) {
+      verzamel(item);
+    }
+
+    return List<OpmetingRaamTechnischeSoortResultaat>.unmodifiable(resultaten);
   }
 
   void _bewaar() {
@@ -245,153 +484,35 @@ class _OpmetingRaamTechnischMenuDialoogState
       return;
     }
 
-    if (_soorten.isEmpty) {
-      _toonFout('Voeg minstens één soort of keuze toe.');
+    if (_items.isEmpty || _aantalKeuzes(_items) == 0) {
+      _toonFout('Voeg minstens één keuze toe.');
       return;
     }
 
-    final gebruikteNamen = <String>{};
+    final gebruiktePaden = <String>{};
 
-    final resultaten = <OpmetingRaamTechnischeSoortResultaat>[];
-
-    for (var soortIndex = 0; soortIndex < _soorten.length; soortIndex++) {
-      final soort = _soorten[soortIndex];
-
-      final naam = soort.naamController.text.trim();
-
-      if (naam.isEmpty) {
-        _toonFout(
-          'Vul een naam in bij soort '
-          '${soortIndex + 1}.',
-        );
-        return;
-      }
-
-      if (naam.toLowerCase() == 'geen') {
-        _toonFout(
-          'De keuze “Geen” wordt automatisch '
-          'toegevoegd.',
-        );
-        return;
-      }
-
-      final naamSleutel = naam.toLowerCase();
-
-      if (!gebruikteNamen.add(naamSleutel)) {
-        _toonFout(
-          'De soort “$naam” werd meer dan '
-          'één keer ingevoerd.',
-        );
-        return;
-      }
-
-      if (soort.tekeningen.length > 4) {
-        _toonFout(
-          'Bij “$naam” kunnen maximaal vier '
-          'rechthoeken worden gebruikt.',
-        );
-        return;
-      }
-
-      for (
-        var tekeningIndex = 0;
-        tekeningIndex < soort.tekeningen.length;
-        tekeningIndex++
-      ) {
-        final tekening = soort.tekeningen[tekeningIndex];
-
-        final nummer = tekeningIndex + 1;
-
-        if (tekening.breedteKeuze ==
-                OpmetingRaamTechnischeMaatKeuze.vasteMaat &&
-            tekening.breedteMm <= 0) {
-          _toonFout(
-            'Vul bij “$naam”, rechthoek $nummer, '
-            'een geldige breedte in.',
-          );
-          return;
-        }
-
-        if (tekening.hoogteKeuze == OpmetingRaamTechnischeMaatKeuze.vasteMaat &&
-            tekening.hoogteMm <= 0) {
-          _toonFout(
-            'Vul bij “$naam”, rechthoek $nummer, '
-            'een geldige hoogte in.',
-          );
-          return;
-        }
-
-        if (tekening.maatPlaatsing ==
-            OpmetingRaamTechnischeMaatPlaatsing.buitenDeRaammaat) {
-          final afstandTekst = tekening.afstandController.text.trim();
-
-          if (afstandTekst.isEmpty || int.tryParse(afstandTekst) == null) {
-            _toonFout(
-              'Vul bij “$naam”, rechthoek $nummer, '
-              'een geldige afstand in. Negatieve '
-              'waarden zijn toegestaan.',
-            );
-            return;
-          }
-        }
-
-        if (tekening.inhoudType == OpmetingRaamTechnischeInhoudType.tekst &&
-            tekening.tekstController.text.trim().isEmpty) {
-          _toonFout(
-            'Vul bij “$naam”, rechthoek $nummer, '
-            'de tekst voor de rechthoek in.',
-          );
-          return;
-        }
-      }
-
-      final geldigeNietCombineerbareKeuzes =
-          <OpmetingRaamNietCombineerbareKeuze>[];
-
-      final gebruikteKoppelingen = <String>{};
-
-      for (final koppeling in soort.nietCombineerbaarMet) {
-        if (!koppeling.isGeldig) {
-          continue;
-        }
-
-        /*
-         * Een keuze mag zichzelf niet als
-         * niet-combineerbaar opslaan.
-         */
-        if (koppeling.optieId == soort.id) {
-          continue;
-        }
-
-        if (!gebruikteKoppelingen.add(koppeling.sleutel)) {
-          continue;
-        }
-
-        geldigeNietCombineerbareKeuzes.add(koppeling);
-      }
-
-      resultaten.add(
-        OpmetingRaamTechnischeSoortResultaat(
-          id: soort.id,
-          naam: naam,
-          tekeningen: soort.tekeningen
-              .map((tekening) => tekening.naarInstelling())
-              .take(4)
-              .toList(),
-          nietCombineerbaarMet:
-              List<OpmetingRaamNietCombineerbareKeuze>.unmodifiable(
-                geldigeNietCombineerbareKeuzes,
-              ),
-        ),
+    for (final item in _items) {
+      final fout = _controleerItem(
+        item: item,
+        pad: const <String>[],
+        gebruiktePaden: gebruiktePaden,
       );
+
+      if (fout != null) {
+        _toonFout(fout);
+        return;
+      }
     }
+
+    final items = _items.map(_maakMenuItem).toList();
 
     Navigator.pop(
       context,
       OpmetingRaamTechnischMenuResultaat(
         titel: titel,
-        soorten: resultaten,
-        actief: _menuActief,
+        soorten: _maakSoortenResultaat(),
+        items: items,
+        actief: true,
       ),
     );
   }
@@ -412,7 +533,7 @@ class _OpmetingRaamTechnischMenuDialoogState
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: 820,
+          maxWidth: 680,
           maxHeight: schermHoogte - 48,
         ),
         child: Column(
@@ -421,7 +542,7 @@ class _OpmetingRaamTechnischMenuDialoogState
             const Divider(height: 1),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(18),
+                padding: const EdgeInsets.all(14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -429,57 +550,21 @@ class _OpmetingRaamTechnischMenuDialoogState
                       controller: _titelController,
                       autofocus: widget.bestaandMenu == null,
                       decoration: const InputDecoration(
-                        labelText: 'Titel',
-                        hintText: 'Bijvoorbeeld: Dorpel',
+                        labelText: 'Titel technische keuze',
+                        hintText: 'Bijvoorbeeld: Rolluiken',
                         border: OutlineInputBorder(),
+                        isDense: true,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        'Technische keuze actief',
-                        style: TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      subtitle: const Text(
-                        'Een inactieve technische keuze '
-                        'wordt tijdens een normale opmeting '
-                        'verborgen.',
-                      ),
-                      value: _menuActief,
-                      onChanged: (waarde) {
-                        setState(() {
-                          _menuActief = waarde;
-                        });
-                      },
-                    ),
+                    const SizedBox(height: 12),
+                    _bouwStructuurKop(),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Soorten / keuzes',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          onPressed: _voegSoortToe,
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('Soort toevoegen'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ...List<Widget>.generate(_soorten.length, (index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _bouwSoortKaart(
-                          soort: _soorten[index],
-                          index: index,
-                        ),
+                    ...List<Widget>.generate(_items.length, (index) {
+                      return _bouwItemKaart(
+                        lijst: _items,
+                        item: _items[index],
+                        index: index,
+                        diepte: 0,
                       );
                     }),
                     if (_foutmelding != null) ...[
@@ -512,25 +597,88 @@ class _OpmetingRaamTechnischMenuDialoogState
     );
   }
 
-  Widget _bouwKop() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 12, 10, 12),
+  Widget _bouwStructuurKop() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: lichtGroen,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: groen),
+      ),
       child: Row(
         children: [
+          const Expanded(
+            child: Text(
+              'Soorten / keuzes',
+              style: TextStyle(
+                color: groen,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: () {
+              _voegSubmenuToe();
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: groen,
+              side: const BorderSide(color: groen),
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.account_tree_outlined, size: 17),
+            label: const Text('Submenu'),
+          ),
+          const SizedBox(width: 6),
+          FilledButton.icon(
+            onPressed: () {
+              _voegKeuzeToe();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: groen,
+              foregroundColor: Colors.white,
+              visualDensity: VisualDensity.compact,
+            ),
+            icon: const Icon(Icons.add, size: 17),
+            label: const Text('Keuze'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwKop() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      decoration: const BoxDecoration(
+        color: lichtGroen,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.tune, color: groen, size: 20),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               widget.bestaandMenu == null
                   ? 'Nieuwe technische keuze'
                   : 'Technische keuze aanpassen',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              style: const TextStyle(
+                color: groen,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           IconButton(
             tooltip: 'Sluiten',
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
             onPressed: () {
               Navigator.pop(context);
             },
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close, color: groen),
           ),
         ],
       ),
@@ -539,9 +687,8 @@ class _OpmetingRaamTechnischMenuDialoogState
 
   Widget _bouwOnderbalk() {
     return Padding(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
         children: [
           TextButton(
             onPressed: () {
@@ -549,14 +696,14 @@ class _OpmetingRaamTechnischMenuDialoogState
             },
             child: const Text('Annuleren'),
           ),
-          const SizedBox(width: 8),
+          const Spacer(),
           FilledButton.icon(
-            onPressed: _bewaar,
             style: FilledButton.styleFrom(
               backgroundColor: groen,
               foregroundColor: Colors.white,
             ),
-            icon: const Icon(Icons.save_outlined, size: 18),
+            onPressed: _bewaar,
+            icon: const Icon(Icons.check, size: 18),
             label: const Text('Bewaren'),
           ),
         ],
@@ -564,165 +711,373 @@ class _OpmetingRaamTechnischMenuDialoogState
     );
   }
 
-  Widget _bouwSoortKaart({
-    required _TechnischeSoortConcept soort,
+  Widget _bouwItemKaart({
+    required List<_TechnischMenuItemConcept> lijst,
+    required _TechnischMenuItemConcept item,
     required int index,
+    required int diepte,
   }) {
-    final maximumBereikt = soort.tekeningen.length >= 4;
+    final naam = item.naamController.text.trim();
+    final titel = naam.isEmpty
+        ? item.isSubmenu
+              ? 'Submenu'
+              : 'Keuze ${index + 1}'
+        : naam;
 
-    /*
-     * De eigen keuze wordt uit de beschikbare
-     * uitsluitingen gefilterd.
-     */
     final beschikbareNietCombineerbareKeuzes = widget
         .beschikbareNietCombineerbareKeuzes
-        .where((keuze) => keuze.optieId != soort.id)
+        .where((keuze) => keuze.optieId != item.id)
         .toList();
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: achtergrond,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: rand),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: soort.naamController,
-                  decoration: InputDecoration(
-                    labelText: 'Soort ${index + 1}',
-                    hintText: 'Bijvoorbeeld: Blauwe hardsteen',
-                    border: const OutlineInputBorder(),
-                    isDense: true,
-                  ),
+    return Padding(
+      padding: EdgeInsets.only(left: diepte * 14.0, bottom: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: item.isSubmenu ? Colors.white : achtergrond,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: rand),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                setState(() {
+                  item.ingeklapt = !item.ingeklapt;
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+                child: Row(
+                  children: [
+                    Icon(
+                      item.ingeklapt
+                          ? Icons.keyboard_arrow_right
+                          : Icons.keyboard_arrow_down,
+                      color: groen,
+                      size: 21,
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      item.isSubmenu
+                          ? Icons.account_tree_outlined
+                          : Icons.check_box_outline_blank,
+                      color: item.isSubmenu ? groen : const Color(0xFF6B7280),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF111827),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            item.isSubmenu
+                                ? 'Submenu · ${item.kinderen.length} onderliggend'
+                                : '${item.tekeningen.length} rechthoek${item.tekeningen.length == 1 ? '' : 'en'}',
+                            style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: item.isSubmenu
+                          ? 'Submenu kopiëren'
+                          : 'Keuze kopiëren',
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 30,
+                        minHeight: 30,
+                      ),
+                      onPressed: () {
+                        _kopieerItem(lijst: lijst, item: item);
+                      },
+                      icon: const Icon(Icons.copy, color: groen, size: 17),
+                    ),
+                    IconButton(
+                      tooltip: item.isSubmenu
+                          ? 'Submenu verwijderen'
+                          : 'Keuze verwijderen',
+                      visualDensity: VisualDensity.compact,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 30,
+                        minHeight: 30,
+                      ),
+                      onPressed: () {
+                        _verwijderItem(lijst: lijst, index: index);
+                      },
+                      icon: const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xFFDC2626),
+                        size: 19,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                tooltip: 'Soort verwijderen',
-                onPressed: () {
-                  _verwijderSoort(index);
-                },
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
+            ),
+            if (!item.ingeklapt) ...[
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: item.isSubmenu
+                    ? _bouwSubmenuInhoud(item: item, diepte: diepte)
+                    : _bouwKeuzeInhoud(
+                        item: item,
+                        index: index,
+                        beschikbareNietCombineerbareKeuzes:
+                            beschikbareNietCombineerbareKeuzes,
+                      ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwSubmenuInhoud({
+    required _TechnischMenuItemConcept item,
+    required int diepte,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: item.naamController,
+          onChanged: (_) {
+            setState(() {});
+          },
+          decoration: const InputDecoration(
+            labelText: 'Naam submenu',
+            hintText: 'Bijvoorbeeld: Traditionele rolluiken',
+            border: OutlineInputBorder(),
+            isDense: true,
           ),
-          const SizedBox(height: 12),
-
-          OpmetingRaamNietCombineerbaarKeuzemenu(
-            beschikbareKeuzes: beschikbareNietCombineerbareKeuzes,
-            geselecteerdeKeuzes: soort.nietCombineerbaarMet,
-            onGewijzigd: (nieuweKeuzes) {
-              setState(() {
-                soort.nietCombineerbaarMet =
-                    List<OpmetingRaamNietCombineerbareKeuze>.from(nieuweKeuzes);
-
-                _foutmelding = null;
-              });
-            },
-          ),
-
-          const SizedBox(height: 14),
-
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Extra rechthoekige tekeningen',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  _voegSubmenuToe(doelLijst: item.kinderen);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: groen,
+                  side: const BorderSide(color: groen),
+                  visualDensity: VisualDensity.compact,
                 ),
+                icon: const Icon(Icons.account_tree_outlined, size: 17),
+                label: const Text('Submenu'),
               ),
-              Text(
-                '${soort.tekeningen.length}/4',
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
-              ),
-              const SizedBox(width: 6),
-              IconButton.filled(
-                tooltip: maximumBereikt
-                    ? 'Maximum van vier rechthoeken bereikt'
-                    : 'Rechthoek toevoegen',
-                visualDensity: VisualDensity.compact,
-                onPressed: maximumBereikt
-                    ? null
-                    : () {
-                        _voegTekeningToe(soort);
-                      },
-                style: IconButton.styleFrom(
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () {
+                  _voegKeuzeToe(doelLijst: item.kinderen);
+                },
+                style: FilledButton.styleFrom(
                   backgroundColor: groen,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: const Color(0xFFD1D5DB),
+                  visualDensity: VisualDensity.compact,
                 ),
-                icon: const Icon(Icons.add, size: 19),
+                icon: const Icon(Icons.add, size: 17),
+                label: const Text('Keuze'),
               ),
-            ],
-          ),
-
-          if (soort.tekeningen.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Geen extra rechthoekige tekening. '
-                'Gebruik het plusteken om er één toe '
-                'te voegen.',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
-              ),
-            )
-          else ...[
-            const SizedBox(height: 8),
-            ...List<Widget>.generate(soort.tekeningen.length, (tekeningIndex) {
-              final tekening = soort.tekeningen[tekeningIndex];
-
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: OpmetingRaamTechnischeTekeningEditor(
-                  key: ValueKey(tekening.id),
-                  volgnummer: tekeningIndex + 1,
-                  concept: tekening,
-                  onGewijzigd: () {
-                    setState(() {
-                      _foutmelding = null;
-                    });
-                  },
-                  onVerwijderen: () {
-                    _verwijderTekening(soort: soort, index: tekeningIndex);
-                  },
-                ),
-              );
-            }),
+            ),
           ],
+        ),
+        if (item.kinderen.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(top: 10),
+            child: Text(
+              'Geen onderliggende keuzes. Voeg hier keuzes of extra submenu’s toe.',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
+          )
+        else ...[
+          const SizedBox(height: 10),
+          ...List<Widget>.generate(item.kinderen.length, (kindIndex) {
+            return _bouwItemKaart(
+              lijst: item.kinderen,
+              item: item.kinderen[kindIndex],
+              index: kindIndex,
+              diepte: diepte + 1,
+            );
+          }),
         ],
-      ),
+      ],
+    );
+  }
+
+  Widget _bouwKeuzeInhoud({
+    required _TechnischMenuItemConcept item,
+    required int index,
+    required List<OpmetingRaamBeschikbareNietCombineerbareKeuze>
+    beschikbareNietCombineerbareKeuzes,
+  }) {
+    final maximumBereikt = item.tekeningen.length >= 4;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: item.naamController,
+          onChanged: (_) {
+            setState(() {});
+          },
+          decoration: InputDecoration(
+            labelText: 'Keuze ${index + 1}',
+            hintText: 'Bijvoorbeeld: Minirol',
+            border: const OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 10),
+        OpmetingRaamNietCombineerbaarKeuzemenu(
+          beschikbareKeuzes: beschikbareNietCombineerbareKeuzes,
+          geselecteerdeKeuzes: item.nietCombineerbaarMet,
+          onGewijzigd: (nieuweKeuzes) {
+            setState(() {
+              item.nietCombineerbaarMet =
+                  List<OpmetingRaamNietCombineerbareKeuze>.from(nieuweKeuzes);
+              _foutmelding = null;
+            });
+          },
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Extra rechthoekige tekening',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+              ),
+            ),
+            Text(
+              '${item.tekeningen.length}/4',
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
+            const SizedBox(width: 6),
+            IconButton.filled(
+              tooltip: maximumBereikt
+                  ? 'Maximum van vier rechthoeken bereikt'
+                  : 'Rechthoek toevoegen',
+              visualDensity: VisualDensity.compact,
+              onPressed: maximumBereikt
+                  ? null
+                  : () {
+                      _voegTekeningToe(item);
+                    },
+              style: IconButton.styleFrom(
+                backgroundColor: groen,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFD1D5DB),
+              ),
+              icon: const Icon(Icons.add, size: 19),
+            ),
+          ],
+        ),
+        if (item.tekeningen.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Text(
+              'Geen extra rechthoekige tekening. Gebruik het plusteken om er één toe te voegen.',
+              style: TextStyle(color: Color(0xFF6B7280), fontSize: 12),
+            ),
+          )
+        else ...[
+          const SizedBox(height: 8),
+          ...List<Widget>.generate(item.tekeningen.length, (tekeningIndex) {
+            final tekening = item.tekeningen[tekeningIndex];
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: OpmetingRaamTechnischeTekeningEditor(
+                key: ValueKey(tekening.id),
+                volgnummer: tekeningIndex + 1,
+                concept: tekening,
+                onGewijzigd: () {
+                  setState(() {
+                    _foutmelding = null;
+                  });
+                },
+                onVerwijderen: () {
+                  _verwijderTekening(item: item, index: tekeningIndex);
+                },
+              ),
+            );
+          }),
+        ],
+      ],
     );
   }
 }
 
-class _TechnischeSoortConcept {
-  _TechnischeSoortConcept({
+class _TechnischMenuItemConcept {
+  _TechnischMenuItemConcept({
     required this.id,
+    required this.type,
     required this.naamController,
     required this.tekeningen,
     required this.nietCombineerbaarMet,
+    required this.kinderen,
+    required this.ingeklapt,
   });
 
-  factory _TechnischeSoortConcept.nieuw() {
-    return _TechnischeSoortConcept(
-      id: 'soort_${DateTime.now().microsecondsSinceEpoch}',
+  factory _TechnischMenuItemConcept.nieuweKeuze({
+    String? id,
+    bool ingeklapt = true,
+  }) {
+    return _TechnischMenuItemConcept(
+      id: id ?? 'soort_${DateTime.now().microsecondsSinceEpoch}',
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
       naamController: TextEditingController(),
       tekeningen: <OpmetingRaamTechnischeTekeningConcept>[],
       nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: ingeklapt,
     );
   }
 
-  factory _TechnischeSoortConcept.vanResultaat(
+  factory _TechnischMenuItemConcept.nieuwSubmenu({
+    String? id,
+    bool ingeklapt = true,
+  }) {
+    return _TechnischMenuItemConcept(
+      id: id ?? 'submenu_${DateTime.now().microsecondsSinceEpoch}',
+      type: OpmetingRaamKeuzeMenuItemType.submenu,
+      naamController: TextEditingController(),
+      tekeningen: <OpmetingRaamTechnischeTekeningConcept>[],
+      nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: ingeklapt,
+    );
+  }
+
+  factory _TechnischMenuItemConcept.vanResultaat(
     OpmetingRaamTechnischeSoortResultaat resultaat,
   ) {
-    return _TechnischeSoortConcept(
+    return _TechnischMenuItemConcept(
       id: resultaat.id,
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
       naamController: TextEditingController(text: resultaat.naam),
       tekeningen: resultaat.alleTekeningen
           .take(4)
@@ -731,22 +1086,117 @@ class _TechnischeSoortConcept {
       nietCombineerbaarMet: List<OpmetingRaamNietCombineerbareKeuze>.from(
         resultaat.nietCombineerbaarMet,
       ),
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: true,
+    );
+  }
+
+  factory _TechnischMenuItemConcept.vanMenuItem(
+    OpmetingRaamKeuzeMenuItem item,
+  ) {
+    if (item.isSubmenu) {
+      return _TechnischMenuItemConcept(
+        id: item.id,
+        type: OpmetingRaamKeuzeMenuItemType.submenu,
+        naamController: TextEditingController(text: item.naam),
+        tekeningen: <OpmetingRaamTechnischeTekeningConcept>[],
+        nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
+        kinderen: item.kinderen
+            .map(_TechnischMenuItemConcept.vanMenuItem)
+            .toList(),
+        ingeklapt: true,
+      );
+    }
+
+    final optie = item.optie;
+
+    return _TechnischMenuItemConcept(
+      id: optie?.id ?? item.id,
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
+      naamController: TextEditingController(text: optie?.naam ?? item.naam),
+      tekeningen:
+          (optie?.alleTechnischeTekeningen ??
+                  const <OpmetingRaamTechnischeTekeningInstelling>[])
+              .take(4)
+              .map(OpmetingRaamTechnischeTekeningConcept.vanInstelling)
+              .toList(),
+      nietCombineerbaarMet: List<OpmetingRaamNietCombineerbareKeuze>.from(
+        optie?.nietCombineerbaarMet ??
+            const <OpmetingRaamNietCombineerbareKeuze>[],
+      ),
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: true,
+    );
+  }
+
+  factory _TechnischMenuItemConcept.kopieVan(
+    _TechnischMenuItemConcept bron, {
+    required String Function(String prefix) nieuwId,
+  }) {
+    final naam = bron.naamController.text.trim();
+
+    if (bron.isSubmenu) {
+      return _TechnischMenuItemConcept(
+        id: nieuwId('submenu'),
+        type: OpmetingRaamKeuzeMenuItemType.submenu,
+        naamController: TextEditingController(
+          text: naam.isEmpty ? '' : '$naam kopie',
+        ),
+        tekeningen: <OpmetingRaamTechnischeTekeningConcept>[],
+        nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
+        kinderen: bron.kinderen
+            .map(
+              (kind) =>
+                  _TechnischMenuItemConcept.kopieVan(kind, nieuwId: nieuwId),
+            )
+            .toList(),
+        ingeklapt: false,
+      );
+    }
+
+    return _TechnischMenuItemConcept(
+      id: nieuwId('soort'),
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
+      naamController: TextEditingController(
+        text: naam.isEmpty ? '' : '$naam kopie',
+      ),
+      tekeningen: bron.tekeningen
+          .map(OpmetingRaamTechnischeTekeningConcept.kopieVan)
+          .toList(),
+      nietCombineerbaarMet: List<OpmetingRaamNietCombineerbareKeuze>.from(
+        bron.nietCombineerbaarMet,
+      ),
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: false,
     );
   }
 
   final String id;
-
+  final OpmetingRaamKeuzeMenuItemType type;
   final TextEditingController naamController;
-
   final List<OpmetingRaamTechnischeTekeningConcept> tekeningen;
 
   List<OpmetingRaamNietCombineerbareKeuze> nietCombineerbaarMet;
+  final List<_TechnischMenuItemConcept> kinderen;
+  bool ingeklapt;
+
+  bool get isSubmenu {
+    return type == OpmetingRaamKeuzeMenuItemType.submenu;
+  }
+
+  bool get isKeuze {
+    return type == OpmetingRaamKeuzeMenuItemType.keuze;
+  }
 
   void dispose() {
     naamController.dispose();
 
     for (final tekening in tekeningen) {
       tekening.dispose();
+    }
+
+    for (final kind in kinderen) {
+      kind.dispose();
     }
   }
 }
