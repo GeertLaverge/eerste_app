@@ -560,6 +560,10 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     if (widget.actieveTool == 'kadertoevoegen') {
       _kaderToevoegMenuGesloten = false;
+
+      if (oldWidget.actieveTool != 'kadertoevoegen') {
+        _resetToevoegKaderVoorNieuwKader();
+      }
     }
 
     if (_isTekenToolActief) {
@@ -2883,6 +2887,48 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     _vervangKleinhoutVlakSelectie(resultaat.geselecteerdeVlakIds);
   }
 
+  OpmetingRaamLijn? _zoekTStijlStartLijnMetRuimeKlikzone({
+    required Offset punt,
+    required Size size,
+  }) {
+    const verschuivingen = <Offset>[
+      Offset.zero,
+      Offset(0, -6),
+      Offset(6, 0),
+      Offset(0, 6),
+      Offset(-6, 0),
+      Offset(6, -6),
+      Offset(6, 6),
+      Offset(-6, 6),
+      Offset(-6, -6),
+      Offset(0, -12),
+      Offset(12, 0),
+      Offset(0, 12),
+      Offset(-12, 0),
+      Offset(12, -12),
+      Offset(12, 12),
+      Offset(-12, 12),
+      Offset(-12, -12),
+    ];
+
+    for (final verschuiving in verschuivingen) {
+      final lijn = OpmetingRaamTStijlActieHelper.vindStartLijn(
+        punt: punt + verschuiving,
+        tekenvlakGrootte: size,
+        breedteMm: _actiefTStijlBreedteMm,
+        hoogteMm: _actiefTStijlHoogteMm,
+        tStijlen: _tStijlen,
+        vleugels: _vleugels,
+      );
+
+      if (lijn != null) {
+        return lijn;
+      }
+    }
+
+    return null;
+  }
+
   void _selecteerTStijlStartLijn(Offset punt) {
     final size = _actueleTekenvlakGrootte();
 
@@ -2890,14 +2936,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final lijn = OpmetingRaamTStijlActieHelper.vindStartLijn(
-      punt: punt,
-      tekenvlakGrootte: size,
-      breedteMm: _actiefTStijlBreedteMm,
-      hoogteMm: _actiefTStijlHoogteMm,
-      tStijlen: _tStijlen,
-      vleugels: _vleugels,
-    );
+    final lijn = _zoekTStijlStartLijnMetRuimeKlikzone(punt: punt, size: size);
 
     setState(() {
       _geselecteerdeLijn = lijn;
@@ -3505,6 +3544,22 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
   }
 
+  void _resetToevoegKaderVoorNieuwKader() {
+    _toevoegKaderId = null;
+    _toevoegKaderZijde = null;
+    _toevoegKaderUitlijning = null;
+    _toevoegKaderVrijeBasisUitlijning = OpmetingKaderUitlijning.begin;
+    _toevoegKaderVrijeOffsetController.text = '0';
+
+    final actiefKaderId = widget.kaderSamenstelling?.actiefKader?.id;
+
+    if (actiefKaderId != null && actiefKaderId.trim().isNotEmpty) {
+      _toevoegAnkerKaderId = actiefKaderId;
+    } else {
+      _toevoegAnkerKaderId = null;
+    }
+  }
+
   OpmetingKaderDeel? get _ankerKaderVoorToevoegMenu {
     final samenstelling = widget.kaderSamenstelling;
 
@@ -3737,39 +3792,60 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return const SizedBox.shrink();
     }
 
-    return OpmetingRaamKaderToevoegMenuOverlay(
-      ankerKader: ankerKader,
-      positie: _kaderToevoegMenuPositie,
-      onPositieGewijzigd: (positie) {
-        if (!mounted) {
-          return;
-        }
+    return Theme(
+      data: Theme.of(context).copyWith(
+        colorScheme: Theme.of(
+          context,
+        ).colorScheme.copyWith(primary: const Color(0xFF0B7A3B)),
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Color(0xFF0B7A3B),
+          selectionHandleColor: Color(0xFF0B7A3B),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          floatingLabelStyle: TextStyle(
+            color: Color(0xFF0B7A3B),
+            fontWeight: FontWeight.w700,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.8),
+          ),
+        ),
+      ),
+      child: OpmetingRaamKaderToevoegMenuOverlay(
+        ankerKader: ankerKader,
+        positie: _kaderToevoegMenuPositie,
+        onPositieGewijzigd: (positie) {
+          if (!mounted) {
+            return;
+          }
 
-        setState(() {
-          _kaderToevoegMenuPositie = positie;
-        });
-      },
-      onSluiten: () {
-        if (!mounted) {
-          return;
-        }
+          setState(() {
+            _kaderToevoegMenuPositie = positie;
+          });
+        },
+        onSluiten: () {
+          if (!mounted) {
+            return;
+          }
 
-        setState(() {
-          _kaderToevoegMenuGesloten = true;
-        });
-      },
-      geselecteerdeZijde: _toevoegKaderZijde,
-      geselecteerdeUitlijning: _toevoegKaderUitlijning,
-      geselecteerdeVrijeBasisUitlijning: _toevoegKaderVrijeBasisUitlijning,
-      onPositieGekozen: _selecteerToevoegKaderPositie,
-      onVrijePositieActiveren: _activeerToevoegVrijePositie,
-      onKaderWijziging: _tekenOfWijzigToevoegKader,
-      breedteController: _toevoegKaderBreedteController,
-      hoogteController: _toevoegKaderHoogteController,
-      vrijeOffsetController: _toevoegKaderVrijeOffsetController,
-      breedteFocusNode: _toevoegKaderBreedteFocusNode,
-      hoogteFocusNode: _toevoegKaderHoogteFocusNode,
-      vrijeOffsetFocusNode: _toevoegKaderVrijeOffsetFocusNode,
+          setState(() {
+            _kaderToevoegMenuGesloten = true;
+            _resetToevoegKaderVoorNieuwKader();
+          });
+        },
+        geselecteerdeZijde: _toevoegKaderZijde,
+        geselecteerdeUitlijning: _toevoegKaderUitlijning,
+        geselecteerdeVrijeBasisUitlijning: _toevoegKaderVrijeBasisUitlijning,
+        onPositieGekozen: _selecteerToevoegKaderPositie,
+        onVrijePositieActiveren: _activeerToevoegVrijePositie,
+        onKaderWijziging: _tekenOfWijzigToevoegKader,
+        breedteController: _toevoegKaderBreedteController,
+        hoogteController: _toevoegKaderHoogteController,
+        vrijeOffsetController: _toevoegKaderVrijeOffsetController,
+        breedteFocusNode: _toevoegKaderBreedteFocusNode,
+        hoogteFocusNode: _toevoegKaderHoogteFocusNode,
+        vrijeOffsetFocusNode: _toevoegKaderVrijeOffsetFocusNode,
+      ),
     );
   }
 

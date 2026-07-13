@@ -6,6 +6,8 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     super.key,
     required this.dagmaatHoogteController,
     required this.dagmaatBreedteController,
+    required this.raammaatHoogteController,
+    required this.raammaatBreedteController,
     required this.slagLinksController,
     required this.slagRechtsController,
     required this.slagBovenController,
@@ -16,6 +18,8 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required this.raammaatHoogte,
     required this.verschilTablet,
     required this.onChanged,
+    required this.onDagmaatGewijzigd,
+    required this.onRaammaatGewijzigd,
     this.dagmatenVergrendeld = false,
   });
 
@@ -27,6 +31,8 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
 
   final TextEditingController dagmaatHoogteController;
   final TextEditingController dagmaatBreedteController;
+  final TextEditingController raammaatHoogteController;
+  final TextEditingController raammaatBreedteController;
   final TextEditingController slagLinksController;
   final TextEditingController slagRechtsController;
   final TextEditingController slagBovenController;
@@ -38,6 +44,8 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   final int raammaatHoogte;
   final int verschilTablet;
   final VoidCallback onChanged;
+  final VoidCallback onDagmaatGewijzigd;
+  final VoidCallback onRaammaatGewijzigd;
   final bool dagmatenVergrendeld;
 
   @override
@@ -96,9 +104,32 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _bouwGetalVeld(
+                        label: 'Raammaat B',
+                        controller: raammaatBreedteController,
+                        enabled: !dagmatenVergrendeld,
+                        onChanged: onRaammaatGewijzigd,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _bouwGetalVeld(
+                        label: 'Raammaat H',
+                        controller: raammaatHoogteController,
+                        enabled: !dagmatenVergrendeld,
+                        onChanged: onRaammaatGewijzigd,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _bouwGetalVeld(
                         label: 'Dagmaat B',
                         controller: dagmaatBreedteController,
                         enabled: !dagmatenVergrendeld,
+                        onChanged: onDagmaatGewijzigd,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -107,6 +138,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                         label: 'Dagmaat H',
                         controller: dagmaatHoogteController,
                         enabled: !dagmatenVergrendeld,
+                        onChanged: onDagmaatGewijzigd,
                       ),
                     ),
                   ],
@@ -118,6 +150,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Slag L',
                         controller: slagLinksController,
+                        onChanged: onRaammaatGewijzigd,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -125,6 +158,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Slag R',
                         controller: slagRechtsController,
+                        onChanged: onRaammaatGewijzigd,
                       ),
                     ),
                   ],
@@ -136,6 +170,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Slag B',
                         controller: slagBovenController,
+                        onChanged: onRaammaatGewijzigd,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -143,6 +178,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Slag O',
                         controller: slagOnderController,
+                        onChanged: onRaammaatGewijzigd,
                       ),
                     ),
                   ],
@@ -154,6 +190,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Tablet binnen',
                         controller: binnenTabletController,
+                        onChanged: onChanged,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -161,6 +198,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                       child: _bouwGetalVeld(
                         label: 'Tablet buiten',
                         controller: buitenTabletController,
+                        onChanged: onChanged,
                       ),
                     ),
                   ],
@@ -238,7 +276,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
           SizedBox(width: 7),
           Expanded(
             child: Text(
-              'Meerdere kaders: dagmaten worden automatisch berekend op basis van de totale raammaat min de slag.',
+              'Meerdere kaders: dagmaten en raammaten worden automatisch berekend op basis van de totale kaderopbouw.',
               style: TextStyle(
                 color: Color(0xFF064E3B),
                 fontSize: 10.8,
@@ -256,6 +294,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required String label,
     required TextEditingController controller,
     bool enabled = true,
+    VoidCallback? onChanged,
   }) {
     return TextField(
       controller: controller,
@@ -268,7 +307,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
       textAlign: TextAlign.center,
       onChanged: (_) {
-        onChanged();
+        (onChanged ?? this.onChanged)();
       },
       decoration: InputDecoration(
         labelText: label,

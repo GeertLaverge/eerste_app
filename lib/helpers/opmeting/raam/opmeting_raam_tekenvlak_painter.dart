@@ -658,6 +658,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     List<OpmetingRaamKleinhout>? kleinhoutenOverride,
     Set<String>? geselecteerdeKleinhoutVlakIdsOverride,
     bool toonSelectie = true,
+    double geselecteerdeLijnSchaal = 1.0,
   }) {
     final effectieveBreedteMm = werkBreedteMm ?? breedteMm;
     final effectieveHoogteMm = werkHoogteMm ?? hoogteMm;
@@ -726,19 +727,23 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     );
 
     if (toonSelectie) {
-      _tekenGeselecteerdeLijn(canvas);
+      _tekenGeselecteerdeLijn(canvas, schaal: geselecteerdeLijnSchaal);
       _tekenPreviewPunt(canvas);
     }
   }
 
-  void _tekenGeselecteerdeLijn(Canvas canvas) {
+  void _tekenGeselecteerdeLijn(Canvas canvas, {double schaal = 1.0}) {
     if (geselecteerdeLijn == null) {
       return;
     }
 
+    final veiligeSchaal = schaal.isFinite && schaal > 0 ? schaal : 1.0;
+
+    final strokeBreedte = (4.5 / veiligeSchaal).clamp(4.5, 12.0).toDouble();
+
     final paint = Paint()
       ..color = const Color(0xFFF97316)
-      ..strokeWidth = 4
+      ..strokeWidth = strokeBreedte
       ..strokeCap = StrokeCap.round;
 
     canvas.drawLine(geselecteerdeLijn!.start, geselecteerdeLijn!.einde, paint);

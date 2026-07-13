@@ -19,6 +19,22 @@ class OpmetingRaamVulvlak {
   bool bevatPunt(Offset punt) {
     return vlak.contains(punt);
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'werkvlakId': werkvlakId,
+      'vlak': _rectToJson(vlak),
+    };
+  }
+
+  factory OpmetingRaamVulvlak.fromJson(Map<String, dynamic> json) {
+    return OpmetingRaamVulvlak(
+      id: json['id']?.toString() ?? '',
+      werkvlakId: json['werkvlakId']?.toString() ?? 'kader',
+      vlak: _rectFromJson(json['vlak']),
+    );
+  }
 }
 
 class OpmetingRaamVullingLegendaItem {
@@ -678,4 +694,41 @@ class _VulvlakKoppelingKandidaat {
   final int toewijzingIndex;
   final OpmetingRaamVulvlak nieuwVlak;
   final double score;
+}
+
+Map<String, dynamic> _rectToJson(Rect rect) {
+  return <String, dynamic>{
+    'left': rect.left,
+    'top': rect.top,
+    'right': rect.right,
+    'bottom': rect.bottom,
+  };
+}
+
+Rect _rectFromJson(Object? waarde) {
+  if (waarde is Map) {
+    return Rect.fromLTRB(
+      _leesDouble(waarde['left'], 0),
+      _leesDouble(waarde['top'], 0),
+      _leesDouble(waarde['right'], 0),
+      _leesDouble(waarde['bottom'], 0),
+    );
+  }
+
+  return Rect.zero;
+}
+
+double _leesDouble(Object? waarde, double standaardWaarde) {
+  if (waarde is double) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toDouble();
+  }
+
+  return double.tryParse(
+        waarde?.toString().trim().replaceAll(',', '.') ?? '',
+      ) ??
+      standaardWaarde;
 }

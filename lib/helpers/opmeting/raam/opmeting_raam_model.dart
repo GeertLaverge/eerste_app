@@ -16,6 +16,22 @@ class OpmetingRaamLijn {
   }
 
   bool get isVerticaal => !isHorizontaal;
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'start': _offsetToJson(start),
+      'einde': _offsetToJson(einde),
+    };
+  }
+
+  factory OpmetingRaamLijn.fromJson(Map<String, dynamic> json) {
+    return OpmetingRaamLijn(
+      id: json['id']?.toString() ?? '',
+      start: _offsetFromJson(json['start']),
+      einde: _offsetFromJson(json['einde']),
+    );
+  }
 }
 
 class OpmetingRaamTStijl {
@@ -39,6 +55,46 @@ class OpmetingRaamTStijl {
   /// Bij een T-stijl in een vleugel bevat dit de unieke
   /// identificatie van de glasopening van die vleugel.
   final String werkvlakId;
+
+  OpmetingRaamTStijl copyWith({
+    String? id,
+    String? richting,
+    Offset? start,
+    Offset? einde,
+    double? breedteMm,
+    String? werkvlakId,
+  }) {
+    return OpmetingRaamTStijl(
+      id: id ?? this.id,
+      richting: richting ?? this.richting,
+      start: start ?? this.start,
+      einde: einde ?? this.einde,
+      breedteMm: breedteMm ?? this.breedteMm,
+      werkvlakId: werkvlakId ?? this.werkvlakId,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'richting': richting,
+      'start': _offsetToJson(start),
+      'einde': _offsetToJson(einde),
+      'breedteMm': breedteMm,
+      'werkvlakId': werkvlakId,
+    };
+  }
+
+  factory OpmetingRaamTStijl.fromJson(Map<String, dynamic> json) {
+    return OpmetingRaamTStijl(
+      id: json['id']?.toString() ?? '',
+      richting: json['richting']?.toString() ?? 'verticaal',
+      start: _offsetFromJson(json['start']),
+      einde: _offsetFromJson(json['einde']),
+      breedteMm: _leesDouble(json['breedteMm'], 90),
+      werkvlakId: json['werkvlakId']?.toString() ?? 'kader',
+    );
+  }
 }
 
 /// Alle beschikbare types vleugels.
@@ -147,6 +203,18 @@ extension OpmetingRaamVleugelTypeInfo on OpmetingRaamVleugelType {
         return false;
     }
   }
+
+  static OpmetingRaamVleugelType vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final type in OpmetingRaamVleugelType.values) {
+      if (type.name == tekst) {
+        return type;
+      }
+    }
+
+    return OpmetingRaamVleugelType.geenVleugel;
+  }
 }
 
 class OpmetingRaamVleugel {
@@ -159,6 +227,34 @@ class OpmetingRaamVleugel {
   final String id;
   final Rect vlak;
   final OpmetingRaamVleugelType type;
+
+  OpmetingRaamVleugel copyWith({
+    String? id,
+    Rect? vlak,
+    OpmetingRaamVleugelType? type,
+  }) {
+    return OpmetingRaamVleugel(
+      id: id ?? this.id,
+      vlak: vlak ?? this.vlak,
+      type: type ?? this.type,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'vlak': _rectToJson(vlak),
+      'type': type.name,
+    };
+  }
+
+  factory OpmetingRaamVleugel.fromJson(Map<String, dynamic> json) {
+    return OpmetingRaamVleugel(
+      id: json['id']?.toString() ?? '',
+      vlak: _rectFromJson(json['vlak']),
+      type: OpmetingRaamVleugelTypeInfo.vanOpslagWaarde(json['type']),
+    );
+  }
 }
 
 /// Koppelt één berekend vulvlak aan een opvulling.
@@ -253,4 +349,53 @@ class OpmetingRaamVullingToewijzing {
       transparantie: transparantieWaarde.clamp(0.05, 1.0).toDouble(),
     );
   }
+}
+
+Map<String, dynamic> _offsetToJson(Offset offset) {
+  return <String, dynamic>{'dx': offset.dx, 'dy': offset.dy};
+}
+
+Offset _offsetFromJson(Object? waarde) {
+  if (waarde is Map) {
+    return Offset(_leesDouble(waarde['dx'], 0), _leesDouble(waarde['dy'], 0));
+  }
+
+  return Offset.zero;
+}
+
+Map<String, dynamic> _rectToJson(Rect rect) {
+  return <String, dynamic>{
+    'left': rect.left,
+    'top': rect.top,
+    'right': rect.right,
+    'bottom': rect.bottom,
+  };
+}
+
+Rect _rectFromJson(Object? waarde) {
+  if (waarde is Map) {
+    return Rect.fromLTRB(
+      _leesDouble(waarde['left'], 0),
+      _leesDouble(waarde['top'], 0),
+      _leesDouble(waarde['right'], 0),
+      _leesDouble(waarde['bottom'], 0),
+    );
+  }
+
+  return Rect.zero;
+}
+
+double _leesDouble(Object? waarde, double standaardWaarde) {
+  if (waarde is double) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toDouble();
+  }
+
+  return double.tryParse(
+        waarde?.toString().trim().replaceAll(',', '.') ?? '',
+      ) ??
+      standaardWaarde;
 }

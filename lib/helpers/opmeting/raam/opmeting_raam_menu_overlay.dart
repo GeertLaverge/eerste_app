@@ -248,56 +248,47 @@ class OpmetingRaamMenuOverlay extends StatelessWidget {
               top: tStijlMenuPositie.dy,
               child: Material(
                 type: MaterialType.transparency,
-                child: OpmetingRaamVerplaatsbaarMenu(
-                  menuKey: zwevendeMenus.tStijlMenuKey,
-                  breedte: tStijlMenuBreedte,
-                  titel: 'T-stijlmenu verplaatsen',
-                  onSleepStart: (details) {
+                child: Listener(
+                  onPointerDown: (event) {
                     zwevendeMenus.startMenuSleep(
                       menuId: 'tstijl',
-                      globaleCursorPositie: details.globalPosition,
+                      globaleCursorPositie: event.position,
                       huidigeMenuPositie: tStijlMenuPositie,
                     );
                   },
-                  onVerslepen: (details) {
-                    onMenuVerslepen(
-                      menuId: 'tstijl',
-                      details: details,
-                      overlayContext: context,
-                      schermGrootte: schermGrootte,
-                      menuGrootte: tStijlMenuGrootte,
-                    );
-                  },
-                  onSleepEinde: (_) {
+                  onPointerUp: (_) {
                     zwevendeMenus.stopMenuSleep('tstijl');
                   },
-                  onSleepAnnuleren: () {
+                  onPointerCancel: (_) {
                     zwevendeMenus.stopMenuSleep('tstijl');
                   },
-                  onSluiten: onTStijlMenuSluiten,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: maximaleMenuInhoudHoogte,
-                    ),
-                    child: SingleChildScrollView(
-                      child: OpmetingRaamTStijlMenu(
-                        positieType: positieType,
-                        positieController: positieController,
-                        toonToevoegKnop:
-                            !alleenVerplaatsenVoorGeselecteerdeTStijl,
-                        toonWisKnop:
-                            bestaandeTStijlGeselecteerd &&
-                            !alleenVerplaatsenVoorGeselecteerdeTStijl,
-                        toonVerplaatsKnop: bestaandeTStijlGeselecteerd,
-                        onPositieTypeGewijzigd: onPositieTypeGewijzigd,
-                        onMaatGewijzigd: (_) {
-                          onTStijlMaatGewijzigd();
-                        },
-                        onToevoegen: onTStijlToevoegen,
-                        onVerplaatsen: onTStijlVerplaatsen,
-                        onWissen: onTStijlWissen,
-                      ),
-                    ),
+                  child: OpmetingRaamTStijlMenu(
+                    breedte: tStijlMenuBreedte,
+                    maxHoogte: maximaleMenuInhoudHoogte,
+                    positieType: positieType,
+                    positieController: positieController,
+                    toonToevoegKnop: !alleenVerplaatsenVoorGeselecteerdeTStijl,
+                    toonWisKnop:
+                        bestaandeTStijlGeselecteerd &&
+                        !alleenVerplaatsenVoorGeselecteerdeTStijl,
+                    toonVerplaatsKnop: bestaandeTStijlGeselecteerd,
+                    onSluiten: onTStijlMenuSluiten,
+                    onVerslepen: (details) {
+                      onMenuVerslepen(
+                        menuId: 'tstijl',
+                        details: details,
+                        overlayContext: context,
+                        schermGrootte: schermGrootte,
+                        menuGrootte: tStijlMenuGrootte,
+                      );
+                    },
+                    onPositieTypeGewijzigd: onPositieTypeGewijzigd,
+                    onMaatGewijzigd: (_) {
+                      onTStijlMaatGewijzigd();
+                    },
+                    onToevoegen: onTStijlToevoegen,
+                    onVerplaatsen: onTStijlVerplaatsen,
+                    onWissen: onTStijlWissen,
                   ),
                 ),
               ),

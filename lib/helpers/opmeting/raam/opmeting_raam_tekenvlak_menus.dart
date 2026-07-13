@@ -200,11 +200,15 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
 class OpmetingRaamTStijlMenu extends StatelessWidget {
   const OpmetingRaamTStijlMenu({
     super.key,
+    required this.breedte,
+    required this.maxHoogte,
     required this.positieType,
     required this.positieController,
     this.toonToevoegKnop = true,
     this.toonWisKnop = false,
     this.toonVerplaatsKnop = false,
+    required this.onSluiten,
+    required this.onVerslepen,
     required this.onPositieTypeGewijzigd,
     required this.onMaatGewijzigd,
     required this.onToevoegen,
@@ -212,12 +216,18 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
     required this.onWissen,
   });
 
+  final double breedte;
+  final double maxHoogte;
+
   final String positieType;
   final TextEditingController positieController;
 
   final bool toonToevoegKnop;
   final bool toonWisKnop;
   final bool toonVerplaatsKnop;
+
+  final VoidCallback onSluiten;
+  final ValueChanged<DragUpdateDetails> onVerslepen;
 
   final ValueChanged<String> onPositieTypeGewijzigd;
   final ValueChanged<String> onMaatGewijzigd;
@@ -229,7 +239,6 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   static const List<String> _positieKeuzes = [
@@ -245,7 +254,8 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260,
+      width: breedte,
+      constraints: BoxConstraints(maxHeight: maxHoogte),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.98),
         borderRadius: BorderRadius.circular(12),
@@ -261,116 +271,171 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-            decoration: const BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.view_column_outlined, size: 18, color: _groen),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'T-stijl',
-                    style: TextStyle(
-                      color: Color(0xFF064E3B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+          MouseRegion(
+            cursor: SystemMouseCursors.move,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onPanUpdate: onVerslepen,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
                 ),
-              ],
+                decoration: const BoxDecoration(
+                  color: _lichtGroen,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.drag_indicator,
+                      size: 18,
+                      color: _tekstGrijs,
+                    ),
+                    const SizedBox(width: 7),
+                    const Icon(
+                      Icons.view_column_outlined,
+                      size: 18,
+                      color: _groen,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'T-stijl',
+                        style: TextStyle(
+                          color: Color(0xFF064E3B),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'T-stijlmenu sluiten',
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 30,
+                        minHeight: 30,
+                      ),
+                      onPressed: onSluiten,
+                      icon: const Icon(
+                        Icons.close,
+                        size: 20,
+                        color: _tekstGrijs,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: _positieKeuzes.map((waarde) {
-                    return ChoiceChip(
-                      label: Text(waarde),
-                      selected: positieType == waarde,
-                      onSelected: (_) {
-                        onPositieTypeGewijzigd(waarde);
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: positieController,
-                  enabled: positieType == 'mm',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  textAlign: TextAlign.center,
-                  onChanged: onMaatGewijzigd,
-                  decoration: const InputDecoration(
-                    labelText: 'Maat in mm',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Kaderlijn: meten vanaf buitenlijn. '
-                  'T-stijl of vleugellijn: 0 mm = begin van de geselecteerde lijn.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, color: _tekstGrijs),
-                ),
-                if (toonToevoegKnop) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onToevoegen,
-                      icon: const Icon(Icons.add, size: 18),
-                      label: const Text('T-stijl toevoegen'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0B7A3B),
-                        foregroundColor: Colors.white,
+          Flexible(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: _positieKeuzes.map((waarde) {
+                        return ChoiceChip(
+                          label: Text(waarde),
+                          selected: positieType == waarde,
+                          selectedColor: _lichtGroen,
+                          checkmarkColor: _groen,
+                          side: BorderSide(
+                            color: positieType == waarde
+                                ? _groen
+                                : const Color(0xFFD1D5DB),
+                          ),
+                          labelStyle: TextStyle(
+                            color: positieType == waarde
+                                ? _groen
+                                : const Color(0xFF111827),
+                            fontWeight: FontWeight.w700,
+                          ),
+                          onSelected: (_) {
+                            onPositieTypeGewijzigd(waarde);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: positieController,
+                      enabled: positieType == 'mm',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      textAlign: TextAlign.center,
+                      onChanged: onMaatGewijzigd,
+                      decoration: const InputDecoration(
+                        labelText: 'Maat in mm',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: _groen, width: 1.8),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-                if (toonVerplaatsKnop) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onVerplaatsen,
-                      icon: const Icon(Icons.open_with, size: 18),
-                      label: const Text('T-stijl verplaatsen'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        foregroundColor: Colors.white,
-                      ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Kaderlijn: meten vanaf buitenlijn. '
+                      'T-stijl of vleugellijn: 0 mm = begin van de geselecteerde lijn.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: _tekstGrijs),
                     ),
-                  ),
-                ],
-                if (toonWisKnop) ...[
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: onWissen,
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('T-stijl wissen'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFDC2626),
-                        foregroundColor: Colors.white,
+                    if (toonToevoegKnop) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: onToevoegen,
+                          icon: const Icon(Icons.add, size: 18),
+                          label: const Text('T-stijl toevoegen'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _groen,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ],
+                    ],
+                    if (toonVerplaatsKnop) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: onVerplaatsen,
+                          icon: const Icon(Icons.open_with, size: 18),
+                          label: const Text('T-stijl verplaatsen'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _groen,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (toonWisKnop) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: onWissen,
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          label: const Text('T-stijl wissen'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFDC2626),
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
         ],

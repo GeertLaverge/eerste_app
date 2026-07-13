@@ -10,6 +10,7 @@ import '../helpers/notities/notitie_actie_model.dart';
 import '../helpers/notities/notitie_model.dart';
 import 'opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
+import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
@@ -25,6 +26,8 @@ class AppStorage {
   static const String _opmetingRaamOpvullingenKey = 'opmeting_raam_opvullingen';
 
   static const String _opmetingRaamKeuzemenusKey = 'opmeting_raam_keuzemenus';
+
+  static const String _opmetingenKey = 'thimaco_opmetingen';
 
   static Future<SharedPreferences> openBox() async {
     return SharedPreferences.getInstance();
@@ -437,5 +440,142 @@ class AppStorage {
 
       return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
     });
+  }
+
+  // ------------------------------------------------------------
+  // OPMETINGEN - ALGEMENE OPSLAG
+  // ------------------------------------------------------------
+
+  static List<OpmetingOverzichtRaamItem> _decodeOpmetingen(String? jsonString) {
+    if (jsonString == null || jsonString.isEmpty) {
+      return <OpmetingOverzichtRaamItem>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! List) {
+        return <OpmetingOverzichtRaamItem>[];
+      }
+
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => OpmetingOverzichtRaamItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((opmeting) => opmeting.id.trim().isNotEmpty)
+          .toList();
+    } catch (_) {
+      return <OpmetingOverzichtRaamItem>[];
+    }
+  }
+
+  static String encodeOpmetingenVoorSync(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    return jsonEncode(opmetingen.map((opmeting) => opmeting.toJson()).toList());
+  }
+
+  static Future<List<OpmetingOverzichtRaamItem>>
+  laadOpmetingenVoorSync() async {
+    final prefs = await openBox();
+
+    return _decodeOpmetingen(prefs.getString(_opmetingenKey));
+  }
+
+  static Future<List<OpmetingOverzichtRaamItem>> laadOpmetingen() async {
+    final alleOpmetingen = await laadOpmetingenVoorSync();
+
+    final zichtbaar = alleOpmetingen.where((opmeting) {
+      return !opmeting.isVerwijderd;
+    }).toList();
+
+    zichtbaar.sort((eerste, tweede) {
+      final eersteDatum = DateTime.tryParse(eerste.gewijzigdOp);
+      final tweedeDatum = DateTime.tryParse(tweede.gewijzigdOp);
+
+      if (eersteDatum != null && tweedeDatum != null) {
+        return tweedeDatum.compareTo(eersteDatum);
+      }
+
+      return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
+    });
+
+    return zichtbaar;
+  }
+
+  static Future<void> bewaarOpmetingen(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(_opmetingenKey, encodeOpmetingenVoorSync(opmetingen));
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingenVoorSync(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(_opmetingenKey, encodeOpmetingenVoorSync(opmetingen));
+  }
+
+  static Future<OpmetingOverzichtRaamItem> voegOpmetingToe(
+    OpmetingOverzichtRaamItem opmeting,
+  ) async {
+    final bestaandeOpmetingen = await laadOpmetingenVoorSync();
+
+    final id = opmeting.id.trim().isEmpty
+        ? DateTime.now().microsecondsSinceEpoch.toString()
+        : opmeting.id.trim();
+
+    final opmetingVoorOpslag = opmeting.copyWith(
+      id: id,
+      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      isVerwijderd: false,
+    );
+
+    final zonderZelfdeId = bestaandeOpmetingen
+        .where((bestaand) => bestaand.id != opmetingVoorOpslag.id)
+        .toList();
+
+    zonderZelfdeId.add(opmetingVoorOpslag);
+
+    await bewaarOpmetingen(zonderZelfdeId);
+
+    return opmetingVoorOpslag;
+  }
+
+  static Future<OpmetingOverzichtRaamItem> werkOpmetingBij(
+    OpmetingOverzichtRaamItem opmeting,
+  ) async {
+    return voegOpmetingToe(opmeting);
+  }
+
+  static Future<void> verwijderOpmeting(String id) async {
+    final bestaandeOpmetingen = await laadOpmetingenVoorSync();
+
+    final resultaat = <OpmetingOverzichtRaamItem>[];
+    var gevonden = false;
+
+    for (final opmeting in bestaandeOpmetingen) {
+      if (opmeting.id != id) {
+        resultaat.add(opmeting);
+        continue;
+      }
+
+      gevonden = true;
+      resultaat.add(opmeting.metNieuweWijzigingsDatum(isVerwijderd: true));
+    }
+
+    if (!gevonden) {
+      return;
+    }
+
+    await bewaarOpmetingen(resultaat);
   }
 }

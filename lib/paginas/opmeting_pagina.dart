@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../helpers/app_storage.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
-import '../helpers/opmeting/overzicht/opmeting_overzicht_kaart.dart';
+import '../helpers/opmeting/overzicht/opmeting_overzicht_tekening.dart';
 import 'opmeting_raam_pagina.dart';
 
 class OpmetingPagina extends StatefulWidget {
@@ -22,17 +23,88 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   String _klantNaam = '';
+  bool _laden = true;
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
 
+  @override
+  void initState() {
+    super.initState();
+    _laadOpmetingenVanOpslag();
+  }
+
+  Future<void> _laadOpmetingenVanOpslag({String? klantNaam}) async {
+    setState(() {
+      _laden = true;
+    });
+
+    final alleOpmetingen = await AppStorage.laadOpmetingen();
+
+    if (!mounted) {
+      return;
+    }
+
+    final actieveKlantNaam = klantNaam ?? _klantNaam;
+    final klantFilter = actieveKlantNaam.trim().toLowerCase();
+
+    final zichtbareOpmetingen = klantFilter.isEmpty
+        ? alleOpmetingen
+        : alleOpmetingen.where((opmeting) {
+            return opmeting.klantNaam.trim().toLowerCase() == klantFilter;
+          }).toList();
+
+    setState(() {
+      _klantNaam = actieveKlantNaam.trim();
+      _raamOpmetingen
+        ..clear()
+        ..addAll(zichtbareOpmetingen);
+      _laden = false;
+    });
+  }
+
   Future<void> _nieuwBestand() async {
+    final controller = TextEditingController(text: _klantNaam);
+
     final naam = await showDialog<String>(
       context: context,
-      barrierDismissible: false,
       builder: (context) {
-        return _NieuwBestandDialog(beginWaarde: _klantNaam);
+        return AlertDialog(
+          title: const Text('Nieuw opmeetbestand'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: const InputDecoration(
+              labelText: 'Naam klant',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: (waarde) {
+              Navigator.pop(context, waarde.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Annuleren'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _groen,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(context, controller.text.trim());
+              },
+              child: const Text('Aanmaken'),
+            ),
+          ],
+        );
       },
     );
+
+    controller.dispose();
 
     if (naam == null || naam.trim().isEmpty) {
       return;
@@ -44,26 +116,153 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     });
   }
 
-  void _openBestand() {
-    _toonMelding('Open bestand wordt in de volgende stap gekoppeld.');
-  }
+  Future<void> _openBestand() async {
+    final alleOpmetingen = await AppStorage.laadOpmetingen();
 
-  void _opslaanBestand() {
-    if (_klantNaam.trim().isEmpty) {
-      _toonMelding('Maak eerst een nieuw bestand met klantnaam.', fout: true);
+    if (!mounted) {
       return;
     }
 
-    _toonMelding('Opslaan bestand wordt in de volgende stap gekoppeld.');
+    if (alleOpmetingen.isEmpty) {
+      _toonMelding('Er zijn nog geen opgeslagen opmetingen.', fout: true);
+      return;
+    }
+
+    final klanten = <String, List<OpmetingOverzichtRaamItem>>{};
+
+    for (final opmeting in alleOpmetingen) {
+      final klantNaam = opmeting.klantNaam.trim().isEmpty
+          ? 'Zonder klantnaam'
+          : opmeting.klantNaam.trim();
+
+      klanten
+          .putIfAbsent(klantNaam, () => <OpmetingOverzichtRaamItem>[])
+          .add(opmeting);
+    }
+
+    final klantNamen = klanten.keys.toList()
+      ..sort((eerste, tweede) {
+        return eerste.toLowerCase().compareTo(tweede.toLowerCase());
+      });
+
+    final gekozenKlant = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Opmeetbestand openen',
+            style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: 430,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.folder_open_rounded,
+                      color: _groen,
+                    ),
+                    title: const Text(
+                      'Alle opmetingen',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text('${alleOpmetingen.length} opmeting(en)'),
+                    onTap: () {
+                      Navigator.pop(dialogContext, '');
+                    },
+                  ),
+                  const Divider(height: 1),
+                  ...klantNamen.map((klantNaam) {
+                    final aantal = klanten[klantNaam]?.length ?? 0;
+
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.description_outlined,
+                        color: _groen,
+                      ),
+                      title: Text(
+                        klantNaam,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text('$aantal opmeting(en)'),
+                      onTap: () {
+                        Navigator.pop(dialogContext, klantNaam);
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (gekozenKlant == null) {
+      return;
+    }
+
+    await _laadOpmetingenVanOpslag(klantNaam: gekozenKlant);
+
+    if (!mounted) {
+      return;
+    }
+
+    _toonMelding(
+      gekozenKlant.trim().isEmpty
+          ? 'Alle opmetingen zijn geopend.'
+          : 'Opmeetbestand “$gekozenKlant” is geopend.',
+    );
+  }
+
+  Future<void> _opslaanBestand() async {
+    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (alleOpmetingen.isEmpty) {
+      _toonMelding(
+        'Er is nog geen opmeting om op te slaan. Voeg eerst een raamopmeting toe.',
+        fout: true,
+      );
+      return;
+    }
+
+    await AppStorage.bewaarOpmetingen(alleOpmetingen);
+
+    if (!mounted) {
+      return;
+    }
+
+    _toonMelding('Bestand opgeslagen en synchronisatie gestart.');
   }
 
   Future<void> _openRaamopmeting() async {
     if (_klantNaam.trim().isEmpty) {
-      _toonMelding(
-        'Maak eerst een nieuw bestand via Bestand > Nieuw bestand, of open een bestaand bestand.',
-        fout: true,
-      );
-      return;
+      await _nieuwBestand();
+
+      if (_klantNaam.trim().isEmpty) {
+        return;
+      }
     }
 
     if (!mounted) {
@@ -83,25 +282,17 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    setState(() {
-      _raamOpmetingen.add(resultaat);
-    });
+    await _laadOpmetingenVanOpslag(klantNaam: _klantNaam);
   }
 
-  Future<void> _bewerkRaamopmeting(int index) async {
-    if (index < 0 || index >= _raamOpmetingen.length) {
-      return;
-    }
-
-    final huidigeOpmeting = _raamOpmetingen[index];
-
+  Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) async {
     final resultaat = await Navigator.push<OpmetingOverzichtRaamItem>(
       context,
       MaterialPageRoute(
         builder: (context) {
           return OpmetingRaamPagina(
-            klantNaam: _klantNaam,
-            bestaandeOpmeting: huidigeOpmeting,
+            klantNaam: item.klantNaam,
+            bestaandeOpmeting: item,
           );
         },
       ),
@@ -111,9 +302,62 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    setState(() {
-      _raamOpmetingen[index] = resultaat;
-    });
+    await _laadOpmetingenVanOpslag(
+      klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
+    );
+  }
+
+  Future<void> _verwijderRaamopmeting(OpmetingOverzichtRaamItem item) async {
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Opmeting verwijderen?'),
+          content: Text('De opmeting “${item.titel}” wordt verwijderd.'),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Annuleren'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Verwijderen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) {
+      return;
+    }
+
+    await AppStorage.verwijderOpmeting(item.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    await _laadOpmetingenVanOpslag(
+      klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    _toonMelding('Opmeting verwijderd en synchronisatie gestart.');
   }
 
   void _toonMelding(String tekst, {bool fout = false}) {
@@ -134,7 +378,11 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           children: [
             _bouwBovenbalk(),
             Expanded(
-              child: _raamOpmetingen.isEmpty
+              child: _laden
+                  ? const Center(
+                      child: CircularProgressIndicator(color: _groen),
+                    )
+                  : _raamOpmetingen.isEmpty
                   ? _bouwLegeFiche()
                   : _bouwOverzichtslijst(),
             ),
@@ -201,7 +449,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              _klantNaam.trim().isEmpty ? 'Nieuw opmeetblad' : _klantNaam,
+              _titelBovenbalk(),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -240,12 +488,24 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  String _titelBovenbalk() {
+    if (_klantNaam.trim().isNotEmpty) {
+      return _klantNaam.trim();
+    }
+
+    if (_raamOpmetingen.isNotEmpty) {
+      return 'Alle opmetingen';
+    }
+
+    return 'Nieuw opmeetblad';
+  }
+
   Widget _bouwLegeFiche() {
-    final heeftKlant = _klantNaam.trim().isNotEmpty;
+    final heeftKlantNaam = _klantNaam.trim().isNotEmpty;
 
     return Center(
       child: Container(
-        width: 520,
+        width: 540,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -277,9 +537,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             ),
             const SizedBox(height: 16),
             Text(
-              heeftKlant
-                  ? 'Nog geen opmetingen toegevoegd'
-                  : 'Start via Bestand',
+              heeftKlantNaam
+                  ? 'Nog geen opmetingen voor $_klantNaam'
+                  : 'Nog geen opmetingen geopend',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 color: _tekstDonker,
                 fontSize: 20,
@@ -288,9 +549,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             ),
             const SizedBox(height: 8),
             Text(
-              heeftKlant
-                  ? 'Voeg rechtsboven een raamopmeting toe via de plusknop.'
-                  : 'Maak eerst een nieuw bestand aan of open een bestaand bestand. Daarna kan u rechtsboven een raamopmeting toevoegen.',
+              heeftKlantNaam
+                  ? 'Voeg rechtsboven een raamopmeting toe voor dit opmeetbestand.'
+                  : 'Maak een nieuw bestand aan of open een bestaand bestand via de knop Bestand.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: _tekstGrijs,
@@ -298,41 +559,53 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 height: 1.35,
               ),
             ),
-            if (!heeftKlant) ...[
-              const SizedBox(height: 18),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _nieuwBestand,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text('Nieuw bestand'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _groen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 13,
-                      ),
+            const SizedBox(height: 18),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: _nieuwBestand,
+                  icon: const Icon(Icons.note_add_outlined),
+                  label: const Text('Nieuw bestand'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _groen,
+                    side: const BorderSide(color: _groen),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 13,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  OutlinedButton.icon(
-                    onPressed: _openBestand,
-                    icon: const Icon(Icons.folder_open_rounded),
-                    label: const Text('Open bestand'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _groen,
-                      side: const BorderSide(color: _groen),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 13,
-                      ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _openBestand,
+                  icon: const Icon(Icons.folder_open_rounded),
+                  label: const Text('Open bestand'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _groen,
+                    side: const BorderSide(color: _groen),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 13,
                     ),
                   ),
-                ],
-              ),
-            ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: _openRaamopmeting,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Raamopmeting toevoegen'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _groen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -348,16 +621,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
-          child: OpmetingOverzichtKaart(
+          child: _RaamOverzichtKaart(
             item: item,
             volgnummer: index + 1,
-            onBewerken: () {
-              _bewerkRaamopmeting(index);
+            onOpenen: () {
+              _bewerkRaamopmeting(item);
             },
             onVerwijderen: () {
-              setState(() {
-                _raamOpmetingen.removeAt(index);
-              });
+              _verwijderRaamopmeting(item);
             },
           ),
         );
@@ -366,80 +637,229 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 }
 
-class _NieuwBestandDialog extends StatefulWidget {
-  const _NieuwBestandDialog({required this.beginWaarde});
+class _RaamOverzichtKaart extends StatelessWidget {
+  const _RaamOverzichtKaart({
+    required this.item,
+    required this.volgnummer,
+    required this.onOpenen,
+    required this.onVerwijderen,
+  });
 
-  final String beginWaarde;
+  final OpmetingOverzichtRaamItem item;
+  final int volgnummer;
+  final VoidCallback onOpenen;
+  final VoidCallback onVerwijderen;
 
-  @override
-  State<_NieuwBestandDialog> createState() {
-    return _NieuwBestandDialogState();
-  }
-}
-
-class _NieuwBestandDialogState extends State<_NieuwBestandDialog> {
-  late final TextEditingController _controller;
-  bool _afgesloten = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = TextEditingController(text: widget.beginWaarde);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-
-    super.dispose();
-  }
-
-  void _annuleer() {
-    if (_afgesloten) {
-      return;
-    }
-
-    _afgesloten = true;
-    Navigator.pop(context);
-  }
-
-  void _bewaar() {
-    if (_afgesloten) {
-      return;
-    }
-
-    final naam = _controller.text.trim();
-
-    if (naam.isEmpty) {
-      return;
-    }
-
-    _afgesloten = true;
-    Navigator.pop(context, naam);
-  }
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstDonker = Color(0xFF111827);
+  static const Color _tekstGrijs = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Nieuw opmeetbestand'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textCapitalization: TextCapitalization.words,
-        textInputAction: TextInputAction.done,
-        decoration: const InputDecoration(
-          labelText: 'Naam klant',
-          border: OutlineInputBorder(),
-        ),
-        onSubmitted: (_) {
-          _bewaar();
-        },
+    final technischeRegels = item.zichtbareTechnischeRegels;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _rand),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(onPressed: _annuleer, child: const Text('Annuleren')),
-        ElevatedButton(onPressed: _bewaar, child: const Text('Aanmaken')),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _lichtGroen,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  'Raam $volgnummer',
+                  style: const TextStyle(
+                    color: _groen,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  item.titel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Openen',
+                onPressed: onOpenen,
+                icon: const Icon(Icons.open_in_new_rounded, color: _groen),
+              ),
+              IconButton(
+                tooltip: 'Verwijderen',
+                onPressed: onVerwijderen,
+                icon: const Icon(
+                  Icons.delete_outline,
+                  color: Color(0xFFDC2626),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 330,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AspectRatio(
+                      aspectRatio: 1.45,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAFAFA),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _rand),
+                        ),
+                        child: CustomPaint(
+                          painter: OpmetingOverzichtTekening(item: item),
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Raammaat: ${item.raammaatBreedteMm} × ${item.raammaatHoogteMm} mm',
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Dagmaat: ${item.dagmaatBreedteMm} × ${item.dagmaatHoogteMm} mm',
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: technischeRegels.isEmpty
+                    ? const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Geen technische kenmerken ingevuld.',
+                          style: TextStyle(
+                            color: _tekstGrijs,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    : _bouwTechnischeTekst(technischeRegels),
+              ),
+            ],
+          ),
+          if (item.notities.trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAFAFA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _rand),
+              ),
+              child: Text(
+                item.notities.trim(),
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwTechnischeTekst(
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final midden = (technischeRegels.length / 2).ceil();
+    final eersteKolom = technischeRegels.take(midden).toList();
+    final tweedeKolom = technischeRegels.skip(midden).toList();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: _bouwTechnischeKolom(eersteKolom)),
+        if (tweedeKolom.isNotEmpty) ...[
+          const SizedBox(width: 14),
+          Expanded(child: _bouwTechnischeKolom(tweedeKolom)),
+        ],
       ],
+    );
+  }
+
+  Widget _bouwTechnischeKolom(List<OpmetingOverzichtTechnischeRegel> regels) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: regels.map((regel) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                regel.titel,
+                style: const TextStyle(
+                  color: _tekstGrijs,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                regel.waarde,
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  height: 1.22,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'onedrive_auth_service.dart';
 
 import '/helpers/Agenda/agenda_item.dart';
 import '/helpers/klanten/fiche/klantenfiche_model.dart';
+import '/helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'sync_merge_service.dart';
 import '../app_storage.dart';
 
@@ -113,6 +114,29 @@ class OneDriveSyncService {
         return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
       }
 
+      List<OpmetingOverzichtRaamItem> decodeOpmetingen(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) {
+          return <OpmetingOverzichtRaamItem>[];
+        }
+
+        final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+        return lijst
+            .whereType<Map>()
+            .map(
+              (item) => OpmetingOverzichtRaamItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList();
+      }
+
+      String encodeOpmetingen(List<OpmetingOverzichtRaamItem> opmetingen) {
+        return jsonEncode(
+          opmetingen.map((opmeting) => opmeting.toJson()).toList(),
+        );
+      }
+
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
       final cloudAgenda = decodeAgenda(
@@ -139,6 +163,17 @@ class OneDriveSyncService {
         cloudKlanten,
       );
 
+      final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+
+      final cloudOpmetingen = decodeOpmetingen(
+        cloudBackup['opmetingen'] is String ? cloudBackup['opmetingen'] : null,
+      );
+
+      final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
+        lokaleOpmetingen,
+        cloudOpmetingen,
+      );
+
       final backup = <String, dynamic>{
         'backupDatum': backupDatum,
         'agendaItems': encodeAgenda(mergedAgenda),
@@ -148,6 +183,8 @@ class OneDriveSyncService {
         'notities': prefs.getString('thimaco_notities'),
         'notitieActies': prefs.getString('thimaco_notitie_acties'),
         'opmetingRaamOpvullingen': prefs.getString('opmeting_raam_opvullingen'),
+        'opmetingRaamKeuzemenus': prefs.getString('opmeting_raam_keuzemenus'),
+        'opmetingen': encodeOpmetingen(mergedOpmetingen),
       };
 
       final response = await http.put(
@@ -170,6 +207,8 @@ class OneDriveSyncService {
       await AppStorage.bewaarKlantenFichesVoorSync(
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
+
+      await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
 
       String fotoResultaat = 'FOTOS_OVERGESLAGEN';
 
@@ -381,6 +420,23 @@ class OneDriveSyncService {
             .toList();
       }
 
+      List<OpmetingOverzichtRaamItem> decodeOpmetingen(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) {
+          return <OpmetingOverzichtRaamItem>[];
+        }
+
+        final lijst = jsonDecode(jsonString) as List<dynamic>;
+
+        return lijst
+            .whereType<Map>()
+            .map(
+              (item) => OpmetingOverzichtRaamItem.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList();
+      }
+
       final cloudAgenda = decodeAgenda(
         data['agendaItems'] is String ? data['agendaItems'] : null,
       );
@@ -403,11 +459,24 @@ class OneDriveSyncService {
         cloudKlanten,
       );
 
+      final cloudOpmetingen = decodeOpmetingen(
+        data['opmetingen'] is String ? data['opmetingen'] : null,
+      );
+
+      final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+
+      final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
+        lokaleOpmetingen,
+        cloudOpmetingen,
+      );
+
       await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
 
       await AppStorage.bewaarKlantenFichesVoorSync(
         mergedKlanten.map((fiche) => fiche.toJson()).toList(),
       );
+
+      await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
 
       if (data['dagtaakTemplates'] is String) {
         await prefs.setString('dagtaak_templates', data['dagtaakTemplates']);
@@ -429,6 +498,13 @@ class OneDriveSyncService {
         await prefs.setString(
           'opmeting_raam_opvullingen',
           data['opmetingRaamOpvullingen'],
+        );
+      }
+
+      if (data['opmetingRaamKeuzemenus'] is String) {
+        await prefs.setString(
+          'opmeting_raam_keuzemenus',
+          data['opmetingRaamKeuzemenus'],
         );
       }
 

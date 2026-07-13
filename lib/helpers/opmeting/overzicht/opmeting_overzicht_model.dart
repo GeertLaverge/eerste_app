@@ -16,6 +16,17 @@ class OpmetingOverzichtTechnischeRegel {
   bool get isZichtbaar {
     return titel.trim().isNotEmpty && waarde.trim().isNotEmpty;
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{'titel': titel, 'waarde': waarde};
+  }
+
+  factory OpmetingOverzichtTechnischeRegel.fromJson(Map<String, dynamic> json) {
+    return OpmetingOverzichtTechnischeRegel(
+      titel: json['titel']?.toString() ?? '',
+      waarde: json['waarde']?.toString() ?? '',
+    );
+  }
 }
 
 class OpmetingOverzichtTechnischeContainer {
@@ -35,6 +46,27 @@ class OpmetingOverzichtTechnischeContainer {
 
   bool get isZichtbaar {
     return titel.trim().isNotEmpty && afmeting.trim().isNotEmpty;
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'titel': titel,
+      'afmeting': afmeting,
+      'regels': regels.map((regel) => regel.toJson()).toList(),
+    };
+  }
+
+  factory OpmetingOverzichtTechnischeContainer.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return OpmetingOverzichtTechnischeContainer(
+      titel: json['titel']?.toString() ?? '',
+      afmeting: json['afmeting']?.toString() ?? '',
+      regels: _leesLijst(
+        json['regels'],
+        OpmetingOverzichtTechnischeRegel.fromJson,
+      ),
+    );
   }
 }
 
@@ -162,6 +194,105 @@ class OpmetingOverzichtTekeningData {
       technischeKaderGroepen,
     ].join('|');
   }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'tekenvlakBreedtePx': tekenvlakBreedtePx,
+      'tekenvlakHoogtePx': tekenvlakHoogtePx,
+      'tStijlen': tStijlen.map((item) => item.toJson()).toList(),
+      'tStijlenPerKader': _schrijfMapLijst(
+        tStijlenPerKader,
+        (item) => item.toJson(),
+      ),
+      'vleugels': vleugels.map((item) => item.toJson()).toList(),
+      'vleugelsPerKader': _schrijfMapLijst(
+        vleugelsPerKader,
+        (item) => item.toJson(),
+      ),
+      'vulvlakken': vulvlakken.map((item) => item.toJson()).toList(),
+      'vulvlakkenPerKader': _schrijfMapLijst(
+        vulvlakkenPerKader,
+        (item) => item.toJson(),
+      ),
+      'vullingToewijzingen': vullingToewijzingen
+          .map((item) => item.toJson())
+          .toList(),
+      'vullingToewijzingenPerKader': _schrijfMapLijst(
+        vullingToewijzingenPerKader,
+        (item) => item.toJson(),
+      ),
+      'kleinhouten': kleinhouten.map((item) => item.toJson()).toList(),
+      'kleinhoutenPerKader': _schrijfMapLijst(
+        kleinhoutenPerKader,
+        (item) => item.toJson(),
+      ),
+      'technischeTekeningen': technischeTekeningen
+          .map((item) => item.toJson())
+          .toList(),
+      'technischeTekeningenPerKader': _schrijfMapLijst(
+        technischeTekeningenPerKader,
+        (item) => item.toJson(),
+      ),
+      'technischeTekeningenPerKaderGroep': _schrijfMapLijst(
+        technischeTekeningenPerKaderGroep,
+        (item) => item.toJson(),
+      ),
+      'technischeKaderGroepen': technischeKaderGroepen.map((sleutel, ids) {
+        return MapEntry(sleutel, ids.toList());
+      }),
+    };
+  }
+
+  factory OpmetingOverzichtTekeningData.fromJson(Map<String, dynamic> json) {
+    return OpmetingOverzichtTekeningData(
+      tekenvlakBreedtePx: _leesDouble(json['tekenvlakBreedtePx']),
+      tekenvlakHoogtePx: _leesDouble(json['tekenvlakHoogtePx']),
+      tStijlen: _leesLijst(json['tStijlen'], OpmetingRaamTStijl.fromJson),
+      tStijlenPerKader: _leesMapLijst(
+        json['tStijlenPerKader'],
+        OpmetingRaamTStijl.fromJson,
+      ),
+      vleugels: _leesLijst(json['vleugels'], OpmetingRaamVleugel.fromJson),
+      vleugelsPerKader: _leesMapLijst(
+        json['vleugelsPerKader'],
+        OpmetingRaamVleugel.fromJson,
+      ),
+      vulvlakken: _leesLijst(json['vulvlakken'], OpmetingRaamVulvlak.fromJson),
+      vulvlakkenPerKader: _leesMapLijst(
+        json['vulvlakkenPerKader'],
+        OpmetingRaamVulvlak.fromJson,
+      ),
+      vullingToewijzingen: _leesLijst(
+        json['vullingToewijzingen'],
+        OpmetingRaamVullingToewijzing.fromJson,
+      ),
+      vullingToewijzingenPerKader: _leesMapLijst(
+        json['vullingToewijzingenPerKader'],
+        OpmetingRaamVullingToewijzing.fromJson,
+      ),
+      kleinhouten: _leesLijst(
+        json['kleinhouten'],
+        OpmetingRaamKleinhout.fromJson,
+      ),
+      kleinhoutenPerKader: _leesMapLijst(
+        json['kleinhoutenPerKader'],
+        OpmetingRaamKleinhout.fromJson,
+      ),
+      technischeTekeningen: _leesLijst(
+        json['technischeTekeningen'],
+        OpmetingRaamTechnischeTekeningInstelling.fromJson,
+      ),
+      technischeTekeningenPerKader: _leesMapLijst(
+        json['technischeTekeningenPerKader'],
+        OpmetingRaamTechnischeTekeningInstelling.fromJson,
+      ),
+      technischeTekeningenPerKaderGroep: _leesMapLijst(
+        json['technischeTekeningenPerKaderGroep'],
+        OpmetingRaamTechnischeTekeningInstelling.fromJson,
+      ),
+      technischeKaderGroepen: _leesMapSet(json['technischeKaderGroepen']),
+    );
+  }
 }
 
 class OpmetingOverzichtRaamItem {
@@ -174,6 +305,9 @@ class OpmetingOverzichtRaamItem {
     required this.raammaatBreedteMm,
     required this.raammaatHoogteMm,
     required this.kaderSamenstelling,
+    this.formulierType = 'raam',
+    this.gewijzigdOp = '',
+    this.isVerwijderd = false,
     this.tekeningData = const OpmetingOverzichtTekeningData(),
     this.technischeRegels = const <OpmetingOverzichtTechnischeRegel>[],
     this.technischeContainers = const <OpmetingOverzichtTechnischeContainer>[],
@@ -185,6 +319,9 @@ class OpmetingOverzichtRaamItem {
   final String id;
   final String titel;
   final String klantNaam;
+  final String formulierType;
+  final String gewijzigdOp;
+  final bool isVerwijderd;
 
   final int dagmaatBreedteMm;
   final int dagmaatHoogteMm;
@@ -208,4 +345,250 @@ class OpmetingOverzichtRaamItem {
         .where((container) => container.isZichtbaar)
         .toList();
   }
+
+  OpmetingOverzichtRaamItem copyWith({
+    String? id,
+    String? titel,
+    String? klantNaam,
+    String? formulierType,
+    String? gewijzigdOp,
+    bool? isVerwijderd,
+    int? dagmaatBreedteMm,
+    int? dagmaatHoogteMm,
+    int? raammaatBreedteMm,
+    int? raammaatHoogteMm,
+    OpmetingKaderSamenstelling? kaderSamenstelling,
+    OpmetingOverzichtTekeningData? tekeningData,
+    List<OpmetingOverzichtTechnischeRegel>? technischeRegels,
+    List<OpmetingOverzichtTechnischeContainer>? technischeContainers,
+    Map<String, Map<String, OpmetingRaamKeuzeSelectie>>? keuzeSelectiesPerKader,
+    String? notities,
+  }) {
+    return OpmetingOverzichtRaamItem(
+      id: id ?? this.id,
+      titel: titel ?? this.titel,
+      klantNaam: klantNaam ?? this.klantNaam,
+      formulierType: formulierType ?? this.formulierType,
+      gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
+      isVerwijderd: isVerwijderd ?? this.isVerwijderd,
+      dagmaatBreedteMm: dagmaatBreedteMm ?? this.dagmaatBreedteMm,
+      dagmaatHoogteMm: dagmaatHoogteMm ?? this.dagmaatHoogteMm,
+      raammaatBreedteMm: raammaatBreedteMm ?? this.raammaatBreedteMm,
+      raammaatHoogteMm: raammaatHoogteMm ?? this.raammaatHoogteMm,
+      kaderSamenstelling: kaderSamenstelling ?? this.kaderSamenstelling,
+      tekeningData: tekeningData ?? this.tekeningData,
+      technischeRegels: technischeRegels ?? this.technischeRegels,
+      technischeContainers: technischeContainers ?? this.technischeContainers,
+      keuzeSelectiesPerKader:
+          keuzeSelectiesPerKader ?? this.keuzeSelectiesPerKader,
+      notities: notities ?? this.notities,
+    );
+  }
+
+  OpmetingOverzichtRaamItem metNieuweWijzigingsDatum({bool? isVerwijderd}) {
+    return copyWith(
+      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      isVerwijderd: isVerwijderd,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'id': id,
+      'titel': titel,
+      'klantNaam': klantNaam,
+      'formulierType': formulierType,
+      'gewijzigdOp': gewijzigdOp,
+      'isVerwijderd': isVerwijderd,
+      'dagmaatBreedteMm': dagmaatBreedteMm,
+      'dagmaatHoogteMm': dagmaatHoogteMm,
+      'raammaatBreedteMm': raammaatBreedteMm,
+      'raammaatHoogteMm': raammaatHoogteMm,
+      'kaderSamenstelling': kaderSamenstelling.toJson(),
+      'tekeningData': tekeningData.toJson(),
+      'technischeRegels': technischeRegels
+          .map((regel) => regel.toJson())
+          .toList(),
+      'technischeContainers': technischeContainers
+          .map((container) => container.toJson())
+          .toList(),
+      'keuzeSelectiesPerKader': keuzeSelectiesPerKader.map((kaderId, map) {
+        return MapEntry(
+          kaderId,
+          map.map((menuId, selectie) {
+            return MapEntry(menuId, selectie.toJson());
+          }),
+        );
+      }),
+      'notities': notities,
+    };
+  }
+
+  factory OpmetingOverzichtRaamItem.fromJson(Map<String, dynamic> json) {
+    final raammaatBreedteMm = _leesInt(json['raammaatBreedteMm']);
+    final raammaatHoogteMm = _leesInt(json['raammaatHoogteMm']);
+    final dagmaatBreedteMm = _leesInt(json['dagmaatBreedteMm']);
+    final dagmaatHoogteMm = _leesInt(json['dagmaatHoogteMm']);
+
+    final ruweKaderSamenstelling = json['kaderSamenstelling'];
+
+    final kaderSamenstelling = ruweKaderSamenstelling is Map
+        ? OpmetingKaderSamenstelling.fromJson(
+            Map<String, dynamic>.from(ruweKaderSamenstelling),
+          )
+        : OpmetingKaderSamenstelling.basis(
+            breedteMm: raammaatBreedteMm > 0 ? raammaatBreedteMm : 1000,
+            hoogteMm: raammaatHoogteMm > 0 ? raammaatHoogteMm : 2000,
+          );
+
+    final ruweTekeningData = json['tekeningData'];
+
+    return OpmetingOverzichtRaamItem(
+      id: json['id']?.toString() ?? '',
+      titel: json['titel']?.toString() ?? 'Raam',
+      klantNaam: json['klantNaam']?.toString() ?? '',
+      formulierType: json['formulierType']?.toString() ?? 'raam',
+      gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
+      isVerwijderd: json['isVerwijderd'] == true,
+      dagmaatBreedteMm: dagmaatBreedteMm,
+      dagmaatHoogteMm: dagmaatHoogteMm,
+      raammaatBreedteMm: raammaatBreedteMm,
+      raammaatHoogteMm: raammaatHoogteMm,
+      kaderSamenstelling: kaderSamenstelling,
+      tekeningData: ruweTekeningData is Map
+          ? OpmetingOverzichtTekeningData.fromJson(
+              Map<String, dynamic>.from(ruweTekeningData),
+            )
+          : OpmetingOverzichtTekeningData.leeg(),
+      technischeRegels: _leesLijst(
+        json['technischeRegels'],
+        OpmetingOverzichtTechnischeRegel.fromJson,
+      ),
+      technischeContainers: _leesLijst(
+        json['technischeContainers'],
+        OpmetingOverzichtTechnischeContainer.fromJson,
+      ),
+      keuzeSelectiesPerKader: _leesKeuzeSelectiesPerKader(
+        json['keuzeSelectiesPerKader'],
+      ),
+      notities: json['notities']?.toString() ?? '',
+    );
+  }
+}
+
+List<T> _leesLijst<T>(
+  Object? waarde,
+  T Function(Map<String, dynamic> json) maker,
+) {
+  if (waarde is! List) {
+    return <T>[];
+  }
+
+  return waarde.whereType<Map>().map((item) {
+    return maker(Map<String, dynamic>.from(item));
+  }).toList();
+}
+
+Map<String, List<T>> _leesMapLijst<T>(
+  Object? waarde,
+  T Function(Map<String, dynamic> json) maker,
+) {
+  if (waarde is! Map) {
+    return <String, List<T>>{};
+  }
+
+  final resultaat = <String, List<T>>{};
+
+  waarde.forEach((key, lijst) {
+    resultaat[key.toString()] = _leesLijst(lijst, maker);
+  });
+
+  return resultaat;
+}
+
+Map<String, dynamic> _schrijfMapLijst<T>(
+  Map<String, List<T>> bron,
+  Map<String, dynamic> Function(T item) maker,
+) {
+  return bron.map((key, lijst) {
+    return MapEntry(key, lijst.map(maker).toList());
+  });
+}
+
+Map<String, Set<String>> _leesMapSet(Object? waarde) {
+  if (waarde is! Map) {
+    return <String, Set<String>>{};
+  }
+
+  final resultaat = <String, Set<String>>{};
+
+  waarde.forEach((key, lijst) {
+    if (lijst is List) {
+      resultaat[key.toString()] = lijst
+          .map((id) => id.toString())
+          .where((id) => id.trim().isNotEmpty)
+          .toSet();
+    }
+  });
+
+  return resultaat;
+}
+
+Map<String, Map<String, OpmetingRaamKeuzeSelectie>> _leesKeuzeSelectiesPerKader(
+  Object? waarde,
+) {
+  if (waarde is! Map) {
+    return <String, Map<String, OpmetingRaamKeuzeSelectie>>{};
+  }
+
+  final resultaat = <String, Map<String, OpmetingRaamKeuzeSelectie>>{};
+
+  waarde.forEach((kaderId, ruweSelecties) {
+    if (ruweSelecties is! Map) {
+      return;
+    }
+
+    final selecties = <String, OpmetingRaamKeuzeSelectie>{};
+
+    ruweSelecties.forEach((menuId, ruweSelectie) {
+      if (ruweSelectie is! Map) {
+        return;
+      }
+
+      selecties[menuId.toString()] = OpmetingRaamKeuzeSelectie.fromJson(
+        Map<String, dynamic>.from(ruweSelectie),
+      );
+    });
+
+    resultaat[kaderId.toString()] = selecties;
+  });
+
+  return resultaat;
+}
+
+int _leesInt(Object? waarde, {int standaardWaarde = 0}) {
+  if (waarde is int) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toInt();
+  }
+
+  return int.tryParse(waarde?.toString().trim() ?? '') ?? standaardWaarde;
+}
+
+double _leesDouble(Object? waarde, {double standaardWaarde = 0}) {
+  if (waarde is double) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toDouble();
+  }
+
+  return double.tryParse(
+        waarde?.toString().trim().replaceAll(',', '.') ?? '',
+      ) ??
+      standaardWaarde;
 }

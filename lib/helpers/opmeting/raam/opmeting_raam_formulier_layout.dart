@@ -18,9 +18,11 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.klantNaam,
     required this.onTerug,
     required this.onToevoegen,
-    required this.onOpslaan,
+    required this.onAnnuleren,
     required this.dagmaatHoogteController,
     required this.dagmaatBreedteController,
+    required this.raammaatHoogteController,
+    required this.raammaatBreedteController,
     required this.slagLinksController,
     required this.slagRechtsController,
     required this.slagBovenController,
@@ -32,6 +34,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.verschilTablet,
     required this.dagmatenVergrendeld,
     required this.onMatenGewijzigd,
+    required this.onDagmaatGewijzigd,
+    required this.onRaammaatGewijzigd,
     required this.tekenvlakController,
     required this.actieveTool,
     required this.vleugelMenuOpenSignaal,
@@ -75,10 +79,12 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final String? klantNaam;
   final Future<void> Function() onTerug;
   final Future<void> Function() onToevoegen;
-  final Future<void> Function() onOpslaan;
+  final Future<void> Function() onAnnuleren;
 
   final TextEditingController dagmaatHoogteController;
   final TextEditingController dagmaatBreedteController;
+  final TextEditingController raammaatHoogteController;
+  final TextEditingController raammaatBreedteController;
   final TextEditingController slagLinksController;
   final TextEditingController slagRechtsController;
   final TextEditingController slagBovenController;
@@ -91,6 +97,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final int verschilTablet;
   final bool dagmatenVergrendeld;
   final VoidCallback onMatenGewijzigd;
+  final VoidCallback onDagmaatGewijzigd;
+  final VoidCallback onRaammaatGewijzigd;
 
   final OpmetingRaamTekenvlakController tekenvlakController;
   final String actieveTool;
@@ -187,22 +195,18 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                 label: const Text('Toevoegen'),
               ),
             ),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.copy_outlined)),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.delete_outline),
-            ),
             Padding(
               padding: const EdgeInsets.only(right: 10),
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: () {
-                  onOpslaan();
+                  onAnnuleren();
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: const Color(0xFF0B7A3B),
                 ),
-                child: const Text('Opslaan'),
+                icon: const Icon(Icons.close_rounded, size: 18),
+                label: const Text('Annuleren'),
               ),
             ),
           ],
@@ -274,6 +278,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                     OpmetingRaamBasisMaten(
                       dagmaatHoogteController: dagmaatHoogteController,
                       dagmaatBreedteController: dagmaatBreedteController,
+                      raammaatHoogteController: raammaatHoogteController,
+                      raammaatBreedteController: raammaatBreedteController,
                       slagLinksController: slagLinksController,
                       slagRechtsController: slagRechtsController,
                       slagBovenController: slagBovenController,
@@ -285,6 +291,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       verschilTablet: verschilTablet,
                       dagmatenVergrendeld: dagmatenVergrendeld,
                       onChanged: onMatenGewijzigd,
+                      onDagmaatGewijzigd: onDagmaatGewijzigd,
+                      onRaammaatGewijzigd: onRaammaatGewijzigd,
                     ),
                     const SizedBox(height: 10),
                     OpmetingRaamTechnischeKeuzesPaneel(

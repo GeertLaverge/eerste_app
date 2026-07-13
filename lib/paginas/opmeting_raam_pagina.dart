@@ -42,6 +42,14 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     text: '1000',
   );
 
+  final TextEditingController raammaatHoogteController = TextEditingController(
+    text: '2020',
+  );
+
+  final TextEditingController raammaatBreedteController = TextEditingController(
+    text: '1040',
+  );
+
   final TextEditingController slagLinksController = TextEditingController(
     text: '20',
   );
@@ -127,6 +135,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         slagOnderController: slagOnderController,
       );
 
+      _zetControllerTekst(raammaatBreedteController, startRaammaatBreedte);
+      _zetControllerTekst(raammaatHoogteController, startRaammaatHoogte);
+
       _kaderSamenstelling = OpmetingKaderSamenstelling.basis(
         breedteMm: startRaammaatBreedte,
         hoogteMm: startRaammaatHoogte,
@@ -143,6 +154,14 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       _zetControllerTekst(
         dagmaatHoogteController,
         bestaandeOpmeting.dagmaatHoogteMm,
+      );
+      _zetControllerTekst(
+        raammaatBreedteController,
+        bestaandeOpmeting.raammaatBreedteMm,
+      );
+      _zetControllerTekst(
+        raammaatHoogteController,
+        bestaandeOpmeting.raammaatHoogteMm,
       );
       _zetControllerTekst(
         slagLinksController,
@@ -176,6 +195,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   void dispose() {
     dagmaatHoogteController.dispose();
     dagmaatBreedteController.dispose();
+    raammaatHoogteController.dispose();
+    raammaatBreedteController.dispose();
 
     slagLinksController.dispose();
     slagRechtsController.dispose();
@@ -261,24 +282,32 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       slagBovenController: slagBovenController,
       slagOnderController: slagOnderController,
     );
+
+    _synchroniseerRaammaatVeldenMetSamenstelling(samenstelling);
   }
 
   int get raammaatBreedte {
-    return OpmetingRaamMatenHelper.berekenRaammaatBreedteVoorSamenstellingOfVelden(
-      samenstelling: _kaderSamenstelling,
-      dagmaatBreedteController: dagmaatBreedteController,
-      slagLinksController: slagLinksController,
-      slagRechtsController: slagRechtsController,
-    );
+    if (_kaderSamenstelling.kaders.length <= 1) {
+      final waarde = _waarde(raammaatBreedteController).round();
+
+      if (waarde > 0) {
+        return waarde;
+      }
+    }
+
+    return _berekenSamenstellingBreedte(_kaderSamenstelling);
   }
 
   int get raammaatHoogte {
-    return OpmetingRaamMatenHelper.berekenRaammaatHoogteVoorSamenstellingOfVelden(
-      samenstelling: _kaderSamenstelling,
-      dagmaatHoogteController: dagmaatHoogteController,
-      slagBovenController: slagBovenController,
-      slagOnderController: slagOnderController,
-    );
+    if (_kaderSamenstelling.kaders.length <= 1) {
+      final waarde = _waarde(raammaatHoogteController).round();
+
+      if (waarde > 0) {
+        return waarde;
+      }
+    }
+
+    return _berekenSamenstellingHoogte(_kaderSamenstelling);
   }
 
   int get verschilTablet {
@@ -288,15 +317,115 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     );
   }
 
-  void _herbereken() {
+  int _positieveMaat(int waarde) {
+    return waarde < 0 ? 0 : waarde;
+  }
+
+  int _berekenSamenstellingBreedte(OpmetingKaderSamenstelling samenstelling) {
+    if (samenstelling.kaders.isEmpty) {
+      return _waarde(raammaatBreedteController).round();
+    }
+
+    int? links;
+    int? rechts;
+
+    for (final kader in samenstelling.kaders) {
+      links = links == null
+          ? kader.linksMm
+          : (kader.linksMm < links ? kader.linksMm : links);
+      rechts = rechts == null
+          ? kader.rechtsMm
+          : (kader.rechtsMm > rechts ? kader.rechtsMm : rechts);
+    }
+
+    if (links == null || rechts == null) {
+      return _waarde(raammaatBreedteController).round();
+    }
+
+    return rechts - links;
+  }
+
+  int _berekenSamenstellingHoogte(OpmetingKaderSamenstelling samenstelling) {
+    if (samenstelling.kaders.isEmpty) {
+      return _waarde(raammaatHoogteController).round();
+    }
+
+    int? boven;
+    int? onder;
+
+    for (final kader in samenstelling.kaders) {
+      boven = boven == null
+          ? kader.bovenMm
+          : (kader.bovenMm < boven ? kader.bovenMm : boven);
+      onder = onder == null
+          ? kader.onderMm
+          : (kader.onderMm > onder ? kader.onderMm : onder);
+    }
+
+    if (boven == null || onder == null) {
+      return _waarde(raammaatHoogteController).round();
+    }
+
+    return onder - boven;
+  }
+
+  void _synchroniseerRaammaatVeldenMetSamenstelling(
+    OpmetingKaderSamenstelling samenstelling,
+  ) {
+    _zetControllerTekst(
+      raammaatBreedteController,
+      _berekenSamenstellingBreedte(samenstelling),
+    );
+    _zetControllerTekst(
+      raammaatHoogteController,
+      _berekenSamenstellingHoogte(samenstelling),
+    );
+  }
+
+  void _werkRaammaatVeldenBijUitDagmaat() {
+    final nieuweRaammaatBreedte =
+        _waarde(dagmaatBreedteController).round() +
+        _waarde(slagLinksController).round() +
+        _waarde(slagRechtsController).round();
+
+    final nieuweRaammaatHoogte =
+        _waarde(dagmaatHoogteController).round() +
+        _waarde(slagBovenController).round() +
+        _waarde(slagOnderController).round();
+
+    _zetControllerTekst(raammaatBreedteController, nieuweRaammaatBreedte);
+    _zetControllerTekst(raammaatHoogteController, nieuweRaammaatHoogte);
+  }
+
+  void _werkDagmaatVeldenBijUitRaammaat() {
+    final nieuweDagmaatBreedte = _positieveMaat(
+      _waarde(raammaatBreedteController).round() -
+          _waarde(slagLinksController).round() -
+          _waarde(slagRechtsController).round(),
+    );
+
+    final nieuweDagmaatHoogte = _positieveMaat(
+      _waarde(raammaatHoogteController).round() -
+          _waarde(slagBovenController).round() -
+          _waarde(slagOnderController).round(),
+    );
+
+    _zetControllerTekst(dagmaatBreedteController, nieuweDagmaatBreedte);
+    _zetControllerTekst(dagmaatHoogteController, nieuweDagmaatHoogte);
+  }
+
+  void _herberekenSamenstellingMetRaammaat({
+    required int breedte,
+    required int hoogte,
+  }) {
     late final OpmetingKaderSamenstelling herberekendeSamenstelling;
 
     setState(() {
       herberekendeSamenstelling =
           OpmetingRaamMatenHelper.herberekenSamenstelling(
             huidigeSamenstelling: _kaderSamenstelling,
-            raammaatBreedte: raammaatBreedte,
-            raammaatHoogte: raammaatHoogte,
+            raammaatBreedte: breedte,
+            raammaatHoogte: hoogte,
             slagLinksController: slagLinksController,
             slagRechtsController: slagRechtsController,
             slagBovenController: slagBovenController,
@@ -307,6 +436,30 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     });
 
     _vulMaatveldenMetActiefKader(herberekendeSamenstelling);
+  }
+
+  void _herberekenVanDagmaat() {
+    if (_kaderSamenstelling.kaders.length <= 1) {
+      _werkRaammaatVeldenBijUitDagmaat();
+    }
+
+    _herberekenSamenstellingMetRaammaat(
+      breedte: raammaatBreedte,
+      hoogte: raammaatHoogte,
+    );
+  }
+
+  void _herberekenVanRaammaat() {
+    _werkDagmaatVeldenBijUitRaammaat();
+
+    _herberekenSamenstellingMetRaammaat(
+      breedte: raammaatBreedte,
+      hoogte: raammaatHoogte,
+    );
+  }
+
+  void _herbereken() {
+    _herberekenVanDagmaat();
   }
 
   void _wijzigKaderSamenstelling(
@@ -600,9 +753,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     });
 
     /*
-   * Bij "Geen" hoeft geen controle uitgevoerd
-   * te worden.
-   */
+     * Bij "Geen" hoeft geen controle uitgevoerd
+     * te worden.
+     */
     if (gekozenOptie.isGeenKeuze) {
       return;
     }
@@ -738,7 +891,23 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   Future<void> _voegOpmetingToeAanOverzicht() async {
-    Navigator.pop(context, _maakOverzichtItem());
+    final bewaardeOpmeting = await _bewaarHuidigeOpmeting();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.pop(context, bewaardeOpmeting);
+  }
+
+  Future<OpmetingOverzichtRaamItem> _bewaarHuidigeOpmeting() async {
+    final opmeting = _maakOverzichtItem();
+
+    if (widget.bestaandeOpmeting == null) {
+      return AppStorage.voegOpmetingToe(opmeting);
+    }
+
+    return AppStorage.werkOpmetingBij(opmeting);
   }
 
   Future<void> _vraagToevoegenAanOverzichtBijTerug() async {
@@ -746,24 +915,43 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Opmeting toevoegen aan overzicht?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Opmeting toevoegen aan overzicht?',
+            style: TextStyle(
+              color: Color(0xFF0B7A3B),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           content: const Text(
             'Deze raamopmeting is nog niet toegevoegd aan het overzicht. Wilt u deze opmeting toevoegen?',
           ),
           actions: [
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0B7A3B),
+              ),
               onPressed: () {
                 Navigator.pop(context, 'niet_toevoegen');
               },
               child: const Text('Niet toevoegen'),
             ),
             TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0B7A3B),
+              ),
               onPressed: () {
                 Navigator.pop(context, 'verder_bewerken');
               },
               child: const Text('Verder bewerken'),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0B7A3B),
+                foregroundColor: Colors.white,
+              ),
               onPressed: () {
                 Navigator.pop(context, 'toevoegen');
               },
@@ -779,7 +967,63 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     if (keuze == 'toevoegen') {
-      Navigator.pop(context, _maakOverzichtItem());
+      final bewaardeOpmeting = await _bewaarHuidigeOpmeting();
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.pop(context, bewaardeOpmeting);
+      return;
+    }
+
+    Navigator.pop(context);
+  }
+
+  Future<void> _vraagAnnulerenZonderToevoegen() async {
+    final annuleren = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Opmeting annuleren?',
+            style: TextStyle(
+              color: Color(0xFF0B7A3B),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: const Text(
+            'Wilt u deze opmeting annuleren zonder toe te voegen?',
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0B7A3B),
+              ),
+              onPressed: () {
+                Navigator.pop(context, false);
+              },
+              child: const Text('Verder bewerken'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0B7A3B),
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || annuleren != true) {
       return;
     }
 
@@ -787,7 +1031,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   OpmetingOverzichtRaamItem _maakOverzichtItem() {
-    return OpmetingRaamOverzichtBuilder.maak(
+    final nieuweOpmeting = OpmetingRaamOverzichtBuilder.maak(
       klantNaam: widget.klantNaam?.trim() ?? '',
       dagmaatBreedteMm: _waarde(dagmaatBreedteController).round(),
       dagmaatHoogteMm: _waarde(dagmaatHoogteController).round(),
@@ -806,6 +1050,18 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
       notities: notitiesController.text.trim(),
+    );
+
+    final bestaandeOpmeting = widget.bestaandeOpmeting;
+
+    if (bestaandeOpmeting == null) {
+      return nieuweOpmeting;
+    }
+
+    return nieuweOpmeting.copyWith(
+      id: bestaandeOpmeting.id,
+      gewijzigdOp: bestaandeOpmeting.gewijzigdOp,
+      isVerwijderd: bestaandeOpmeting.isVerwijderd,
     );
   }
 
@@ -837,9 +1093,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       klantNaam: widget.klantNaam,
       onTerug: _vraagToevoegenAanOverzichtBijTerug,
       onToevoegen: _voegOpmetingToeAanOverzicht,
-      onOpslaan: _opslaan,
+      onAnnuleren: _vraagAnnulerenZonderToevoegen,
       dagmaatHoogteController: dagmaatHoogteController,
       dagmaatBreedteController: dagmaatBreedteController,
+      raammaatHoogteController: raammaatHoogteController,
+      raammaatBreedteController: raammaatBreedteController,
       slagLinksController: slagLinksController,
       slagRechtsController: slagRechtsController,
       slagBovenController: slagBovenController,
@@ -851,6 +1109,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       verschilTablet: verschilTablet,
       dagmatenVergrendeld: _kaderSamenstelling.kaders.length > 1,
       onMatenGewijzigd: _herbereken,
+      onDagmaatGewijzigd: _herberekenVanDagmaat,
+      onRaammaatGewijzigd: _herberekenVanRaammaat,
       tekenvlakController: tekenvlakController,
       actieveTool: actieveTool,
       vleugelMenuOpenSignaal: vleugelMenuOpenSignaal,
