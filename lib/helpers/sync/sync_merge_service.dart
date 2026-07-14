@@ -127,19 +127,9 @@ class SyncMergeService {
       }
     }
 
-    final lijst = resultaat.values.toList();
-
-    lijst.sort((eerste, tweede) {
-      final eersteDatum = DateTime.tryParse(eerste.gewijzigdOp);
-      final tweedeDatum = DateTime.tryParse(tweede.gewijzigdOp);
-
-      if (eersteDatum != null && tweedeDatum != null) {
-        return tweedeDatum.compareTo(eersteDatum);
-      }
-
-      return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
-    });
-
-    return lijst;
+    // Niet sorteren op wijzigingsdatum.
+    // De volgorde van lokaal/cloud wordt behouden, zodat Pos 1, Pos 2, ...
+    // niet verspringt na synchronisatie of na het bewerken van een positie.
+    return resultaat.values.toList();
   }
 }

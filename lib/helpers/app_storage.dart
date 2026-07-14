@@ -27,6 +27,9 @@ class AppStorage {
 
   static const String _opmetingRaamKeuzemenusKey = 'opmeting_raam_keuzemenus';
 
+  static const String _opmetingRaamKeuzemenusAluKey =
+      'opmeting_raam_keuzemenus_alu';
+
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
   static Future<SharedPreferences> openBox() async {
@@ -348,11 +351,38 @@ class AppStorage {
   // OPMETING RAAM - INSTELBARE KEUZEMENU'S
   // ------------------------------------------------------------
 
+  static String _opmetingRaamKeuzemenusKeyVoorFormulier(String formulierType) {
+    switch (formulierType.trim()) {
+      case 'aluRaam':
+      case 'alu_raam':
+      case 'ALU Raam':
+        return _opmetingRaamKeuzemenusAluKey;
+
+      case 'pvcRaam':
+      case 'pvc_raam':
+      case 'PVC Raam':
+      case 'raam':
+      case '':
+        return _opmetingRaamKeuzemenusKey;
+
+      default:
+        return _opmetingRaamKeuzemenusKey;
+    }
+  }
+
   static Future<List<OpmetingRaamKeuzeMenu>>
-  laadOpmetingRaamKeuzemenus() async {
+  laadOpmetingRaamKeuzemenusVoorFormulier(String formulierType) async {
+    return _laadOpmetingRaamKeuzemenusMetKey(
+      _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType),
+    );
+  }
+
+  static Future<List<OpmetingRaamKeuzeMenu>> _laadOpmetingRaamKeuzemenusMetKey(
+    String key,
+  ) async {
     final prefs = await openBox();
 
-    final jsonString = prefs.getString(_opmetingRaamKeuzemenusKey);
+    final jsonString = prefs.getString(key);
 
     if (jsonString == null || jsonString.isEmpty) {
       return <OpmetingRaamKeuzeMenu>[];
@@ -385,31 +415,67 @@ class AppStorage {
     }
   }
 
-  static Future<void> bewaarOpmetingRaamKeuzemenus(
-    List<OpmetingRaamKeuzeMenu> menus,
-  ) async {
+  static Future<List<OpmetingRaamKeuzeMenu>>
+  laadOpmetingRaamKeuzemenus() async {
+    return laadOpmetingRaamKeuzemenusVoorFormulier('pvcRaam');
+  }
+
+  static Future<void> bewaarOpmetingRaamKeuzemenusVoorFormulier({
+    required String formulierType,
+    required List<OpmetingRaamKeuzeMenu> menus,
+  }) async {
+    await _bewaarOpmetingRaamKeuzemenusMetKey(
+      key: _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType),
+      menus: menus,
+      sync: true,
+    );
+  }
+
+  static Future<void> _bewaarOpmetingRaamKeuzemenusMetKey({
+    required String key,
+    required List<OpmetingRaamKeuzeMenu> menus,
+    required bool sync,
+  }) async {
     final prefs = await openBox();
 
     final genormaliseerdeMenus = _normaliseerOpmetingRaamKeuzemenus(menus);
 
     await prefs.setString(
-      _opmetingRaamKeuzemenusKey,
+      key,
       jsonEncode(genormaliseerdeMenus.map((menu) => menu.toJson()).toList()),
     );
 
-    await _syncBackup();
+    if (sync) {
+      await _syncBackup();
+    }
+  }
+
+  static Future<void> bewaarOpmetingRaamKeuzemenus(
+    List<OpmetingRaamKeuzeMenu> menus,
+  ) async {
+    await bewaarOpmetingRaamKeuzemenusVoorFormulier(
+      formulierType: 'pvcRaam',
+      menus: menus,
+    );
   }
 
   static Future<void> bewaarOpmetingRaamKeuzemenusVoorSync(
     List<OpmetingRaamKeuzeMenu> menus,
   ) async {
-    final prefs = await openBox();
+    await bewaarOpmetingRaamKeuzemenusVoorFormulierVoorSync(
+      formulierType: 'pvcRaam',
+      menus: menus,
+    );
+  }
 
-    final genormaliseerdeMenus = _normaliseerOpmetingRaamKeuzemenus(menus);
-
-    await prefs.setString(
-      _opmetingRaamKeuzemenusKey,
-      jsonEncode(genormaliseerdeMenus.map((menu) => menu.toJson()).toList()),
+  static Future<void> bewaarOpmetingRaamKeuzemenusVoorFormulierVoorSync({
+    required String formulierType,
+    required List<OpmetingRaamKeuzeMenu> menus,
+  }) async {
+    await _bewaarOpmetingRaamKeuzemenusMetKey(
+      key: _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType),
+      menus: menus,
+      sync: false,
     );
   }
 
@@ -488,22 +554,11 @@ class AppStorage {
   static Future<List<OpmetingOverzichtRaamItem>> laadOpmetingen() async {
     final alleOpmetingen = await laadOpmetingenVoorSync();
 
-    final zichtbaar = alleOpmetingen.where((opmeting) {
+    // Volgorde bewust behouden zoals opgeslagen.
+    // Daardoor blijft Pos 1 bovenaan staan en komt elke nieuwe positie onderaan.
+    return alleOpmetingen.where((opmeting) {
       return !opmeting.isVerwijderd;
     }).toList();
-
-    zichtbaar.sort((eerste, tweede) {
-      final eersteDatum = DateTime.tryParse(eerste.gewijzigdOp);
-      final tweedeDatum = DateTime.tryParse(tweede.gewijzigdOp);
-
-      if (eersteDatum != null && tweedeDatum != null) {
-        return tweedeDatum.compareTo(eersteDatum);
-      }
-
-      return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
-    });
-
-    return zichtbaar;
   }
 
   static Future<void> bewaarOpmetingen(
@@ -539,13 +594,21 @@ class AppStorage {
       isVerwijderd: false,
     );
 
-    final zonderZelfdeId = bestaandeOpmetingen
-        .where((bestaand) => bestaand.id != opmetingVoorOpslag.id)
-        .toList();
+    final resultaat = List<OpmetingOverzichtRaamItem>.from(bestaandeOpmetingen);
 
-    zonderZelfdeId.add(opmetingVoorOpslag);
+    final bestaandeIndex = resultaat.indexWhere((bestaand) {
+      return bestaand.id == opmetingVoorOpslag.id;
+    });
 
-    await bewaarOpmetingen(zonderZelfdeId);
+    if (bestaandeIndex >= 0) {
+      // Bestaande positie bijwerken zonder deze in de lijst te verplaatsen.
+      resultaat[bestaandeIndex] = opmetingVoorOpslag;
+    } else {
+      // Nieuwe positie altijd onderaan toevoegen.
+      resultaat.add(opmetingVoorOpslag);
+    }
+
+    await bewaarOpmetingen(resultaat);
 
     return opmetingVoorOpslag;
   }

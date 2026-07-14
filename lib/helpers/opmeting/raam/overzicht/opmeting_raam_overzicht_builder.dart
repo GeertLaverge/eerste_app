@@ -13,6 +13,7 @@ class OpmetingRaamOverzichtBuilder {
 
   static OpmetingOverzichtRaamItem maak({
     required String klantNaam,
+    required String formulierType,
     required int dagmaatBreedteMm,
     required int dagmaatHoogteMm,
     required int raammaatBreedteMm,
@@ -55,10 +56,15 @@ class OpmetingRaamOverzichtBuilder {
       technischeKaderGroepen: technischeKaderGroepen,
     );
 
+    final formulierTypeGenormaliseerd = _normaliseerFormulierType(
+      formulierType,
+    );
+
     return OpmetingOverzichtRaamItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
-      titel: 'Raam',
+      titel: _formulierTypeLabel(formulierTypeGenormaliseerd),
       klantNaam: klantNaam.trim(),
+      formulierType: formulierTypeGenormaliseerd,
       dagmaatBreedteMm: dagmaatBreedteMm,
       dagmaatHoogteMm: dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm,
@@ -82,6 +88,44 @@ class OpmetingRaamOverzichtBuilder {
         Map<String, OpmetingRaamKeuzeSelectie>.from(selecties),
       );
     });
+  }
+
+  static String _normaliseerFormulierType(String waarde) {
+    switch (waarde.trim()) {
+      case 'aluRaam':
+      case 'alu_raam':
+      case 'ALU Raam':
+        return 'aluRaam';
+
+      case 'pvcRaam':
+      case 'pvc_raam':
+      case 'PVC Raam':
+      case 'raam':
+      case '':
+        return 'pvcRaam';
+
+      default:
+        return waarde.trim().isEmpty ? 'pvcRaam' : waarde.trim();
+    }
+  }
+
+  static String _formulierTypeLabel(String formulierType) {
+    switch (formulierType) {
+      case 'aluRaam':
+        return 'ALU Raam';
+
+      case 'pvcRaam':
+        return 'PVC Raam';
+
+      case 'aluDeur':
+        return 'ALU Deur';
+
+      case 'pvcDeur':
+        return 'PVC Deur';
+
+      default:
+        return formulierType.trim().isEmpty ? 'PVC Raam' : formulierType.trim();
+    }
   }
 }
 
@@ -158,8 +202,7 @@ class _OpmetingRaamOverzichtContext {
     regels.add(
       OpmetingOverzichtTechnischeRegel(
         titel: 'Maten',
-        waarde:
-            'Raammaat $raammaatBreedteMm × $raammaatHoogteMm mm · dagmaat $dagmaatBreedteMm × $dagmaatHoogteMm mm',
+        waarde: 'Raammaat $raammaatBreedteMm × $raammaatHoogteMm mm',
       ),
     );
 
@@ -227,7 +270,6 @@ class _OpmetingRaamOverzichtContext {
         }
 
         final waarde = _overzichtTekstVoorOptie(
-          menu: menu,
           optie: optie,
           selectie: selectie,
         );
@@ -317,11 +359,7 @@ class _OpmetingRaamOverzichtContext {
         continue;
       }
 
-      final waarde = _overzichtTekstVoorOptie(
-        menu: menu,
-        optie: optie,
-        selectie: selectie,
-      );
+      final waarde = _overzichtTekstVoorOptie(optie: optie, selectie: selectie);
 
       if (waarde.trim().isEmpty) {
         continue;
@@ -483,38 +521,19 @@ class _OpmetingRaamOverzichtContext {
     required OpmetingRaamKeuzeMenu menu,
     required OpmetingRaamKeuzeSelectie selectie,
   }) {
-    for (final optie in menu.opties) {
-      if (optie.id == selectie.optieId) {
-        return optie;
-      }
-    }
-
-    return menu.geenOptie;
+    return menu.zoekOptie(selectie.optieId) ?? menu.geenOptie;
   }
 
   String _overzichtTekstVoorOptie({
-    required OpmetingRaamKeuzeMenu menu,
     required OpmetingRaamKeuzeOptie optie,
     required OpmetingRaamKeuzeSelectie selectie,
   }) {
     final delen = <String>[];
 
-    final padTekst = menu.padTekstVoorOptie(optie.id).trim();
-
-    if (padTekst.isNotEmpty && padTekst.toLowerCase() != 'geen') {
-      delen.add(padTekst);
-    } else if (optie.uitvoerTekst.trim().isNotEmpty) {
+    if (optie.uitvoerTekst.trim().isNotEmpty) {
       delen.add(optie.uitvoerTekst.trim());
     } else if (optie.naam.trim().isNotEmpty) {
       delen.add(optie.naam.trim());
-    }
-
-    final uitvoerTekst = optie.uitvoerTekst.trim();
-
-    if (uitvoerTekst.isNotEmpty &&
-        uitvoerTekst != optie.naam.trim() &&
-        uitvoerTekst != padTekst) {
-      delen.add(uitvoerTekst);
     }
 
     for (final veld in optie.extraVelden) {

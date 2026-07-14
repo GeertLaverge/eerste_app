@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_tekening.dart';
 import 'opmeting_raam_pagina.dart';
@@ -23,14 +24,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   String _klantNaam = '';
-  bool _laden = true;
+  bool _laden = false;
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
 
   @override
   void initState() {
     super.initState();
-    _laadOpmetingenVanOpslag();
   }
 
   Future<void> _laadOpmetingenVanOpslag({String? klantNaam}) async {
@@ -48,7 +48,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final klantFilter = actieveKlantNaam.trim().toLowerCase();
 
     final zichtbareOpmetingen = klantFilter.isEmpty
-        ? alleOpmetingen
+        ? <OpmetingOverzichtRaamItem>[]
         : alleOpmetingen.where((opmeting) {
             return opmeting.klantNaam.trim().toLowerCase() == klantFilter;
           }).toList();
@@ -117,6 +117,12 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Future<void> _openBestand() async {
+    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
+
+    if (!mounted) {
+      return;
+    }
+
     final alleOpmetingen = await AppStorage.laadOpmetingen();
 
     if (!mounted) {
@@ -153,7 +159,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text(
-            'Opmeetbestand openen',
+            'Klant openen',
             style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
           ),
           content: SizedBox(
@@ -163,21 +169,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
               child: ListView(
                 shrinkWrap: true,
                 children: [
-                  ListTile(
-                    leading: const Icon(
-                      Icons.folder_open_rounded,
-                      color: _groen,
-                    ),
-                    title: const Text(
-                      'Alle opmetingen',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: Text('${alleOpmetingen.length} opmeting(en)'),
-                    onTap: () {
-                      Navigator.pop(dialogContext, '');
-                    },
-                  ),
-                  const Divider(height: 1),
                   ...klantNamen.map((klantNaam) {
                     final aantal = klanten[klantNaam]?.length ?? 0;
 
@@ -225,38 +216,125 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    _toonMelding(
-      gekozenKlant.trim().isEmpty
-          ? 'Alle opmetingen zijn geopend.'
-          : 'Opmeetbestand “$gekozenKlant” is geopend.',
-    );
+    _toonMelding('Opmeetbestand “$gekozenKlant” is geopend.');
   }
 
-  Future<void> _opslaanBestand() async {
+  Future<bool> _opslaanBestand({bool toonMelding = true}) async {
     final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
     if (!mounted) {
-      return;
+      return false;
     }
 
     if (alleOpmetingen.isEmpty) {
-      _toonMelding(
-        'Er is nog geen opmeting om op te slaan. Voeg eerst een raamopmeting toe.',
-        fout: true,
-      );
-      return;
+      if (toonMelding) {
+        _toonMelding(
+          'Er is nog geen opmeting om op te slaan. Voeg eerst een raamopmeting toe.',
+          fout: true,
+        );
+      }
+      return false;
     }
 
-    await AppStorage.bewaarOpmetingen(alleOpmetingen);
+    await AppStorage.bewaarOpmetingenVoorSync(alleOpmetingen);
+    await OneDriveSyncService.registreerLokaleWijziging();
+
+    final syncResultaat = await OneDriveSyncService().slimmeSync(
+      magLoginVragen: true,
+    );
+
+    if (!mounted) {
+      return false;
+    }
+
+    final syncOk =
+        !syncResultaat.startsWith('FOUT') &&
+        !syncResultaat.contains('FOUT') &&
+        !syncResultaat.contains('OVERGESLAGEN');
+
+    if (toonMelding) {
+      _toonMelding(
+        syncOk
+            ? 'Bestand opgeslagen en synchronisatie uitgevoerd.'
+            : 'Bestand lokaal opgeslagen, maar synchronisatie is niet gelukt: $syncResultaat',
+        fout: !syncOk,
+      );
+    }
+
+    return syncOk;
+  }
+
+  Future<void> _eindeOpmeting() async {
+    final heeftOpmetingen =
+        _raamOpmetingen.isNotEmpty ||
+        (await AppStorage.laadOpmetingenVoorSync()).isNotEmpty;
 
     if (!mounted) {
       return;
     }
 
-    _toonMelding('Bestand opgeslagen en synchronisatie gestart.');
+    if (!heeftOpmetingen) {
+      await Navigator.of(context).maybePop();
+      return;
+    }
+
+    final keuze = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Bestand opslaan?'),
+          content: const Text(
+            'Wilt u het bestand opslaan en synchroniseren voordat u terugkeert naar Home?',
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _tekstGrijs),
+              onPressed: () {
+                Navigator.pop(dialogContext, 'annuleren');
+              },
+              child: const Text('Annuleren'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () {
+                Navigator.pop(dialogContext, 'niet_opslaan');
+              },
+              child: const Text('Niet opslaan'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _groen,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, 'opslaan');
+              },
+              child: const Text('Opslaan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (keuze == null || keuze == 'annuleren') {
+      return;
+    }
+
+    if (keuze == 'opslaan') {
+      await _opslaanBestand(toonMelding: false);
+
+      if (!mounted) {
+        return;
+      }
+    }
+
+    await Navigator.of(context).maybePop();
   }
 
-  Future<void> _openRaamopmeting() async {
+  Future<void> _openRaamopmeting({String formulierType = 'pvcRaam'}) async {
     if (_klantNaam.trim().isEmpty) {
       await _nieuwBestand();
 
@@ -273,7 +351,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       context,
       MaterialPageRoute(
         builder: (context) {
-          return OpmetingRaamPagina(klantNaam: _klantNaam);
+          return OpmetingRaamPagina(
+            klantNaam: _klantNaam,
+            formulierType: formulierType,
+          );
         },
       ),
     );
@@ -293,6 +374,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           return OpmetingRaamPagina(
             klantNaam: item.klantNaam,
             bestaandeOpmeting: item,
+            formulierType: item.formulierTypeGenormaliseerd,
           );
         },
       ),
@@ -411,6 +493,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 _openBestand();
               } else if (waarde == 'opslaan') {
                 _opslaanBestand();
+              } else if (waarde == 'einde') {
+                _eindeOpmeting();
               }
             },
             itemBuilder: (context) {
@@ -418,6 +502,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 PopupMenuItem(value: 'nieuw', child: Text('Nieuw bestand')),
                 PopupMenuItem(value: 'open', child: Text('Open bestand')),
                 PopupMenuItem(value: 'opslaan', child: Text('Opslaan bestand')),
+                PopupMenuDivider(),
+                PopupMenuItem(value: 'einde', child: Text('Einde')),
               ];
             },
             child: Container(
@@ -464,13 +550,44 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           PopupMenuButton<String>(
             tooltip: 'Formulier toevoegen',
             onSelected: (waarde) {
-              if (waarde == 'raam') {
-                _openRaamopmeting();
+              if (waarde == 'pvc_raam') {
+                _openRaamopmeting(formulierType: 'pvcRaam');
+              } else if (waarde == 'alu_raam') {
+                _openRaamopmeting(formulierType: 'aluRaam');
               }
             },
             itemBuilder: (context) {
               return const [
-                PopupMenuItem(value: 'raam', child: Text('Raamopmeting')),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Text(
+                    'Ramen',
+                    style: TextStyle(
+                      color: _groen,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'pvc_raam',
+                  child: Row(
+                    children: [
+                      Icon(Icons.window_rounded, color: _groen, size: 20),
+                      SizedBox(width: 10),
+                      Text('PVC Raam'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'alu_raam',
+                  child: Row(
+                    children: [
+                      Icon(Icons.window_outlined, color: _groen, size: 20),
+                      SizedBox(width: 10),
+                      Text('ALU Raam'),
+                    ],
+                  ),
+                ),
               ];
             },
             child: Container(
@@ -493,11 +610,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return _klantNaam.trim();
     }
 
-    if (_raamOpmetingen.isNotEmpty) {
-      return 'Alle opmetingen';
-    }
-
-    return 'Nieuw opmeetblad';
+    return 'Kies een opmeetbestand';
   }
 
   Widget _bouwLegeFiche() {
@@ -539,7 +652,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             Text(
               heeftKlantNaam
                   ? 'Nog geen opmetingen voor $_klantNaam'
-                  : 'Nog geen opmetingen geopend',
+                  : 'Nog geen opmeetbestand geopend',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: _tekstDonker,
@@ -551,7 +664,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             Text(
               heeftKlantNaam
                   ? 'Voeg rechtsboven een raamopmeting toe voor dit opmeetbestand.'
-                  : 'Maak een nieuw bestand aan of open een bestaand bestand via de knop Bestand.',
+                  : 'Maak een nieuw bestand aan of open één klant via de knop Bestand.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: _tekstGrijs,
@@ -591,16 +704,59 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                     ),
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _openRaamopmeting,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Raamopmeting toevoegen'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _groen,
-                    foregroundColor: Colors.white,
+                PopupMenuButton<String>(
+                  tooltip: 'Raamopmeting toevoegen',
+                  onSelected: (waarde) {
+                    if (waarde == 'pvc_raam') {
+                      _openRaamopmeting(formulierType: 'pvcRaam');
+                    } else if (waarde == 'alu_raam') {
+                      _openRaamopmeting(formulierType: 'aluRaam');
+                    }
+                  },
+                  itemBuilder: (context) {
+                    return const [
+                      PopupMenuItem<String>(
+                        enabled: false,
+                        child: Text(
+                          'Ramen',
+                          style: TextStyle(
+                            color: _groen,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'pvc_raam',
+                        child: Text('PVC Raam'),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'alu_raam',
+                        child: Text('ALU Raam'),
+                      ),
+                    ];
+                  },
+                  child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 18,
                       vertical: 13,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _groen,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          'Raamopmeting toevoegen',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -658,7 +814,9 @@ class _RaamOverzichtKaart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final technischeRegels = item.zichtbareTechnischeRegels;
+    final technischeRegels = _technischeRegelsZonderMaten(
+      item.zichtbareTechnischeRegels,
+    );
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -689,7 +847,7 @@ class _RaamOverzichtKaart extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'Raam $volgnummer',
+                  'Pos $volgnummer',
                   style: const TextStyle(
                     color: _groen,
                     fontSize: 13,
@@ -700,7 +858,7 @@ class _RaamOverzichtKaart extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  item.titel,
+                  item.formulierTypeLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -725,50 +883,37 @@ class _RaamOverzichtKaart extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          Text(
+            'Raammaat: ${item.raammaatBreedteMm} × ${item.raammaatHoogteMm} mm',
+            style: const TextStyle(
+              color: _tekstDonker,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 330,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    AspectRatio(
-                      aspectRatio: 1.45,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFAFAFA),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _rand),
-                        ),
-                        child: CustomPaint(
-                          painter: OpmetingOverzichtTekening(item: item),
-                          child: const SizedBox.expand(),
-                        ),
-                      ),
+                child: AspectRatio(
+                  aspectRatio: 1.45,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAFAFA),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _rand),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Raammaat: ${item.raammaatBreedteMm} × ${item.raammaatHoogteMm} mm',
-                      style: const TextStyle(
-                        color: _tekstDonker,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: CustomPaint(
+                      painter: OpmetingOverzichtTekening(item: item),
+                      child: const SizedBox.expand(),
                     ),
-                    Text(
-                      'Dagmaat: ${item.dagmaatBreedteMm} × ${item.dagmaatHoogteMm} mm',
-                      style: const TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 18),
               Expanded(
                 child: technischeRegels.isEmpty
                     ? const Padding(
@@ -810,31 +955,43 @@ class _RaamOverzichtKaart extends StatelessWidget {
     );
   }
 
+  List<OpmetingOverzichtTechnischeRegel> _technischeRegelsZonderMaten(
+    List<OpmetingOverzichtTechnischeRegel> regels,
+  ) {
+    return regels.where((regel) {
+      final titel = regel.titel.trim().toLowerCase();
+      final waarde = regel.waarde.trim().toLowerCase();
+
+      if (titel.isEmpty && waarde.isEmpty) {
+        return false;
+      }
+
+      if (titel == 'maten' ||
+          titel == 'maat' ||
+          titel == 'afmeting' ||
+          titel == 'afmetingen') {
+        return false;
+      }
+
+      if (titel.contains('raammaat') ||
+          titel.contains('dagmaat') ||
+          waarde.startsWith('raammaat') ||
+          waarde.startsWith('dagmaat')) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
   Widget _bouwTechnischeTekst(
     List<OpmetingOverzichtTechnischeRegel> technischeRegels,
   ) {
-    final midden = (technischeRegels.length / 2).ceil();
-    final eersteKolom = technischeRegels.take(midden).toList();
-    final tweedeKolom = technischeRegels.skip(midden).toList();
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: _bouwTechnischeKolom(eersteKolom)),
-        if (tweedeKolom.isNotEmpty) ...[
-          const SizedBox(width: 14),
-          Expanded(child: _bouwTechnischeKolom(tweedeKolom)),
-        ],
-      ],
-    );
-  }
-
-  Widget _bouwTechnischeKolom(List<OpmetingOverzichtTechnischeRegel> regels) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: regels.map((regel) {
+      children: technischeRegels.map((regel) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 7),
+          padding: const EdgeInsets.only(bottom: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

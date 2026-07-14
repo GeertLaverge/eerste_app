@@ -22,10 +22,16 @@ import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_lay
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
-  const OpmetingRaamPagina({super.key, this.klantNaam, this.bestaandeOpmeting});
+  const OpmetingRaamPagina({
+    super.key,
+    this.klantNaam,
+    this.bestaandeOpmeting,
+    this.formulierType = 'pvcRaam',
+  });
 
   final String? klantNaam;
   final OpmetingOverzichtRaamItem? bestaandeOpmeting;
+  final String formulierType;
 
   @override
   State<OpmetingRaamPagina> createState() {
@@ -183,6 +189,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
       _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling;
       _overzichtTekeningData = bestaandeOpmeting.tekeningData;
+      _herstelLegendaUitTekeningData(bestaandeOpmeting.tekeningData);
       _keuzeSelectiesPerKader.addAll(
         _kopieKeuzeSelecties(bestaandeOpmeting.keuzeSelectiesPerKader),
       );
@@ -214,8 +221,37 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     super.dispose();
   }
 
+  String get _formulierType {
+    final bestaandeOpmeting = widget.bestaandeOpmeting;
+
+    if (bestaandeOpmeting != null) {
+      return bestaandeOpmeting.formulierTypeGenormaliseerd;
+    }
+
+    switch (widget.formulierType.trim()) {
+      case 'aluRaam':
+      case 'alu_raam':
+      case 'ALU Raam':
+        return 'aluRaam';
+
+      case 'pvcRaam':
+      case 'pvc_raam':
+      case 'PVC Raam':
+      case 'raam':
+      case '':
+        return 'pvcRaam';
+
+      default:
+        return widget.formulierType.trim();
+    }
+  }
+
   double _waarde(TextEditingController controller) {
     return OpmetingRaamMatenHelper.waarde(controller);
+  }
+
+  bool _isMaatveldLeeg(TextEditingController controller) {
+    return controller.text.trim().isEmpty;
   }
 
   Map<String, Map<String, OpmetingRaamKeuzeSelectie>> _kopieKeuzeSelecties(
@@ -270,6 +306,51 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
   void _verwerkOverzichtTekeningData(OpmetingOverzichtTekeningData data) {
     _overzichtTekeningData = data;
+    _herstelLegendaUitTekeningData(data, metSetState: true);
+  }
+
+  void _herstelLegendaUitTekeningData(
+    OpmetingOverzichtTekeningData data, {
+    bool metSetState = false,
+  }) {
+    final nieuweOpvullingen = OpmetingRaamVullingHelper.bepaalLegenda(
+      vulvlakken: data.vulvlakken,
+      toewijzingen: data.vullingToewijzingen,
+    );
+
+    final nieuweKleinhouten = OpmetingRaamKleinhoutHelper.bepaalLegenda(
+      vulvlakken: data.vulvlakken,
+      kleinhouten: data.kleinhouten,
+    );
+
+    final opvullingenGelijk = _zijnOpvullingenGelijk(
+      gekozenOpvullingen,
+      nieuweOpvullingen,
+    );
+
+    final kleinhoutenGelijk = _zijnKleinhoutenGelijk(
+      gekozenKleinhouten,
+      nieuweKleinhouten,
+    );
+
+    if (opvullingenGelijk && kleinhoutenGelijk) {
+      return;
+    }
+
+    void pasAan() {
+      gekozenOpvullingen = List<OpmetingRaamVullingLegendaItem>.unmodifiable(
+        nieuweOpvullingen,
+      );
+      gekozenKleinhouten = List<OpmetingRaamKleinhoutLegendaItem>.unmodifiable(
+        nieuweKleinhouten,
+      );
+    }
+
+    if (metSetState && mounted) {
+      setState(pasAan);
+    } else {
+      pasAan();
+    }
   }
 
   void _vulMaatveldenMetActiefKader(OpmetingKaderSamenstelling samenstelling) {
@@ -439,6 +520,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _herberekenVanDagmaat() {
+    if (_isMaatveldLeeg(dagmaatBreedteController) ||
+        _isMaatveldLeeg(dagmaatHoogteController)) {
+      return;
+    }
+
     if (_kaderSamenstelling.kaders.length <= 1) {
       _werkRaammaatVeldenBijUitDagmaat();
     }
@@ -450,6 +536,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _herberekenVanRaammaat() {
+    if (_isMaatveldLeeg(raammaatBreedteController) ||
+        _isMaatveldLeeg(raammaatHoogteController)) {
+      return;
+    }
+
     _werkDagmaatVeldenBijUitRaammaat();
 
     _herberekenSamenstellingMetRaammaat(
@@ -601,7 +692,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     });
 
     try {
-      final geladenMenus = await AppStorage.laadOpmetingRaamKeuzemenus();
+      final geladenMenus =
+          await AppStorage.laadOpmetingRaamKeuzemenusVoorFormulier(
+            _formulierType,
+          );
 
       final opgeschoondeMenus = _verwijderOngeldigeNietCombineerbareKoppelingen(
         geladenMenus,
@@ -663,7 +757,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     });
 
     try {
-      await AppStorage.bewaarOpmetingRaamKeuzemenus(gesorteerdeMenus);
+      await AppStorage.bewaarOpmetingRaamKeuzemenusVoorFormulier(
+        formulierType: _formulierType,
+        menus: gesorteerdeMenus,
+      );
     } catch (_) {
       if (mounted) {
         _toonMelding('De keuzemenu’s konden niet worden bewaard.', fout: true);
@@ -1033,6 +1130,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   OpmetingOverzichtRaamItem _maakOverzichtItem() {
     final nieuweOpmeting = OpmetingRaamOverzichtBuilder.maak(
       klantNaam: widget.klantNaam?.trim() ?? '',
+      formulierType: _formulierType,
       dagmaatBreedteMm: _waarde(dagmaatBreedteController).round(),
       dagmaatHoogteMm: _waarde(dagmaatHoogteController).round(),
       raammaatBreedteMm: raammaatBreedte,

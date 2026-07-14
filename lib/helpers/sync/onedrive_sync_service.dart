@@ -184,6 +184,9 @@ class OneDriveSyncService {
         'notitieActies': prefs.getString('thimaco_notitie_acties'),
         'opmetingRaamOpvullingen': prefs.getString('opmeting_raam_opvullingen'),
         'opmetingRaamKeuzemenus': prefs.getString('opmeting_raam_keuzemenus'),
+        'opmetingRaamKeuzemenusAlu': prefs.getString(
+          'opmeting_raam_keuzemenus_alu',
+        ),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
       };
 
@@ -508,6 +511,13 @@ class OneDriveSyncService {
         );
       }
 
+      if (data['opmetingRaamKeuzemenusAlu'] is String) {
+        await prefs.setString(
+          'opmeting_raam_keuzemenus_alu',
+          data['opmetingRaamKeuzemenusAlu'],
+        );
+      }
+
       if (data['backupDatum'] is String) {
         await prefs.setString(_backupDatumKey, data['backupDatum']);
       }
@@ -792,13 +802,13 @@ $laatsteSyncActie
     );
 
     if (oneDriveDatumString == null) {
-      laatsteSyncActie = 'Geen OneDrive login of geen OneDrive backup gevonden';
+      laatsteSyncActie = 'Geen OneDrive backup gevonden of geen login';
 
       if (lokaleWijzigingOpenstaand) {
         laatsteSyncActie =
-            'Lokale wijziging openstaand, maar geen OneDrive login';
+            'Lokale wijziging openstaand, eerste snelle upload uitgevoerd';
 
-        return 'SYNC_GEEN_ONEDRIVE_LOGIN_UPLOAD_OVERGESLAGEN';
+        return uploadBackup(uploadFotos: false);
       }
 
       return 'SYNC_GEEN_ONEDRIVE_LOGIN';

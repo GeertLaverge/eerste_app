@@ -107,6 +107,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                         label: 'Raammaat B',
                         controller: raammaatBreedteController,
                         enabled: !dagmatenVergrendeld,
+                        lichtgroenVeld: true,
                         onChanged: onRaammaatGewijzigd,
                       ),
                     ),
@@ -116,6 +117,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                         label: 'Raammaat H',
                         controller: raammaatHoogteController,
                         enabled: !dagmatenVergrendeld,
+                        lichtgroenVeld: true,
                         onChanged: onRaammaatGewijzigd,
                       ),
                     ),
@@ -294,6 +296,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required String label,
     required TextEditingController controller,
     bool enabled = true,
+    bool lichtgroenVeld = false,
     VoidCallback? onChanged,
   }) {
     return TextField(
@@ -313,8 +316,12 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
         labelText: label,
         suffixText: 'mm',
         isDense: true,
-        filled: !enabled,
-        fillColor: !enabled ? const Color(0xFFF3F4F6) : Colors.white,
+        filled: !enabled || lichtgroenVeld,
+        fillColor: !enabled
+            ? const Color(0xFFF3F4F6)
+            : lichtgroenVeld
+            ? _lichtGroen
+            : Colors.white,
         labelStyle: const TextStyle(
           color: _tekstGrijs,
           fontWeight: FontWeight.w700,

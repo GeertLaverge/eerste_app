@@ -305,7 +305,7 @@ class OpmetingOverzichtRaamItem {
     required this.raammaatBreedteMm,
     required this.raammaatHoogteMm,
     required this.kaderSamenstelling,
-    this.formulierType = 'raam',
+    this.formulierType = 'pvcRaam',
     this.gewijzigdOp = '',
     this.isVerwijderd = false,
     this.tekeningData = const OpmetingOverzichtTekeningData(),
@@ -335,6 +335,14 @@ class OpmetingOverzichtRaamItem {
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
   keuzeSelectiesPerKader;
   final String notities;
+
+  String get formulierTypeGenormaliseerd {
+    return _normaliseerOpmetingFormulierType(formulierType);
+  }
+
+  String get formulierTypeLabel {
+    return _labelVoorOpmetingFormulierType(formulierTypeGenormaliseerd);
+  }
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -447,7 +455,9 @@ class OpmetingOverzichtRaamItem {
       id: json['id']?.toString() ?? '',
       titel: json['titel']?.toString() ?? 'Raam',
       klantNaam: json['klantNaam']?.toString() ?? '',
-      formulierType: json['formulierType']?.toString() ?? 'raam',
+      formulierType: _normaliseerOpmetingFormulierType(
+        json['formulierType']?.toString(),
+      ),
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,
       dagmaatBreedteMm: dagmaatBreedteMm,
@@ -473,6 +483,62 @@ class OpmetingOverzichtRaamItem {
       ),
       notities: json['notities']?.toString() ?? '',
     );
+  }
+}
+
+String _normaliseerOpmetingFormulierType(Object? waarde) {
+  final tekst = waarde?.toString().trim() ?? '';
+
+  switch (tekst) {
+    case 'aluRaam':
+    case 'alu_raam':
+    case 'ALU Raam':
+      return 'aluRaam';
+
+    case 'pvcRaam':
+    case 'pvc_raam':
+    case 'PVC Raam':
+    case 'raam':
+    case '':
+      return 'pvcRaam';
+
+    case 'aluDeur':
+    case 'alu_deur':
+    case 'ALU Deur':
+      return 'aluDeur';
+
+    case 'pvcDeur':
+    case 'pvc_deur':
+    case 'PVC Deur':
+      return 'pvcDeur';
+
+    default:
+      return tekst;
+  }
+}
+
+String _labelVoorOpmetingFormulierType(String formulierType) {
+  switch (formulierType) {
+    case 'aluRaam':
+      return 'ALU Raam';
+
+    case 'pvcRaam':
+      return 'PVC Raam';
+
+    case 'aluDeur':
+      return 'ALU Deur';
+
+    case 'pvcDeur':
+      return 'PVC Deur';
+
+    default:
+      final tekst = formulierType.trim();
+
+      if (tekst.isEmpty) {
+        return 'PVC Raam';
+      }
+
+      return tekst;
   }
 }
 
