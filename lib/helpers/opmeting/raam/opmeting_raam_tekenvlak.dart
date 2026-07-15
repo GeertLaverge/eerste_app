@@ -3,6 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../deurpanelen/opmeting_deurpaneel_actie_helper.dart';
+import '../deurpanelen/opmeting_deurpaneel_actieve_keuze_controller.dart';
+import '../deurpanelen/opmeting_deurpaneel_geometrie_helper.dart';
+import '../deurpanelen/opmeting_deurpaneel_dxf_bibliotheek.dart';
+import '../deurpanelen/opmeting_deurpaneel_teken_helper.dart';
+import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
 import 'opmeting_raam_opvulling_model.dart';
@@ -141,6 +147,9 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
   final List<OpmetingRaamKleinhout> _kleinhouten = <OpmetingRaamKleinhout>[];
 
+  final List<OpmetingDeurpaneelToewijzing> _deurpaneelToewijzingen =
+      <OpmetingDeurpaneelToewijzing>[];
+
   final Set<String> _geselecteerdeKleinhoutVlakIds = <String>{};
 
   OpmetingRaamKleinhoutType _geselecteerdKleinhoutType =
@@ -190,6 +199,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   final Set<String> _geselecteerdeKaderIds = <String>{};
 
   String _laatsteOverzichtTekeningSignatuur = '';
+  bool _deurpaneelToewijzingenUitControllerBijwerken = false;
 
   final TextEditingController _kaderBreedteController = TextEditingController();
   final TextEditingController _kaderHoogteController = TextEditingController();
@@ -248,6 +258,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   bool get _isTekenToolActief {
     return widget.actieveTool == 'tstijl' ||
         widget.actieveTool == 'vleugel' ||
+        widget.actieveTool == 'deurvleugel' ||
+        widget.actieveTool == 'deurpanelen' ||
         widget.actieveTool == 'opvulling' ||
         widget.actieveTool == 'kleinhout';
   }
@@ -284,11 +296,90 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
   }
 
+  bool _zijnDeurpaneelToewijzingenGelijk(
+    List<OpmetingDeurpaneelToewijzing> eerste,
+    List<OpmetingDeurpaneelToewijzing> tweede,
+  ) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    for (var index = 0; index < eerste.length; index++) {
+      final eersteItem = eerste[index];
+      final tweedeItem = tweede[index];
+
+      if (eersteItem.id != tweedeItem.id ||
+          eersteItem.deurVleugelId != tweedeItem.deurVleugelId ||
+          eersteItem.paneelId != tweedeItem.paneelId ||
+          eersteItem.paneelNaam != tweedeItem.paneelNaam ||
+          eersteItem.tekeningBestandsnaam != tweedeItem.tekeningBestandsnaam ||
+          eersteItem.uitvoering != tweedeItem.uitvoering ||
+          eersteItem.cilinderZijde != tweedeItem.cilinderZijde) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  void _verwerkDeurpaneelToewijzingenUitController() {
+    if (_deurpaneelToewijzingenUitControllerBijwerken) {
+      return;
+    }
+
+    final nieuweToewijzingen =
+        OpmetingDeurpaneelActieveKeuzeController.toewijzingen.value;
+
+    if (_zijnDeurpaneelToewijzingenGelijk(
+      _deurpaneelToewijzingen,
+      nieuweToewijzingen,
+    )) {
+      return;
+    }
+
+    if (!mounted) {
+      _deurpaneelToewijzingen
+        ..clear()
+        ..addAll(nieuweToewijzingen);
+      return;
+    }
+
+    setState(() {
+      _deurpaneelToewijzingen
+        ..clear()
+        ..addAll(nieuweToewijzingen);
+    });
+  }
+
+  void _werkDeurpaneelControllerBij() {
+    _deurpaneelToewijzingenUitControllerBijwerken = true;
+    OpmetingDeurpaneelActieveKeuzeController.werkToewijzingenBij(
+      _deurpaneelToewijzingen,
+    );
+    _deurpaneelToewijzingenUitControllerBijwerken = false;
+  }
+
+  void _verwerkDxfBibliotheekWijziging() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
 
     _laadBeginTekeningData();
+    _verwerkDeurpaneelToewijzingenUitController();
+    OpmetingDeurpaneelActieveKeuzeController.toewijzingen.addListener(
+      _verwerkDeurpaneelToewijzingenUitController,
+    );
+    OpmetingDeurpaneelDxfBibliotheek.versie.addListener(
+      _verwerkDxfBibliotheekWijziging,
+    );
+    unawaited(OpmetingDeurpaneelDxfBibliotheek.laad());
 
     _legendaMeldingen = OpmetingRaamLegendaMeldingController(
       isMounted: () => mounted,
@@ -348,6 +439,13 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
   @override
   void dispose() {
+    OpmetingDeurpaneelActieveKeuzeController.toewijzingen.removeListener(
+      _verwerkDeurpaneelToewijzingenUitController,
+    );
+    OpmetingDeurpaneelDxfBibliotheek.versie.removeListener(
+      _verwerkDxfBibliotheekWijziging,
+    );
+
     _schaalController.dispose();
 
     widget.controller?.ontkoppel(eigenaar: this);
@@ -560,10 +658,6 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     if (widget.actieveTool == 'kadertoevoegen') {
       _kaderToevoegMenuGesloten = false;
-
-      if (oldWidget.actieveTool != 'kadertoevoegen') {
-        _resetToevoegKaderVoorNieuwKader();
-      }
     }
 
     if (_isTekenToolActief) {
@@ -767,139 +861,18 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     final samenstelling = _bruikbareKaderSamenstelling;
+    final heeftMeerdereKaders = (samenstelling?.kaders.length ?? 0) > 1;
 
-    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
-      final geschaaldeTStijlenPerKader = <String, List<OpmetingRaamTStijl>>{};
-      final geschaaldeVleugelsPerKader = <String, List<OpmetingRaamVleugel>>{};
-      final geschaaldeVullingenPerKader =
-          <String, List<OpmetingRaamVullingToewijzing>>{};
-      final geschaaldeKleinhoutenPerKader =
-          <String, List<OpmetingRaamKleinhout>>{};
-
-      final enkelKader = samenstelling.kaders.length == 1;
-
-      for (final kader in samenstelling.kaders) {
-        final kaderId = kader.id;
-
-        final bestaandeTStijlen = kaderId == _huidigTStijlKaderId
-            ? List<OpmetingRaamTStijl>.from(_tStijlen)
-            : List<OpmetingRaamTStijl>.from(
-                _tStijlenPerKader[kaderId] ?? const <OpmetingRaamTStijl>[],
-              );
-
-        final bestaandeVleugels = kaderId == _huidigVleugelKaderId
-            ? List<OpmetingRaamVleugel>.from(_vleugels)
-            : List<OpmetingRaamVleugel>.from(
-                _vleugelsPerKader[kaderId] ?? const <OpmetingRaamVleugel>[],
-              );
-
-        final bestaandeVullingen = kaderId == _huidigOpvullingKaderId
-            ? List<OpmetingRaamVullingToewijzing>.from(_vullingToewijzingen)
-            : List<OpmetingRaamVullingToewijzing>.from(
-                _vullingToewijzingenPerKader[kaderId] ??
-                    const <OpmetingRaamVullingToewijzing>[],
-              );
-
-        final bestaandeKleinhouten = kaderId == _huidigKleinhoutKaderId
-            ? List<OpmetingRaamKleinhout>.from(_kleinhouten)
-            : List<OpmetingRaamKleinhout>.from(
-                _kleinhoutenPerKader[kaderId] ??
-                    const <OpmetingRaamKleinhout>[],
-              );
-
-        final kaderWijziging = OpmetingRaamSchaalWijziging(
-          oudeTekenvlakGrootte: wijziging.oudeTekenvlakGrootte,
-          nieuweTekenvlakGrootte: wijziging.nieuweTekenvlakGrootte,
-          oudeBreedteMm: enkelKader ? wijziging.oudeBreedteMm : kader.breedteMm,
-          oudeHoogteMm: enkelKader ? wijziging.oudeHoogteMm : kader.hoogteMm,
-          nieuweBreedteMm: enkelKader
-              ? wijziging.nieuweBreedteMm
-              : kader.breedteMm,
-          nieuweHoogteMm: enkelKader
-              ? wijziging.nieuweHoogteMm
-              : kader.hoogteMm,
-        );
-
-        final resultaat = OpmetingRaamSchaalAanpassingHelper.bereken(
-          wijziging: kaderWijziging,
-          bestaandeTStijlen: bestaandeTStijlen,
-          bestaandeVleugels: bestaandeVleugels,
-          bestaandeVullingToewijzingen: bestaandeVullingen,
-          bestaandeKleinhouten: bestaandeKleinhouten,
-        );
-
-        if (resultaat == null) {
-          geschaaldeTStijlenPerKader[kaderId] =
-              List<OpmetingRaamTStijl>.unmodifiable(bestaandeTStijlen);
-          geschaaldeVleugelsPerKader[kaderId] =
-              List<OpmetingRaamVleugel>.unmodifiable(bestaandeVleugels);
-          geschaaldeVullingenPerKader[kaderId] =
-              List<OpmetingRaamVullingToewijzing>.unmodifiable(
-                bestaandeVullingen,
-              );
-          geschaaldeKleinhoutenPerKader[kaderId] =
-              List<OpmetingRaamKleinhout>.unmodifiable(bestaandeKleinhouten);
-          continue;
-        }
-
-        geschaaldeTStijlenPerKader[kaderId] =
-            List<OpmetingRaamTStijl>.unmodifiable(resultaat.tStijlen);
-        geschaaldeVleugelsPerKader[kaderId] =
-            List<OpmetingRaamVleugel>.unmodifiable(resultaat.vleugels);
-        geschaaldeVullingenPerKader[kaderId] =
-            List<OpmetingRaamVullingToewijzing>.unmodifiable(
-              resultaat.vullingToewijzingen,
-            );
-        geschaaldeKleinhoutenPerKader[kaderId] =
-            List<OpmetingRaamKleinhout>.unmodifiable(resultaat.kleinhouten);
-      }
-
-      setState(() {
-        _tStijlenPerKader
-          ..clear()
-          ..addAll(geschaaldeTStijlenPerKader);
-
-        _vleugelsPerKader
-          ..clear()
-          ..addAll(geschaaldeVleugelsPerKader);
-
-        _vullingToewijzingenPerKader
-          ..clear()
-          ..addAll(geschaaldeVullingenPerKader);
-
-        _kleinhoutenPerKader
-          ..clear()
-          ..addAll(geschaaldeKleinhoutenPerKader);
-
-        _vervangTStijlen(
-          geschaaldeTStijlenPerKader[_huidigTStijlKaderId] ??
-              const <OpmetingRaamTStijl>[],
-        );
-
-        _vervangVleugels(
-          geschaaldeVleugelsPerKader[_huidigVleugelKaderId] ??
-              const <OpmetingRaamVleugel>[],
-        );
-
-        _vervangVullingToewijzingen(
-          geschaaldeVullingenPerKader[_huidigOpvullingKaderId] ??
-              const <OpmetingRaamVullingToewijzing>[],
-        );
-
-        _vervangKleinhouten(
-          geschaaldeKleinhoutenPerKader[_huidigKleinhoutKaderId] ??
-              const <OpmetingRaamKleinhout>[],
-        );
-
-        _wisTekeningSelecties();
-      });
-
+    // Bij meerdere kaders wordt de samenstelling zelf via de kaderlayout
+    // getransformeerd. Bij één kader moet de opgeslagen tekening wél mee
+    // schalen met het actuele tekenvlak, anders blijft een deurvleugel op
+    // oude canvas-pixels staan na schermrotatie of venstergrootte wijzigen.
+    if (heeftMeerdereKaders) {
       _schaalController.bevestigWijziging(wijziging);
-
-      _wisGeschiedenis();
-      _planAlleLegendaMeldingen();
       return;
     }
+
+    final oudeVleugelsVoorSchaal = List<OpmetingRaamVleugel>.from(_vleugels);
 
     final resultaat = OpmetingRaamSchaalAanpassingHelper.bereken(
       wijziging: wijziging,
@@ -910,17 +883,26 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
 
     if (resultaat == null) {
-      _schaalController.bevestigWijziging(wijziging);
       return;
     }
+
+    final geschaaldeVleugels = _herstelDeurVleugelGegevensNaSchaal(
+      oudeVleugels: oudeVleugelsVoorSchaal,
+      nieuweVleugels: resultaat.vleugels,
+    );
 
     setState(() {
       _vervangVolledigeTekening(
         tStijlen: resultaat.tStijlen,
-        vleugels: resultaat.vleugels,
+        vleugels: geschaaldeVleugels,
         vullingToewijzingen: resultaat.vullingToewijzingen,
         kleinhouten: resultaat.kleinhouten,
       );
+
+      if (samenstelling != null) {
+        _bewaarTStijlenVoorActiefKader();
+        _bewaarVleugelsVoorActiefKader();
+      }
 
       _wisTekeningSelecties();
     });
@@ -929,6 +911,174 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     _wisGeschiedenis();
     _planAlleLegendaMeldingen();
+  }
+
+  List<OpmetingRaamVleugel> _herstelDeurVleugelGegevensNaSchaal({
+    required List<OpmetingRaamVleugel> oudeVleugels,
+    required List<OpmetingRaamVleugel> nieuweVleugels,
+  }) {
+    if (oudeVleugels.isEmpty || nieuweVleugels.isEmpty) {
+      return nieuweVleugels;
+    }
+
+    final oudeVleugelPerId = <String, OpmetingRaamVleugel>{
+      for (final vleugel in oudeVleugels) vleugel.id: vleugel,
+    };
+
+    final nieuweVleugelPerId = <String, OpmetingRaamVleugel>{
+      for (final vleugel in nieuweVleugels) vleugel.id: vleugel,
+    };
+
+    bool zelfdeGroep(OpmetingRaamVleugel eerste, OpmetingRaamVleugel tweede) {
+      final eersteGroep = eerste.deurVleugelGroepId.trim();
+      final tweedeGroep = tweede.deurVleugelGroepId.trim();
+
+      if (eersteGroep.isNotEmpty || tweedeGroep.isNotEmpty) {
+        return eersteGroep.isNotEmpty && eersteGroep == tweedeGroep;
+      }
+
+      return eerste.id == tweede.id;
+    }
+
+    Rect groepRectVanNieuweVleugels(List<OpmetingRaamVleugel> oudeGroep) {
+      Rect? rect;
+
+      for (final oudeVleugel in oudeGroep) {
+        final nieuweVleugel = nieuweVleugelPerId[oudeVleugel.id];
+
+        if (nieuweVleugel == null) {
+          continue;
+        }
+
+        rect = rect == null
+            ? nieuweVleugel.vlak
+            : rect!.expandToInclude(nieuweVleugel.vlak);
+      }
+
+      return rect ?? oudeGroep.first.vlak;
+    }
+
+    double splitXVoorDubbeleDeur({
+      required Rect groepVlak,
+      required OpmetingRaamVleugel basisVleugel,
+    }) {
+      if (groepVlak.width <= 0) {
+        return groepVlak.center.dx;
+      }
+
+      final size = _actueleTekenvlakGrootte();
+      double schaalX = 0;
+
+      if (size != null && _effectieveBreedteMm > 0) {
+        final buitenKader = OpmetingRaamKaderHelper.buitenKader(
+          size: size,
+          breedteMm: _effectieveBreedteMm,
+          hoogteMm: _effectieveHoogteMm,
+        );
+
+        if (buitenKader.width > 0) {
+          schaalX = buitenKader.width / _effectieveBreedteMm;
+        }
+      }
+
+      if (schaalX <= 0 || !schaalX.isFinite) {
+        schaalX = groepVlak.width / 1000;
+      }
+
+      final verschuivingPx =
+          basisVleugel.deurVleugelMiddenVerschuivingMm * schaalX;
+
+      final minimaleVleugelBreedte = groepVlak.width * 0.22;
+
+      return (groepVlak.center.dx + verschuivingPx)
+          .clamp(
+            groepVlak.left + minimaleVleugelBreedte,
+            groepVlak.right - minimaleVleugelBreedte,
+          )
+          .toDouble();
+    }
+
+    final resultaat = <OpmetingRaamVleugel>[];
+    final verwerkteDubbeleDeurGroepen = <String>{};
+
+    for (final nieuweVleugel in nieuweVleugels) {
+      final oudeVleugel = oudeVleugelPerId[nieuweVleugel.id];
+
+      if (oudeVleugel == null || !oudeVleugel.isDeurVleugel) {
+        resultaat.add(nieuweVleugel);
+        continue;
+      }
+
+      if (!oudeVleugel.isDubbeleDeurVleugel) {
+        resultaat.add(oudeVleugel.copyWith(vlak: nieuweVleugel.vlak));
+        continue;
+      }
+
+      final groepSleutel = oudeVleugel.deurVleugelGroepId.trim().isEmpty
+          ? oudeVleugel.id
+          : oudeVleugel.deurVleugelGroepId.trim();
+
+      if (!verwerkteDubbeleDeurGroepen.add(groepSleutel)) {
+        continue;
+      }
+
+      final oudeGroep = oudeVleugels.where((vleugel) {
+        return vleugel.isDeurVleugel &&
+            vleugel.isDubbeleDeurVleugel &&
+            zelfdeGroep(vleugel, oudeVleugel);
+      }).toList();
+
+      if (oudeGroep.length < 2) {
+        resultaat.add(oudeVleugel.copyWith(vlak: nieuweVleugel.vlak));
+        continue;
+      }
+
+      final groepVlak = groepRectVanNieuweVleugels(oudeGroep);
+
+      if (groepVlak.width <= 24 || groepVlak.height <= 24) {
+        for (final oudeDeel in oudeGroep) {
+          final nieuwDeel = nieuweVleugelPerId[oudeDeel.id];
+
+          if (nieuwDeel == null) {
+            continue;
+          }
+
+          resultaat.add(oudeDeel.copyWith(vlak: nieuwDeel.vlak));
+        }
+
+        continue;
+      }
+
+      final splitX = splitXVoorDubbeleDeur(
+        groepVlak: groepVlak,
+        basisVleugel: oudeVleugel,
+      );
+
+      final linksVlak = Rect.fromLTRB(
+        groepVlak.left,
+        groepVlak.top,
+        splitX,
+        groepVlak.bottom,
+      );
+
+      final rechtsVlak = Rect.fromLTRB(
+        splitX,
+        groepVlak.top,
+        groepVlak.right,
+        groepVlak.bottom,
+      );
+
+      for (final oudeDeel in oudeGroep) {
+        final deelVlak =
+            oudeDeel.deurVleugelDeel == OpmetingRaamDeurVleugelDeel.links
+            ? linksVlak
+            : rechtsVlak;
+
+        resultaat.add(oudeDeel.copyWith(vlak: deelVlak));
+      }
+    }
+
+    return resultaat;
   }
 
   Size? _actueleTekenvlakGrootte() {
@@ -1029,7 +1179,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   int get _actiefWerkBreedteMm {
-    if (widget.actieveTool == 'vleugel') {
+    if (widget.actieveTool == 'vleugel' ||
+        widget.actieveTool == 'deurvleugel') {
       return _actiefVleugelBreedteMm;
     }
 
@@ -1041,7 +1192,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   int get _actiefWerkHoogteMm {
-    if (widget.actieveTool == 'vleugel') {
+    if (widget.actieveTool == 'vleugel' ||
+        widget.actieveTool == 'deurvleugel') {
       return _actiefVleugelHoogteMm;
     }
 
@@ -1730,7 +1882,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
   }
 
-  void _klikTekenvlak(TapDownDetails details) {
+  Future<void> _klikTekenvlak(TapDownDetails details) async {
     final size = _actueleTekenvlakGrootte();
 
     if (size == null) {
@@ -1787,11 +1939,17 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    if (widget.actieveTool == 'vleugel') {
+    if (widget.actieveTool == 'vleugel' ||
+        widget.actieveTool == 'deurvleugel') {
       final samenstelling = _bruikbareKaderSamenstelling;
+      final isDeurVleugelTool = widget.actieveTool == 'deurvleugel';
 
       if (samenstelling == null) {
-        _pasVleugelToe(basisPunt);
+        if (isDeurVleugelTool) {
+          await _pasDeurVleugelToe(basisPunt);
+        } else {
+          _pasVleugelToe(basisPunt);
+        }
         return;
       }
 
@@ -1819,7 +1977,47 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         samenstelling: samenstelling,
       );
 
-      _pasVleugelToe(werkPunt);
+      if (isDeurVleugelTool) {
+        await _pasDeurVleugelToe(werkPunt);
+      } else {
+        _pasVleugelToe(werkPunt);
+      }
+      return;
+    }
+
+    if (widget.actieveTool == 'deurpanelen') {
+      final samenstelling = _bruikbareKaderSamenstelling;
+
+      if (samenstelling == null) {
+        _pasDeurpaneelToeOpPunt(basisPunt);
+        return;
+      }
+
+      final aangekliktKader = _kaderVoorPuntInSamenstelling(
+        basisPunt: basisPunt,
+        size: size,
+      );
+
+      if (aangekliktKader == null) {
+        return;
+      }
+
+      final werkPunt = _puntVoorKader(
+        basisPunt: basisPunt,
+        size: size,
+        kaderId: aangekliktKader.id,
+      );
+
+      if (werkPunt == null) {
+        return;
+      }
+
+      _activeerKaderVoorVleugel(
+        kaderId: aangekliktKader.id,
+        samenstelling: samenstelling,
+      );
+
+      _pasDeurpaneelToeOpPunt(werkPunt);
       return;
     }
 
@@ -1855,6 +2053,53 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         _selecteerKaderViaTekening(basisPunt: basisPunt, size: size);
         return;
     }
+  }
+
+  void _pasDeurpaneelToeOpPunt(Offset punt) {
+    final keuze = OpmetingDeurpaneelActieveKeuzeController.huidigeKeuze;
+
+    if (keuze == null) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(
+        context,
+        'Kies eerst een deurpaneel via de knop Deur panelen.',
+      );
+      return;
+    }
+
+    final deurVleugel =
+        OpmetingDeurpaneelGeometrieHelper.vindDeurVleugelVoorPunt(
+          punt: punt,
+          vleugels: _vleugels,
+        );
+
+    if (deurVleugel == null) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(
+        context,
+        'Klik op een bestaande deurvleugel om het deurpaneel te plaatsen.',
+      );
+      return;
+    }
+
+    final resultaat = OpmetingDeurpaneelActieHelper.plaatsOfVervang(
+      deurVleugel: deurVleugel,
+      keuze: keuze,
+      huidigeToewijzingen: _deurpaneelToewijzingen,
+    );
+
+    if (!resultaat.gelukt) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(context, resultaat.melding);
+      return;
+    }
+
+    setState(() {
+      _deurpaneelToewijzingen
+        ..clear()
+        ..addAll(resultaat.toewijzingen);
+    });
+
+    _werkDeurpaneelControllerBij();
+
+    OpmetingRaamSnackBarHelper.toonWaarschuwing(context, resultaat.melding);
   }
 
   void _selecteerVulvlak(Offset punt) {
@@ -2887,48 +3132,6 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     _vervangKleinhoutVlakSelectie(resultaat.geselecteerdeVlakIds);
   }
 
-  OpmetingRaamLijn? _zoekTStijlStartLijnMetRuimeKlikzone({
-    required Offset punt,
-    required Size size,
-  }) {
-    const verschuivingen = <Offset>[
-      Offset.zero,
-      Offset(0, -6),
-      Offset(6, 0),
-      Offset(0, 6),
-      Offset(-6, 0),
-      Offset(6, -6),
-      Offset(6, 6),
-      Offset(-6, 6),
-      Offset(-6, -6),
-      Offset(0, -12),
-      Offset(12, 0),
-      Offset(0, 12),
-      Offset(-12, 0),
-      Offset(12, -12),
-      Offset(12, 12),
-      Offset(-12, 12),
-      Offset(-12, -12),
-    ];
-
-    for (final verschuiving in verschuivingen) {
-      final lijn = OpmetingRaamTStijlActieHelper.vindStartLijn(
-        punt: punt + verschuiving,
-        tekenvlakGrootte: size,
-        breedteMm: _actiefTStijlBreedteMm,
-        hoogteMm: _actiefTStijlHoogteMm,
-        tStijlen: _tStijlen,
-        vleugels: _vleugels,
-      );
-
-      if (lijn != null) {
-        return lijn;
-      }
-    }
-
-    return null;
-  }
-
   void _selecteerTStijlStartLijn(Offset punt) {
     final size = _actueleTekenvlakGrootte();
 
@@ -2936,7 +3139,18 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final lijn = _zoekTStijlStartLijnMetRuimeKlikzone(punt: punt, size: size);
+    final deurLijnInfo = _vindDeurVleugelBinnenLijn(punt: punt, size: size);
+
+    final lijn =
+        deurLijnInfo?.lijn ??
+        OpmetingRaamTStijlActieHelper.vindStartLijn(
+          punt: punt,
+          tekenvlakGrootte: size,
+          breedteMm: _actiefTStijlBreedteMm,
+          hoogteMm: _actiefTStijlHoogteMm,
+          tStijlen: _tStijlen,
+          vleugels: _vleugels,
+        );
 
     setState(() {
       _geselecteerdeLijn = lijn;
@@ -2945,6 +3159,243 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         _menuZichtbaarheid.toonTStijlMenu();
       }
     });
+  }
+
+  _DeurVleugelBinnenLijnInfo? _vindDeurVleugelBinnenLijn({
+    required Offset punt,
+    required Size size,
+  }) {
+    final lijnen = _deurVleugelBinnenLijnen(size);
+
+    _DeurVleugelBinnenLijnInfo? besteInfo;
+    var besteAfstand = double.infinity;
+
+    for (final info in lijnen) {
+      final afstand = _afstandTotLijnstuk(
+        punt: punt,
+        start: info.lijn.start,
+        einde: info.lijn.einde,
+      );
+
+      if (afstand > 14 || afstand >= besteAfstand) {
+        continue;
+      }
+
+      besteAfstand = afstand;
+      besteInfo = info;
+    }
+
+    return besteInfo;
+  }
+
+  List<_DeurVleugelBinnenLijnInfo> _deurVleugelBinnenLijnen(Size size) {
+    if (_vleugels.isEmpty ||
+        _actiefTStijlBreedteMm <= 0 ||
+        _actiefTStijlHoogteMm <= 0) {
+      return const <_DeurVleugelBinnenLijnInfo>[];
+    }
+
+    final buitenKader = OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
+    );
+
+    if (buitenKader.width <= 0 || buitenKader.height <= 0) {
+      return const <_DeurVleugelBinnenLijnInfo>[];
+    }
+
+    final resultaat = <_DeurVleugelBinnenLijnInfo>[];
+
+    for (final vleugel in _vleugels) {
+      if (!vleugel.isDeurVleugel) {
+        continue;
+      }
+
+      final binnenRect = _deurVleugelBinnenRect(
+        vleugel: vleugel,
+        buitenKader: buitenKader,
+      );
+
+      if (binnenRect == null ||
+          binnenRect.width <= 8 ||
+          binnenRect.height <= 8) {
+        continue;
+      }
+
+      void voegLijnToe({
+        required String zijde,
+        required Offset start,
+        required Offset einde,
+      }) {
+        resultaat.add(
+          _DeurVleugelBinnenLijnInfo(
+            vleugel: vleugel,
+            binnenRect: binnenRect,
+            zijde: zijde,
+            lijn: OpmetingRaamLijn(
+              id: 'deurvleugel:${vleugel.id}:$zijde',
+              start: start,
+              einde: einde,
+            ),
+          ),
+        );
+      }
+
+      voegLijnToe(
+        zijde: 'links',
+        start: binnenRect.topLeft,
+        einde: binnenRect.bottomLeft,
+      );
+      voegLijnToe(
+        zijde: 'rechts',
+        start: binnenRect.topRight,
+        einde: binnenRect.bottomRight,
+      );
+      voegLijnToe(
+        zijde: 'boven',
+        start: binnenRect.topLeft,
+        einde: binnenRect.topRight,
+      );
+      voegLijnToe(
+        zijde: 'onder',
+        start: binnenRect.bottomLeft,
+        einde: binnenRect.bottomRight,
+      );
+    }
+
+    for (final stijl in _tStijlen) {
+      if (!stijl.werkvlakId.startsWith('deurvleugel_')) {
+        continue;
+      }
+
+      final vleugelId = stijl.werkvlakId.substring('deurvleugel_'.length);
+      OpmetingRaamVleugel? deurVleugel;
+
+      for (final vleugel in _vleugels) {
+        if (vleugel.id == vleugelId && vleugel.isDeurVleugel) {
+          deurVleugel = vleugel;
+          break;
+        }
+      }
+
+      if (deurVleugel == null) {
+        continue;
+      }
+
+      final binnenRect = _deurVleugelBinnenRect(
+        vleugel: deurVleugel,
+        buitenKader: buitenKader,
+      );
+
+      if (binnenRect == null) {
+        continue;
+      }
+
+      final actueleLijn = _lijnVoorTStijlInDeurWerkvlak(
+        stijl: stijl,
+        werkvlak: binnenRect,
+      );
+
+      resultaat.add(
+        _DeurVleugelBinnenLijnInfo(
+          vleugel: deurVleugel,
+          binnenRect: binnenRect,
+          zijde: stijl.richting == 'verticaal'
+              ? 'tstijl_verticaal'
+              : 'tstijl_horizontaal',
+          lijn: OpmetingRaamLijn(
+            id: 'deurvleugel:${deurVleugel.id}:tstijl:${stijl.id}',
+            start: actueleLijn.start,
+            einde: actueleLijn.einde,
+          ),
+        ),
+      );
+    }
+
+    return List<_DeurVleugelBinnenLijnInfo>.unmodifiable(resultaat);
+  }
+
+  Rect? _deurVleugelBinnenRect({
+    required OpmetingRaamVleugel vleugel,
+    required Rect buitenKader,
+  }) {
+    if (_actiefTStijlBreedteMm <= 0 || _actiefTStijlHoogteMm <= 0) {
+      return null;
+    }
+
+    final schaalX = buitenKader.width / _actiefTStijlBreedteMm;
+    final schaalY = buitenKader.height / _actiefTStijlHoogteMm;
+
+    if (!schaalX.isFinite ||
+        !schaalY.isFinite ||
+        schaalX <= 0 ||
+        schaalY <= 0) {
+      return null;
+    }
+
+    final maximaleProfielBreedteX = buitenKader.width / 3;
+    final maximaleProfielBreedteY = buitenKader.height / 3;
+
+    if (maximaleProfielBreedteX < 5 || maximaleProfielBreedteY < 5) {
+      return null;
+    }
+
+    final profielBreedteX = (vleugel.deurVleugelBreedteMm * schaalX)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteX)
+        .toDouble();
+    final profielBreedteY = (vleugel.deurVleugelBreedteMm * schaalY)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteY)
+        .toDouble();
+    final onderAfstandPx = (vleugel.deurVleugelOnderAfstandMm * schaalY)
+        .abs()
+        .clamp(0.0, buitenKader.height / 4)
+        .toDouble();
+
+    final deurRect = Rect.fromLTRB(
+      vleugel.vlak.left,
+      vleugel.vlak.top,
+      vleugel.vlak.right,
+      buitenKader.bottom - onderAfstandPx,
+    );
+
+    if (deurRect.width <= profielBreedteX * 2 + 8 ||
+        deurRect.height <= profielBreedteY * 2 + 8) {
+      return null;
+    }
+
+    return Rect.fromLTRB(
+      deurRect.left + profielBreedteX,
+      deurRect.top + profielBreedteY,
+      deurRect.right - profielBreedteX,
+      deurRect.bottom - profielBreedteY,
+    );
+  }
+
+  double _afstandTotLijnstuk({
+    required Offset punt,
+    required Offset start,
+    required Offset einde,
+  }) {
+    final dx = einde.dx - start.dx;
+    final dy = einde.dy - start.dy;
+    final lengteKwadraat = dx * dx + dy * dy;
+
+    if (lengteKwadraat <= 0) {
+      return (punt - start).distance;
+    }
+
+    final t =
+        (((punt.dx - start.dx) * dx + (punt.dy - start.dy) * dy) /
+                lengteKwadraat)
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+    final projectie = Offset(start.dx + dx * t, start.dy + dy * t);
+
+    return (punt - projectie).distance;
   }
 
   void _meldOverzichtTekeningGewijzigd({
@@ -3017,6 +3468,10 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
+    if (_voegTStijlToeInDeurVleugel(size)) {
+      return;
+    }
+
     final resultaat = OpmetingRaamTStijlActieHelper.voegToe(
       geselecteerdeLijn: _geselecteerdeLijn,
       tekenvlakGrootte: size,
@@ -3044,6 +3499,139 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     });
 
     _planAlleLegendaMeldingen();
+  }
+
+  bool _voegTStijlToeInDeurVleugel(Size size) {
+    final lijn = _geselecteerdeLijn;
+
+    if (lijn == null || !lijn.id.startsWith('deurvleugel:')) {
+      return false;
+    }
+
+    _DeurVleugelBinnenLijnInfo? info;
+
+    for (final kandidaat in _deurVleugelBinnenLijnen(size)) {
+      if (kandidaat.lijn.id == lijn.id) {
+        info = kandidaat;
+        break;
+      }
+    }
+
+    if (info == null) {
+      return false;
+    }
+
+    final binnenRect = info.binnenRect;
+
+    if (binnenRect.width <= 12 || binnenRect.height <= 12) {
+      return false;
+    }
+
+    final geselecteerdeLijnIsHorizontaal = info.lijn.isHorizontaal;
+    final richting = geselecteerdeLijnIsHorizontaal
+        ? 'verticaal'
+        : 'horizontaal';
+
+    final positie = geselecteerdeLijnIsHorizontaal
+        ? _berekenTStijlPositieInDeurVleugel(
+            lengtePx: binnenRect.width,
+            lengteMm: _actiefTStijlBreedteMm,
+          )
+        : _berekenTStijlPositieInDeurVleugel(
+            lengtePx: binnenRect.height,
+            lengteMm: _actiefTStijlHoogteMm,
+          );
+
+    final marge = 6.0;
+
+    late final Offset start;
+    late final Offset einde;
+
+    if (geselecteerdeLijnIsHorizontaal) {
+      final x = (binnenRect.left + positie)
+          .clamp(binnenRect.left + marge, binnenRect.right - marge)
+          .toDouble();
+      start = Offset(x, binnenRect.top);
+      einde = Offset(x, binnenRect.bottom);
+    } else {
+      final y = (binnenRect.top + positie)
+          .clamp(binnenRect.top + marge, binnenRect.bottom - marge)
+          .toDouble();
+      start = Offset(binnenRect.left, y);
+      einde = Offset(binnenRect.right, y);
+    }
+
+    final positieFractie = geselecteerdeLijnIsHorizontaal
+        ? ((start.dx - binnenRect.left) / binnenRect.width)
+              .clamp(0.0, 1.0)
+              .toDouble()
+        : ((start.dy - binnenRect.top) / binnenRect.height)
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+    final nieuweTStijl = OpmetingRaamTStijl(
+      id: 'tstijl_${DateTime.now().microsecondsSinceEpoch}',
+      richting: richting,
+      start: start,
+      einde: einde,
+      breedteMm: 90,
+      werkvlakId: 'deurvleugel_${info.vleugel.id}',
+      positieFractie: positieFractie,
+    );
+
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangTStijlen(<OpmetingRaamTStijl>[..._tStijlen, nieuweTStijl]);
+
+      _bewaarTStijlenVoorActiefKader();
+
+      _wisTekeningSelecties();
+      _schoonVullingEnKleinhoutenOp();
+    });
+
+    _planAlleLegendaMeldingen();
+
+    return true;
+  }
+
+  double _berekenTStijlPositieInDeurVleugel({
+    required double lengtePx,
+    required int lengteMm,
+  }) {
+    final fractie = _fractieVoorTStijlPositieType(_positieType);
+
+    if (fractie != null) {
+      return lengtePx * fractie;
+    }
+
+    final tekst = widget.positieController.text.trim().replaceAll(',', '.');
+    final mm = double.tryParse(tekst) ?? 0;
+
+    if (lengteMm <= 0) {
+      return lengtePx / 2;
+    }
+
+    return (mm * lengtePx / lengteMm).clamp(0.0, lengtePx).toDouble();
+  }
+
+  double? _fractieVoorTStijlPositieType(String waarde) {
+    switch (waarde) {
+      case '1/2':
+        return 0.5;
+      case '1/3':
+        return 1 / 3;
+      case '2/3':
+        return 2 / 3;
+      case '1/4':
+        return 0.25;
+      case '2/4':
+        return 0.5;
+      case '3/4':
+        return 0.75;
+      default:
+        return null;
+    }
   }
 
   void _verplaatsGeselecteerdeTStijl() {
@@ -3175,6 +3763,1039 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     });
 
     _planAlleLegendaMeldingen();
+  }
+
+  Future<void> _pasDeurVleugelToe(Offset punt) async {
+    final size = _actueleTekenvlakGrootte();
+
+    if (size == null) {
+      return;
+    }
+
+    final bestaandeGroep = _deurVleugelGroepVoorPunt(punt);
+
+    if (bestaandeGroep.isNotEmpty) {
+      final bestaandeVleugel = bestaandeGroep.first;
+
+      final keuze = await _toonDeurVleugelKeuzeMenu(
+        bestaandeVleugel: bestaandeVleugel,
+        toonWissen: true,
+      );
+
+      if (!mounted || keuze == null) {
+        return;
+      }
+
+      final groepId = bestaandeVleugel.deurVleugelGroepId.trim();
+      final bestaandeIds = bestaandeGroep.map((vleugel) => vleugel.id).toSet();
+
+      bool hoortBijBestaandeGroep(OpmetingRaamVleugel vleugel) {
+        if (!vleugel.isDeurVleugel) {
+          return false;
+        }
+
+        if (groepId.isNotEmpty) {
+          return vleugel.deurVleugelGroepId == groepId;
+        }
+
+        return bestaandeIds.contains(vleugel.id);
+      }
+
+      if (keuze.wissen) {
+        final teVerwijderenWerkvlakIds = _deurVleugelWerkvlakIdsVoorVleugels(
+          bestaandeGroep,
+        );
+
+        _bewaarVoorWijziging();
+
+        setState(() {
+          _vervangVleugels(
+            _vleugels.where((vleugel) {
+              return !hoortBijBestaandeGroep(vleugel);
+            }).toList(),
+          );
+
+          _vervangTStijlen(
+            _tStijlen.where((stijl) {
+              return !teVerwijderenWerkvlakIds.contains(stijl.werkvlakId);
+            }).toList(),
+          );
+
+          _bewaarVleugelsVoorActiefKader();
+          _bewaarTStijlenVoorActiefKader();
+          _geselecteerdeLijn = null;
+          _wisTekeningSelecties();
+          _schoonVullingEnKleinhoutenOp();
+        });
+
+        _planAlleLegendaMeldingen();
+        return;
+      }
+
+      final bestaandVlak = OpmetingRaamVulvlak(
+        id: 'bestaande_deurvleugel_${bestaandeVleugel.id}',
+        werkvlakId: 'kader',
+        vlak: _samengevoegdVlakVoorDeurVleugels(bestaandeGroep),
+      );
+
+      final gemaakteDeurVleugels = keuze.isDubbel
+          ? _maakDubbeleDeurVleugels(
+              vulvlak: bestaandVlak,
+              size: size,
+              keuze: keuze,
+            )
+          : <OpmetingRaamVleugel>[
+              _maakEnkeleDeurVleugel(vulvlak: bestaandVlak, keuze: keuze),
+            ];
+
+      if (gemaakteDeurVleugels.isEmpty) {
+        OpmetingRaamSnackBarHelper.toonWaarschuwing(
+          context,
+          'De dubbele deur kan niet in dit te smalle vlak geplaatst worden.',
+        );
+        return;
+      }
+
+      final nieuweDeurVleugels = _behoudBestaandeDeurVleugelIds(
+        oudeGroep: bestaandeGroep,
+        nieuweGroep: gemaakteDeurVleugels,
+      );
+
+      final aangepasteTStijlen = _pasTStijlenAanVoorGewijzigdeDeurVleugel(
+        size: size,
+        oudeDeurVleugels: bestaandeGroep,
+        nieuweDeurVleugels: nieuweDeurVleugels,
+        bestaandeTStijlen: _tStijlen,
+      );
+
+      _bewaarVoorWijziging();
+
+      setState(() {
+        _vervangVleugels(<OpmetingRaamVleugel>[
+          ..._vleugels.where((vleugel) {
+            return !hoortBijBestaandeGroep(vleugel);
+          }),
+          ...nieuweDeurVleugels,
+        ]);
+
+        _vervangTStijlen(aangepasteTStijlen);
+
+        _bewaarVleugelsVoorActiefKader();
+        _bewaarTStijlenVoorActiefKader();
+        _geselecteerdeLijn = null;
+        _wisTekeningSelecties();
+        _schoonVullingEnKleinhoutenOp();
+      });
+
+      _planAlleLegendaMeldingen();
+      return;
+    }
+
+    final vulvlak = OpmetingRaamVullingHelper.vindVulvlak(
+      punt: punt,
+      vulvlakken: _bepaalVulvlakken(size),
+    );
+
+    if (vulvlak == null) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(
+        context,
+        'Klik binnen een leeg deurvlak om een deurvleugel te plaatsen.',
+      );
+      return;
+    }
+
+    final keuze = await _toonDeurVleugelKeuzeMenu();
+
+    if (!mounted || keuze == null || keuze.wissen) {
+      return;
+    }
+
+    final nieuweDeurVleugels = keuze.isDubbel
+        ? _maakDubbeleDeurVleugels(vulvlak: vulvlak, size: size, keuze: keuze)
+        : <OpmetingRaamVleugel>[
+            _maakEnkeleDeurVleugel(vulvlak: vulvlak, keuze: keuze),
+          ];
+
+    if (nieuweDeurVleugels.isEmpty) {
+      OpmetingRaamSnackBarHelper.toonWaarschuwing(
+        context,
+        'De dubbele deur kan niet in dit te smalle vlak geplaatst worden.',
+      );
+      return;
+    }
+
+    final nieuweVlak = vulvlak.vlak.inflate(2);
+
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangVleugels(<OpmetingRaamVleugel>[
+        ..._vleugels.where((vleugel) {
+          if (!vleugel.isDeurVleugel) {
+            return true;
+          }
+
+          return !nieuweVlak.overlaps(vleugel.vlak.inflate(2));
+        }),
+        ...nieuweDeurVleugels,
+      ]);
+
+      _bewaarVleugelsVoorActiefKader();
+
+      _geselecteerdeLijn = null;
+      _wisTekeningSelecties();
+      _schoonVullingEnKleinhoutenOp();
+    });
+
+    _planAlleLegendaMeldingen();
+  }
+
+  List<OpmetingRaamVleugel> _deurVleugelGroepVoorPunt(Offset punt) {
+    final aangeklikteDeurVleugel = _vleugels.where((vleugel) {
+      return vleugel.isDeurVleugel && vleugel.vlak.inflate(8).contains(punt);
+    }).toList();
+
+    if (aangeklikteDeurVleugel.isEmpty) {
+      return const <OpmetingRaamVleugel>[];
+    }
+
+    final basisVleugel = aangeklikteDeurVleugel.first;
+    final groepId = basisVleugel.deurVleugelGroepId.trim();
+
+    if (groepId.isEmpty) {
+      return <OpmetingRaamVleugel>[basisVleugel];
+    }
+
+    return _vleugels.where((vleugel) {
+      return vleugel.isDeurVleugel && vleugel.deurVleugelGroepId == groepId;
+    }).toList();
+  }
+
+  Rect _samengevoegdVlakVoorDeurVleugels(
+    List<OpmetingRaamVleugel> deurVleugels,
+  ) {
+    if (deurVleugels.isEmpty) {
+      return Rect.zero;
+    }
+
+    var vlak = deurVleugels.first.vlak;
+
+    for (final deurVleugel in deurVleugels.skip(1)) {
+      vlak = vlak.expandToInclude(deurVleugel.vlak);
+    }
+
+    return vlak;
+  }
+
+  List<OpmetingRaamVleugel> _behoudBestaandeDeurVleugelIds({
+    required List<OpmetingRaamVleugel> oudeGroep,
+    required List<OpmetingRaamVleugel> nieuweGroep,
+  }) {
+    if (oudeGroep.isEmpty || nieuweGroep.isEmpty) {
+      return nieuweGroep;
+    }
+
+    String? bestaandeGroepId;
+
+    for (final oudeVleugel in oudeGroep) {
+      final groepId = oudeVleugel.deurVleugelGroepId.trim();
+
+      if (groepId.isNotEmpty) {
+        bestaandeGroepId = groepId;
+        break;
+      }
+    }
+
+    final oudePerDeel = <OpmetingRaamDeurVleugelDeel, OpmetingRaamVleugel>{};
+
+    for (final oudeVleugel in oudeGroep) {
+      oudePerDeel[oudeVleugel.deurVleugelDeel] = oudeVleugel;
+    }
+
+    return nieuweGroep.map((nieuweVleugel) {
+      final overeenkomstigeOudeVleugel =
+          oudePerDeel[nieuweVleugel.deurVleugelDeel];
+
+      if (overeenkomstigeOudeVleugel == null) {
+        return nieuweVleugel.copyWith(
+          deurVleugelGroepId:
+              bestaandeGroepId ?? nieuweVleugel.deurVleugelGroepId,
+        );
+      }
+
+      return nieuweVleugel.copyWith(
+        id: overeenkomstigeOudeVleugel.id,
+        deurVleugelGroepId:
+            bestaandeGroepId ?? overeenkomstigeOudeVleugel.deurVleugelGroepId,
+      );
+    }).toList();
+  }
+
+  List<OpmetingRaamTStijl> _pasTStijlenAanVoorGewijzigdeDeurVleugel({
+    required Size size,
+    required List<OpmetingRaamVleugel> oudeDeurVleugels,
+    required List<OpmetingRaamVleugel> nieuweDeurVleugels,
+    required List<OpmetingRaamTStijl> bestaandeTStijlen,
+  }) {
+    final buitenKader = OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
+    );
+
+    if (buitenKader.width <= 0 || buitenKader.height <= 0) {
+      return bestaandeTStijlen;
+    }
+
+    final oudeWerkvlakken = _deurVleugelWerkvlakkenVoorVleugels(
+      deurVleugels: oudeDeurVleugels,
+      buitenKader: buitenKader,
+    );
+    final nieuweWerkvlakken = _deurVleugelWerkvlakkenVoorVleugels(
+      deurVleugels: nieuweDeurVleugels,
+      buitenKader: buitenKader,
+    );
+
+    if (oudeWerkvlakken.isEmpty) {
+      return bestaandeTStijlen;
+    }
+
+    final werkvlakKoppelingen = <String, String>{};
+
+    for (final oudeVleugel in oudeDeurVleugels) {
+      OpmetingRaamVleugel? nieuweVleugel;
+
+      for (final kandidaat in nieuweDeurVleugels) {
+        if (kandidaat.id == oudeVleugel.id &&
+            kandidaat.deurVleugelDeel == oudeVleugel.deurVleugelDeel) {
+          nieuweVleugel = kandidaat;
+          break;
+        }
+      }
+
+      if (nieuweVleugel == null) {
+        continue;
+      }
+
+      werkvlakKoppelingen[_deurVleugelWerkvlakId(oudeVleugel)] =
+          _deurVleugelWerkvlakId(nieuweVleugel);
+    }
+
+    final resultaat = <OpmetingRaamTStijl>[];
+
+    for (final stijl in bestaandeTStijlen) {
+      final oudWerkvlakId = _vindOudDeurWerkvlakIdVoorTStijl(
+        stijl: stijl,
+        oudeWerkvlakken: oudeWerkvlakken,
+      );
+
+      if (oudWerkvlakId == null) {
+        resultaat.add(stijl);
+        continue;
+      }
+
+      final oudWerkvlak = oudeWerkvlakken[oudWerkvlakId];
+      final nieuwWerkvlakId = werkvlakKoppelingen[oudWerkvlakId];
+      final nieuwWerkvlak = nieuwWerkvlakId == null
+          ? null
+          : nieuweWerkvlakken[nieuwWerkvlakId];
+
+      if (oudWerkvlak == null ||
+          nieuwWerkvlak == null ||
+          oudWerkvlak.width <= 0 ||
+          oudWerkvlak.height <= 0 ||
+          nieuwWerkvlak.width <= 0 ||
+          nieuwWerkvlak.height <= 0) {
+        continue;
+      }
+
+      resultaat.add(
+        _schaalTStijlBinnenDeurWerkvlak(
+          stijl: stijl,
+          oudWerkvlak: oudWerkvlak,
+          nieuwWerkvlak: nieuwWerkvlak,
+          nieuwWerkvlakId: nieuwWerkvlakId!,
+        ),
+      );
+    }
+
+    return resultaat;
+  }
+
+  String? _vindOudDeurWerkvlakIdVoorTStijl({
+    required OpmetingRaamTStijl stijl,
+    required Map<String, Rect> oudeWerkvlakken,
+  }) {
+    if (oudeWerkvlakken.containsKey(stijl.werkvlakId)) {
+      return stijl.werkvlakId;
+    }
+
+    // Oudere of fout aangemaakte T-stijlen in een deurvleugel kunnen nog
+    // werkvlakId 'kader' hebben. Die moeten bij een middenverschuiving toch
+    // mee naar het juiste deurdeel. Daarom zoeken we niet enkel op werkvlakId,
+    // maar ook op de echte positie van de T-stijl binnen de oude deurvlakken.
+    final controlePunt = _controlePuntVoorTStijl(stijl);
+
+    String? besteWerkvlakId;
+    var besteAfstand = double.infinity;
+
+    for (final entry in oudeWerkvlakken.entries) {
+      final vlak = entry.value;
+
+      if (vlak.inflate(8).contains(controlePunt)) {
+        return entry.key;
+      }
+
+      if (_tStijlLijnRect(stijl).overlaps(vlak.inflate(8))) {
+        return entry.key;
+      }
+
+      final afstand = (controlePunt - vlak.center).distance;
+
+      if (afstand < besteAfstand) {
+        besteAfstand = afstand;
+        besteWerkvlakId = entry.key;
+      }
+    }
+
+    if (stijl.werkvlakId.startsWith('deurvleugel_')) {
+      return besteWerkvlakId;
+    }
+
+    // Voor T-stijlen die per ongeluk nog op 'kader' staan, koppelen we enkel
+    // automatisch wanneer het lijnstuk duidelijk in of tegen een oud
+    // deurwerkvlak ligt. Zo verplaatsen gewone kader-T-stijlen niet mee.
+    for (final entry in oudeWerkvlakken.entries) {
+      final vlak = entry.value.inflate(18);
+      final lijnRect = _tStijlLijnRect(stijl);
+
+      if (lijnRect.overlaps(vlak) || vlak.contains(controlePunt)) {
+        return entry.key;
+      }
+    }
+
+    return null;
+  }
+
+  Offset _controlePuntVoorTStijl(OpmetingRaamTStijl stijl) {
+    return Offset(
+      (stijl.start.dx + stijl.einde.dx) / 2,
+      (stijl.start.dy + stijl.einde.dy) / 2,
+    );
+  }
+
+  Rect _tStijlLijnRect(OpmetingRaamTStijl stijl) {
+    const marge = 3.0;
+
+    final left = stijl.start.dx < stijl.einde.dx
+        ? stijl.start.dx
+        : stijl.einde.dx;
+    final right = stijl.start.dx > stijl.einde.dx
+        ? stijl.start.dx
+        : stijl.einde.dx;
+    final top = stijl.start.dy < stijl.einde.dy
+        ? stijl.start.dy
+        : stijl.einde.dy;
+    final bottom = stijl.start.dy > stijl.einde.dy
+        ? stijl.start.dy
+        : stijl.einde.dy;
+
+    return Rect.fromLTRB(left, top, right, bottom).inflate(marge);
+  }
+
+  Set<String> _deurVleugelWerkvlakIdsVoorVleugels(
+    List<OpmetingRaamVleugel> deurVleugels,
+  ) {
+    return deurVleugels
+        .where((vleugel) => vleugel.isDeurVleugel)
+        .map(_deurVleugelWerkvlakId)
+        .toSet();
+  }
+
+  Map<String, Rect> _deurVleugelWerkvlakkenVoorVleugels({
+    required List<OpmetingRaamVleugel> deurVleugels,
+    required Rect buitenKader,
+  }) {
+    final resultaat = <String, Rect>{};
+
+    for (final deurVleugel in deurVleugels) {
+      if (!deurVleugel.isDeurVleugel) {
+        continue;
+      }
+
+      final binnenRect = _deurVleugelBinnenRect(
+        vleugel: deurVleugel,
+        buitenKader: buitenKader,
+      );
+
+      if (binnenRect == null ||
+          binnenRect.width <= 0 ||
+          binnenRect.height <= 0) {
+        continue;
+      }
+
+      resultaat[_deurVleugelWerkvlakId(deurVleugel)] = binnenRect;
+    }
+
+    return resultaat;
+  }
+
+  String _deurVleugelWerkvlakId(OpmetingRaamVleugel deurVleugel) {
+    return 'deurvleugel_${deurVleugel.id}';
+  }
+
+  OpmetingRaamTStijl _schaalTStijlBinnenDeurWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect oudWerkvlak,
+    required Rect nieuwWerkvlak,
+    required String nieuwWerkvlakId,
+  }) {
+    final fractie = _positieFractieVoorTStijlInWerkvlak(
+      stijl: stijl,
+      werkvlak: oudWerkvlak,
+    );
+    final actueleLijn = _lijnVoorTStijlInDeurWerkvlak(
+      stijl: stijl.copyWith(
+        werkvlakId: nieuwWerkvlakId,
+        positieFractie: fractie,
+      ),
+      werkvlak: nieuwWerkvlak,
+    );
+
+    return stijl.copyWith(
+      start: actueleLijn.start,
+      einde: actueleLijn.einde,
+      werkvlakId: nieuwWerkvlakId,
+      positieFractie: fractie,
+    );
+  }
+
+  double _positieFractieVoorTStijlInWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+  }) {
+    final opgeslagenFractie = stijl.positieFractie;
+
+    if (opgeslagenFractie != null && opgeslagenFractie.isFinite) {
+      return opgeslagenFractie.clamp(0.0, 1.0).toDouble();
+    }
+
+    if (stijl.richting == 'verticaal') {
+      if (werkvlak.width <= 0) {
+        return 0.5;
+      }
+
+      return ((stijl.start.dx - werkvlak.left) / werkvlak.width)
+          .clamp(0.0, 1.0)
+          .toDouble();
+    }
+
+    if (werkvlak.height <= 0) {
+      return 0.5;
+    }
+
+    return ((stijl.start.dy - werkvlak.top) / werkvlak.height)
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
+
+  OpmetingRaamLijn _lijnVoorTStijlInDeurWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+  }) {
+    final fractie = _positieFractieVoorTStijlInWerkvlak(
+      stijl: stijl,
+      werkvlak: werkvlak,
+    );
+
+    if (stijl.richting == 'verticaal') {
+      final x = (werkvlak.left + werkvlak.width * fractie)
+          .clamp(werkvlak.left, werkvlak.right)
+          .toDouble();
+
+      return OpmetingRaamLijn(
+        id: stijl.id,
+        start: Offset(x, werkvlak.top),
+        einde: Offset(x, werkvlak.bottom),
+      );
+    }
+
+    final y = (werkvlak.top + werkvlak.height * fractie)
+        .clamp(werkvlak.top, werkvlak.bottom)
+        .toDouble();
+
+    return OpmetingRaamLijn(
+      id: stijl.id,
+      start: Offset(werkvlak.left, y),
+      einde: Offset(werkvlak.right, y),
+    );
+  }
+
+  OpmetingRaamVleugel _maakEnkeleDeurVleugel({
+    required OpmetingRaamVulvlak vulvlak,
+    required _DeurVleugelPlaatsKeuze keuze,
+  }) {
+    final tijd = DateTime.now().microsecondsSinceEpoch;
+
+    return OpmetingRaamVleugel(
+      id: 'deurvleugel_$tijd',
+      vlak: vulvlak.vlak,
+      type: OpmetingRaamVleugelType.vastDubbeleKader,
+      isDeurVleugel: true,
+      deurVleugelBreedteMm: 100,
+      deurVleugelOnderAfstandMm: 5,
+      deurVleugelSoort: OpmetingRaamDeurVleugelSoort.achterdeur,
+      deurVleugelKrukType: keuze.krukType,
+      deurVleugelKrukZijde: keuze.krukZijde,
+      deurDraairichting: keuze.draairichting,
+      deurVleugelAantal: OpmetingRaamDeurVleugelAantal.enkel,
+      deurVleugelDeel: OpmetingRaamDeurVleugelDeel.enkel,
+      deurKrukPlaatsing: keuze.krukPlaatsing,
+      deurVleugelMiddenVerschuivingMm: 0,
+      deurVleugelGroepId: 'deurvleugelgroep_$tijd',
+    );
+  }
+
+  List<OpmetingRaamVleugel> _maakDubbeleDeurVleugels({
+    required OpmetingRaamVulvlak vulvlak,
+    required Size size,
+    required _DeurVleugelPlaatsKeuze keuze,
+  }) {
+    final buitenKader = OpmetingRaamKaderHelper.buitenKader(
+      size: size,
+      breedteMm: _actiefVleugelBreedteMm,
+      hoogteMm: _actiefVleugelHoogteMm,
+    );
+
+    if (buitenKader.width <= 0 || _actiefVleugelBreedteMm <= 0) {
+      return const <OpmetingRaamVleugel>[];
+    }
+
+    final schaalX = buitenKader.width / _actiefVleugelBreedteMm;
+    final verschuivingPx = keuze.middenVerschuivingMm * schaalX;
+    final minimaleVleugelBreedte = vulvlak.vlak.width * 0.22;
+
+    final splitX = (vulvlak.vlak.center.dx + verschuivingPx)
+        .clamp(
+          vulvlak.vlak.left + minimaleVleugelBreedte,
+          vulvlak.vlak.right - minimaleVleugelBreedte,
+        )
+        .toDouble();
+
+    final linksVlak = Rect.fromLTRB(
+      vulvlak.vlak.left,
+      vulvlak.vlak.top,
+      splitX,
+      vulvlak.vlak.bottom,
+    );
+
+    final rechtsVlak = Rect.fromLTRB(
+      splitX,
+      vulvlak.vlak.top,
+      vulvlak.vlak.right,
+      vulvlak.vlak.bottom,
+    );
+
+    if (linksVlak.width < 24 || rechtsVlak.width < 24) {
+      return const <OpmetingRaamVleugel>[];
+    }
+
+    final tijd = DateTime.now().microsecondsSinceEpoch;
+    final groepId = 'deurvleugelgroep_$tijd';
+
+    OpmetingRaamVleugel maakDeel({
+      required Rect vlak,
+      required OpmetingRaamDeurVleugelDeel deel,
+    }) {
+      return OpmetingRaamVleugel(
+        id: '${groepId}_${deel.opslagWaarde}',
+        vlak: vlak,
+        type: OpmetingRaamVleugelType.vastDubbeleKader,
+        isDeurVleugel: true,
+        deurVleugelBreedteMm: 100,
+        deurVleugelOnderAfstandMm: 5,
+        deurVleugelSoort: OpmetingRaamDeurVleugelSoort.achterdeur,
+        deurVleugelKrukType: keuze.krukType,
+        deurVleugelKrukZijde: keuze.krukZijde,
+        deurDraairichting: keuze.draairichting,
+        deurVleugelAantal: OpmetingRaamDeurVleugelAantal.dubbel,
+        deurVleugelDeel: deel,
+        deurKrukPlaatsing: keuze.krukPlaatsing,
+        deurVleugelMiddenVerschuivingMm: keuze.middenVerschuivingMm,
+        deurVleugelGroepId: groepId,
+      );
+    }
+
+    return <OpmetingRaamVleugel>[
+      maakDeel(vlak: linksVlak, deel: OpmetingRaamDeurVleugelDeel.links),
+      maakDeel(vlak: rechtsVlak, deel: OpmetingRaamDeurVleugelDeel.rechts),
+    ];
+  }
+
+  String _deurVleugelMenuKeuzeVoorBestaandeVleugel(
+    OpmetingRaamVleugel? bestaandeVleugel,
+  ) {
+    if (bestaandeVleugel == null) {
+      return 'enkel_links';
+    }
+
+    final zijde =
+        bestaandeVleugel.deurVleugelKrukZijde == OpmetingRaamKrukZijde.rechts
+        ? 'rechts'
+        : 'links';
+
+    if (bestaandeVleugel.isDubbeleDeurVleugel) {
+      return 'dubbel_$zijde';
+    }
+
+    return 'enkel_$zijde';
+  }
+
+  Future<_DeurVleugelPlaatsKeuze?> _toonDeurVleugelKeuzeMenu({
+    OpmetingRaamVleugel? bestaandeVleugel,
+    bool toonWissen = false,
+  }) {
+    return showDialog<_DeurVleugelPlaatsKeuze>(
+      context: context,
+      builder: (dialogContext) {
+        var draairichting =
+            bestaandeVleugel?.deurDraairichting ??
+            OpmetingRaamDeurDraairichting.binnendraaiend;
+        var vleugelKeuze = _deurVleugelMenuKeuzeVoorBestaandeVleugel(
+          bestaandeVleugel,
+        );
+        var krukPlaatsing =
+            bestaandeVleugel?.deurKrukPlaatsing ??
+            OpmetingRaamDeurKrukPlaatsing.binnen;
+        var rolluikkruk =
+            bestaandeVleugel?.deurVleugelKrukType ==
+            OpmetingRaamDeurVleugelKrukType.rolluikkruk;
+        final verschuivingController = TextEditingController(
+          text: '${bestaandeVleugel?.deurVleugelMiddenVerschuivingMm ?? 0}',
+        );
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final isDubbel = vleugelKeuze.startsWith('dubbel');
+
+            Widget sectieTitel(String tekst) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 7),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    tekst,
+                    style: const TextStyle(
+                      color: Color(0xFF0B7A3B),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            Widget keuzeKnop({
+              required bool geselecteerd,
+              required String titel,
+              required VoidCallback onTap,
+            }) {
+              return InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: onTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: geselecteerd
+                        ? const Color(0xFFE7F6EC)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: geselecteerd
+                          ? const Color(0xFF0B7A3B)
+                          : const Color(0xFFE5E7EB),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        geselecteerd
+                            ? Icons.check_circle_rounded
+                            : Icons.radio_button_unchecked_rounded,
+                        size: 17,
+                        color: geselecteerd
+                            ? const Color(0xFF0B7A3B)
+                            : const Color(0xFF9CA3AF),
+                      ),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          titel,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: geselecteerd
+                                ? const Color(0xFF0B7A3B)
+                                : const Color(0xFF111827),
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(18, 16, 12, 0),
+              contentPadding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
+              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      toonWissen
+                          ? 'Deurvleugel aanpassen'
+                          : 'Deurvleugel selecteren',
+                      style: const TextStyle(
+                        color: Color(0xFF0B7A3B),
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                    },
+                    icon: const Icon(Icons.close_rounded),
+                    color: const Color(0xFF0B7A3B),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      sectieTitel('Draairichting'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          keuzeKnop(
+                            geselecteerd:
+                                draairichting ==
+                                OpmetingRaamDeurDraairichting.binnendraaiend,
+                            titel: 'Binnendraaiend',
+                            onTap: () {
+                              setDialogState(() {
+                                draairichting = OpmetingRaamDeurDraairichting
+                                    .binnendraaiend;
+                              });
+                            },
+                          ),
+                          keuzeKnop(
+                            geselecteerd:
+                                draairichting ==
+                                OpmetingRaamDeurDraairichting.buitendraaiend,
+                            titel: 'Buitendraaiend',
+                            onTap: () {
+                              setDialogState(() {
+                                draairichting = OpmetingRaamDeurDraairichting
+                                    .buitendraaiend;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      sectieTitel('Vleugel en krukkant'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          keuzeKnop(
+                            geselecteerd: vleugelKeuze == 'enkel_links',
+                            titel: 'Enkele vleugel\nkruk links',
+                            onTap: () {
+                              setDialogState(
+                                () => vleugelKeuze = 'enkel_links',
+                              );
+                            },
+                          ),
+                          keuzeKnop(
+                            geselecteerd: vleugelKeuze == 'enkel_rechts',
+                            titel: 'Enkele vleugel\nkruk rechts',
+                            onTap: () {
+                              setDialogState(
+                                () => vleugelKeuze = 'enkel_rechts',
+                              );
+                            },
+                          ),
+                          keuzeKnop(
+                            geselecteerd: vleugelKeuze == 'dubbel_rechts',
+                            titel: 'Dubbele vleugel\nkruk rechterdeel',
+                            onTap: () {
+                              setDialogState(
+                                () => vleugelKeuze = 'dubbel_rechts',
+                              );
+                            },
+                          ),
+                          keuzeKnop(
+                            geselecteerd: vleugelKeuze == 'dubbel_links',
+                            titel: 'Dubbele vleugel\nkruk linkerdeel',
+                            onTap: () {
+                              setDialogState(
+                                () => vleugelKeuze = 'dubbel_links',
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      sectieTitel('Kruk'),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          keuzeKnop(
+                            geselecteerd:
+                                krukPlaatsing ==
+                                OpmetingRaamDeurKrukPlaatsing.binnen,
+                            titel: 'Kruk binnen',
+                            onTap: () {
+                              setDialogState(() {
+                                krukPlaatsing =
+                                    OpmetingRaamDeurKrukPlaatsing.binnen;
+                              });
+                            },
+                          ),
+                          keuzeKnop(
+                            geselecteerd:
+                                krukPlaatsing ==
+                                OpmetingRaamDeurKrukPlaatsing.binnenEnBuiten,
+                            titel: 'Kruk binnen\nen buiten',
+                            onTap: () {
+                              setDialogState(() {
+                                krukPlaatsing = OpmetingRaamDeurKrukPlaatsing
+                                    .binnenEnBuiten;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      CheckboxListTile(
+                        value: rolluikkruk,
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: const Color(0xFF0B7A3B),
+                        title: const Text(
+                          'Rolluikkruk',
+                          style: TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (waarde) {
+                          setDialogState(() {
+                            rolluikkruk = waarde == true;
+                          });
+                        },
+                      ),
+                      if (isDubbel) ...[
+                        sectieTitel('Verdeling dubbele deur'),
+                        TextField(
+                          controller: verschuivingController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            signed: true,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Verschuiving vanaf midden in mm',
+                            helperText:
+                                '100 = rechterdeel 100 mm kleiner · -100 = linkerdeel 100 mm kleiner',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                if (toonWissen)
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFDC2626),
+                    ),
+                    onPressed: () {
+                      Navigator.pop(
+                        dialogContext,
+                        _DeurVleugelPlaatsKeuze.wissen(),
+                      );
+                    },
+                    icon: const Icon(Icons.delete_outline_rounded),
+                    label: const Text('Wissen'),
+                  ),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF0B7A3B),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  child: const Text('Annuleren'),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0B7A3B),
+                  ),
+                  onPressed: () {
+                    final isDubbel = vleugelKeuze.startsWith('dubbel');
+                    final krukZijde = vleugelKeuze.endsWith('rechts')
+                        ? OpmetingRaamKrukZijde.rechts
+                        : OpmetingRaamKrukZijde.links;
+
+                    Navigator.pop(
+                      dialogContext,
+                      _DeurVleugelPlaatsKeuze(
+                        draairichting: draairichting,
+                        aantal: isDubbel
+                            ? OpmetingRaamDeurVleugelAantal.dubbel
+                            : OpmetingRaamDeurVleugelAantal.enkel,
+                        krukZijde: krukZijde,
+                        krukPlaatsing: krukPlaatsing,
+                        krukType: rolluikkruk
+                            ? OpmetingRaamDeurVleugelKrukType.rolluikkruk
+                            : OpmetingRaamDeurVleugelKrukType.kruk,
+                        middenVerschuivingMm: isDubbel
+                            ? int.tryParse(
+                                    verschuivingController.text
+                                        .trim()
+                                        .replaceAll(',', '.'),
+                                  ) ??
+                                  0
+                            : 0,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('Plaatsen'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _voerMenuWijzigingUit(VoidCallback wijziging) {
@@ -3544,22 +5165,6 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
   }
 
-  void _resetToevoegKaderVoorNieuwKader() {
-    _toevoegKaderId = null;
-    _toevoegKaderZijde = null;
-    _toevoegKaderUitlijning = null;
-    _toevoegKaderVrijeBasisUitlijning = OpmetingKaderUitlijning.begin;
-    _toevoegKaderVrijeOffsetController.text = '0';
-
-    final actiefKaderId = widget.kaderSamenstelling?.actiefKader?.id;
-
-    if (actiefKaderId != null && actiefKaderId.trim().isNotEmpty) {
-      _toevoegAnkerKaderId = actiefKaderId;
-    } else {
-      _toevoegAnkerKaderId = null;
-    }
-  }
-
   OpmetingKaderDeel? get _ankerKaderVoorToevoegMenu {
     final samenstelling = widget.kaderSamenstelling;
 
@@ -3792,60 +5397,39 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return const SizedBox.shrink();
     }
 
-    return Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: Theme.of(
-          context,
-        ).colorScheme.copyWith(primary: const Color(0xFF0B7A3B)),
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: Color(0xFF0B7A3B),
-          selectionHandleColor: Color(0xFF0B7A3B),
-        ),
-        inputDecorationTheme: const InputDecorationTheme(
-          floatingLabelStyle: TextStyle(
-            color: Color(0xFF0B7A3B),
-            fontWeight: FontWeight.w700,
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.8),
-          ),
-        ),
-      ),
-      child: OpmetingRaamKaderToevoegMenuOverlay(
-        ankerKader: ankerKader,
-        positie: _kaderToevoegMenuPositie,
-        onPositieGewijzigd: (positie) {
-          if (!mounted) {
-            return;
-          }
+    return OpmetingRaamKaderToevoegMenuOverlay(
+      ankerKader: ankerKader,
+      positie: _kaderToevoegMenuPositie,
+      onPositieGewijzigd: (positie) {
+        if (!mounted) {
+          return;
+        }
 
-          setState(() {
-            _kaderToevoegMenuPositie = positie;
-          });
-        },
-        onSluiten: () {
-          if (!mounted) {
-            return;
-          }
+        setState(() {
+          _kaderToevoegMenuPositie = positie;
+        });
+      },
+      onSluiten: () {
+        if (!mounted) {
+          return;
+        }
 
-          setState(() {
-            _kaderToevoegMenuGesloten = true;
-            _resetToevoegKaderVoorNieuwKader();
-          });
-        },
-        geselecteerdeZijde: _toevoegKaderZijde,
-        geselecteerdeUitlijning: _toevoegKaderUitlijning,
-        geselecteerdeVrijeBasisUitlijning: _toevoegKaderVrijeBasisUitlijning,
-        onPositieGekozen: _selecteerToevoegKaderPositie,
-        onVrijePositieActiveren: _activeerToevoegVrijePositie,
-        onKaderWijziging: _tekenOfWijzigToevoegKader,
-        breedteController: _toevoegKaderBreedteController,
-        hoogteController: _toevoegKaderHoogteController,
-        vrijeOffsetController: _toevoegKaderVrijeOffsetController,
-        breedteFocusNode: _toevoegKaderBreedteFocusNode,
-        hoogteFocusNode: _toevoegKaderHoogteFocusNode,
-        vrijeOffsetFocusNode: _toevoegKaderVrijeOffsetFocusNode,
-      ),
+        setState(() {
+          _kaderToevoegMenuGesloten = true;
+        });
+      },
+      geselecteerdeZijde: _toevoegKaderZijde,
+      geselecteerdeUitlijning: _toevoegKaderUitlijning,
+      geselecteerdeVrijeBasisUitlijning: _toevoegKaderVrijeBasisUitlijning,
+      onPositieGekozen: _selecteerToevoegKaderPositie,
+      onVrijePositieActiveren: _activeerToevoegVrijePositie,
+      onKaderWijziging: _tekenOfWijzigToevoegKader,
+      breedteController: _toevoegKaderBreedteController,
+      hoogteController: _toevoegKaderHoogteController,
+      vrijeOffsetController: _toevoegKaderVrijeOffsetController,
+      breedteFocusNode: _toevoegKaderBreedteFocusNode,
+      hoogteFocusNode: _toevoegKaderHoogteFocusNode,
+      vrijeOffsetFocusNode: _toevoegKaderVrijeOffsetFocusNode,
     );
   }
 
@@ -3982,36 +5566,59 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
           ],
         );
       },
-      child: OpmetingRaamTekenvlakTekenlaag(
-        breedteMm: widget.breedteMm,
-        hoogteMm: widget.hoogteMm,
-        onTapDown: _klikTekenvlak,
-        geselecteerdeLijn: _geselecteerdeLijn,
-        previewPunt: preview,
-        tStijlen: _tStijlen,
-        tStijlenPerKader: tStijlenPerKaderVoorWeergave,
-        vleugels: _vleugels,
-        vleugelsPerKader: vleugelsPerKaderVoorWeergave,
-        vulvlakken: vulvlakken,
-        vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
-        vullingToewijzingen: _vullingToewijzingen,
-        vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
-        geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-        geselecteerdeVulvlakIdsPerKader:
-            geselecteerdeVulvlakIdsPerKaderVoorWeergave,
-        kleinhouten: _kleinhouten,
-        kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
-        geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
-        geselecteerdeKleinhoutVlakIdsPerKader:
-            geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
-        technischeTekeningen: widget.technischeTekeningen,
-        technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
-        technischeTekeningenPerKaderGroep:
-            widget.technischeTekeningenPerKaderGroep,
-        technischeKaderGroepen: widget.technischeKaderGroepen,
-        geselecteerdeKaderIds: Set<String>.unmodifiable(_geselecteerdeKaderIds),
-        kaderSamenstelling: widget.kaderSamenstelling,
-        actiefKaderId: _actiefKaderIdVoorWeergave,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          OpmetingRaamTekenvlakTekenlaag(
+            breedteMm: widget.breedteMm,
+            hoogteMm: widget.hoogteMm,
+            onTapDown: (details) {
+              unawaited(_klikTekenvlak(details));
+            },
+            geselecteerdeLijn: _geselecteerdeLijn,
+            previewPunt: preview,
+            tStijlen: _tStijlen,
+            tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+            vleugels: _vleugels,
+            vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+            vulvlakken: vulvlakken,
+            vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+            vullingToewijzingen: _vullingToewijzingen,
+            vullingToewijzingenPerKader:
+                vullingToewijzingenPerKaderVoorWeergave,
+            geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
+            geselecteerdeVulvlakIdsPerKader:
+                geselecteerdeVulvlakIdsPerKaderVoorWeergave,
+            kleinhouten: _kleinhouten,
+            kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+            geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
+            geselecteerdeKleinhoutVlakIdsPerKader:
+                geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
+            technischeTekeningen: widget.technischeTekeningen,
+            technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
+            technischeTekeningenPerKaderGroep:
+                widget.technischeTekeningenPerKaderGroep,
+            technischeKaderGroepen: widget.technischeKaderGroepen,
+            geselecteerdeKaderIds: Set<String>.unmodifiable(
+              _geselecteerdeKaderIds,
+            ),
+            kaderSamenstelling: widget.kaderSamenstelling,
+            actiefKaderId: _actiefKaderIdVoorWeergave,
+          ),
+          IgnorePointer(
+            child: CustomPaint(
+              painter: OpmetingDeurpaneelTekenvlakPainter(
+                breedteMm: widget.breedteMm,
+                hoogteMm: widget.hoogteMm,
+                vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
+                toewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+                  _deurpaneelToewijzingen,
+                ),
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -4020,4 +5627,54 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   Widget build(BuildContext context) {
     return OpmetingRaamTekenvlakKader(inhoudBuilder: _bouwTekenvlakInhoud);
   }
+}
+
+class _DeurVleugelPlaatsKeuze {
+  const _DeurVleugelPlaatsKeuze({
+    required this.draairichting,
+    required this.aantal,
+    required this.krukZijde,
+    required this.krukPlaatsing,
+    required this.krukType,
+    required this.middenVerschuivingMm,
+    this.wissen = false,
+  });
+
+  factory _DeurVleugelPlaatsKeuze.wissen() {
+    return const _DeurVleugelPlaatsKeuze(
+      draairichting: OpmetingRaamDeurDraairichting.binnendraaiend,
+      aantal: OpmetingRaamDeurVleugelAantal.enkel,
+      krukZijde: OpmetingRaamKrukZijde.links,
+      krukPlaatsing: OpmetingRaamDeurKrukPlaatsing.binnen,
+      krukType: OpmetingRaamDeurVleugelKrukType.kruk,
+      middenVerschuivingMm: 0,
+      wissen: true,
+    );
+  }
+
+  final OpmetingRaamDeurDraairichting draairichting;
+  final OpmetingRaamDeurVleugelAantal aantal;
+  final OpmetingRaamKrukZijde krukZijde;
+  final OpmetingRaamDeurKrukPlaatsing krukPlaatsing;
+  final OpmetingRaamDeurVleugelKrukType krukType;
+  final int middenVerschuivingMm;
+  final bool wissen;
+
+  bool get isDubbel {
+    return aantal == OpmetingRaamDeurVleugelAantal.dubbel;
+  }
+}
+
+class _DeurVleugelBinnenLijnInfo {
+  const _DeurVleugelBinnenLijnInfo({
+    required this.vleugel,
+    required this.binnenRect,
+    required this.zijde,
+    required this.lijn,
+  });
+
+  final OpmetingRaamVleugel vleugel;
+  final Rect binnenRect;
+  final String zijde;
+  final OpmetingRaamLijn lijn;
 }

@@ -30,6 +30,12 @@ class AppStorage {
   static const String _opmetingRaamKeuzemenusAluKey =
       'opmeting_raam_keuzemenus_alu';
 
+  static const String _opmetingDeurKeuzemenusPvcKey =
+      'opmeting_deur_keuzemenus_pvc';
+
+  static const String _opmetingDeurKeuzemenusAluKey =
+      'opmeting_deur_keuzemenus_alu';
+
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
   static Future<SharedPreferences> openBox() async {
@@ -357,6 +363,16 @@ class AppStorage {
       case 'alu_raam':
       case 'ALU Raam':
         return _opmetingRaamKeuzemenusAluKey;
+
+      case 'pvcDeur':
+      case 'pvc_deur':
+      case 'PVC Deur':
+        return _opmetingDeurKeuzemenusPvcKey;
+
+      case 'aluDeur':
+      case 'alu_deur':
+      case 'ALU Deur':
+        return _opmetingDeurKeuzemenusAluKey;
 
       case 'pvcRaam':
       case 'pvc_raam':

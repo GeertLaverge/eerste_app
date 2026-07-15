@@ -187,6 +187,12 @@ class OneDriveSyncService {
         'opmetingRaamKeuzemenusAlu': prefs.getString(
           'opmeting_raam_keuzemenus_alu',
         ),
+        'opmetingDeurKeuzemenusPvc': prefs.getString(
+          'opmeting_deur_keuzemenus_pvc',
+        ),
+        'opmetingDeurKeuzemenusAlu': prefs.getString(
+          'opmeting_deur_keuzemenus_alu',
+        ),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
       };
 
@@ -515,6 +521,20 @@ class OneDriveSyncService {
         await prefs.setString(
           'opmeting_raam_keuzemenus_alu',
           data['opmetingRaamKeuzemenusAlu'],
+        );
+      }
+
+      if (data['opmetingDeurKeuzemenusPvc'] is String) {
+        await prefs.setString(
+          'opmeting_deur_keuzemenus_pvc',
+          data['opmetingDeurKeuzemenusPvc'],
+        );
+      }
+
+      if (data['opmetingDeurKeuzemenusAlu'] is String) {
+        await prefs.setString(
+          'opmeting_deur_keuzemenus_alu',
+          data['opmetingDeurKeuzemenusAlu'],
         );
       }
 

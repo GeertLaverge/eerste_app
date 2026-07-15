@@ -7,6 +7,7 @@ import '../helpers/sync/onedrive_auth_service.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/notities/notitie_acties_pagina.dart';
 import '../helpers/opmeting/raam/opmeting_raam_opvullingen_pagina.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_beheer_dialog.dart';
 
 class InstellingenPagina extends StatelessWidget {
   const InstellingenPagina({super.key});
@@ -37,6 +38,15 @@ class InstellingenPagina extends StatelessWidget {
             ),
           ],
         );
+      },
+    );
+  }
+
+  Future<void> _openDeurpanelenBeheer(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) {
+        return const OpmetingDeurpaneelBeheerDialog();
       },
     );
   }
@@ -217,6 +227,15 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.format_color_fill_outlined),
                 label: const Text('Opvullingen'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  _openDeurpanelenBeheer(context);
+                },
+                icon: const Icon(Icons.door_front_door_outlined),
+                label: const Text('Deurpanelen'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),

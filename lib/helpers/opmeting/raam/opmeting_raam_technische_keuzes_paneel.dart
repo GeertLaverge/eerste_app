@@ -8,6 +8,8 @@ import 'opmeting_raam_vulling_helper.dart';
 class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   const OpmetingRaamTechnischeKeuzesPaneel({
     super.key,
+    this.deurVleugelSamenvatting = '',
+    this.profielSamenvatting = '',
     required this.gekozenOpvullingen,
     required this.gekozenKleinhouten,
     required this.keuzemenus,
@@ -28,6 +30,8 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
     required this.onMenuVerwijderen,
   });
 
+  final String deurVleugelSamenvatting;
+  final String profielSamenvatting;
   final List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen;
   final List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten;
   final List<OpmetingRaamKeuzeMenu> keuzemenus;
@@ -99,17 +103,20 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         side: const BorderSide(color: rand),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+        padding: const EdgeInsets.fromLTRB(9, 7, 9, 7),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _bouwKop(),
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
+            if (widget.deurVleugelSamenvatting.trim().isNotEmpty)
+              _bouwDeurVleugelRij(),
             _bouwCompacteOpvullingRij(),
             _bouwCompacteKleinhoutRij(),
+            if (widget.profielSamenvatting.trim().isNotEmpty) _bouwProfielRij(),
             if (widget.keuzemenusLaden)
               const Padding(
-                padding: EdgeInsets.all(20),
+                padding: EdgeInsets.all(16),
                 child: Center(
                   child: CircularProgressIndicator(
                     strokeWidth: 2.4,
@@ -119,20 +126,64 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               )
             else if (zichtbareMenus.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 7),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     widget.menuBeheerOntgrendeld
                         ? 'Voeg een technisch item toe met +.'
                         : 'Nog geen technische keuzes toegevoegd.',
-                    style: const TextStyle(color: tekstGrijs, fontSize: 12),
+                    style: const TextStyle(color: tekstGrijs, fontSize: 11.5),
                   ),
                 ),
               )
             else
               ...zichtbareMenus.map(_bouwKeuzemenuKaart),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwDeurVleugelRij() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 5.5),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: rand)),
+      ),
+      child: Text(
+        widget.deurVleugelSamenvatting.trim(),
+        maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.left,
+        style: const TextStyle(
+          color: groen,
+          fontSize: 11.5,
+          height: 1.1,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwProfielRij() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 5.5),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: rand)),
+      ),
+      child: Text(
+        widget.profielSamenvatting.trim(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.left,
+        style: const TextStyle(
+          color: groen,
+          fontSize: 11.5,
+          height: 1.1,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );
@@ -145,7 +196,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
           child: Text(
             'Technische keuzes',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
               color: tekstDonker,
             ),
@@ -153,27 +204,27 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         ),
         if (widget.keuzemenusBewaren)
           const Padding(
-            padding: EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: 5),
             child: SizedBox(
-              width: 16,
-              height: 16,
+              width: 15,
+              height: 15,
               child: CircularProgressIndicator(strokeWidth: 2, color: groen),
             ),
           ),
         SizedBox(
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           child: IconButton(
             tooltip: 'Technisch item toevoegen',
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
             onPressed: widget.onMenuToevoegen,
-            icon: const Icon(Icons.add_circle_outline, size: 22, color: groen),
+            icon: const Icon(Icons.add_circle_outline, size: 20, color: groen),
           ),
         ),
         SizedBox(
-          width: 34,
-          height: 34,
+          width: 30,
+          height: 30,
           child: IconButton(
             tooltip: widget.menuBeheerOntgrendeld
                 ? 'Menu-beheer vergrendelen'
@@ -185,7 +236,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               widget.menuBeheerOntgrendeld
                   ? Icons.lock_open
                   : Icons.lock_outline,
-              size: 19,
+              size: 18,
               color: groen,
             ),
           ),
@@ -272,7 +323,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
             child: InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
+                padding: const EdgeInsets.symmetric(vertical: 5.5),
                 child: Row(
                   children: [
                     Expanded(
@@ -283,8 +334,8 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                         textAlign: TextAlign.left,
                         style: TextStyle(
                           color: heeftWaarde ? groen : tekstDonker,
-                          fontSize: 12,
-                          height: 1.15,
+                          fontSize: 11.5,
+                          height: 1.1,
                           fontWeight: heeftWaarde
                               ? FontWeight.w800
                               : FontWeight.w600,
@@ -292,14 +343,14 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                       ),
                     ),
                     if (beheerKnop != null) ...[
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       beheerKnop,
                     ],
                     Icon(
                       isOpen
                           ? Icons.keyboard_arrow_up_rounded
                           : Icons.keyboard_arrow_down_rounded,
-                      size: 20,
+                      size: 18,
                       color: tekstGrijs,
                     ),
                   ],
@@ -309,7 +360,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
           ),
           if (isOpen)
             Padding(
-              padding: const EdgeInsets.only(left: 2, right: 2, bottom: 8),
+              padding: const EdgeInsets.only(left: 2, right: 2, bottom: 6),
               child: Align(alignment: Alignment.centerLeft, child: inhoud),
             ),
         ],
@@ -393,14 +444,14 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               });
             },
             child: Padding(
-              padding: EdgeInsets.fromLTRB(8 + (niveau * 14), 7, 7, 7),
+              padding: EdgeInsets.fromLTRB(8 + (niveau * 14), 5.5, 7, 5.5),
               child: Row(
                 children: [
                   Icon(
                     isOpen
                         ? Icons.keyboard_arrow_down_rounded
                         : Icons.keyboard_arrow_right_rounded,
-                    size: 18,
+                    size: 17,
                     color: bevatGeselecteerdeKeuze ? groen : tekstGrijs,
                   ),
                   const SizedBox(width: 5),
@@ -411,7 +462,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: bevatGeselecteerdeKeuze ? groen : tekstDonker,
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -466,7 +517,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         borderRadius: BorderRadius.circular(7),
         onTap: onTap,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(30 + (niveau * 14), 7, 7, 7),
+          padding: EdgeInsets.fromLTRB(30 + (niveau * 14), 5.5, 7, 5.5),
           child: Row(
             children: [
               Expanded(
@@ -476,7 +527,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: geselecteerd ? groen : tekstDonker,
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: geselecteerd
                         ? FontWeight.w900
                         : FontWeight.w600,
@@ -484,7 +535,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                 ),
               ),
               if (geselecteerd)
-                const Icon(Icons.check_circle, size: 16, color: groen),
+                const Icon(Icons.check_circle, size: 15, color: groen),
             ],
           ),
         ),
@@ -611,32 +662,32 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
     if (widget.gekozenOpvullingen.isEmpty) {
       return const Text(
         'Kies de tool Opvulling en selecteer een glasvlak.',
-        style: TextStyle(color: tekstGrijs, fontSize: 11),
+        style: TextStyle(color: tekstGrijs, fontSize: 10.8),
       );
     }
 
     return Column(
       children: widget.gekozenOpvullingen.map((opvulling) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 5),
+          padding: const EdgeInsets.only(bottom: 4),
           child: Row(
             children: [
               Container(
-                width: 17,
-                height: 17,
+                width: 15,
+                height: 15,
                 decoration: BoxDecoration(
                   color: opvulling.weergaveKleur,
                   borderRadius: BorderRadius.circular(3),
                   border: Border.all(color: const Color(0xFF9CA3AF)),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   '${opvulling.nummer}. ${opvulling.naam}',
                   style: const TextStyle(
                     color: tekstDonker,
-                    fontSize: 11,
+                    fontSize: 10.8,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -652,14 +703,14 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
     if (widget.gekozenKleinhouten.isEmpty) {
       return const Text(
         'Kies de tool Kleinhout en selecteer een gevuld glasvlak.',
-        style: TextStyle(color: tekstGrijs, fontSize: 11),
+        style: TextStyle(color: tekstGrijs, fontSize: 10.8),
       );
     }
 
     return Column(
       children: widget.gekozenKleinhouten.map((kleinhout) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 5),
+          padding: const EdgeInsets.only(bottom: 4),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
@@ -668,7 +719,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               '${_maakLeesbaar(kleinhout.patroon.name)}',
               style: const TextStyle(
                 color: tekstDonker,
-                fontSize: 11,
+                fontSize: 10.8,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -680,12 +731,12 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
 
   Widget _bouwKeuzemenuBeheerKnop(OpmetingRaamKeuzeMenu menu) {
     return SizedBox(
-      width: 34,
-      height: 34,
+      width: 30,
+      height: 30,
       child: PopupMenuButton<String>(
         tooltip: 'Technische keuze aanpassen',
         padding: EdgeInsets.zero,
-        icon: const Icon(Icons.more_vert, size: 18, color: tekstGrijs),
+        icon: const Icon(Icons.more_vert, size: 17, color: tekstGrijs),
         onSelected: (actie) {
           switch (actie) {
             case 'aanpassen':

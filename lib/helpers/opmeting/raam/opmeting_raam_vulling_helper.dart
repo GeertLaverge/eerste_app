@@ -116,9 +116,38 @@ class OpmetingRaamVullingHelper {
       );
     }
 
+    for (final deurVleugel in vleugels.where(
+      (vleugel) => vleugel.isDeurVleugel,
+    )) {
+      final deurVlak = _bepaalDeurVleugelBinnenVlak(
+        vleugel: deurVleugel,
+        buitenKader: buitenKader,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
+      );
+
+      if (!_isGeldigVlak(deurVlak)) {
+        continue;
+      }
+
+      final werkvlakId = _deurVleugelWerkvlakId(deurVleugel);
+
+      resultaat.add(
+        OpmetingRaamVulvlak(
+          id: _maakVlakId(werkvlakId: werkvlakId, index: 0),
+          werkvlakId: werkvlakId,
+          vlak: deurVlak,
+        ),
+      );
+    }
+
+    final normaleVleugels = vleugels
+        .where((vleugel) => !vleugel.isDeurVleugel)
+        .toList();
+
     final vleugelWerkvlakken =
         OpmetingRaamTStijlHelper.bepaalVleugelWerkvlakken(
-          vleugels: vleugels,
+          vleugels: normaleVleugels,
           buitenKader: buitenKader,
           breedteMm: breedteMm,
           hoogteMm: hoogteMm,
@@ -584,6 +613,61 @@ class OpmetingRaamVullingHelper {
     }
 
     return nummerPerVlak;
+  }
+
+  static Rect _bepaalDeurVleugelBinnenVlak({
+    required OpmetingRaamVleugel vleugel,
+    required Rect buitenKader,
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    if (breedteMm <= 0 || hoogteMm <= 0 || !_isGeldigVlak(vleugel.vlak)) {
+      return Rect.zero;
+    }
+
+    final schaalX = buitenKader.width / breedteMm;
+    final schaalY = buitenKader.height / hoogteMm;
+
+    final profielBreedteX = (vleugel.deurVleugelBreedteMm * schaalX)
+        .abs()
+        .clamp(5.0, buitenKader.width / 3)
+        .toDouble();
+
+    final profielBreedteY = (vleugel.deurVleugelBreedteMm * schaalY)
+        .abs()
+        .clamp(5.0, buitenKader.height / 3)
+        .toDouble();
+
+    final onderAfstandPx = (vleugel.deurVleugelOnderAfstandMm * schaalY)
+        .abs()
+        .clamp(0.0, buitenKader.height / 4)
+        .toDouble();
+
+    final deurRect = Rect.fromLTRB(
+      vleugel.vlak.left,
+      vleugel.vlak.top,
+      vleugel.vlak.right,
+      buitenKader.bottom - onderAfstandPx,
+    );
+
+    final binnenVlak = Rect.fromLTRB(
+      deurRect.left + profielBreedteX,
+      deurRect.top + profielBreedteY,
+      deurRect.right - profielBreedteX,
+      deurRect.bottom - profielBreedteY,
+    );
+
+    if (!_isGeldigVlak(binnenVlak)) {
+      return Rect.zero;
+    }
+
+    return binnenVlak;
+  }
+
+  static String _deurVleugelWerkvlakId(OpmetingRaamVleugel vleugel) {
+    final id = vleugel.id.trim().isEmpty ? 'deurvleugel' : vleugel.id.trim();
+
+    return 'deurvleugel_${id}_binnen';
   }
 
   static String _maakVlakId({required String werkvlakId, required int index}) {

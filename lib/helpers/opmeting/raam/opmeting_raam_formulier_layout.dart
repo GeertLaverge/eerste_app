@@ -16,6 +16,12 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   const OpmetingRaamFormulierLayout({
     super.key,
     required this.klantNaam,
+    this.formulierTitel = 'Opmeting raam',
+    this.toonDeurKnoppen = false,
+    this.deurVleugelSamenvatting = '',
+    this.profielSamenvatting = '',
+    this.onDeurVleugel,
+    this.onDeurPanelen,
     required this.onTerug,
     required this.onToevoegen,
     required this.onAnnuleren,
@@ -29,6 +35,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.slagOnderController,
     required this.binnenTabletController,
     required this.buitenTabletController,
+    required this.uitzagenTandController,
+    required this.buitensteLipController,
     required this.raammaatBreedte,
     required this.raammaatHoogte,
     required this.verschilTablet,
@@ -77,6 +85,12 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   });
 
   final String? klantNaam;
+  final String formulierTitel;
+  final bool toonDeurKnoppen;
+  final String deurVleugelSamenvatting;
+  final String profielSamenvatting;
+  final VoidCallback? onDeurVleugel;
+  final VoidCallback? onDeurPanelen;
   final Future<void> Function() onTerug;
   final Future<void> Function() onToevoegen;
   final Future<void> Function() onAnnuleren;
@@ -91,6 +105,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final TextEditingController slagOnderController;
   final TextEditingController binnenTabletController;
   final TextEditingController buitenTabletController;
+  final TextEditingController uitzagenTandController;
+  final TextEditingController buitensteLipController;
 
   final int raammaatBreedte;
   final int raammaatHoogte;
@@ -176,8 +192,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
           ),
           title: Text(
             klantNaam == null || klantNaam!.trim().isEmpty
-                ? 'Opmeting raam'
-                : 'Opmeting raam · $klantNaam',
+                ? formulierTitel
+                : '$formulierTitel · $klantNaam',
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           actions: [
@@ -248,7 +264,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                             onKaderSamenstellingGewijzigd,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     AnimatedBuilder(
                       animation: tekenvlakController,
                       builder: (context, child) {
@@ -260,10 +276,13 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                           kanHerstellen: tekenvlakController.kanHerstellen,
                           onOngedaanMaken: tekenvlakController.ongedaanMaken,
                           onHerstellen: tekenvlakController.herstellen,
+                          toonDeurTools: toonDeurKnoppen,
+                          onDeurVleugel: onDeurVleugel,
+                          onDeurPanelen: onDeurPanelen,
                         );
                       },
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     OpmetingRaamNotities(controller: notitiesController),
                   ],
                 ),
@@ -286,6 +305,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       slagOnderController: slagOnderController,
                       binnenTabletController: binnenTabletController,
                       buitenTabletController: buitenTabletController,
+                      uitzagenTandController: uitzagenTandController,
+                      buitensteLipController: buitensteLipController,
                       raammaatBreedte: raammaatBreedte,
                       raammaatHoogte: raammaatHoogte,
                       verschilTablet: verschilTablet,
@@ -294,8 +315,10 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       onDagmaatGewijzigd: onDagmaatGewijzigd,
                       onRaammaatGewijzigd: onRaammaatGewijzigd,
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     OpmetingRaamTechnischeKeuzesPaneel(
+                      deurVleugelSamenvatting: deurVleugelSamenvatting,
+                      profielSamenvatting: profielSamenvatting,
                       gekozenOpvullingen: gekozenOpvullingen,
                       gekozenKleinhouten: gekozenKleinhouten,
                       keuzemenus: keuzemenus,

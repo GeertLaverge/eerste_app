@@ -1,5 +1,7 @@
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
+import '../../deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
+import '../../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import '../opmeting_raam_keuzemenu_model.dart';
 import '../opmeting_raam_kleinhout_helper.dart';
 import '../opmeting_raam_kleinhout_model.dart';
@@ -32,6 +34,8 @@ class OpmetingRaamOverzichtBuilder {
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen,
     required List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten,
+    List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen =
+        const <OpmetingDeurpaneelToewijzing>[],
     required String notities,
   }) {
     final tekeningData =
@@ -53,6 +57,7 @@ class OpmetingRaamOverzichtBuilder {
       keuzemenus: keuzemenus,
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
+      deurpaneelToewijzingen: deurpaneelToewijzingen,
       technischeKaderGroepen: technischeKaderGroepen,
     );
 
@@ -141,6 +146,7 @@ class _OpmetingRaamOverzichtContext {
     required this.keuzemenus,
     required this.gekozenOpvullingen,
     required this.gekozenKleinhouten,
+    required this.deurpaneelToewijzingen,
     required this.technischeKaderGroepen,
   });
 
@@ -155,6 +161,7 @@ class _OpmetingRaamOverzichtContext {
   final List<OpmetingRaamKeuzeMenu> keuzemenus;
   final List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen;
   final List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten;
+  final List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen;
   final Map<String, Set<String>> technischeKaderGroepen;
 
   List<OpmetingOverzichtTechnischeContainer> maakTechnischeContainers() {
@@ -211,6 +218,28 @@ class _OpmetingRaamOverzichtContext {
         OpmetingOverzichtTechnischeRegel(
           titel: 'Kaders',
           waarde: '${kaderSamenstelling.kaders.length} kaders',
+        ),
+      );
+    }
+
+    final deurVleugelTekst = _deurVleugelSamenvatting();
+
+    if (deurVleugelTekst.trim().isNotEmpty) {
+      regels.add(
+        OpmetingOverzichtTechnischeRegel(
+          titel: 'Deurvleugel',
+          waarde: deurVleugelTekst,
+        ),
+      );
+    }
+
+    final deurpanelenTekst = _deurpanelenSamenvattingVoorOverzicht();
+
+    if (deurpanelenTekst.trim().isNotEmpty) {
+      regels.add(
+        OpmetingOverzichtTechnischeRegel(
+          titel: 'Deurpanelen',
+          waarde: deurpanelenTekst,
         ),
       );
     }
@@ -389,6 +418,60 @@ class _OpmetingRaamOverzichtContext {
     }
 
     return <T>[];
+  }
+
+  String _deurVleugelSamenvatting() {
+    final deurVleugels = <OpmetingRaamVleugel>[];
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (!vleugel.isDeurVleugel) {
+          continue;
+        }
+
+        if (deurVleugels.any((bestaand) => bestaand.id == vleugel.id)) {
+          continue;
+        }
+
+        deurVleugels.add(vleugel);
+      }
+    }
+
+    voegToe(tekeningData.vleugels);
+
+    for (final lijst in tekeningData.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    if (deurVleugels.isEmpty) {
+      return '';
+    }
+
+    return deurVleugels
+        .map((vleugel) {
+          return vleugel.deurVleugelSamenvatting;
+        })
+        .toSet()
+        .join('\n');
+  }
+
+  String _deurpanelenSamenvattingVoorOverzicht() {
+    final samenvatting =
+        OpmetingDeurpaneelTekstHelper.samenvattingVoorToewijzingen(
+          deurpaneelToewijzingen,
+        ).trim();
+
+    if (samenvatting.isEmpty) {
+      return '';
+    }
+
+    final regels = samenvatting.split('\n').map((regel) => regel.trim()).where((
+      regel,
+    ) {
+      return regel.isNotEmpty && regel.toLowerCase() != 'deurpanelen';
+    }).toList();
+
+    return regels.join('\n');
   }
 
   String _opvullingTekstVoorOverzicht(int aantalVlakken) {

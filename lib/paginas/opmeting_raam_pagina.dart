@@ -1,6 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_actieve_keuze_controller.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_keuze_dialog.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_model.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
+import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_storage_helper.dart';
 import '../helpers/opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
@@ -80,6 +88,14 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     text: '105',
   );
 
+  final TextEditingController uitzagenTandController = TextEditingController(
+    text: '0',
+  );
+
+  final TextEditingController buitensteLipController = TextEditingController(
+    text: '0',
+  );
+
   final TextEditingController notitiesController = TextEditingController();
 
   final TextEditingController positieController = TextEditingController();
@@ -116,9 +132,18 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   bool _opvullingenOpen = false;
   bool _kleinhoutenOpen = false;
 
+  OpmetingDeurpaneelKeuze? _actieveDeurpaneelKeuze;
+  List<OpmetingDeurpaneelToewijzing> _deurpaneelToewijzingen =
+      const <OpmetingDeurpaneelToewijzing>[];
+
   @override
   void initState() {
     super.initState();
+
+    OpmetingDeurpaneelActieveKeuzeController.wisAlles();
+    OpmetingDeurpaneelActieveKeuzeController.toewijzingen.addListener(
+      _verwerkDeurpaneelToewijzingen,
+    );
 
     final bestaandeOpmeting = widget.bestaandeOpmeting;
 
@@ -196,10 +221,18 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     _laadKeuzemenus();
+
+    if (bestaandeOpmeting != null) {
+      unawaited(_laadDeurpaneelToewijzingenVoorOpmeting(bestaandeOpmeting.id));
+    }
   }
 
   @override
   void dispose() {
+    OpmetingDeurpaneelActieveKeuzeController.toewijzingen.removeListener(
+      _verwerkDeurpaneelToewijzingen,
+    );
+
     dagmaatHoogteController.dispose();
     dagmaatBreedteController.dispose();
     raammaatHoogteController.dispose();
@@ -212,6 +245,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     binnenTabletController.dispose();
     buitenTabletController.dispose();
+    uitzagenTandController.dispose();
+    buitensteLipController.dispose();
 
     notitiesController.dispose();
     positieController.dispose();
@@ -234,6 +269,16 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       case 'ALU Raam':
         return 'aluRaam';
 
+      case 'pvcDeur':
+      case 'pvc_deur':
+      case 'PVC Deur':
+        return 'pvcDeur';
+
+      case 'aluDeur':
+      case 'alu_deur':
+      case 'ALU Deur':
+        return 'aluDeur';
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -246,12 +291,104 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
   }
 
+  String get _formulierTitel {
+    switch (_formulierType) {
+      case 'aluRaam':
+        return 'Opmeting ALU Raam';
+
+      case 'pvcDeur':
+        return 'Opmeting PVC Deur';
+
+      case 'aluDeur':
+        return 'Opmeting ALU Deur';
+
+      case 'pvcRaam':
+      default:
+        return 'Opmeting PVC Raam';
+    }
+  }
+
+  bool get _isDeurFiche {
+    return _formulierType == 'pvcDeur' || _formulierType == 'aluDeur';
+  }
+
+  Future<void> _laadDeurpaneelToewijzingenVoorOpmeting(
+    String opmetingId,
+  ) async {
+    final toewijzingen =
+        await OpmetingDeurpaneelToewijzingStorageHelper.laadVoorOpmetingId(
+          opmetingId: opmetingId,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+        toewijzingen,
+      );
+    });
+
+    OpmetingDeurpaneelActieveKeuzeController.werkToewijzingenBij(toewijzingen);
+  }
+
+  void _openDeurVleugel() {
+    _toolGekozen(actieveTool == 'deurvleugel' ? 'lijn' : 'deurvleugel');
+  }
+
+  void _openDeurPanelen() {
+    _toonDeurpanelenDialog();
+  }
+
+  Future<void> _toonDeurpanelenDialog() async {
+    if (!_isDeurFiche) {
+      _toonMelding(
+        'Deurpanelen kunnen enkel op een deurfiche worden gekozen.',
+        fout: true,
+      );
+      return;
+    }
+
+    final keuze = await showDialog<OpmetingDeurpaneelKeuze>(
+      context: context,
+      builder: (dialogContext) {
+        return const OpmetingDeurpaneelKeuzeDialog();
+      },
+    );
+
+    if (!mounted || keuze == null) {
+      return;
+    }
+
+    OpmetingDeurpaneelActieveKeuzeController.kies(keuze);
+
+    setState(() {
+      _actieveDeurpaneelKeuze = keuze;
+      actieveTool = 'deurpanelen';
+    });
+
+    final vervolgTekst = keuze.wissen
+        ? 'Klik nu op de deurvleugel waarvan u het paneel wilt verwijderen.'
+        : 'Klik nu op de deurvleugel om het paneel te plaatsen.';
+
+    _toonMelding(
+      '${OpmetingDeurpaneelTekstHelper.korteMeldingVoorKeuze(keuze)} $vervolgTekst',
+    );
+  }
+
   double _waarde(TextEditingController controller) {
     return OpmetingRaamMatenHelper.waarde(controller);
   }
 
   bool _isMaatveldLeeg(TextEditingController controller) {
     return controller.text.trim().isEmpty;
+  }
+
+  bool _isMaatveldNogTijdelijk(TextEditingController controller) {
+    final tekst = controller.text.trim();
+
+    return tekst.isNotEmpty && tekst.length < 3;
   }
 
   Map<String, Map<String, OpmetingRaamKeuzeSelectie>> _kopieKeuzeSelecties(
@@ -305,8 +442,122 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _verwerkOverzichtTekeningData(OpmetingOverzichtTekeningData data) {
-    _overzichtTekeningData = data;
+    setState(() {
+      _overzichtTekeningData = data;
+    });
+
     _herstelLegendaUitTekeningData(data, metSetState: true);
+  }
+
+  void _verwerkDeurpaneelToewijzingen() {
+    final nieuweToewijzingen =
+        OpmetingDeurpaneelActieveKeuzeController.toewijzingen.value;
+
+    if (_zijnDeurpaneelToewijzingenGelijk(
+      _deurpaneelToewijzingen,
+      nieuweToewijzingen,
+    )) {
+      return;
+    }
+
+    if (!mounted) {
+      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+        nieuweToewijzingen,
+      );
+      return;
+    }
+
+    setState(() {
+      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+        nieuweToewijzingen,
+      );
+    });
+  }
+
+  bool _zijnDeurpaneelToewijzingenGelijk(
+    List<OpmetingDeurpaneelToewijzing> eerste,
+    List<OpmetingDeurpaneelToewijzing> tweede,
+  ) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    for (var index = 0; index < eerste.length; index++) {
+      final eersteItem = eerste[index];
+      final tweedeItem = tweede[index];
+
+      if (eersteItem.id != tweedeItem.id ||
+          eersteItem.deurVleugelId != tweedeItem.deurVleugelId ||
+          eersteItem.paneelId != tweedeItem.paneelId ||
+          eersteItem.paneelNaam != tweedeItem.paneelNaam ||
+          eersteItem.tekeningBestandsnaam != tweedeItem.tekeningBestandsnaam ||
+          eersteItem.uitvoering != tweedeItem.uitvoering ||
+          eersteItem.cilinderZijde != tweedeItem.cilinderZijde) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  String get _deurVleugelSamenvatting {
+    final data = _overzichtTekeningData;
+
+    if (data == null) {
+      return '';
+    }
+
+    final deurVleugels = <OpmetingRaamVleugel>[];
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (!vleugel.isDeurVleugel) {
+          continue;
+        }
+
+        if (deurVleugels.any((bestaand) => bestaand.id == vleugel.id)) {
+          continue;
+        }
+
+        deurVleugels.add(vleugel);
+      }
+    }
+
+    voegToe(data.vleugels);
+
+    for (final lijst in data.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    final regels = <String>[];
+
+    if (deurVleugels.isNotEmpty) {
+      regels.add(
+        deurVleugels
+            .map((vleugel) {
+              return vleugel.deurVleugelSamenvatting;
+            })
+            .toSet()
+            .join('\n'),
+      );
+    }
+
+    final deurpanelenTekst =
+        OpmetingDeurpaneelTekstHelper.samenvattingVoorToewijzingen(
+          _deurpaneelToewijzingen,
+        );
+
+    if (deurpanelenTekst.trim().isNotEmpty) {
+      regels.add(deurpanelenTekst);
+    } else if (_actieveDeurpaneelKeuze != null) {
+      regels.add(
+        OpmetingDeurpaneelTekstHelper.samenvattingVoorKeuze(
+          _actieveDeurpaneelKeuze!,
+        ),
+      );
+    }
+
+    return regels.where((regel) => regel.trim().isNotEmpty).join('\n');
   }
 
   void _herstelLegendaUitTekeningData(
@@ -396,6 +647,13 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       binnenTabletController: binnenTabletController,
       buitenTabletController: buitenTabletController,
     );
+  }
+
+  String get _profielSamenvatting {
+    final uitzagenTand = _waarde(uitzagenTandController).round();
+    final buitensteProfiel = _waarde(buitensteLipController).round();
+
+    return 'uitzagen tand $uitzagenTand mm buitenste profiel $buitensteProfiel mm';
   }
 
   int _positieveMaat(int waarde) {
@@ -521,7 +779,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
   void _herberekenVanDagmaat() {
     if (_isMaatveldLeeg(dagmaatBreedteController) ||
-        _isMaatveldLeeg(dagmaatHoogteController)) {
+        _isMaatveldLeeg(dagmaatHoogteController) ||
+        _isMaatveldNogTijdelijk(dagmaatBreedteController) ||
+        _isMaatveldNogTijdelijk(dagmaatHoogteController)) {
       return;
     }
 
@@ -537,7 +797,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
   void _herberekenVanRaammaat() {
     if (_isMaatveldLeeg(raammaatBreedteController) ||
-        _isMaatveldLeeg(raammaatHoogteController)) {
+        _isMaatveldLeeg(raammaatHoogteController) ||
+        _isMaatveldNogTijdelijk(raammaatBreedteController) ||
+        _isMaatveldNogTijdelijk(raammaatHoogteController)) {
       return;
     }
 
@@ -590,6 +852,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
         case 'kleinhout':
           kleinhoutMenuOpenSignaal++;
+          break;
+
+        case 'deurpanelen':
           break;
       }
     });
@@ -1000,11 +1265,20 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   Future<OpmetingOverzichtRaamItem> _bewaarHuidigeOpmeting() async {
     final opmeting = _maakOverzichtItem();
 
+    late final OpmetingOverzichtRaamItem bewaardeOpmeting;
+
     if (widget.bestaandeOpmeting == null) {
-      return AppStorage.voegOpmetingToe(opmeting);
+      bewaardeOpmeting = await AppStorage.voegOpmetingToe(opmeting);
+    } else {
+      bewaardeOpmeting = await AppStorage.werkOpmetingBij(opmeting);
     }
 
-    return AppStorage.werkOpmetingBij(opmeting);
+    await OpmetingDeurpaneelToewijzingStorageHelper.bewaarVoorOpmetingId(
+      opmetingId: bewaardeOpmeting.id,
+      toewijzingen: _deurpaneelToewijzingen,
+    );
+
+    return bewaardeOpmeting;
   }
 
   Future<void> _vraagToevoegenAanOverzichtBijTerug() async {
@@ -1147,6 +1421,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       keuzemenus: _keuzemenus,
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
+      deurpaneelToewijzingen: _deurpaneelToewijzingen,
       notities: notitiesController.text.trim(),
     );
 
@@ -1189,6 +1464,12 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     return OpmetingRaamFormulierLayout(
       klantNaam: widget.klantNaam,
+      formulierTitel: _formulierTitel,
+      toonDeurKnoppen: _isDeurFiche,
+      deurVleugelSamenvatting: _isDeurFiche ? _deurVleugelSamenvatting : '',
+      profielSamenvatting: _profielSamenvatting,
+      onDeurVleugel: _openDeurVleugel,
+      onDeurPanelen: _openDeurPanelen,
       onTerug: _vraagToevoegenAanOverzichtBijTerug,
       onToevoegen: _voegOpmetingToeAanOverzicht,
       onAnnuleren: _vraagAnnulerenZonderToevoegen,
@@ -1202,6 +1483,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       slagOnderController: slagOnderController,
       binnenTabletController: binnenTabletController,
       buitenTabletController: buitenTabletController,
+      uitzagenTandController: uitzagenTandController,
+      buitensteLipController: buitensteLipController,
       raammaatBreedte: raammaatBreedte,
       raammaatHoogte: raammaatHoogte,
       verschilTablet: verschilTablet,

@@ -190,7 +190,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     if (heeftMeerdereKaders && effectieveSamenstelling != null) {
       _tekenMaatvoeringPerKader(
         canvas: canvas,
-        size: size,
         tekenGebied: basisBuiten,
         samenstelling: effectieveSamenstelling,
       );
@@ -292,10 +291,9 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       final kaderGeselecteerdeKleinhoutVlakken =
           geselecteerdeKleinhoutVlakIdsPerKader[kader.id] ?? const <String>{};
 
-      final kaderTechnischeTekeningen = groepWeergave == null
-          ? technischeTekeningenPerKader[kader.id] ??
-                const <OpmetingRaamTechnischeTekeningInstelling>[]
-          : const <OpmetingRaamTechnischeTekeningInstelling>[];
+      final kaderTechnischeTekeningen =
+          technischeTekeningenPerKader[kader.id] ??
+          const <OpmetingRaamTechnischeTekeningInstelling>[];
 
       _tekenRaamInhoudInKader(
         canvas: canvas,
@@ -326,9 +324,8 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         hoogteMm: actiefKader.hoogteMm,
       );
 
-      final actieveTechnischeTekeningen = actiefGroepWeergave == null
-          ? technischeTekeningenPerKader[actieveId] ?? technischeTekeningen
-          : const <OpmetingRaamTechnischeTekeningInstelling>[];
+      final actieveTechnischeTekeningen =
+          technischeTekeningenPerKader[actieveId] ?? technischeTekeningen;
 
       final actieveTechnischeLayout =
           OpmetingRaamTechnischeLayoutHelper.bereken(
@@ -658,7 +655,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     List<OpmetingRaamKleinhout>? kleinhoutenOverride,
     Set<String>? geselecteerdeKleinhoutVlakIdsOverride,
     bool toonSelectie = true,
-    double geselecteerdeLijnSchaal = 1.0,
   }) {
     final effectieveBreedteMm = werkBreedteMm ?? breedteMm;
     final effectieveHoogteMm = werkHoogteMm ?? hoogteMm;
@@ -685,28 +681,66 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       toewijzingen: teTekenenVullingToewijzingen,
     );
 
+    final heeftDeurVleugel = teTekenenVleugels.any(
+      (vleugel) => vleugel.isDeurVleugel,
+    );
+
     if (tekenKader) {
-      _tekenKader(canvas, buiten, binnen);
+      _tekenKader(
+        canvas,
+        buiten,
+        binnen,
+        toonOnderVerstekken: !heeftDeurVleugel,
+      );
     }
 
     for (final vleugel in teTekenenVleugels) {
-      OpmetingRaamVleugelHelper.tekenVleugel(
-        canvas: canvas,
-        vleugel: vleugel,
-        buitenKader: buiten,
-        breedteMm: effectieveBreedteMm,
-        hoogteMm: effectieveHoogteMm,
-      );
+      if (vleugel.isDeurVleugel) {
+        _tekenDeurVleugel(
+          canvas: canvas,
+          vleugel: vleugel,
+          buitenKader: buiten,
+          binnenKader: binnen,
+          breedteMm: effectieveBreedteMm,
+          hoogteMm: effectieveHoogteMm,
+        );
+      } else {
+        OpmetingRaamVleugelHelper.tekenVleugel(
+          canvas: canvas,
+          vleugel: vleugel,
+          buitenKader: buiten,
+          breedteMm: effectieveBreedteMm,
+          hoogteMm: effectieveHoogteMm,
+        );
+      }
     }
 
+    _tekenDubbeleDeurMaatvoering(
+      canvas: canvas,
+      vleugels: teTekenenVleugels,
+      buitenKader: buiten,
+      breedteMm: effectieveBreedteMm,
+    );
+
     for (final stijl in teTekenenTStijlen) {
-      OpmetingRaamTStijlHelper.tekenTStijl(
-        canvas: canvas,
-        stijl: stijl,
-        buitenKader: buiten,
-        breedteMm: effectieveBreedteMm,
-        hoogteMm: effectieveHoogteMm,
-      );
+      if (stijl.werkvlakId.startsWith('deurvleugel_')) {
+        _tekenDeurVleugelTStijl(
+          canvas: canvas,
+          stijl: stijl,
+          deurVleugels: teTekenenVleugels,
+          buitenKader: buiten,
+          breedteMm: effectieveBreedteMm,
+          hoogteMm: effectieveHoogteMm,
+        );
+      } else {
+        OpmetingRaamTStijlHelper.tekenTStijl(
+          canvas: canvas,
+          stijl: stijl,
+          buitenKader: buiten,
+          breedteMm: effectieveBreedteMm,
+          hoogteMm: effectieveHoogteMm,
+        );
+      }
     }
 
     OpmetingRaamKleinhoutHelper.tekenKleinhouten(
@@ -727,23 +761,19 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     );
 
     if (toonSelectie) {
-      _tekenGeselecteerdeLijn(canvas, schaal: geselecteerdeLijnSchaal);
+      _tekenGeselecteerdeLijn(canvas);
       _tekenPreviewPunt(canvas);
     }
   }
 
-  void _tekenGeselecteerdeLijn(Canvas canvas, {double schaal = 1.0}) {
+  void _tekenGeselecteerdeLijn(Canvas canvas) {
     if (geselecteerdeLijn == null) {
       return;
     }
 
-    final veiligeSchaal = schaal.isFinite && schaal > 0 ? schaal : 1.0;
-
-    final strokeBreedte = (4.5 / veiligeSchaal).clamp(4.5, 12.0).toDouble();
-
     final paint = Paint()
       ..color = const Color(0xFFF97316)
-      ..strokeWidth = strokeBreedte
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
     canvas.drawLine(geselecteerdeLijn!.start, geselecteerdeLijn!.einde, paint);
@@ -787,7 +817,12 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     }
   }
 
-  void _tekenKader(Canvas canvas, Rect buiten, Rect binnen) {
+  void _tekenKader(
+    Canvas canvas,
+    Rect buiten,
+    Rect binnen, {
+    bool toonOnderVerstekken = true,
+  }) {
     final kaderVulling = Paint()
       ..color = Colors.white.withValues(alpha: 0.75)
       ..style = PaintingStyle.fill;
@@ -813,13 +848,533 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
 
     canvas.drawLine(buiten.topLeft, binnen.topLeft, verstekLijn);
     canvas.drawLine(buiten.topRight, binnen.topRight, verstekLijn);
-    canvas.drawLine(buiten.bottomLeft, binnen.bottomLeft, verstekLijn);
-    canvas.drawLine(buiten.bottomRight, binnen.bottomRight, verstekLijn);
+
+    if (toonOnderVerstekken) {
+      canvas.drawLine(buiten.bottomLeft, binnen.bottomLeft, verstekLijn);
+      canvas.drawLine(buiten.bottomRight, binnen.bottomRight, verstekLijn);
+    }
+  }
+
+  void _tekenDeurVleugel({
+    required Canvas canvas,
+    required OpmetingRaamVleugel vleugel,
+    required Rect buitenKader,
+    required Rect binnenKader,
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    if (breedteMm < 100 ||
+        hoogteMm < 100 ||
+        buitenKader.width < 24 ||
+        buitenKader.height < 24 ||
+        vleugel.vlak.isEmpty) {
+      return;
+    }
+
+    final schaalX = buitenKader.width / breedteMm;
+    final schaalY = buitenKader.height / hoogteMm;
+
+    final maximaleProfielBreedteX = buitenKader.width / 3;
+    final maximaleProfielBreedteY = buitenKader.height / 3;
+
+    if (maximaleProfielBreedteX < 5 || maximaleProfielBreedteY < 5) {
+      return;
+    }
+
+    final profielBreedteX = (vleugel.deurVleugelBreedteMm * schaalX)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteX)
+        .toDouble();
+
+    final profielBreedteY = (vleugel.deurVleugelBreedteMm * schaalY)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteY)
+        .toDouble();
+
+    final onderAfstandPx = (vleugel.deurVleugelOnderAfstandMm * schaalY)
+        .abs()
+        .clamp(0.0, buitenKader.height / 4)
+        .toDouble();
+
+    final deurRect = Rect.fromLTRB(
+      vleugel.vlak.left,
+      vleugel.vlak.top,
+      vleugel.vlak.right,
+      buitenKader.bottom - onderAfstandPx,
+    );
+
+    if (deurRect.width <= profielBreedteX * 2 + 12 ||
+        deurRect.height <= profielBreedteY * 2 + 36) {
+      return;
+    }
+
+    // Geen wit vlak meer over de onderzijde leggen.
+    // De deurvleugel wordt volledig over de kader getekend.
+
+    final profielVulling = Paint()
+      ..color = Colors.white.withValues(alpha: 0.84)
+      ..style = PaintingStyle.fill;
+
+    final profielLijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+
+    final hulplijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1.15
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final verstekLijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1;
+
+    final linksProfiel = Rect.fromLTRB(
+      deurRect.left,
+      deurRect.top,
+      deurRect.left + profielBreedteX,
+      deurRect.bottom,
+    );
+
+    final rechtsProfiel = Rect.fromLTRB(
+      deurRect.right - profielBreedteX,
+      deurRect.top,
+      deurRect.right,
+      deurRect.bottom,
+    );
+
+    final bovenProfiel = Rect.fromLTRB(
+      deurRect.left,
+      deurRect.top,
+      deurRect.right,
+      deurRect.top + profielBreedteY,
+    );
+
+    final onderProfiel = Rect.fromLTRB(
+      deurRect.left,
+      deurRect.bottom - profielBreedteY,
+      deurRect.right,
+      deurRect.bottom,
+    );
+
+    canvas.drawRect(linksProfiel, profielVulling);
+    canvas.drawRect(rechtsProfiel, profielVulling);
+    canvas.drawRect(bovenProfiel, profielVulling);
+    canvas.drawRect(onderProfiel, profielVulling);
+
+    final binnenLinks = deurRect.left + profielBreedteX;
+    final binnenRechts = deurRect.right - profielBreedteX;
+    final binnenBoven = deurRect.top + profielBreedteY;
+    final binnenOnder = deurRect.bottom - profielBreedteY;
+
+    // Deurvleugel volledig rondom tekenen.
+    canvas.drawRect(deurRect, profielLijn);
+    canvas.drawRect(
+      Rect.fromLTRB(binnenLinks, binnenBoven, binnenRechts, binnenOnder),
+      profielLijn,
+    );
+
+    // Verstekken van de deurvleugel zelf.
+    // Onderaan worden geen verstekhoeken getekend bij een deur.
+    canvas.drawLine(
+      deurRect.topLeft,
+      Offset(binnenLinks, binnenBoven),
+      verstekLijn,
+    );
+    canvas.drawLine(
+      deurRect.topRight,
+      Offset(binnenRechts, binnenBoven),
+      verstekLijn,
+    );
+
+    final krukMinY = binnenBoven + 18;
+    final krukMaxY = binnenOnder - 18;
+
+    if (krukMaxY <= krukMinY) {
+      return;
+    }
+
+    final krukHoogtePx = 1000 * schaalY;
+    final krukY = (buitenKader.bottom - krukHoogtePx)
+        .clamp(krukMinY, krukMaxY)
+        .toDouble();
+
+    final isDubbeleDeur = vleugel.isDubbeleDeurVleugel;
+    final krukLinks = isDubbeleDeur
+        ? vleugel.deurVleugelDeel == OpmetingRaamDeurVleugelDeel.rechts
+        : vleugel.deurVleugelKrukZijde == OpmetingRaamKrukZijde.links;
+
+    // Bij een dubbele deur staat de kruk op het gekozen actieve deel.
+    // Het andere deel krijgt wel zijn openingslijnen, maar geen kruk.
+    final krukTekenen = !isDubbeleDeur || vleugel.isActiefDeurdeelMetKruk;
+
+    // De kruk start in het midden van het deurvleugelprofiel en loopt naar
+    // binnen. De punt van de openingslijnen raakt exact de binnenzijde
+    // van de vleugel.
+    final krukX = krukLinks
+        ? deurRect.left + (profielBreedteX / 2)
+        : deurRect.right - (profielBreedteX / 2);
+    final pijlPuntX = krukLinks ? binnenLinks : binnenRechts;
+    final krukRichting = krukLinks ? 1.0 : -1.0;
+    final krukLengte = (68 * schaalX.abs()).clamp(28.0, 56.0).toDouble();
+
+    if (krukTekenen) {
+      final krukPaint = Paint()
+        ..color = const Color(0xFF111827)
+        ..strokeWidth = 2.2
+        ..strokeCap = StrokeCap.round;
+
+      final krukStart = Offset(krukX, krukY);
+      final krukEinde = Offset(krukX + (krukRichting * krukLengte), krukY);
+
+      canvas.drawLine(krukStart, krukEinde, krukPaint);
+    }
+
+    // Alle deurkrukken worden met één lijn getekend.
+    // Ook een rolluikkruk krijgt geen blokje op de tekening;
+    // het verschil staat tekstueel in de rechterkolom en het overzicht.
+
+    // Openingslijnen zoals bij een opendraaiend raam/deur.
+    // Het eindpunt staat exact in het midden van de vleugel, zodat beide
+    // openingslijnen even lang zijn.
+    final scharnierX = krukLinks ? binnenRechts : binnenLinks;
+    final draaipuntY = (binnenBoven + binnenOnder) / 2;
+    final draaipunt = Offset(pijlPuntX, draaipuntY);
+
+    canvas.drawLine(Offset(scharnierX, binnenBoven), draaipunt, hulplijn);
+    canvas.drawLine(Offset(scharnierX, binnenOnder), draaipunt, hulplijn);
+  }
+
+  void _tekenDeurVleugelTStijl({
+    required Canvas canvas,
+    required OpmetingRaamTStijl stijl,
+    required List<OpmetingRaamVleugel> deurVleugels,
+    required Rect buitenKader,
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    if (breedteMm <= 0 ||
+        hoogteMm <= 0 ||
+        buitenKader.width <= 0 ||
+        buitenKader.height <= 0) {
+      return;
+    }
+
+    final schaalX = buitenKader.width / breedteMm;
+    final schaalY = buitenKader.height / hoogteMm;
+
+    if (!schaalX.isFinite ||
+        !schaalY.isFinite ||
+        schaalX <= 0 ||
+        schaalY <= 0) {
+      return;
+    }
+
+    final werkvlak = _actueelDeurWerkvlakVoorTStijl(
+      stijl: stijl,
+      deurVleugels: deurVleugels,
+      buitenKader: buitenKader,
+      schaalX: schaalX,
+      schaalY: schaalY,
+    );
+
+    final actueleLijn = werkvlak == null
+        ? OpmetingRaamLijn(id: stijl.id, start: stijl.start, einde: stijl.einde)
+        : _lijnVoorTStijlInDeurWerkvlak(stijl: stijl, werkvlak: werkvlak);
+
+    final vulling = Paint()
+      ..color = Colors.white.withValues(alpha: 0.92)
+      ..style = PaintingStyle.fill;
+
+    final lijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1.3
+      ..style = PaintingStyle.stroke;
+
+    if (stijl.richting == 'verticaal') {
+      final halfBreedte = (stijl.breedteMm * schaalX / 2)
+          .abs()
+          .clamp(3.0, buitenKader.width / 4)
+          .toDouble();
+      final rect = Rect.fromLTRB(
+        actueleLijn.start.dx - halfBreedte,
+        actueleLijn.start.dy,
+        actueleLijn.start.dx + halfBreedte,
+        actueleLijn.einde.dy,
+      );
+
+      if (rect.width <= 0 || rect.height <= 0) {
+        return;
+      }
+
+      canvas.drawRect(rect, vulling);
+      canvas.drawRect(rect, lijn);
+      return;
+    }
+
+    final halfHoogte = (stijl.breedteMm * schaalY / 2)
+        .abs()
+        .clamp(3.0, buitenKader.height / 4)
+        .toDouble();
+    final rect = Rect.fromLTRB(
+      actueleLijn.start.dx,
+      actueleLijn.start.dy - halfHoogte,
+      actueleLijn.einde.dx,
+      actueleLijn.start.dy + halfHoogte,
+    );
+
+    if (rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+
+    canvas.drawRect(rect, vulling);
+    canvas.drawRect(rect, lijn);
+  }
+
+  Rect? _actueelDeurWerkvlakVoorTStijl({
+    required OpmetingRaamTStijl stijl,
+    required List<OpmetingRaamVleugel> deurVleugels,
+    required Rect buitenKader,
+    required double schaalX,
+    required double schaalY,
+  }) {
+    if (!stijl.werkvlakId.startsWith('deurvleugel_')) {
+      return null;
+    }
+
+    final vleugelId = stijl.werkvlakId.substring('deurvleugel_'.length);
+
+    for (final vleugel in deurVleugels) {
+      if (!vleugel.isDeurVleugel || vleugel.id != vleugelId) {
+        continue;
+      }
+
+      return _deurVleugelBinnenWerkvlak(
+        vleugel: vleugel,
+        buitenKader: buitenKader,
+        schaalX: schaalX,
+        schaalY: schaalY,
+      );
+    }
+
+    return null;
+  }
+
+  Rect? _deurVleugelBinnenWerkvlak({
+    required OpmetingRaamVleugel vleugel,
+    required Rect buitenKader,
+    required double schaalX,
+    required double schaalY,
+  }) {
+    final maximaleProfielBreedteX = buitenKader.width / 3;
+    final maximaleProfielBreedteY = buitenKader.height / 3;
+
+    if (maximaleProfielBreedteX < 5 || maximaleProfielBreedteY < 5) {
+      return null;
+    }
+
+    final profielBreedteX = (vleugel.deurVleugelBreedteMm * schaalX)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteX)
+        .toDouble();
+
+    final profielBreedteY = (vleugel.deurVleugelBreedteMm * schaalY)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteY)
+        .toDouble();
+
+    final onderAfstandPx = (vleugel.deurVleugelOnderAfstandMm * schaalY)
+        .abs()
+        .clamp(0.0, buitenKader.height / 4)
+        .toDouble();
+
+    final deurRect = Rect.fromLTRB(
+      vleugel.vlak.left,
+      vleugel.vlak.top,
+      vleugel.vlak.right,
+      buitenKader.bottom - onderAfstandPx,
+    );
+
+    if (deurRect.width <= profielBreedteX * 2 + 12 ||
+        deurRect.height <= profielBreedteY * 2 + 36) {
+      return null;
+    }
+
+    return Rect.fromLTRB(
+      deurRect.left + profielBreedteX,
+      deurRect.top + profielBreedteY,
+      deurRect.right - profielBreedteX,
+      deurRect.bottom - profielBreedteY,
+    );
+  }
+
+  double _positieFractieVoorTStijlInWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+  }) {
+    final opgeslagenFractie = stijl.positieFractie;
+
+    if (opgeslagenFractie != null && opgeslagenFractie.isFinite) {
+      return opgeslagenFractie.clamp(0.0, 1.0).toDouble();
+    }
+
+    if (stijl.richting == 'verticaal') {
+      if (werkvlak.width <= 0) {
+        return 0.5;
+      }
+
+      return ((stijl.start.dx - werkvlak.left) / werkvlak.width)
+          .clamp(0.0, 1.0)
+          .toDouble();
+    }
+
+    if (werkvlak.height <= 0) {
+      return 0.5;
+    }
+
+    return ((stijl.start.dy - werkvlak.top) / werkvlak.height)
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
+
+  OpmetingRaamLijn _lijnVoorTStijlInDeurWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+  }) {
+    final fractie = _positieFractieVoorTStijlInWerkvlak(
+      stijl: stijl,
+      werkvlak: werkvlak,
+    );
+
+    if (stijl.richting == 'verticaal') {
+      final x = (werkvlak.left + werkvlak.width * fractie)
+          .clamp(werkvlak.left, werkvlak.right)
+          .toDouble();
+
+      return OpmetingRaamLijn(
+        id: stijl.id,
+        start: Offset(x, werkvlak.top),
+        einde: Offset(x, werkvlak.bottom),
+      );
+    }
+
+    final y = (werkvlak.top + werkvlak.height * fractie)
+        .clamp(werkvlak.top, werkvlak.bottom)
+        .toDouble();
+
+    return OpmetingRaamLijn(
+      id: stijl.id,
+      start: Offset(werkvlak.left, y),
+      einde: Offset(werkvlak.right, y),
+    );
+  }
+
+  void _tekenDubbeleDeurMaatvoering({
+    required Canvas canvas,
+    required List<OpmetingRaamVleugel> vleugels,
+    required Rect buitenKader,
+    required int breedteMm,
+  }) {
+    if (breedteMm <= 0 || buitenKader.width <= 0) {
+      return;
+    }
+
+    final groepen = <String, List<OpmetingRaamVleugel>>{};
+
+    for (final vleugel in vleugels) {
+      if (!vleugel.isDeurVleugel || !vleugel.isDubbeleDeurVleugel) {
+        continue;
+      }
+
+      final groepId = vleugel.deurVleugelGroepId.trim().isEmpty
+          ? vleugel.id
+          : vleugel.deurVleugelGroepId;
+
+      groepen.putIfAbsent(groepId, () => <OpmetingRaamVleugel>[]).add(vleugel);
+    }
+
+    for (final groep in groepen.values) {
+      if (groep.length < 2) {
+        continue;
+      }
+
+      Rect deurRect = groep.first.vlak;
+
+      for (final vleugel in groep.skip(1)) {
+        deurRect = deurRect.expandToInclude(vleugel.vlak);
+      }
+
+      if (deurRect.width <= 20 || deurRect.height <= 20) {
+        continue;
+      }
+
+      final linksDeel = groep.where((vleugel) {
+        return vleugel.deurVleugelDeel == OpmetingRaamDeurVleugelDeel.links;
+      }).toList();
+
+      final splitX = linksDeel.isNotEmpty
+          ? linksDeel.first.vlak.right
+          : deurRect.center.dx;
+
+      if (splitX <= deurRect.left + 8 || splitX >= deurRect.right - 8) {
+        continue;
+      }
+
+      // De deelmaten van een dubbele deur horen onder de tekening,
+      // tussen de deur/kadertekening en de gewone totale breedtemaat.
+      final y = buitenKader.bottom + 14;
+      final maatLijnPaint = Paint()
+        ..color = _maatKleur
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawLine(
+        Offset(deurRect.left, buitenKader.bottom + 3),
+        Offset(deurRect.left, y + 5),
+        maatLijnPaint,
+      );
+      canvas.drawLine(
+        Offset(splitX, buitenKader.bottom + 3),
+        Offset(splitX, y + 5),
+        maatLijnPaint,
+      );
+      canvas.drawLine(
+        Offset(deurRect.right, buitenKader.bottom + 3),
+        Offset(deurRect.right, y + 5),
+        maatLijnPaint,
+      );
+
+      final linksMm = ((splitX - deurRect.left) / buitenKader.width * breedteMm)
+          .round()
+          .clamp(0, breedteMm);
+      final rechtsMm =
+          ((deurRect.right - splitX) / buitenKader.width * breedteMm)
+              .round()
+              .clamp(0, breedteMm);
+
+      _tekenHorizontaleMaat(
+        canvas: canvas,
+        startX: deurRect.left,
+        eindeX: splitX,
+        y: y,
+        tekst: '$linksMm',
+        buitenmaat: false,
+      );
+
+      _tekenHorizontaleMaat(
+        canvas: canvas,
+        startX: splitX,
+        eindeX: deurRect.right,
+        y: y,
+        tekst: '$rechtsMm',
+        buitenmaat: false,
+      );
+    }
   }
 
   void _tekenMaatvoeringPerKader({
     required Canvas canvas,
-    required Size size,
     required Rect tekenGebied,
     required OpmetingKaderSamenstelling samenstelling,
   }) {
@@ -835,44 +1390,13 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     final gebruikteBreedteSleutels = <String>{};
     final gebruikteHoogteSleutels = <String>{};
 
-    final kadersMetVerticaleTStijlen = <String>[];
-    final kadersMetHorizontaleTStijlen = <String>[];
-
-    for (final kader in weergave.layout.kaders) {
-      if (_tStijlBreedtePositiesMmVoorKader(
-        size: size,
-        kader: kader,
-      ).isNotEmpty) {
-        kadersMetVerticaleTStijlen.add(kader.id);
-      }
-
-      if (_tStijlHoogtePositiesMmVoorKader(
-        size: size,
-        kader: kader,
-      ).isNotEmpty) {
-        kadersMetHorizontaleTStijlen.add(kader.id);
-      }
-    }
-
     final tStijlBreedteY = tekenGebied.bottom + 14;
-    final kaderBreedteY =
-        tekenGebied.bottom + (kadersMetVerticaleTStijlen.isNotEmpty ? 38 : 18);
-    final totaleBreedteY = kaderBreedteY + 28;
+    final kaderBreedteY = tekenGebied.bottom + 32;
+    final totaleBreedteY = tekenGebied.bottom + 58;
 
-    final tStijlHoogteXPerKader = <String, double>{};
-    var huidigeTStijlHoogteX = tekenGebied.right + 14;
-
-    for (final kaderId in kadersMetHorizontaleTStijlen) {
-      tStijlHoogteXPerKader[kaderId] = huidigeTStijlHoogteX;
-      huidigeTStijlHoogteX += 24;
-    }
-
-    final kaderHoogteX =
-        tekenGebied.right +
-        (kadersMetHorizontaleTStijlen.isNotEmpty
-            ? 14 + (kadersMetHorizontaleTStijlen.length * 24) + 18
-            : 18);
-    final totaleHoogteX = kaderHoogteX + 30;
+    final tStijlHoogteX = tekenGebied.right + 14;
+    final kaderHoogteX = tekenGebied.right + 36;
+    final totaleHoogteX = tekenGebied.right + 64;
 
     for (final kader in weergave.layout.kaders) {
       final rect = weergave.rectVoorKaderId(kader.id);
@@ -881,15 +1405,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         continue;
       }
 
-      _tekenTStijlBreedtematenVoorKaderBuiten(
-        canvas: canvas,
-        size: size,
-        rect: rect,
-        buitenSamenstelling: tekenGebied,
-        kader: kader,
-        maatLijnY: tStijlBreedteY,
-      );
-
       final breedteSleutel =
           '${rect.left.round()}_${rect.right.round()}_${kader.breedteMm}';
 
@@ -897,24 +1412,18 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         _tekenKaderBreedtemaatBuiten(
           canvas: canvas,
           rect: rect,
-          buitenSamenstelling: tekenGebied,
           maatLijnY: kaderBreedteY,
           breedteMm: kader.breedteMm,
         );
       }
 
-      final tStijlHoogteX = tStijlHoogteXPerKader[kader.id];
-
-      if (tStijlHoogteX != null) {
-        _tekenTStijlHoogtematenVoorKaderBuiten(
-          canvas: canvas,
-          size: size,
-          rect: rect,
-          buitenSamenstelling: tekenGebied,
-          kader: kader,
-          maatLijnX: tStijlHoogteX,
-        );
-      }
+      _tekenTStijlBreedtematenVoorKaderBuiten(
+        canvas: canvas,
+        size: tekenGebied.size,
+        rect: rect,
+        kader: kader,
+        maatLijnY: tStijlBreedteY,
+      );
 
       final hoogteIsGelijkAanTotaleHoogte =
           (kader.bovenMm - weergave.layout.minYMm).abs() <= 1 &&
@@ -929,11 +1438,18 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         _tekenKaderHoogtemaatBuiten(
           canvas: canvas,
           rect: rect,
-          buitenSamenstelling: tekenGebied,
           maatLijnX: kaderHoogteX,
           hoogteMm: kader.hoogteMm,
         );
       }
+
+      _tekenTStijlHoogtematenVoorKaderBuiten(
+        canvas: canvas,
+        size: tekenGebied.size,
+        rect: rect,
+        kader: kader,
+        maatLijnX: tStijlHoogteX,
+      );
     }
 
     _tekenTotaleBreedtemaat(
@@ -954,7 +1470,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
   void _tekenKaderBreedtemaatBuiten({
     required Canvas canvas,
     required Rect rect,
-    required Rect buitenSamenstelling,
     required double maatLijnY,
     required int breedteMm,
   }) {
@@ -964,13 +1479,13 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(
-      Offset(rect.left, buitenSamenstelling.bottom + 2),
+      Offset(rect.left, rect.bottom + 2),
       Offset(rect.left, maatLijnY + 5),
       hulplijnPaint,
     );
 
     canvas.drawLine(
-      Offset(rect.right, buitenSamenstelling.bottom + 2),
+      Offset(rect.right, rect.bottom + 2),
       Offset(rect.right, maatLijnY + 5),
       hulplijnPaint,
     );
@@ -988,7 +1503,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
   void _tekenKaderHoogtemaatBuiten({
     required Canvas canvas,
     required Rect rect,
-    required Rect buitenSamenstelling,
     required double maatLijnX,
     required int hoogteMm,
   }) {
@@ -998,13 +1512,13 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     canvas.drawLine(
-      Offset(buitenSamenstelling.right + 2, rect.top),
+      Offset(rect.right + 2, rect.top),
       Offset(maatLijnX + 5, rect.top),
       hulplijnPaint,
     );
 
     canvas.drawLine(
-      Offset(buitenSamenstelling.right + 2, rect.bottom),
+      Offset(rect.right + 2, rect.bottom),
       Offset(maatLijnX + 5, rect.bottom),
       hulplijnPaint,
     );
@@ -1023,26 +1537,44 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required Canvas canvas,
     required Size size,
     required Rect rect,
-    required Rect buitenSamenstelling,
     required OpmetingKaderDeel kader,
     required double maatLijnY,
   }) {
-    final positiesMm = _tStijlBreedtePositiesMmVoorKader(
-      size: size,
-      kader: kader,
-    );
+    final stijlen = _tStijlenVoorMaatvoeringKader(kader.id);
 
-    if (positiesMm.isEmpty) {
+    final verticalePosities = stijlen
+        .where((stijl) {
+          return stijl.werkvlakId == 'kader' && stijl.richting == 'verticaal';
+        })
+        .map((stijl) {
+          final bron = _kaderBronBuitenVoorMaatvoering(
+            size: size,
+            kader: kader,
+          );
+
+          return _mapXVanKaderBronNaarRect(
+            x: stijl.start.dx,
+            bron: bron,
+            doel: rect,
+          );
+        })
+        .where((x) {
+          return x > rect.left + 2 && x < rect.right - 2;
+        })
+        .toList();
+
+    final uniekePosities = _uniekeGesorteerdeWaarden(verticalePosities);
+
+    if (uniekePosities.isEmpty) {
       return;
     }
 
-    _tekenHorizontaleMaatkettingMm(
+    _tekenHorizontaleMaatketting(
       canvas: canvas,
-      rect: rect,
-      buitenSamenstelling: buitenSamenstelling,
-      positiesMm: positiesMm,
+      buiten: rect,
+      tStijlPosities: uniekePosities,
       maatLijnY: maatLijnY,
-      totaleMaatMm: kader.breedteMm,
+      maatBreedteMm: kader.breedteMm,
     );
   }
 
@@ -1050,216 +1582,45 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required Canvas canvas,
     required Size size,
     required Rect rect,
-    required Rect buitenSamenstelling,
     required OpmetingKaderDeel kader,
     required double maatLijnX,
   }) {
-    final positiesMm = _tStijlHoogtePositiesMmVoorKader(
-      size: size,
-      kader: kader,
-    );
+    final stijlen = _tStijlenVoorMaatvoeringKader(kader.id);
 
-    if (positiesMm.isEmpty) {
+    final horizontalePosities = stijlen
+        .where((stijl) {
+          return stijl.werkvlakId == 'kader' && stijl.richting == 'horizontaal';
+        })
+        .map((stijl) {
+          final bron = _kaderBronBuitenVoorMaatvoering(
+            size: size,
+            kader: kader,
+          );
+
+          return _mapYVanKaderBronNaarRect(
+            y: stijl.start.dy,
+            bron: bron,
+            doel: rect,
+          );
+        })
+        .where((y) {
+          return y > rect.top + 2 && y < rect.bottom - 2;
+        })
+        .toList();
+
+    final uniekePosities = _uniekeGesorteerdeWaarden(horizontalePosities);
+
+    if (uniekePosities.isEmpty) {
       return;
     }
 
-    _tekenVerticaleMaatkettingMm(
+    _tekenVerticaleMaatketting(
       canvas: canvas,
-      rect: rect,
-      buitenSamenstelling: buitenSamenstelling,
-      positiesMm: positiesMm,
+      buiten: rect,
+      tStijlPosities: uniekePosities,
       maatLijnX: maatLijnX,
-      totaleMaatMm: kader.hoogteMm,
+      maatHoogteMm: kader.hoogteMm,
     );
-  }
-
-  List<int> _tStijlBreedtePositiesMmVoorKader({
-    required Size size,
-    required OpmetingKaderDeel kader,
-  }) {
-    final stijlen = _tStijlenVoorMaatvoeringKader(kader.id);
-    final bron = _kaderBronBuitenVoorMaatvoering(size: size, kader: kader);
-
-    final posities = <int>[];
-
-    for (final stijl in stijlen) {
-      if (stijl.werkvlakId != 'kader' || stijl.richting != 'verticaal') {
-        continue;
-      }
-
-      if (bron.width <= 0 || kader.breedteMm <= 0) {
-        continue;
-      }
-
-      final positieMm =
-          ((stijl.start.dx - bron.left) / bron.width * kader.breedteMm).round();
-
-      if (positieMm <= 1 || positieMm >= kader.breedteMm - 1) {
-        continue;
-      }
-
-      posities.add(positieMm);
-    }
-
-    return _uniekeGesorteerdeMmWaarden(posities);
-  }
-
-  List<int> _tStijlHoogtePositiesMmVoorKader({
-    required Size size,
-    required OpmetingKaderDeel kader,
-  }) {
-    final stijlen = _tStijlenVoorMaatvoeringKader(kader.id);
-    final bron = _kaderBronBuitenVoorMaatvoering(size: size, kader: kader);
-
-    final posities = <int>[];
-
-    for (final stijl in stijlen) {
-      if (stijl.werkvlakId != 'kader' || stijl.richting != 'horizontaal') {
-        continue;
-      }
-
-      if (bron.height <= 0 || kader.hoogteMm <= 0) {
-        continue;
-      }
-
-      final positieMm =
-          ((stijl.start.dy - bron.top) / bron.height * kader.hoogteMm).round();
-
-      if (positieMm <= 1 || positieMm >= kader.hoogteMm - 1) {
-        continue;
-      }
-
-      posities.add(positieMm);
-    }
-
-    return _uniekeGesorteerdeMmWaarden(posities);
-  }
-
-  List<int> _uniekeGesorteerdeMmWaarden(List<int> waarden) {
-    final gesorteerd = <int>[...waarden]..sort();
-    final uniek = <int>[];
-
-    for (final waarde in gesorteerd) {
-      if (uniek.isEmpty || (waarde - uniek.last).abs() > 2) {
-        uniek.add(waarde);
-      }
-    }
-
-    return uniek;
-  }
-
-  void _tekenHorizontaleMaatkettingMm({
-    required Canvas canvas,
-    required Rect rect,
-    required Rect buitenSamenstelling,
-    required List<int> positiesMm,
-    required double maatLijnY,
-    required int totaleMaatMm,
-  }) {
-    if (totaleMaatMm <= 0 || rect.width <= 0) {
-      return;
-    }
-
-    final puntenMm = <int>{0, ...positiesMm, totaleMaatMm}.toList()..sort();
-
-    if (puntenMm.length < 2) {
-      return;
-    }
-
-    final hulplijnPaint = Paint()
-      ..color = _maatKleur
-      ..strokeWidth = 0.75
-      ..style = PaintingStyle.stroke;
-
-    double xVoorMm(int mm) {
-      return rect.left + (rect.width * (mm / totaleMaatMm));
-    }
-
-    for (final mm in puntenMm) {
-      final x = xVoorMm(mm);
-
-      canvas.drawLine(
-        Offset(x, buitenSamenstelling.bottom + 2),
-        Offset(x, maatLijnY + 5),
-        hulplijnPaint,
-      );
-    }
-
-    for (var index = 0; index < puntenMm.length - 1; index++) {
-      final startMm = puntenMm[index];
-      final eindeMm = puntenMm[index + 1];
-      final maatMm = eindeMm - startMm;
-
-      if (maatMm <= 0) {
-        continue;
-      }
-
-      _tekenHorizontaleMaat(
-        canvas: canvas,
-        startX: xVoorMm(startMm),
-        eindeX: xVoorMm(eindeMm),
-        y: maatLijnY,
-        tekst: '$maatMm',
-        buitenmaat: false,
-      );
-    }
-  }
-
-  void _tekenVerticaleMaatkettingMm({
-    required Canvas canvas,
-    required Rect rect,
-    required Rect buitenSamenstelling,
-    required List<int> positiesMm,
-    required double maatLijnX,
-    required int totaleMaatMm,
-  }) {
-    if (totaleMaatMm <= 0 || rect.height <= 0) {
-      return;
-    }
-
-    final puntenMm = <int>{0, ...positiesMm, totaleMaatMm}.toList()..sort();
-
-    if (puntenMm.length < 2) {
-      return;
-    }
-
-    final hulplijnPaint = Paint()
-      ..color = _maatKleur
-      ..strokeWidth = 0.75
-      ..style = PaintingStyle.stroke;
-
-    double yVoorMm(int mm) {
-      return rect.top + (rect.height * (mm / totaleMaatMm));
-    }
-
-    for (final mm in puntenMm) {
-      final y = yVoorMm(mm);
-
-      canvas.drawLine(
-        Offset(buitenSamenstelling.right + 2, y),
-        Offset(maatLijnX + 5, y),
-        hulplijnPaint,
-      );
-    }
-
-    for (var index = 0; index < puntenMm.length - 1; index++) {
-      final startMm = puntenMm[index];
-      final eindeMm = puntenMm[index + 1];
-      final maatMm = eindeMm - startMm;
-
-      if (maatMm <= 0) {
-        continue;
-      }
-
-      _tekenVerticaleMaat(
-        canvas: canvas,
-        startY: yVoorMm(startMm),
-        eindeY: yVoorMm(eindeMm),
-        x: maatLijnX,
-        tekst: '$maatMm',
-        buitenmaat: false,
-      );
-    }
   }
 
   List<OpmetingRaamTStijl> _tStijlenVoorMaatvoeringKader(String kaderId) {
@@ -1279,6 +1640,34 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       breedteMm: kader.breedteMm,
       hoogteMm: kader.hoogteMm,
     );
+  }
+
+  double _mapXVanKaderBronNaarRect({
+    required double x,
+    required Rect bron,
+    required Rect doel,
+  }) {
+    if (bron.width <= 0 || doel.width <= 0) {
+      return doel.left;
+    }
+
+    final fractie = ((x - bron.left) / bron.width).clamp(0.0, 1.0).toDouble();
+
+    return doel.left + doel.width * fractie;
+  }
+
+  double _mapYVanKaderBronNaarRect({
+    required double y,
+    required Rect bron,
+    required Rect doel,
+  }) {
+    if (bron.height <= 0 || doel.height <= 0) {
+      return doel.top;
+    }
+
+    final fractie = ((y - bron.top) / bron.height).clamp(0.0, 1.0).toDouble();
+
+    return doel.top + doel.height * fractie;
   }
 
   void _tekenMaatvoering({

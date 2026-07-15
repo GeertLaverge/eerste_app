@@ -123,7 +123,38 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
       return;
     }
 
-    final oudeKaderTStijlen = oudeTStijlen.where((stijl) {
+    final oudeDeurWerkvlakkenVoorClassificatie = _bepaalDeurVleugelWerkvlakken(
+      vleugels: oudeVleugels,
+      buitenKader: oudBuitenKader,
+      breedteMm: oudeBreedteMm,
+      hoogteMm: oudeHoogteMm,
+    );
+
+    final genormaliseerdeOudeTStijlen = oudeTStijlen.map((stijl) {
+      final deurWerkvlakId = _vindDeurWerkvlakIdVoorTStijl(
+        stijl: stijl,
+        deurWerkvlakken: oudeDeurWerkvlakkenVoorClassificatie,
+      );
+
+      if (deurWerkvlakId == null || deurWerkvlakId == stijl.werkvlakId) {
+        return stijl;
+      }
+
+      final deurWerkvlak = oudeDeurWerkvlakkenVoorClassificatie[deurWerkvlakId];
+      final positieFractie = deurWerkvlak == null
+          ? stijl.positieFractie
+          : _positieFractieVoorTStijlInWerkvlak(
+              stijl: stijl,
+              werkvlak: deurWerkvlak,
+            );
+
+      return stijl.copyWith(
+        werkvlakId: deurWerkvlakId,
+        positieFractie: positieFractie,
+      );
+    }).toList();
+
+    final oudeKaderTStijlen = genormaliseerdeOudeTStijlen.where((stijl) {
       return stijl.werkvlakId == 'kader';
     }).toList();
 
@@ -176,8 +207,23 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
     );
 
     final nieuweVleugels = <OpmetingRaamVleugel>[];
+    final verwerkteDubbeleDeurGroepen = <String>{};
 
-    for (final oudeVleugel in oudeVleugels) {
+    bool zelfdeDeurGroep(
+      OpmetingRaamVleugel eerste,
+      OpmetingRaamVleugel tweede,
+    ) {
+      final eersteGroep = eerste.deurVleugelGroepId.trim();
+      final tweedeGroep = tweede.deurVleugelGroepId.trim();
+
+      if (eersteGroep.isNotEmpty || tweedeGroep.isNotEmpty) {
+        return eersteGroep.isNotEmpty && eersteGroep == tweedeGroep;
+      }
+
+      return eerste.id == tweede.id;
+    }
+
+    Rect doelVlakVoorOudeVleugel(OpmetingRaamVleugel oudeVleugel) {
       final oudBronVlak =
           oudeBronVlakkenPerVleugel[oudeVleugel.id] ??
           _vindHoofdVlakVoorVleugel(
@@ -194,8 +240,7 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
         nieuweHoofdVlakken: nieuweHoofdVlakken,
       );
 
-      final doelVlak =
-          nieuwHoofdVlak ??
+      return nieuwHoofdVlak ??
           _begrensVlakBinnenKader(
             vlak: _schaalRectTussenVlakken(
               rect: oudBronVlak,
@@ -204,21 +249,128 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
             ),
             binnenKader: nieuwBinnenKader,
           );
+    }
 
-      final nieuwVleugelVlak = OpmetingRaamVleugelHelper.maakVleugelVlak(
-        vlak: doelVlak,
-        buitenKader: nieuwBuitenKader,
-        breedteMm: nieuweBreedteMm,
-        hoogteMm: nieuweHoogteMm,
-      );
+    Rect unionRect(Iterable<Rect> rects) {
+      Rect? resultaat;
 
-      nieuweVleugels.add(
-        OpmetingRaamVleugel(
-          id: oudeVleugel.id,
-          vlak: nieuwVleugelVlak,
-          type: oudeVleugel.type,
-        ),
-      );
+      for (final rect in rects) {
+        resultaat = resultaat == null ? rect : resultaat!.expandToInclude(rect);
+      }
+
+      return resultaat ?? Rect.zero;
+    }
+
+    double splitXVoorDubbeleDeur({
+      required Rect groepVlak,
+      required OpmetingRaamVleugel basisVleugel,
+    }) {
+      if (groepVlak.width <= 0) {
+        return groepVlak.center.dx;
+      }
+
+      double schaalX = 0;
+
+      if (nieuweBreedteMm > 0 && nieuwBuitenKader.width > 0) {
+        schaalX = nieuwBuitenKader.width / nieuweBreedteMm;
+      }
+
+      if (schaalX <= 0 || !schaalX.isFinite) {
+        schaalX = groepVlak.width / 1000;
+      }
+
+      final verschuivingPx =
+          basisVleugel.deurVleugelMiddenVerschuivingMm * schaalX;
+
+      final minimaleVleugelBreedte = groepVlak.width * 0.22;
+
+      return (groepVlak.center.dx + verschuivingPx)
+          .clamp(
+            groepVlak.left + minimaleVleugelBreedte,
+            groepVlak.right - minimaleVleugelBreedte,
+          )
+          .toDouble();
+    }
+
+    for (final oudeVleugel in oudeVleugels) {
+      if (oudeVleugel.isDeurVleugel && oudeVleugel.isDubbeleDeurVleugel) {
+        final groepSleutel = oudeVleugel.deurVleugelGroepId.trim().isEmpty
+            ? oudeVleugel.id
+            : oudeVleugel.deurVleugelGroepId.trim();
+
+        if (!verwerkteDubbeleDeurGroepen.add(groepSleutel)) {
+          continue;
+        }
+
+        final oudeGroep = oudeVleugels.where((vleugel) {
+          return vleugel.isDeurVleugel &&
+              vleugel.isDubbeleDeurVleugel &&
+              zelfdeDeurGroep(vleugel, oudeVleugel);
+        }).toList();
+
+        if (oudeGroep.length < 2) {
+          nieuweVleugels.add(
+            oudeVleugel.copyWith(vlak: doelVlakVoorOudeVleugel(oudeVleugel)),
+          );
+          continue;
+        }
+
+        final groepVlak = unionRect(
+          oudeGroep.map((vleugel) => doelVlakVoorOudeVleugel(vleugel)),
+        );
+
+        if (groepVlak.width <= 24 || groepVlak.height <= 24) {
+          for (final deel in oudeGroep) {
+            nieuweVleugels.add(
+              deel.copyWith(vlak: doelVlakVoorOudeVleugel(deel)),
+            );
+          }
+          continue;
+        }
+
+        final splitX = splitXVoorDubbeleDeur(
+          groepVlak: groepVlak,
+          basisVleugel: oudeVleugel,
+        );
+
+        final linksVlak = Rect.fromLTRB(
+          groepVlak.left,
+          groepVlak.top,
+          splitX,
+          groepVlak.bottom,
+        );
+
+        final rechtsVlak = Rect.fromLTRB(
+          splitX,
+          groepVlak.top,
+          groepVlak.right,
+          groepVlak.bottom,
+        );
+
+        for (final deel in oudeGroep) {
+          final nieuwVlak =
+              deel.deurVleugelDeel == OpmetingRaamDeurVleugelDeel.links
+              ? linksVlak
+              : rechtsVlak;
+
+          nieuweVleugels.add(deel.copyWith(vlak: nieuwVlak));
+        }
+
+        continue;
+      }
+
+      final doelVlak = doelVlakVoorOudeVleugel(oudeVleugel);
+
+      final nieuwVleugelVlak = oudeVleugel.isDeurVleugel
+          ? doelVlak
+          : OpmetingRaamVleugelHelper.maakVleugelVlak(
+              vlak: doelVlak,
+              buitenKader: nieuwBuitenKader,
+              breedteMm: nieuweBreedteMm,
+              hoogteMm: nieuweHoogteMm,
+            );
+
+      nieuweVleugels.add(oudeVleugel.copyWith(vlak: nieuwVleugelVlak));
     }
 
     final oudeVleugelWerkvlakken =
@@ -237,9 +389,29 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
           hoogteMm: nieuweHoogteMm,
         );
 
+    final oudeWerkvlakkenPerId = <String, Rect>{
+      ...oudeVleugelWerkvlakken,
+      ..._bepaalDeurVleugelWerkvlakken(
+        vleugels: oudeVleugels,
+        buitenKader: oudBuitenKader,
+        breedteMm: oudeBreedteMm,
+        hoogteMm: oudeHoogteMm,
+      ),
+    };
+
+    final nieuweWerkvlakkenPerId = <String, Rect>{
+      ...nieuweVleugelWerkvlakken,
+      ..._bepaalDeurVleugelWerkvlakken(
+        vleugels: nieuweVleugels,
+        buitenKader: nieuwBuitenKader,
+        breedteMm: nieuweBreedteMm,
+        hoogteMm: nieuweHoogteMm,
+      ),
+    };
+
     final interneGroepen = <String, List<OpmetingRaamTStijl>>{};
 
-    for (final stijl in oudeTStijlen) {
+    for (final stijl in genormaliseerdeOudeTStijlen) {
       if (stijl.werkvlakId == 'kader') {
         continue;
       }
@@ -250,20 +422,27 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
     }
 
     for (final entry in interneGroepen.entries) {
-      final oudWerkvlak = oudeVleugelWerkvlakken[entry.key];
-      final nieuwWerkvlak = nieuweVleugelWerkvlakken[entry.key];
+      final oudWerkvlak = oudeWerkvlakkenPerId[entry.key];
+      final nieuwWerkvlak = nieuweWerkvlakkenPerId[entry.key];
 
-      if (oudWerkvlak == null ||
-          nieuwWerkvlak == null ||
-          !_isGeldigVlak(oudWerkvlak) ||
-          !_isGeldigVlak(nieuwWerkvlak)) {
+      final bruikbaarOudWerkvlak =
+          oudWerkvlak != null && _isGeldigVlak(oudWerkvlak)
+          ? oudWerkvlak
+          : oudBinnenKader;
+      final bruikbaarNieuwWerkvlak =
+          nieuwWerkvlak != null && _isGeldigVlak(nieuwWerkvlak)
+          ? nieuwWerkvlak
+          : nieuwBinnenKader;
+
+      if (!_isGeldigVlak(bruikbaarOudWerkvlak) ||
+          !_isGeldigVlak(bruikbaarNieuwWerkvlak)) {
         continue;
       }
 
       final aangepasteGroep = _schaalTStijlGroep(
         oudeStijlen: entry.value,
-        oudWerkvlak: oudWerkvlak,
-        nieuwWerkvlak: nieuwWerkvlak,
+        oudWerkvlak: bruikbaarOudWerkvlak,
+        nieuwWerkvlak: bruikbaarNieuwWerkvlak,
         oudBuitenKader: oudBuitenKader,
         nieuwBuitenKader: nieuwBuitenKader,
         oudeBreedteMm: oudeBreedteMm,
@@ -279,7 +458,7 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
 
     final nieuweAlleTStijlen = <OpmetingRaamTStijl>[];
 
-    for (final oudeStijl in oudeTStijlen) {
+    for (final oudeStijl in genormaliseerdeOudeTStijlen) {
       final aangepasteStijl = aangepasteTStijlenPerId[oudeStijl.id];
 
       if (aangepasteStijl != null) {
@@ -600,6 +779,219 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
     return Rect.fromLTRB(links, boven, rechts, onder);
   }
 
+  static String? _vindDeurWerkvlakIdVoorTStijl({
+    required OpmetingRaamTStijl stijl,
+    required Map<String, Rect> deurWerkvlakken,
+  }) {
+    if (deurWerkvlakken.isEmpty) {
+      return null;
+    }
+
+    if (deurWerkvlakken.containsKey(stijl.werkvlakId)) {
+      return stijl.werkvlakId;
+    }
+
+    final controlePunt = _controlePuntVoorTStijl(stijl);
+    final lijnRect = _tStijlLijnRect(stijl);
+
+    String? besteWerkvlakId;
+    var besteAfstand = double.infinity;
+
+    for (final entry in deurWerkvlakken.entries) {
+      final werkvlak = entry.value;
+      final ruimWerkvlak = werkvlak.inflate(18);
+
+      if (ruimWerkvlak.contains(controlePunt) ||
+          lijnRect.overlaps(ruimWerkvlak)) {
+        return entry.key;
+      }
+
+      if (stijl.werkvlakId.startsWith('deurvleugel_')) {
+        final afstand = (controlePunt - werkvlak.center).distance;
+
+        if (afstand < besteAfstand) {
+          besteAfstand = afstand;
+          besteWerkvlakId = entry.key;
+        }
+      }
+    }
+
+    return besteWerkvlakId;
+  }
+
+  static Offset _controlePuntVoorTStijl(OpmetingRaamTStijl stijl) {
+    return Offset(
+      (stijl.start.dx + stijl.einde.dx) / 2,
+      (stijl.start.dy + stijl.einde.dy) / 2,
+    );
+  }
+
+  static Rect _tStijlLijnRect(OpmetingRaamTStijl stijl) {
+    const marge = 3.0;
+
+    final left = stijl.start.dx < stijl.einde.dx
+        ? stijl.start.dx
+        : stijl.einde.dx;
+    final right = stijl.start.dx > stijl.einde.dx
+        ? stijl.start.dx
+        : stijl.einde.dx;
+    final top = stijl.start.dy < stijl.einde.dy
+        ? stijl.start.dy
+        : stijl.einde.dy;
+    final bottom = stijl.start.dy > stijl.einde.dy
+        ? stijl.start.dy
+        : stijl.einde.dy;
+
+    return Rect.fromLTRB(left, top, right, bottom).inflate(marge);
+  }
+
+  static Map<String, Rect> _bepaalDeurVleugelWerkvlakken({
+    required List<OpmetingRaamVleugel> vleugels,
+    required Rect buitenKader,
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    final resultaat = <String, Rect>{};
+
+    for (final vleugel in vleugels) {
+      if (!vleugel.isDeurVleugel) {
+        continue;
+      }
+
+      final binnenRect = _deurVleugelBinnenRect(
+        vleugel: vleugel,
+        buitenKader: buitenKader,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
+      );
+
+      if (binnenRect == null || !_isGeldigVlak(binnenRect)) {
+        continue;
+      }
+
+      resultaat['deurvleugel_${vleugel.id}'] = binnenRect;
+    }
+
+    return resultaat;
+  }
+
+  static Rect? _deurVleugelBinnenRect({
+    required OpmetingRaamVleugel vleugel,
+    required Rect buitenKader,
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    if (breedteMm <= 0 || hoogteMm <= 0 || !_isGeldigVlak(buitenKader)) {
+      return null;
+    }
+
+    final schaalX = buitenKader.width / breedteMm;
+    final schaalY = buitenKader.height / hoogteMm;
+
+    if (!schaalX.isFinite ||
+        !schaalY.isFinite ||
+        schaalX <= 0 ||
+        schaalY <= 0) {
+      return null;
+    }
+
+    final maximaleProfielBreedteX = buitenKader.width / 3;
+    final maximaleProfielBreedteY = buitenKader.height / 3;
+
+    if (maximaleProfielBreedteX < 5 || maximaleProfielBreedteY < 5) {
+      return null;
+    }
+
+    final profielBreedteX = (vleugel.deurVleugelBreedteMm * schaalX)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteX)
+        .toDouble();
+    final profielBreedteY = (vleugel.deurVleugelBreedteMm * schaalY)
+        .abs()
+        .clamp(5.0, maximaleProfielBreedteY)
+        .toDouble();
+    final onderAfstandPx = (vleugel.deurVleugelOnderAfstandMm * schaalY)
+        .abs()
+        .clamp(0.0, buitenKader.height / 4)
+        .toDouble();
+
+    final deurRect = Rect.fromLTRB(
+      vleugel.vlak.left,
+      vleugel.vlak.top,
+      vleugel.vlak.right,
+      buitenKader.bottom - onderAfstandPx,
+    );
+
+    if (deurRect.width <= profielBreedteX * 2 + 8 ||
+        deurRect.height <= profielBreedteY * 2 + 8) {
+      return null;
+    }
+
+    return Rect.fromLTRB(
+      deurRect.left + profielBreedteX,
+      deurRect.top + profielBreedteY,
+      deurRect.right - profielBreedteX,
+      deurRect.bottom - profielBreedteY,
+    );
+  }
+
+  static double _positieFractieVoorTStijlInWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+  }) {
+    final opgeslagenFractie = stijl.positieFractie;
+
+    if (opgeslagenFractie != null && opgeslagenFractie.isFinite) {
+      return opgeslagenFractie.clamp(0.0, 1.0).toDouble();
+    }
+
+    if (stijl.richting == 'verticaal') {
+      if (werkvlak.width <= 0) {
+        return 0.5;
+      }
+
+      return ((stijl.start.dx - werkvlak.left) / werkvlak.width)
+          .clamp(0.0, 1.0)
+          .toDouble();
+    }
+
+    if (werkvlak.height <= 0) {
+      return 0.5;
+    }
+
+    return ((stijl.start.dy - werkvlak.top) / werkvlak.height)
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
+
+  static OpmetingRaamLijn _lijnVoorTStijlInWerkvlak({
+    required OpmetingRaamTStijl stijl,
+    required Rect werkvlak,
+    required double positieFractie,
+  }) {
+    if (stijl.richting == 'verticaal') {
+      final x = (werkvlak.left + werkvlak.width * positieFractie)
+          .clamp(werkvlak.left, werkvlak.right)
+          .toDouble();
+
+      return OpmetingRaamLijn(
+        id: stijl.id,
+        start: Offset(x, werkvlak.top),
+        einde: Offset(x, werkvlak.bottom),
+      );
+    }
+
+    final y = (werkvlak.top + werkvlak.height * positieFractie)
+        .clamp(werkvlak.top, werkvlak.bottom)
+        .toDouble();
+
+    return OpmetingRaamLijn(
+      id: stijl.id,
+      start: Offset(werkvlak.left, y),
+      einde: Offset(werkvlak.right, y),
+    );
+  }
+
   static List<OpmetingRaamTStijl> _schaalTStijlGroep({
     required List<OpmetingRaamTStijl> oudeStijlen,
     required Rect oudWerkvlak,
@@ -631,6 +1023,7 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
         ),
         breedteMm: stijl.breedteMm,
         werkvlakId: stijl.werkvlakId,
+        positieFractie: stijl.positieFractie,
       );
     }).toList();
 
@@ -674,6 +1067,33 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
         nieuweHoogteMm: nieuweHoogteMm,
       );
 
+      final positieFractie = _positieFractieVoorTStijlInWerkvlak(
+        stijl: oudeStijl,
+        werkvlak: oudWerkvlak,
+      );
+
+      if (oudeStijl.werkvlakId.startsWith('deurvleugel_')) {
+        final actueleLijn = _lijnVoorTStijlInWerkvlak(
+          stijl: oudeStijl,
+          werkvlak: nieuwWerkvlak,
+          positieFractie: positieFractie,
+        );
+
+        definitieveStijlen.add(
+          OpmetingRaamTStijl(
+            id: oudeStijl.id,
+            richting: oudeStijl.richting,
+            start: actueleLijn.start,
+            einde: actueleLijn.einde,
+            breedteMm: oudeStijl.breedteMm,
+            werkvlakId: oudeStijl.werkvlakId,
+            positieFractie: positieFractie,
+          ),
+        );
+
+        continue;
+      }
+
       definitieveStijlen.add(
         OpmetingRaamTStijl(
           id: oudeStijl.id,
@@ -682,6 +1102,7 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
           einde: nieuweEinde,
           breedteMm: oudeStijl.breedteMm,
           werkvlakId: oudeStijl.werkvlakId,
+          positieFractie: oudeStijl.positieFractie,
         ),
       );
     }

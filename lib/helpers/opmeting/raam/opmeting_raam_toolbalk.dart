@@ -9,6 +9,9 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     required this.kanHerstellen,
     required this.onOngedaanMaken,
     required this.onHerstellen,
+    this.toonDeurTools = false,
+    this.onDeurVleugel,
+    this.onDeurPanelen,
   });
 
   final String actieveTool;
@@ -19,6 +22,10 @@ class OpmetingRaamToolbalk extends StatelessWidget {
 
   final VoidCallback onOngedaanMaken;
   final VoidCallback onHerstellen;
+
+  final bool toonDeurTools;
+  final VoidCallback? onDeurVleugel;
+  final VoidCallback? onDeurPanelen;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
@@ -66,7 +73,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               tooltip: _kaderActief
                   ? 'Kader wijzigen actief'
                   : 'Kader selecteren en afmetingen wijzigen',
-              breedte: 76,
+              breedte: 72,
               onTap: () {
                 onToolGekozen(_kaderActief ? 'lijn' : 'kader');
               },
@@ -78,7 +85,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               tooltip: _kaderToevoegenActief
                   ? 'Kader toevoegen uitzetten'
                   : 'Extra kader toevoegen',
-              breedte: 80,
+              breedte: 74,
               onTap: () {
                 onToolGekozen(
                   _kaderToevoegenActief ? 'lijn' : 'kadertoevoegen',
@@ -92,7 +99,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               tooltip: _kadergroepActief
                   ? 'Selecteren uitzetten'
                   : 'Kaders selecteren voor technische keuzes',
-              breedte: 92,
+              breedte: 86,
               onTap: () {
                 onToolGekozen(_kadergroepActief ? 'lijn' : 'kadergroep');
               },
@@ -102,28 +109,54 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               label: 'T-stijl',
               icoon: Icons.format_align_center_rounded,
               tooltip: 'T-stijl toevoegen',
-              breedte: 76,
+              breedte: 70,
             ),
             _toolKnop(
               waarde: 'vleugel',
-              label: 'Vleugel',
+              label: 'Raam\nvleugel',
               icoon: Icons.crop_square_rounded,
-              tooltip: 'Vleugel toevoegen',
-              breedte: 76,
+              tooltip: 'Raamvleugel toevoegen',
+              breedte: toonDeurTools ? 72 : 82,
             ),
+            if (toonDeurTools)
+              _toolKnop(
+                waarde: 'deurvleugel',
+                label: 'Deur\nvleugel',
+                icoon: Icons.door_front_door_outlined,
+                tooltip: 'Deurvleugel toevoegen',
+                breedte: 72,
+                onTap:
+                    onDeurVleugel ??
+                    () {
+                      onToolGekozen('deurvleugel');
+                    },
+              ),
             _toolKnop(
               waarde: 'opvulling',
               label: 'Opvulling',
               icoon: Icons.layers_outlined,
               tooltip: 'Opvulling kiezen',
-              breedte: 84,
+              breedte: 78,
             ),
+            if (toonDeurTools)
+              _toolKnop(
+                waarde: 'deurpanelen',
+                label: 'Deur\npanelen',
+                icoon: Icons.view_agenda_outlined,
+                tooltip: 'Deurpanelen toevoegen',
+                breedte: 72,
+                onTap:
+                    onDeurPanelen ??
+                    () {
+                      onToolGekozen('deurpanelen');
+                    },
+              ),
             _toolKnop(
               waarde: 'kleinhout',
               label: 'Kleinhout',
               icoon: Icons.grid_on_rounded,
               tooltip: 'Kleinhouten kiezen',
-              breedte: 84,
+              breedte: 78,
             ),
             const SizedBox(width: 18),
             _actieKnop(
@@ -150,7 +183,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     required String label,
     required IconData icoon,
     required String tooltip,
-    double breedte = 84,
+    double breedte = 78,
     VoidCallback? onTap,
   }) {
     final geselecteerd = actieveTool == waarde;
@@ -170,7 +203,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
             duration: const Duration(milliseconds: 140),
             width: breedte,
             height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
             decoration: BoxDecoration(
               color: geselecteerd ? _lichtGroen : Colors.transparent,
               borderRadius: BorderRadius.circular(11),
@@ -183,17 +216,19 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               children: [
                 Icon(
                   icoon,
-                  size: 23,
+                  size: 22,
                   color: geselecteerd ? _groen : _tekstDonker,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   label,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: geselecteerd ? _groen : _tekstDonker,
-                    fontSize: 12,
+                    fontSize: label.contains('\n') ? 10.5 : 11.5,
+                    height: 0.98,
                     fontWeight: geselecteerd
                         ? FontWeight.w900
                         : FontWeight.w700,
@@ -219,7 +254,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
         borderRadius: BorderRadius.circular(11),
         onTap: actief ? onTap : null,
         child: SizedBox(
-          width: 76,
+          width: 70,
           height: 56,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -236,7 +271,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: actief ? _tekstGrijs : const Color(0xFFCBD5E1),
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
               ),

@@ -28,6 +28,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
 
+  bool _formulierOpenenBezig = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,57 +64,70 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     });
   }
 
-  Future<void> _nieuwBestand() async {
-    final controller = TextEditingController(text: _klantNaam);
-
+  Future<String?> _vraagKlantNaam() async {
     final naam = await showDialog<String>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Nieuw opmeetbestand'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              labelText: 'Naam klant',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: (waarde) {
-              Navigator.pop(context, waarde.trim());
-            },
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text('Annuleren'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _groen,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(context, controller.text.trim());
-              },
-              child: const Text('Aanmaken'),
-            ),
-          ],
-        );
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return _KlantNaamDialog(beginNaam: _klantNaam);
       },
     );
 
-    controller.dispose();
+    await Future<void>.delayed(Duration.zero);
 
-    if (naam == null || naam.trim().isEmpty) {
+    if (mounted) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
+
+    return naam?.trim();
+  }
+
+  Future<void> _nieuwBestand() async {
+    final naam = await _vraagKlantNaam();
+
+    if (naam == null || naam.trim().isEmpty || !mounted) {
       return;
     }
 
     setState(() {
       _klantNaam = naam.trim();
       _raamOpmetingen.clear();
+    });
+  }
+
+  Future<void> _wachtTotPopupEnDialogGeslotenZijn() async {
+    await Future<void>.delayed(Duration.zero);
+
+    if (!mounted) {
+      return;
+    }
+
+    await WidgetsBinding.instance.endOfFrame;
+  }
+
+  Map<String, List<OpmetingOverzichtRaamItem>> _groepeerOpmetingenPerKlant(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    final klanten = <String, List<OpmetingOverzichtRaamItem>>{};
+
+    for (final opmeting in opmetingen) {
+      final klantNaam = opmeting.klantNaam.trim().isEmpty
+          ? 'Zonder klantnaam'
+          : opmeting.klantNaam.trim();
+
+      klanten
+          .putIfAbsent(klantNaam, () => <OpmetingOverzichtRaamItem>[])
+          .add(opmeting);
+    }
+
+    return klanten;
+  }
+
+  List<String> _gesorteerdeKlantNamen(
+    Map<String, List<OpmetingOverzichtRaamItem>> klanten,
+  ) {
+    return klanten.keys.toList()..sort((eerste, tweede) {
+      return eerste.toLowerCase().compareTo(tweede.toLowerCase());
     });
   }
 
@@ -134,22 +149,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    final klanten = <String, List<OpmetingOverzichtRaamItem>>{};
-
-    for (final opmeting in alleOpmetingen) {
-      final klantNaam = opmeting.klantNaam.trim().isEmpty
-          ? 'Zonder klantnaam'
-          : opmeting.klantNaam.trim();
-
-      klanten
-          .putIfAbsent(klantNaam, () => <OpmetingOverzichtRaamItem>[])
-          .add(opmeting);
-    }
-
-    final klantNamen = klanten.keys.toList()
-      ..sort((eerste, tweede) {
-        return eerste.toLowerCase().compareTo(tweede.toLowerCase());
-      });
+    final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
+    final klantNamen = _gesorteerdeKlantNamen(klanten);
 
     final gekozenKlant = await showDialog<String>(
       context: context,
@@ -217,6 +218,185 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     _toonMelding('Opmeetbestand “$gekozenKlant” is geopend.');
+  }
+
+  Future<void> _wisBestand() async {
+    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
+
+    if (!mounted) {
+      return;
+    }
+
+    final alleOpmetingen = await AppStorage.laadOpmetingen();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (alleOpmetingen.isEmpty) {
+      _toonMelding('Er zijn nog geen opgeslagen opmeetbestanden.', fout: true);
+      return;
+    }
+
+    final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
+    final klantNamen = _gesorteerdeKlantNamen(klanten);
+
+    final gekozenKlant = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Bestand wissen',
+            style: TextStyle(
+              color: Color(0xFFDC2626),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          content: SizedBox(
+            width: 430,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  ...klantNamen.map((klantNaam) {
+                    final aantal = klanten[klantNaam]?.length ?? 0;
+
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.delete_outline,
+                        color: Color(0xFFDC2626),
+                      ),
+                      title: Text(
+                        klantNaam,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      subtitle: Text('$aantal opmeting(en)'),
+                      onTap: () {
+                        Navigator.pop(dialogContext, klantNaam);
+                      },
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (gekozenKlant == null || !mounted) {
+      return;
+    }
+
+    final teWissenOpmetingen =
+        klanten[gekozenKlant] ?? const <OpmetingOverzichtRaamItem>[];
+
+    if (teWissenOpmetingen.isEmpty) {
+      _toonMelding('Dit bestand kon niet gevonden worden.', fout: true);
+      return;
+    }
+
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Bestand definitief wissen?'),
+          content: Text(
+            'Bent u zeker dat u het volledige opmeetbestand “$gekozenKlant” wilt wissen? '
+            'Alle ${teWissenOpmetingen.length} positie(s) van deze klant worden verwijderd.',
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Annuleren'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+              ),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Wissen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (bevestigen != true) {
+      return;
+    }
+
+    setState(() {
+      _laden = true;
+    });
+
+    for (final opmeting in teWissenOpmetingen) {
+      await AppStorage.verwijderOpmeting(opmeting.id);
+    }
+
+    await OneDriveSyncService.registreerLokaleWijziging();
+
+    final syncResultaat = await OneDriveSyncService().slimmeSync(
+      magLoginVragen: true,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    final gewisteKlantIsOpen =
+        _klantNaam.trim().toLowerCase() == gekozenKlant.trim().toLowerCase();
+
+    if (gewisteKlantIsOpen) {
+      setState(() {
+        _klantNaam = '';
+        _raamOpmetingen.clear();
+        _laden = false;
+      });
+    } else {
+      await _laadOpmetingenVanOpslag(
+        klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final syncOk =
+        !syncResultaat.startsWith('FOUT') &&
+        !syncResultaat.contains('FOUT') &&
+        !syncResultaat.contains('OVERGESLAGEN');
+
+    _toonMelding(
+      syncOk
+          ? 'Opmeetbestand “$gekozenKlant” is gewist en gesynchroniseerd.'
+          : 'Opmeetbestand “$gekozenKlant” is lokaal gewist, maar synchronisatie is niet gelukt: $syncResultaat',
+      fout: !syncOk,
+    );
   }
 
   Future<bool> _opslaanBestand({bool toonMelding = true}) async {
@@ -335,35 +515,56 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Future<void> _openRaamopmeting({String formulierType = 'pvcRaam'}) async {
-    if (_klantNaam.trim().isEmpty) {
-      await _nieuwBestand();
+    if (_formulierOpenenBezig) {
+      return;
+    }
 
-      if (_klantNaam.trim().isEmpty) {
+    _formulierOpenenBezig = true;
+
+    try {
+      var klantNaam = _klantNaam.trim();
+
+      if (klantNaam.isEmpty) {
+        final naam = await _vraagKlantNaam();
+
+        if (naam == null || naam.trim().isEmpty || !mounted) {
+          return;
+        }
+
+        klantNaam = naam.trim();
+
+        setState(() {
+          _klantNaam = klantNaam;
+          _raamOpmetingen.clear();
+        });
+      }
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+
+      if (!mounted) {
         return;
       }
-    }
 
-    if (!mounted) {
-      return;
-    }
-
-    final resultaat = await Navigator.push<OpmetingOverzichtRaamItem>(
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return OpmetingRaamPagina(
-            klantNaam: _klantNaam,
-            formulierType: formulierType,
+      final resultaat = await Navigator.of(context)
+          .push<OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingRaamPagina(
+                  klantNaam: klantNaam,
+                  formulierType: formulierType,
+                );
+              },
+            ),
           );
-        },
-      ),
-    );
 
-    if (resultaat == null || !mounted) {
-      return;
+      if (resultaat == null || !mounted) {
+        return;
+      }
+
+      await _laadOpmetingenVanOpslag(klantNaam: klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
     }
-
-    await _laadOpmetingenVanOpslag(klantNaam: _klantNaam);
   }
 
   Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) async {
@@ -493,6 +694,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 _openBestand();
               } else if (waarde == 'opslaan') {
                 _opslaanBestand();
+              } else if (waarde == 'wissen') {
+                _wisBestand();
               } else if (waarde == 'einde') {
                 _eindeOpmeting();
               }
@@ -502,6 +705,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 PopupMenuItem(value: 'nieuw', child: Text('Nieuw bestand')),
                 PopupMenuItem(value: 'open', child: Text('Open bestand')),
                 PopupMenuItem(value: 'opslaan', child: Text('Opslaan bestand')),
+                PopupMenuItem(
+                  value: 'wissen',
+                  child: Text(
+                    'Bestand wissen',
+                    style: TextStyle(color: Color(0xFFDC2626)),
+                  ),
+                ),
                 PopupMenuDivider(),
                 PopupMenuItem(value: 'einde', child: Text('Einde')),
               ];
@@ -554,6 +764,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 _openRaamopmeting(formulierType: 'pvcRaam');
               } else if (waarde == 'alu_raam') {
                 _openRaamopmeting(formulierType: 'aluRaam');
+              } else if (waarde == 'pvc_deur') {
+                _openRaamopmeting(formulierType: 'pvcDeur');
               }
             },
             itemBuilder: (context) {
@@ -585,6 +797,33 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                       Icon(Icons.window_outlined, color: _groen, size: 20),
                       SizedBox(width: 10),
                       Text('ALU Raam'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  enabled: false,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Deuren',
+                      style: TextStyle(
+                        color: _groen,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'pvc_deur',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.door_front_door_outlined,
+                        color: _groen,
+                        size: 20,
+                      ),
+                      SizedBox(width: 10),
+                      Text('PVC Deur'),
                     ],
                   ),
                 ),
@@ -663,7 +902,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             const SizedBox(height: 8),
             Text(
               heeftKlantNaam
-                  ? 'Voeg rechtsboven een raamopmeting toe voor dit opmeetbestand.'
+                  ? 'Voeg rechtsboven een opmeting toe voor dit opmeetbestand.'
                   : 'Maak een nieuw bestand aan of open één klant via de knop Bestand.',
               textAlign: TextAlign.center,
               style: const TextStyle(
@@ -705,12 +944,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                   ),
                 ),
                 PopupMenuButton<String>(
-                  tooltip: 'Raamopmeting toevoegen',
+                  tooltip: 'Formulier toevoegen',
                   onSelected: (waarde) {
                     if (waarde == 'pvc_raam') {
                       _openRaamopmeting(formulierType: 'pvcRaam');
                     } else if (waarde == 'alu_raam') {
                       _openRaamopmeting(formulierType: 'aluRaam');
+                    } else if (waarde == 'pvc_deur') {
+                      _openRaamopmeting(formulierType: 'pvcDeur');
                     }
                   },
                   itemBuilder: (context) {
@@ -733,6 +974,23 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                         value: 'alu_raam',
                         child: Text('ALU Raam'),
                       ),
+                      PopupMenuItem<String>(
+                        enabled: false,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            'Deuren',
+                            style: TextStyle(
+                              color: _groen,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                      ),
+                      PopupMenuItem<String>(
+                        value: 'pvc_deur',
+                        child: Text('PVC Deur'),
+                      ),
                     ];
                   },
                   child: Container(
@@ -750,7 +1008,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                         Icon(Icons.add_rounded, color: Colors.white),
                         SizedBox(width: 8),
                         Text(
-                          'Raamopmeting toevoegen',
+                          'Formulier toevoegen',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -789,6 +1047,74 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           ),
         );
       },
+    );
+  }
+}
+
+class _KlantNaamDialog extends StatefulWidget {
+  const _KlantNaamDialog({required this.beginNaam});
+
+  final String beginNaam;
+
+  @override
+  State<_KlantNaamDialog> createState() {
+    return _KlantNaamDialogState();
+  }
+}
+
+class _KlantNaamDialogState extends State<_KlantNaamDialog> {
+  static const Color _groen = Color(0xFF0B7A3B);
+
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.beginNaam);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _aanmaken() {
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Nieuw opmeetbestand'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          labelText: 'Naam klant',
+          border: OutlineInputBorder(),
+        ),
+        onSubmitted: (_) {
+          _aanmaken();
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: const Text('Annuleren'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _groen,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: _aanmaken,
+          child: const Text('Aanmaken'),
+        ),
+      ],
     );
   }
 }

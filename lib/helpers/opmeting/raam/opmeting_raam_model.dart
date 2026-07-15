@@ -42,6 +42,7 @@ class OpmetingRaamTStijl {
     required this.einde,
     this.breedteMm = 90,
     this.werkvlakId = 'kader',
+    this.positieFractie,
   });
 
   final String id;
@@ -56,6 +57,14 @@ class OpmetingRaamTStijl {
   /// identificatie van de glasopening van die vleugel.
   final String werkvlakId;
 
+  /// Relatieve positie binnen het werkvlak.
+  ///
+  /// Voor een verticale T-stijl is dit de X-fractie binnen het werkvlak.
+  /// Voor een horizontale T-stijl is dit de Y-fractie binnen het werkvlak.
+  /// Dit wordt vooral gebruikt voor T-stijlen in een deurvleugel, zodat ze
+  /// automatisch blijven meegaan wanneer de dubbele deur ongelijk wordt gezet.
+  final double? positieFractie;
+
   OpmetingRaamTStijl copyWith({
     String? id,
     String? richting,
@@ -63,6 +72,8 @@ class OpmetingRaamTStijl {
     Offset? einde,
     double? breedteMm,
     String? werkvlakId,
+    double? positieFractie,
+    bool wisPositieFractie = false,
   }) {
     return OpmetingRaamTStijl(
       id: id ?? this.id,
@@ -71,6 +82,9 @@ class OpmetingRaamTStijl {
       einde: einde ?? this.einde,
       breedteMm: breedteMm ?? this.breedteMm,
       werkvlakId: werkvlakId ?? this.werkvlakId,
+      positieFractie: wisPositieFractie
+          ? null
+          : positieFractie ?? this.positieFractie,
     );
   }
 
@@ -82,6 +96,7 @@ class OpmetingRaamTStijl {
       'einde': _offsetToJson(einde),
       'breedteMm': breedteMm,
       'werkvlakId': werkvlakId,
+      if (positieFractie != null) 'positieFractie': positieFractie,
     };
   }
 
@@ -93,6 +108,7 @@ class OpmetingRaamTStijl {
       einde: _offsetFromJson(json['einde']),
       breedteMm: _leesDouble(json['breedteMm'], 90),
       werkvlakId: json['werkvlakId']?.toString() ?? 'kader',
+      positieFractie: _leesDoubleOfNull(json['positieFractie']),
     );
   }
 }
@@ -217,26 +233,317 @@ extension OpmetingRaamVleugelTypeInfo on OpmetingRaamVleugelType {
   }
 }
 
+enum OpmetingRaamDeurVleugelSoort { voordeur, achterdeur }
+
+extension OpmetingRaamDeurVleugelSoortInfo on OpmetingRaamDeurVleugelSoort {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamDeurVleugelSoort.voordeur:
+        return 'Voordeur';
+      case OpmetingRaamDeurVleugelSoort.achterdeur:
+        return 'Achterdeur';
+    }
+  }
+
+  static OpmetingRaamDeurVleugelSoort vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final soort in OpmetingRaamDeurVleugelSoort.values) {
+      if (soort.name == tekst) {
+        return soort;
+      }
+    }
+
+    return OpmetingRaamDeurVleugelSoort.voordeur;
+  }
+}
+
+enum OpmetingRaamDeurVleugelKrukType { kruk, rolluikkruk }
+
+extension OpmetingRaamDeurVleugelKrukTypeInfo
+    on OpmetingRaamDeurVleugelKrukType {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamDeurVleugelKrukType.kruk:
+        return 'kruk';
+      case OpmetingRaamDeurVleugelKrukType.rolluikkruk:
+        return 'rolluikkruk';
+    }
+  }
+
+  static OpmetingRaamDeurVleugelKrukType vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final type in OpmetingRaamDeurVleugelKrukType.values) {
+      if (type.name == tekst) {
+        return type;
+      }
+    }
+
+    return OpmetingRaamDeurVleugelKrukType.kruk;
+  }
+}
+
+enum OpmetingRaamKrukZijde { links, rechts }
+
+extension OpmetingRaamKrukZijdeInfo on OpmetingRaamKrukZijde {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamKrukZijde.links:
+        return 'Links';
+      case OpmetingRaamKrukZijde.rechts:
+        return 'Rechts';
+    }
+  }
+
+  static OpmetingRaamKrukZijde vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final zijde in OpmetingRaamKrukZijde.values) {
+      if (zijde.name == tekst) {
+        return zijde;
+      }
+    }
+
+    return OpmetingRaamKrukZijde.links;
+  }
+}
+
+enum OpmetingRaamDeurDraairichting { binnendraaiend, buitendraaiend }
+
+extension OpmetingRaamDeurDraairichtingInfo on OpmetingRaamDeurDraairichting {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamDeurDraairichting.binnendraaiend:
+        return 'naar binnendraaiend';
+      case OpmetingRaamDeurDraairichting.buitendraaiend:
+        return 'naar buitendraaiend';
+    }
+  }
+
+  static OpmetingRaamDeurDraairichting vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final richting in OpmetingRaamDeurDraairichting.values) {
+      if (richting.name == tekst) {
+        return richting;
+      }
+    }
+
+    return OpmetingRaamDeurDraairichting.binnendraaiend;
+  }
+}
+
+enum OpmetingRaamDeurVleugelAantal { enkel, dubbel }
+
+extension OpmetingRaamDeurVleugelAantalInfo on OpmetingRaamDeurVleugelAantal {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamDeurVleugelAantal.enkel:
+        return 'Enkele deur';
+      case OpmetingRaamDeurVleugelAantal.dubbel:
+        return 'Dubbele deur';
+    }
+  }
+
+  static OpmetingRaamDeurVleugelAantal vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final aantal in OpmetingRaamDeurVleugelAantal.values) {
+      if (aantal.name == tekst) {
+        return aantal;
+      }
+    }
+
+    return OpmetingRaamDeurVleugelAantal.enkel;
+  }
+}
+
+enum OpmetingRaamDeurVleugelDeel { enkel, links, rechts }
+
+extension OpmetingRaamDeurVleugelDeelInfo on OpmetingRaamDeurVleugelDeel {
+  String get opslagWaarde => name;
+
+  static OpmetingRaamDeurVleugelDeel vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final deel in OpmetingRaamDeurVleugelDeel.values) {
+      if (deel.name == tekst) {
+        return deel;
+      }
+    }
+
+    return OpmetingRaamDeurVleugelDeel.enkel;
+  }
+}
+
+enum OpmetingRaamDeurKrukPlaatsing { binnen, binnenEnBuiten }
+
+extension OpmetingRaamDeurKrukPlaatsingInfo on OpmetingRaamDeurKrukPlaatsing {
+  String get opslagWaarde => name;
+
+  String get label {
+    switch (this) {
+      case OpmetingRaamDeurKrukPlaatsing.binnen:
+        return 'kruk binnen';
+      case OpmetingRaamDeurKrukPlaatsing.binnenEnBuiten:
+        return 'dubbele kruk';
+    }
+  }
+
+  static OpmetingRaamDeurKrukPlaatsing vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim() ?? '';
+
+    for (final plaatsing in OpmetingRaamDeurKrukPlaatsing.values) {
+      if (plaatsing.name == tekst) {
+        return plaatsing;
+      }
+    }
+
+    return OpmetingRaamDeurKrukPlaatsing.binnen;
+  }
+}
+
 class OpmetingRaamVleugel {
   const OpmetingRaamVleugel({
     required this.id,
     required this.vlak,
     required this.type,
+    this.isDeurVleugel = false,
+    this.deurVleugelBreedteMm = 100,
+    this.deurVleugelOnderAfstandMm = 5,
+    this.deurVleugelSoort = OpmetingRaamDeurVleugelSoort.voordeur,
+    this.deurVleugelKrukType = OpmetingRaamDeurVleugelKrukType.kruk,
+    this.deurVleugelKrukZijde = OpmetingRaamKrukZijde.links,
+    this.deurDraairichting = OpmetingRaamDeurDraairichting.binnendraaiend,
+    this.deurVleugelAantal = OpmetingRaamDeurVleugelAantal.enkel,
+    this.deurVleugelDeel = OpmetingRaamDeurVleugelDeel.enkel,
+    this.deurKrukPlaatsing = OpmetingRaamDeurKrukPlaatsing.binnen,
+    this.deurVleugelMiddenVerschuivingMm = 0,
+    this.deurVleugelGroepId = '',
   });
 
   final String id;
   final Rect vlak;
   final OpmetingRaamVleugelType type;
 
+  /// Extra markering voor een deurvleugel.
+  ///
+  /// Een deurvleugel gebruikt dezelfde plaatsingslogica als een gewone
+  /// vleugel, maar wordt anders getekend: U-vormig, zonder onderste regel
+  /// en met de stijlen tot bijna onderaan over het kader.
+  final bool isDeurVleugel;
+
+  /// Profielbreedte van de deurvleugel.
+  final double deurVleugelBreedteMm;
+
+  /// Afstand tussen onderzijde deurvleugel en onderzijde kader.
+  final double deurVleugelOnderAfstandMm;
+
+  /// Voordeur of achterdeur.
+  final OpmetingRaamDeurVleugelSoort deurVleugelSoort;
+
+  /// Gewone kruk of rolluikkruk.
+  final OpmetingRaamDeurVleugelKrukType deurVleugelKrukType;
+
+  /// Bij een enkele deur is dit de krukkant.
+  /// Bij een dubbele deur is dit het actieve deurdeel met kruk.
+  final OpmetingRaamKrukZijde deurVleugelKrukZijde;
+
+  final OpmetingRaamDeurDraairichting deurDraairichting;
+  final OpmetingRaamDeurVleugelAantal deurVleugelAantal;
+  final OpmetingRaamDeurVleugelDeel deurVleugelDeel;
+  final OpmetingRaamDeurKrukPlaatsing deurKrukPlaatsing;
+  final int deurVleugelMiddenVerschuivingMm;
+  final String deurVleugelGroepId;
+
+  bool get isDubbeleDeurVleugel {
+    return deurVleugelAantal == OpmetingRaamDeurVleugelAantal.dubbel;
+  }
+
+  bool get isActiefDeurdeelMetKruk {
+    if (!isDubbeleDeurVleugel) {
+      return true;
+    }
+
+    return (deurVleugelDeel == OpmetingRaamDeurVleugelDeel.links &&
+            deurVleugelKrukZijde == OpmetingRaamKrukZijde.links) ||
+        (deurVleugelDeel == OpmetingRaamDeurVleugelDeel.rechts &&
+            deurVleugelKrukZijde == OpmetingRaamKrukZijde.rechts);
+  }
+
+  String get deurVleugelSamenvatting {
+    final deurTekst = isDubbeleDeurVleugel ? 'Dubbele deur' : 'Enkele deur';
+    final richtingTekst =
+        deurDraairichting == OpmetingRaamDeurDraairichting.binnendraaiend
+        ? 'naar binnen draaiend'
+        : 'naar buiten draaiend';
+    final krukTekst =
+        deurKrukPlaatsing == OpmetingRaamDeurKrukPlaatsing.binnenEnBuiten
+        ? 'dubbele ${deurVleugelKrukType.label}'
+        : deurVleugelKrukType.label;
+
+    if (isDubbeleDeurVleugel) {
+      final deelTekst = deurVleugelKrukZijde == OpmetingRaamKrukZijde.links
+          ? 'linkerdeel'
+          : 'rechterdeel';
+
+      return '$deurTekst $richtingTekst $krukTekst op $deelTekst';
+    }
+
+    final zijdeTekst = deurVleugelKrukZijde == OpmetingRaamKrukZijde.links
+        ? 'links'
+        : 'rechts';
+
+    return '$deurTekst $richtingTekst $krukTekst $zijdeTekst';
+  }
+
   OpmetingRaamVleugel copyWith({
     String? id,
     Rect? vlak,
     OpmetingRaamVleugelType? type,
+    bool? isDeurVleugel,
+    double? deurVleugelBreedteMm,
+    double? deurVleugelOnderAfstandMm,
+    OpmetingRaamDeurVleugelSoort? deurVleugelSoort,
+    OpmetingRaamDeurVleugelKrukType? deurVleugelKrukType,
+    OpmetingRaamKrukZijde? deurVleugelKrukZijde,
+    OpmetingRaamDeurDraairichting? deurDraairichting,
+    OpmetingRaamDeurVleugelAantal? deurVleugelAantal,
+    OpmetingRaamDeurVleugelDeel? deurVleugelDeel,
+    OpmetingRaamDeurKrukPlaatsing? deurKrukPlaatsing,
+    int? deurVleugelMiddenVerschuivingMm,
+    String? deurVleugelGroepId,
   }) {
     return OpmetingRaamVleugel(
       id: id ?? this.id,
       vlak: vlak ?? this.vlak,
       type: type ?? this.type,
+      isDeurVleugel: isDeurVleugel ?? this.isDeurVleugel,
+      deurVleugelBreedteMm: deurVleugelBreedteMm ?? this.deurVleugelBreedteMm,
+      deurVleugelOnderAfstandMm:
+          deurVleugelOnderAfstandMm ?? this.deurVleugelOnderAfstandMm,
+      deurVleugelSoort: deurVleugelSoort ?? this.deurVleugelSoort,
+      deurVleugelKrukType: deurVleugelKrukType ?? this.deurVleugelKrukType,
+      deurVleugelKrukZijde: deurVleugelKrukZijde ?? this.deurVleugelKrukZijde,
+      deurDraairichting: deurDraairichting ?? this.deurDraairichting,
+      deurVleugelAantal: deurVleugelAantal ?? this.deurVleugelAantal,
+      deurVleugelDeel: deurVleugelDeel ?? this.deurVleugelDeel,
+      deurKrukPlaatsing: deurKrukPlaatsing ?? this.deurKrukPlaatsing,
+      deurVleugelMiddenVerschuivingMm:
+          deurVleugelMiddenVerschuivingMm ??
+          this.deurVleugelMiddenVerschuivingMm,
+      deurVleugelGroepId: deurVleugelGroepId ?? this.deurVleugelGroepId,
     );
   }
 
@@ -245,6 +552,18 @@ class OpmetingRaamVleugel {
       'id': id,
       'vlak': _rectToJson(vlak),
       'type': type.name,
+      'isDeurVleugel': isDeurVleugel,
+      'deurVleugelBreedteMm': deurVleugelBreedteMm,
+      'deurVleugelOnderAfstandMm': deurVleugelOnderAfstandMm,
+      'deurVleugelSoort': deurVleugelSoort.opslagWaarde,
+      'deurVleugelKrukType': deurVleugelKrukType.opslagWaarde,
+      'deurVleugelKrukZijde': deurVleugelKrukZijde.opslagWaarde,
+      'deurDraairichting': deurDraairichting.opslagWaarde,
+      'deurVleugelAantal': deurVleugelAantal.opslagWaarde,
+      'deurVleugelDeel': deurVleugelDeel.opslagWaarde,
+      'deurKrukPlaatsing': deurKrukPlaatsing.opslagWaarde,
+      'deurVleugelMiddenVerschuivingMm': deurVleugelMiddenVerschuivingMm,
+      'deurVleugelGroepId': deurVleugelGroepId,
     };
   }
 
@@ -253,6 +572,37 @@ class OpmetingRaamVleugel {
       id: json['id']?.toString() ?? '',
       vlak: _rectFromJson(json['vlak']),
       type: OpmetingRaamVleugelTypeInfo.vanOpslagWaarde(json['type']),
+      isDeurVleugel: json['isDeurVleugel'] == true,
+      deurVleugelBreedteMm: _leesDouble(json['deurVleugelBreedteMm'], 100),
+      deurVleugelOnderAfstandMm: _leesDouble(
+        json['deurVleugelOnderAfstandMm'],
+        5,
+      ),
+      deurVleugelSoort: OpmetingRaamDeurVleugelSoortInfo.vanOpslagWaarde(
+        json['deurVleugelSoort'],
+      ),
+      deurVleugelKrukType: OpmetingRaamDeurVleugelKrukTypeInfo.vanOpslagWaarde(
+        json['deurVleugelKrukType'],
+      ),
+      deurVleugelKrukZijde: OpmetingRaamKrukZijdeInfo.vanOpslagWaarde(
+        json['deurVleugelKrukZijde'],
+      ),
+      deurDraairichting: OpmetingRaamDeurDraairichtingInfo.vanOpslagWaarde(
+        json['deurDraairichting'],
+      ),
+      deurVleugelAantal: OpmetingRaamDeurVleugelAantalInfo.vanOpslagWaarde(
+        json['deurVleugelAantal'],
+      ),
+      deurVleugelDeel: OpmetingRaamDeurVleugelDeelInfo.vanOpslagWaarde(
+        json['deurVleugelDeel'],
+      ),
+      deurKrukPlaatsing: OpmetingRaamDeurKrukPlaatsingInfo.vanOpslagWaarde(
+        json['deurKrukPlaatsing'],
+      ),
+      deurVleugelMiddenVerschuivingMm: _leesInt(
+        json['deurVleugelMiddenVerschuivingMm'],
+      ),
+      deurVleugelGroepId: json['deurVleugelGroepId']?.toString() ?? '',
     );
   }
 }
@@ -385,6 +735,22 @@ Rect _rectFromJson(Object? waarde) {
   return Rect.zero;
 }
 
+double? _leesDoubleOfNull(Object? waarde) {
+  if (waarde == null) {
+    return null;
+  }
+
+  if (waarde is double) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toDouble();
+  }
+
+  return double.tryParse(waarde.toString().trim().replaceAll(',', '.'));
+}
+
 double _leesDouble(Object? waarde, double standaardWaarde) {
   if (waarde is double) {
     return waarde;
@@ -398,4 +764,16 @@ double _leesDouble(Object? waarde, double standaardWaarde) {
         waarde?.toString().trim().replaceAll(',', '.') ?? '',
       ) ??
       standaardWaarde;
+}
+
+int _leesInt(Object? waarde, {int standaardWaarde = 0}) {
+  if (waarde is int) {
+    return waarde;
+  }
+
+  if (waarde is num) {
+    return waarde.toInt();
+  }
+
+  return int.tryParse(waarde?.toString().trim() ?? '') ?? standaardWaarde;
 }
