@@ -1,3 +1,4 @@
+import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_kleinhout_model.dart';
 import '../raam/opmeting_raam_keuzemenu_model.dart';
@@ -313,6 +314,7 @@ class OpmetingOverzichtRaamItem {
     this.technischeContainers = const <OpmetingOverzichtTechnischeContainer>[],
     this.keuzeSelectiesPerKader =
         const <String, Map<String, OpmetingRaamKeuzeSelectie>>{},
+    this.deurpaneelToewijzingen = const <OpmetingDeurpaneelToewijzing>[],
     this.notities = '',
   });
 
@@ -334,15 +336,8 @@ class OpmetingOverzichtRaamItem {
   final List<OpmetingOverzichtTechnischeContainer> technischeContainers;
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
   keuzeSelectiesPerKader;
+  final List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen;
   final String notities;
-
-  String get formulierTypeGenormaliseerd {
-    return _normaliseerOpmetingFormulierType(formulierType);
-  }
-
-  String get formulierTypeLabel {
-    return _labelVoorOpmetingFormulierType(formulierTypeGenormaliseerd);
-  }
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -352,6 +347,54 @@ class OpmetingOverzichtRaamItem {
     return technischeContainers
         .where((container) => container.isZichtbaar)
         .toList();
+  }
+
+  String get formulierTypeGenormaliseerd {
+    switch (formulierType.trim()) {
+      case 'aluRaam':
+      case 'alu_raam':
+      case 'ALU Raam':
+        return 'aluRaam';
+
+      case 'pvcDeur':
+      case 'pvc_deur':
+      case 'PVC Deur':
+        return 'pvcDeur';
+
+      case 'aluDeur':
+      case 'alu_deur':
+      case 'ALU Deur':
+        return 'aluDeur';
+
+      case 'pvcRaam':
+      case 'pvc_raam':
+      case 'PVC Raam':
+      case 'raam':
+      case '':
+        return 'pvcRaam';
+
+      default:
+        return formulierType.trim().isEmpty ? 'pvcRaam' : formulierType.trim();
+    }
+  }
+
+  String get formulierTypeLabel {
+    switch (formulierTypeGenormaliseerd) {
+      case 'aluRaam':
+        return 'ALU Raam';
+
+      case 'pvcDeur':
+        return 'PVC Deur';
+
+      case 'aluDeur':
+        return 'ALU Deur';
+
+      case 'pvcRaam':
+        return 'PVC Raam';
+
+      default:
+        return titel.trim().isEmpty ? formulierTypeGenormaliseerd : titel;
+    }
   }
 
   OpmetingOverzichtRaamItem copyWith({
@@ -370,6 +413,7 @@ class OpmetingOverzichtRaamItem {
     List<OpmetingOverzichtTechnischeRegel>? technischeRegels,
     List<OpmetingOverzichtTechnischeContainer>? technischeContainers,
     Map<String, Map<String, OpmetingRaamKeuzeSelectie>>? keuzeSelectiesPerKader,
+    List<OpmetingDeurpaneelToewijzing>? deurpaneelToewijzingen,
     String? notities,
   }) {
     return OpmetingOverzichtRaamItem(
@@ -389,6 +433,8 @@ class OpmetingOverzichtRaamItem {
       technischeContainers: technischeContainers ?? this.technischeContainers,
       keuzeSelectiesPerKader:
           keuzeSelectiesPerKader ?? this.keuzeSelectiesPerKader,
+      deurpaneelToewijzingen:
+          deurpaneelToewijzingen ?? this.deurpaneelToewijzingen,
       notities: notities ?? this.notities,
     );
   }
@@ -428,6 +474,9 @@ class OpmetingOverzichtRaamItem {
           }),
         );
       }),
+      'deurpaneelToewijzingen': deurpaneelToewijzingen
+          .map((toewijzing) => toewijzing.toJson())
+          .toList(),
       'notities': notities,
     };
   }
@@ -455,9 +504,7 @@ class OpmetingOverzichtRaamItem {
       id: json['id']?.toString() ?? '',
       titel: json['titel']?.toString() ?? 'Raam',
       klantNaam: json['klantNaam']?.toString() ?? '',
-      formulierType: _normaliseerOpmetingFormulierType(
-        json['formulierType']?.toString(),
-      ),
+      formulierType: json['formulierType']?.toString() ?? 'pvcRaam',
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,
       dagmaatBreedteMm: dagmaatBreedteMm,
@@ -481,64 +528,12 @@ class OpmetingOverzichtRaamItem {
       keuzeSelectiesPerKader: _leesKeuzeSelectiesPerKader(
         json['keuzeSelectiesPerKader'],
       ),
+      deurpaneelToewijzingen: _leesLijst(
+        json['deurpaneelToewijzingen'],
+        OpmetingDeurpaneelToewijzing.fromJson,
+      ),
       notities: json['notities']?.toString() ?? '',
     );
-  }
-}
-
-String _normaliseerOpmetingFormulierType(Object? waarde) {
-  final tekst = waarde?.toString().trim() ?? '';
-
-  switch (tekst) {
-    case 'aluRaam':
-    case 'alu_raam':
-    case 'ALU Raam':
-      return 'aluRaam';
-
-    case 'pvcRaam':
-    case 'pvc_raam':
-    case 'PVC Raam':
-    case 'raam':
-    case '':
-      return 'pvcRaam';
-
-    case 'aluDeur':
-    case 'alu_deur':
-    case 'ALU Deur':
-      return 'aluDeur';
-
-    case 'pvcDeur':
-    case 'pvc_deur':
-    case 'PVC Deur':
-      return 'pvcDeur';
-
-    default:
-      return tekst;
-  }
-}
-
-String _labelVoorOpmetingFormulierType(String formulierType) {
-  switch (formulierType) {
-    case 'aluRaam':
-      return 'ALU Raam';
-
-    case 'pvcRaam':
-      return 'PVC Raam';
-
-    case 'aluDeur':
-      return 'ALU Deur';
-
-    case 'pvcDeur':
-      return 'PVC Deur';
-
-    default:
-      final tekst = formulierType.trim();
-
-      if (tekst.isEmpty) {
-        return 'PVC Raam';
-      }
-
-      return tekst;
   }
 }
 

@@ -19,6 +19,21 @@ class OneDriveSyncService {
   static const String _lokaleWijzigingOpenstaandKey =
       'lokale_wijziging_openstaand';
 
+  static const String _deurpanelenBibliotheekKey =
+      'thimaco_deurpanelen_bibliotheek';
+
+  static const String _deurpanelenBibliotheekGewijzigdOpKey =
+      'thimaco_deurpanelen_bibliotheek_gewijzigd_op';
+
+  static const String _deurpanelenDxfBibliotheekKey =
+      'thimaco_deurpanelen_dxf_bibliotheek';
+
+  static const String _deurpanelenDxfBibliotheekGewijzigdOpKey =
+      'thimaco_deurpanelen_dxf_bibliotheek_gewijzigd_op';
+
+  static const String _deurpaneelToewijzingenPrefix =
+      'thimaco_deurpaneel_toewijzingen_';
+
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
 
@@ -55,7 +70,7 @@ class OneDriveSyncService {
       const url =
           'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json:/content';
 
-      Map<String, dynamic> cloudBackup = {};
+      Map<String, dynamic> cloudBackup = <String, dynamic>{};
 
       final cloudResponse = await http.get(
         Uri.parse(url),
@@ -68,7 +83,7 @@ class OneDriveSyncService {
 
       Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) {
-          return {};
+          return <String, List<AgendaItem>>{};
         }
 
         final data = jsonDecode(jsonString) as Map<String, dynamic>;
@@ -97,7 +112,7 @@ class OneDriveSyncService {
 
       List<KlantenficheModel> decodeKlanten(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) {
-          return [];
+          return <KlantenficheModel>[];
         }
 
         final lijst = jsonDecode(jsonString) as List<dynamic>;
@@ -141,7 +156,7 @@ class OneDriveSyncService {
 
       final cloudAgenda = decodeAgenda(
         cloudBackup['agendaItems'] is String
-            ? cloudBackup['agendaItems']
+            ? cloudBackup['agendaItems'] as String
             : null,
       );
 
@@ -154,7 +169,7 @@ class OneDriveSyncService {
 
       final cloudKlanten = decodeKlanten(
         cloudBackup['klantenFiches'] is String
-            ? cloudBackup['klantenFiches']
+            ? cloudBackup['klantenFiches'] as String
             : null,
       );
 
@@ -166,12 +181,49 @@ class OneDriveSyncService {
       final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
       final cloudOpmetingen = decodeOpmetingen(
-        cloudBackup['opmetingen'] is String ? cloudBackup['opmetingen'] : null,
+        cloudBackup['opmetingen'] is String
+            ? cloudBackup['opmetingen'] as String
+            : null,
       );
 
       final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
         lokaleOpmetingen,
         cloudOpmetingen,
+      );
+
+      final deurpanelenBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_deurpanelenBibliotheekKey),
+        cloudWaarde: cloudBackup['deurpanelenBibliotheek'] is String
+            ? cloudBackup['deurpanelenBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(
+          _deurpanelenBibliotheekGewijzigdOpKey,
+        ),
+        cloudGewijzigdOp:
+            cloudBackup['deurpanelenBibliotheekGewijzigdOp'] is String
+            ? cloudBackup['deurpanelenBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
+      );
+
+      final deurpanelenDxfBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_deurpanelenDxfBibliotheekKey),
+        cloudWaarde: cloudBackup['deurpanelenDxfBibliotheek'] is String
+            ? cloudBackup['deurpanelenDxfBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(
+          _deurpanelenDxfBibliotheekGewijzigdOpKey,
+        ),
+        cloudGewijzigdOp:
+            cloudBackup['deurpanelenDxfBibliotheekGewijzigdOp'] is String
+            ? cloudBackup['deurpanelenDxfBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
+      );
+
+      final mergedDeurpaneelToewijzingen = _mergeStringPrefsMap(
+        lokaal: _leesStringPrefsMetPrefix(prefs, _deurpaneelToewijzingenPrefix),
+        cloud: _leesStringMap(cloudBackup['deurpaneelToewijzingen']),
       );
 
       final backup = <String, dynamic>{
@@ -194,6 +246,12 @@ class OneDriveSyncService {
           'opmeting_deur_keuzemenus_alu',
         ),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
+        'deurpanelenBibliotheek': deurpanelenBibliotheek.waarde,
+        'deurpanelenBibliotheekGewijzigdOp': deurpanelenBibliotheek.gewijzigdOp,
+        'deurpanelenDxfBibliotheek': deurpanelenDxfBibliotheek.waarde,
+        'deurpanelenDxfBibliotheekGewijzigdOp':
+            deurpanelenDxfBibliotheek.gewijzigdOp,
+        'deurpaneelToewijzingen': mergedDeurpaneelToewijzingen,
       };
 
       final response = await http.put(
@@ -219,6 +277,32 @@ class OneDriveSyncService {
 
       await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
 
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenBibliotheekKey,
+        waarde: deurpanelenBibliotheek.waarde,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenBibliotheekGewijzigdOpKey,
+        waarde: deurpanelenBibliotheek.gewijzigdOp,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenDxfBibliotheekKey,
+        waarde: deurpanelenDxfBibliotheek.waarde,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenDxfBibliotheekGewijzigdOpKey,
+        waarde: deurpanelenDxfBibliotheek.gewijzigdOp,
+      );
+      await _schrijfStringPrefsMetPrefix(
+        prefs,
+        _deurpaneelToewijzingenPrefix,
+        mergedDeurpaneelToewijzingen,
+      );
+
       String fotoResultaat = 'FOTOS_OVERGESLAGEN';
 
       if (uploadFotos) {
@@ -230,8 +314,8 @@ class OneDriveSyncService {
       await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
 
       laatsteSyncActie = uploadFotos
-          ? 'Merge upload met foto’s uitgevoerd'
-          : 'Snelle merge upload zonder foto’s uitgevoerd';
+          ? 'Merge upload met foto’s en deurpanelen uitgevoerd'
+          : 'Snelle merge upload zonder foto’s met deurpanelen uitgevoerd';
 
       if (uploadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
         return 'BACKUP_OK_FOTOS_LATER\n'
@@ -358,6 +442,16 @@ class OneDriveSyncService {
     }
   }
 
+  Future<String> downloadBackup({bool downloadFotos = true}) async {
+    final token = await OneDriveAuthService().loginInteractief();
+
+    if (token.startsWith('FOUT')) {
+      return token;
+    }
+
+    return downloadBackupMetToken(token, downloadFotos: downloadFotos);
+  }
+
   /// Downloadt de gewone appgegevens.
   ///
   /// Bij automatische synchronisatie blijft [downloadFotos]
@@ -395,10 +489,13 @@ class OneDriveSyncService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       final prefs = await SharedPreferences.getInstance();
+      final backupDatum = data['backupDatum'] is String
+          ? data['backupDatum'] as String
+          : DateTime.now().toIso8601String();
 
       Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) {
-          return {};
+          return <String, List<AgendaItem>>{};
         }
 
         final data = jsonDecode(jsonString) as Map<String, dynamic>;
@@ -416,7 +513,7 @@ class OneDriveSyncService {
 
       List<KlantenficheModel> decodeKlanten(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) {
-          return [];
+          return <KlantenficheModel>[];
         }
 
         final lijst = jsonDecode(jsonString) as List<dynamic>;
@@ -447,7 +544,7 @@ class OneDriveSyncService {
       }
 
       final cloudAgenda = decodeAgenda(
-        data['agendaItems'] is String ? data['agendaItems'] : null,
+        data['agendaItems'] is String ? data['agendaItems'] as String : null,
       );
 
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
@@ -458,7 +555,9 @@ class OneDriveSyncService {
       );
 
       final cloudKlanten = decodeKlanten(
-        data['klantenFiches'] is String ? data['klantenFiches'] : null,
+        data['klantenFiches'] is String
+            ? data['klantenFiches'] as String
+            : null,
       );
 
       final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
@@ -469,7 +568,7 @@ class OneDriveSyncService {
       );
 
       final cloudOpmetingen = decodeOpmetingen(
-        data['opmetingen'] is String ? data['opmetingen'] : null,
+        data['opmetingen'] is String ? data['opmetingen'] as String : null,
       );
 
       final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
@@ -477,6 +576,39 @@ class OneDriveSyncService {
       final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
         lokaleOpmetingen,
         cloudOpmetingen,
+      );
+
+      final deurpanelenBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_deurpanelenBibliotheekKey),
+        cloudWaarde: data['deurpanelenBibliotheek'] is String
+            ? data['deurpanelenBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(
+          _deurpanelenBibliotheekGewijzigdOpKey,
+        ),
+        cloudGewijzigdOp: data['deurpanelenBibliotheekGewijzigdOp'] is String
+            ? data['deurpanelenBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
+      );
+
+      final deurpanelenDxfBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_deurpanelenDxfBibliotheekKey),
+        cloudWaarde: data['deurpanelenDxfBibliotheek'] is String
+            ? data['deurpanelenDxfBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(
+          _deurpanelenDxfBibliotheekGewijzigdOpKey,
+        ),
+        cloudGewijzigdOp: data['deurpanelenDxfBibliotheekGewijzigdOp'] is String
+            ? data['deurpanelenDxfBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
+      );
+
+      final mergedDeurpaneelToewijzingen = _mergeStringPrefsMap(
+        lokaal: _leesStringPrefsMetPrefix(prefs, _deurpaneelToewijzingenPrefix),
+        cloud: _leesStringMap(data['deurpaneelToewijzingen']),
       );
 
       await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
@@ -538,6 +670,32 @@ class OneDriveSyncService {
         );
       }
 
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenBibliotheekKey,
+        waarde: deurpanelenBibliotheek.waarde,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenBibliotheekGewijzigdOpKey,
+        waarde: deurpanelenBibliotheek.gewijzigdOp,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenDxfBibliotheekKey,
+        waarde: deurpanelenDxfBibliotheek.waarde,
+      );
+      await _bewaarOptioneleString(
+        prefs: prefs,
+        key: _deurpanelenDxfBibliotheekGewijzigdOpKey,
+        waarde: deurpanelenDxfBibliotheek.gewijzigdOp,
+      );
+      await _schrijfStringPrefsMetPrefix(
+        prefs,
+        _deurpaneelToewijzingenPrefix,
+        mergedDeurpaneelToewijzingen,
+      );
+
       if (data['backupDatum'] is String) {
         await prefs.setString(_backupDatumKey, data['backupDatum']);
       }
@@ -549,8 +707,8 @@ class OneDriveSyncService {
       }
 
       laatsteSyncActie = downloadFotos
-          ? 'Download met foto’s uitgevoerd'
-          : 'Snelle download zonder foto’s uitgevoerd';
+          ? 'Download met foto’s en deurpanelen uitgevoerd'
+          : 'Snelle download zonder foto’s met deurpanelen uitgevoerd';
 
       if (downloadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
         return 'IMPORT_OK_FOTOS_LATER\n'
@@ -563,6 +721,27 @@ class OneDriveSyncService {
     } finally {
       _downloadBezig = false;
     }
+  }
+
+  Future<String> eersteStartSync() async {
+    final lokaal = await lokaleBackupDatum();
+
+    if (lokaal != null) {
+      return slimmeSync();
+    }
+
+    final token = await OneDriveAuthService().loginInteractief();
+
+    if (token.startsWith('FOUT')) {
+      laatsteSyncActie = 'Eerste login mislukt';
+      return token;
+    }
+
+    final resultaat = await downloadBackupMetToken(token, downloadFotos: true);
+
+    laatsteSyncActie = 'Eerste start sync uitgevoerd: $resultaat';
+
+    return resultaat;
   }
 
   Future<String> _downloadKlantenFotos(String token) async {
@@ -653,27 +832,41 @@ class OneDriveSyncService {
           await parent.create(recursive: true);
         }
 
-        await lokaalBestand.writeAsBytes(response.bodyBytes, flush: false);
+        await lokaalBestand.writeAsBytes(response.bodyBytes, flush: true);
 
         if (remoteGewijzigdOp != null) {
-          try {
-            await lokaalBestand.setLastModified(remoteGewijzigdOp.toLocal());
-          } catch (_) {
-            // Datum instellen is alleen een optimalisatie.
-          }
+          await lokaalBestand.setLastModified(remoteGewijzigdOp);
         }
 
         gedownload++;
       }
 
-      return 'FOTOS_OK '
-          'GEDOWNLOAD $gedownload '
-          'OVERGESLAGEN $overgeslagen';
+      return 'FOTOS_OK gedownload:$gedownload overgeslagen:$overgeslagen';
     } catch (e) {
       return 'FOTOS_EXCEPTION: $e';
     } finally {
       _fotoDownloadBezig = false;
     }
+  }
+
+  int? _leesManifestGrootte(dynamic waarde) {
+    if (waarde is int) {
+      return waarde;
+    }
+
+    if (waarde is num) {
+      return waarde.toInt();
+    }
+
+    return int.tryParse(waarde?.toString() ?? '');
+  }
+
+  DateTime? _leesManifestDatum(dynamic waarde) {
+    if (waarde == null) {
+      return null;
+    }
+
+    return DateTime.tryParse(waarde.toString());
   }
 
   Future<bool> _isLokaalFotoOngewijzigd({
@@ -685,13 +878,9 @@ class OneDriveSyncService {
       return false;
     }
 
-    if (remoteGrootte == null) {
-      return false;
-    }
-
     final stat = await bestand.stat();
 
-    if (stat.size != remoteGrootte) {
+    if (remoteGrootte != null && stat.size != remoteGrootte) {
       return false;
     }
 
@@ -699,33 +888,10 @@ class OneDriveSyncService {
       return true;
     }
 
-    final verschilInSeconden = stat.modified
-        .toUtc()
-        .difference(remoteGewijzigdOp.toUtc())
-        .inSeconds
-        .abs();
+    final lokaal = stat.modified.toUtc();
+    final remote = remoteGewijzigdOp.toUtc();
 
-    return verschilInSeconden <= 2;
-  }
-
-  int? _leesManifestGrootte(dynamic waarde) {
-    if (waarde is int) {
-      return waarde;
-    }
-
-    if (waarde is num) {
-      return waarde.round();
-    }
-
-    return int.tryParse(waarde?.toString() ?? '');
-  }
-
-  DateTime? _leesManifestDatum(dynamic waarde) {
-    if (waarde is! String || waarde.trim().isEmpty) {
-      return null;
-    }
-
-    return DateTime.tryParse(waarde);
+    return lokaal.difference(remote).abs() < const Duration(seconds: 3);
   }
 
   String _encodeOneDrivePath(String pad) {
@@ -762,7 +928,11 @@ class OneDriveSyncService {
 
       final data = jsonDecode(response.body);
 
-      return data['backupDatum'];
+      if (data is Map && data['backupDatum'] is String) {
+        return data['backupDatum'] as String;
+      }
+
+      return null;
     } catch (_) {
       return null;
     }
@@ -880,7 +1050,7 @@ $laatsteSyncActie
     }
 
     if (lokaleDatum.isAfter(oneDriveDatum)) {
-      laatsteSyncActie = 'Lokaal nieuwer, snelle merge upload uitgevoerd';
+      laatsteSyncActie = 'Lokaal nieuwer, snelle upload uitgevoerd';
 
       return uploadBackup(uploadFotos: false);
     }
@@ -889,4 +1059,162 @@ $laatsteSyncActie
 
     return 'SYNC_OK_GEEN_WIJZIGING';
   }
+
+  _SyncStringWaarde _kiesRecenteStringWaarde({
+    required String? lokaleWaarde,
+    required String? cloudWaarde,
+    required String? lokaleGewijzigdOp,
+    required String? cloudGewijzigdOp,
+    required String fallbackDatum,
+  }) {
+    final lokaal = _legeStringNaarNull(lokaleWaarde);
+    final cloud = _legeStringNaarNull(cloudWaarde);
+
+    final lokaleDatum = DateTime.tryParse(lokaleGewijzigdOp ?? '');
+    final cloudDatum = DateTime.tryParse(cloudGewijzigdOp ?? '');
+
+    if (lokaal == null && cloud == null) {
+      return const _SyncStringWaarde(null, null);
+    }
+
+    if (lokaal != null && cloud == null) {
+      return _SyncStringWaarde(lokaal, lokaleGewijzigdOp ?? fallbackDatum);
+    }
+
+    if (cloud != null && lokaal == null) {
+      return _SyncStringWaarde(cloud, cloudGewijzigdOp ?? fallbackDatum);
+    }
+
+    if (lokaleDatum == null && cloudDatum != null) {
+      return _SyncStringWaarde(cloud, cloudGewijzigdOp);
+    }
+
+    if (lokaleDatum != null && cloudDatum == null) {
+      return _SyncStringWaarde(lokaal, lokaleGewijzigdOp);
+    }
+
+    if (lokaleDatum != null &&
+        cloudDatum != null &&
+        cloudDatum.isAfter(lokaleDatum)) {
+      return _SyncStringWaarde(cloud, cloudGewijzigdOp);
+    }
+
+    return _SyncStringWaarde(
+      lokaal,
+      lokaleGewijzigdOp ?? cloudGewijzigdOp ?? fallbackDatum,
+    );
+  }
+
+  String? _legeStringNaarNull(String? waarde) {
+    final tekst = waarde?.trim() ?? '';
+
+    if (tekst.isEmpty) {
+      return null;
+    }
+
+    return tekst;
+  }
+
+  Future<void> _bewaarOptioneleString({
+    required SharedPreferences prefs,
+    required String key,
+    required String? waarde,
+  }) async {
+    final tekst = waarde?.trim() ?? '';
+
+    if (tekst.isEmpty) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setString(key, tekst);
+    }
+  }
+
+  Map<String, String> _leesStringMap(dynamic waarde) {
+    if (waarde is! Map) {
+      return <String, String>{};
+    }
+
+    final resultaat = <String, String>{};
+
+    waarde.forEach((key, value) {
+      final sleutel = key.toString().trim();
+      final tekst = value?.toString() ?? '';
+
+      if (sleutel.isEmpty || tekst.trim().isEmpty) {
+        return;
+      }
+
+      resultaat[sleutel] = tekst;
+    });
+
+    return resultaat;
+  }
+
+  Map<String, String> _leesStringPrefsMetPrefix(
+    SharedPreferences prefs,
+    String prefix,
+  ) {
+    final resultaat = <String, String>{};
+
+    for (final key in prefs.getKeys()) {
+      if (!key.startsWith(prefix)) {
+        continue;
+      }
+
+      final waarde = prefs.getString(key);
+
+      if (waarde == null || waarde.trim().isEmpty) {
+        continue;
+      }
+
+      resultaat[key] = waarde;
+    }
+
+    return resultaat;
+  }
+
+  Map<String, String> _mergeStringPrefsMap({
+    required Map<String, String> lokaal,
+    required Map<String, String> cloud,
+  }) {
+    return <String, String>{...cloud, ...lokaal};
+  }
+
+  Future<void> _schrijfStringPrefsMetPrefix(
+    SharedPreferences prefs,
+    String prefix,
+    Map<String, String> waarden,
+  ) async {
+    final bestaandeKeys = prefs
+        .getKeys()
+        .where((key) {
+          return key.startsWith(prefix);
+        })
+        .toList(growable: false);
+
+    for (final key in bestaandeKeys) {
+      if (!waarden.containsKey(key)) {
+        await prefs.remove(key);
+      }
+    }
+
+    for (final entry in waarden.entries) {
+      if (!entry.key.startsWith(prefix)) {
+        continue;
+      }
+
+      if (entry.value.trim().isEmpty) {
+        await prefs.remove(entry.key);
+      } else {
+        await prefs.setString(entry.key, entry.value);
+      }
+    }
+  }
+}
+
+class _SyncStringWaarde {
+  const _SyncStringWaarde(this.waarde, this.gewijzigdOp);
+
+  final String? waarde;
+  final String? gewijzigdOp;
 }

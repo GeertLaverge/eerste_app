@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../paginas/agenda_pagina_nieuw.dart';
 import '../../paginas/klanten_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
-import '../../paginas/instellingen_pagina.dart';
 import '../../paginas/opmeting_pagina.dart' as opmeting;
 
 class HomeZijMenu extends StatelessWidget {
@@ -42,7 +41,6 @@ class HomeZijMenu extends StatelessWidget {
           _menuKnop(context, 'Puinzak', Icons.delete_outline),
           _menuKnop(context, 'Magazijn', Icons.inventory_2_outlined),
           const Spacer(),
-          _menuKnop(context, 'Instellingen', Icons.settings_outlined),
           _menuKnop(context, 'Afmelden', Icons.logout),
           SizedBox(height: compact ? 8 : 12),
         ],
@@ -94,14 +92,6 @@ class HomeZijMenu extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => opmeting.OpmetingPagina()),
-          );
-          return;
-        }
-
-        if (titel == 'Instellingen') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const InstellingenPagina()),
           );
           return;
         }

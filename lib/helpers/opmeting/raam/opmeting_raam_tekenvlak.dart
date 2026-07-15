@@ -4552,6 +4552,138 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
               );
             }
 
+            Widget deurVleugelKaart({
+              required String keuzeWaarde,
+              required String titel,
+              required String ondertitel,
+              required OpmetingRaamDeurVleugelAantal aantal,
+              required OpmetingRaamKrukZijde krukZijde,
+            }) {
+              final geselecteerd = vleugelKeuze == keuzeWaarde;
+
+              return SizedBox(
+                width: 246,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () {
+                    setDialogState(() {
+                      vleugelKeuze = keuzeWaarde;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: geselecteerd
+                          ? const Color(0xFFE7F6EC)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: geselecteerd
+                            ? const Color(0xFF0B7A3B)
+                            : const Color(0xFFE5E7EB),
+                        width: geselecteerd ? 1.6 : 1,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0F111827),
+                          blurRadius: 7,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 76,
+                          height: 86,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: geselecteerd
+                                  ? const Color(0xFF0B7A3B)
+                                  : const Color(0xFFE5E7EB),
+                            ),
+                          ),
+                          child: CustomPaint(
+                            painter: _DeurVleugelVoorbeeldPainter(
+                              aantal: aantal,
+                              krukZijde: krukZijde,
+                              draairichting: draairichting,
+                              geselecteerd: geselecteerd,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    geselecteerd
+                                        ? Icons.check_circle_rounded
+                                        : Icons.radio_button_unchecked_rounded,
+                                    size: 17,
+                                    color: geselecteerd
+                                        ? const Color(0xFF0B7A3B)
+                                        : const Color(0xFF9CA3AF),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      titel,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: geselecteerd
+                                            ? const Color(0xFF0B7A3B)
+                                            : const Color(0xFF111827),
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                ondertitel,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF6B7280),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                draairichting ==
+                                        OpmetingRaamDeurDraairichting
+                                            .binnendraaiend
+                                    ? 'Binnendraaiend'
+                                    : 'Buitendraaiend',
+                                style: TextStyle(
+                                  color: geselecteerd
+                                      ? const Color(0xFF0B7A3B)
+                                      : const Color(0xFF374151),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+
             return AlertDialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
@@ -4624,41 +4756,33 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          keuzeKnop(
-                            geselecteerd: vleugelKeuze == 'enkel_links',
-                            titel: 'Enkele vleugel\nkruk links',
-                            onTap: () {
-                              setDialogState(
-                                () => vleugelKeuze = 'enkel_links',
-                              );
-                            },
+                          deurVleugelKaart(
+                            keuzeWaarde: 'enkel_links',
+                            titel: 'Enkele vleugel',
+                            ondertitel: 'Kruk links',
+                            aantal: OpmetingRaamDeurVleugelAantal.enkel,
+                            krukZijde: OpmetingRaamKrukZijde.links,
                           ),
-                          keuzeKnop(
-                            geselecteerd: vleugelKeuze == 'enkel_rechts',
-                            titel: 'Enkele vleugel\nkruk rechts',
-                            onTap: () {
-                              setDialogState(
-                                () => vleugelKeuze = 'enkel_rechts',
-                              );
-                            },
+                          deurVleugelKaart(
+                            keuzeWaarde: 'enkel_rechts',
+                            titel: 'Enkele vleugel',
+                            ondertitel: 'Kruk rechts',
+                            aantal: OpmetingRaamDeurVleugelAantal.enkel,
+                            krukZijde: OpmetingRaamKrukZijde.rechts,
                           ),
-                          keuzeKnop(
-                            geselecteerd: vleugelKeuze == 'dubbel_rechts',
-                            titel: 'Dubbele vleugel\nkruk rechterdeel',
-                            onTap: () {
-                              setDialogState(
-                                () => vleugelKeuze = 'dubbel_rechts',
-                              );
-                            },
+                          deurVleugelKaart(
+                            keuzeWaarde: 'dubbel_rechts',
+                            titel: 'Dubbele vleugel',
+                            ondertitel: 'Kruk rechterdeel',
+                            aantal: OpmetingRaamDeurVleugelAantal.dubbel,
+                            krukZijde: OpmetingRaamKrukZijde.rechts,
                           ),
-                          keuzeKnop(
-                            geselecteerd: vleugelKeuze == 'dubbel_links',
-                            titel: 'Dubbele vleugel\nkruk linkerdeel',
-                            onTap: () {
-                              setDialogState(
-                                () => vleugelKeuze = 'dubbel_links',
-                              );
-                            },
+                          deurVleugelKaart(
+                            keuzeWaarde: 'dubbel_links',
+                            titel: 'Dubbele vleugel',
+                            ondertitel: 'Kruk linkerdeel',
+                            aantal: OpmetingRaamDeurVleugelAantal.dubbel,
+                            krukZijde: OpmetingRaamKrukZijde.links,
                           ),
                         ],
                       ),
@@ -5611,6 +5735,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                 breedteMm: widget.breedteMm,
                 hoogteMm: widget.hoogteMm,
                 vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
+                vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+                kaderSamenstelling: widget.kaderSamenstelling,
                 toewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
                   _deurpaneelToewijzingen,
                 ),
@@ -5626,6 +5752,275 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   @override
   Widget build(BuildContext context) {
     return OpmetingRaamTekenvlakKader(inhoudBuilder: _bouwTekenvlakInhoud);
+  }
+}
+
+class _DeurVleugelVoorbeeldPainter extends CustomPainter {
+  const _DeurVleugelVoorbeeldPainter({
+    required this.aantal,
+    required this.krukZijde,
+    required this.draairichting,
+    required this.geselecteerd,
+  });
+
+  final OpmetingRaamDeurVleugelAantal aantal;
+  final OpmetingRaamKrukZijde krukZijde;
+  final OpmetingRaamDeurDraairichting draairichting;
+  final bool geselecteerd;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
+
+    final buiten = Rect.fromLTWH(9, 8, size.width - 18, size.height - 18);
+
+    final lijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1.35
+      ..style = PaintingStyle.stroke;
+
+    final dunneLijn = Paint()
+      ..color = const Color(0xFF111827)
+      ..strokeWidth = 1.05
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final accent = Paint()
+      ..color = geselecteerd ? const Color(0xFF0B7A3B) : const Color(0xFF374151)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final profielVulling = Paint()
+      ..color = const Color(0xFFF9FAFB)
+      ..style = PaintingStyle.fill;
+
+    final tekstPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    final bovenTekst =
+        draairichting == OpmetingRaamDeurDraairichting.binnendraaiend
+        ? 'BIN'
+        : 'BUIT';
+
+    tekstPainter.text = TextSpan(
+      text: bovenTekst,
+      style: TextStyle(
+        color: geselecteerd ? const Color(0xFF0B7A3B) : const Color(0xFF6B7280),
+        fontSize: 8.5,
+        fontWeight: FontWeight.w900,
+      ),
+    );
+    tekstPainter.layout(maxWidth: size.width);
+    tekstPainter.paint(
+      canvas,
+      Offset((size.width - tekstPainter.width) / 2, size.height - 10),
+    );
+
+    if (aantal == OpmetingRaamDeurVleugelAantal.dubbel) {
+      _tekenDubbel(canvas, buiten, lijn, dunneLijn, accent, profielVulling);
+    } else {
+      _tekenEnkel(canvas, buiten, lijn, dunneLijn, accent, profielVulling);
+    }
+  }
+
+  void _tekenEnkel(
+    Canvas canvas,
+    Rect buiten,
+    Paint lijn,
+    Paint dunneLijn,
+    Paint accent,
+    Paint profielVulling,
+  ) {
+    final deur = buiten.deflate(2);
+    final binnen = deur.deflate(7);
+
+    canvas.drawRect(deur, profielVulling);
+    canvas.drawRect(deur, lijn);
+    canvas.drawRect(binnen, dunneLijn);
+
+    final krukLinks = krukZijde == OpmetingRaamKrukZijde.links;
+    final krukX = krukLinks ? deur.left + 5.2 : deur.right - 5.2;
+    final scharnierX = krukLinks ? binnen.right : binnen.left;
+    final puntX = krukLinks ? binnen.left : binnen.right;
+    final puntY = _puntY(binnen);
+
+    _tekenOpeningsLijnen(
+      canvas: canvas,
+      scharnierX: scharnierX,
+      bovenY: binnen.top,
+      onderY: binnen.bottom,
+      punt: Offset(puntX, puntY),
+      paint: accent,
+    );
+
+    _tekenKruk(
+      canvas: canvas,
+      x: krukX,
+      y: puntY,
+      naarRechts: krukLinks,
+      paint: lijn,
+    );
+
+    _tekenScharnieren(
+      canvas: canvas,
+      x: scharnierX,
+      bovenY: binnen.top + 8,
+      onderY: binnen.bottom - 8,
+      paint: dunneLijn,
+    );
+  }
+
+  void _tekenDubbel(
+    Canvas canvas,
+    Rect buiten,
+    Paint lijn,
+    Paint dunneLijn,
+    Paint accent,
+    Paint profielVulling,
+  ) {
+    final deur = buiten.deflate(2);
+    final binnen = deur.deflate(6.5);
+    final middenX = (deur.left + deur.right) / 2;
+    final middenBinnenX = (binnen.left + binnen.right) / 2;
+    final puntY = _puntY(binnen);
+
+    canvas.drawRect(deur, profielVulling);
+    canvas.drawRect(deur, lijn);
+    canvas.drawLine(
+      Offset(middenX, deur.top),
+      Offset(middenX, deur.bottom),
+      lijn,
+    );
+
+    final linksBinnen = Rect.fromLTRB(
+      binnen.left,
+      binnen.top,
+      middenBinnenX - 1.5,
+      binnen.bottom,
+    );
+    final rechtsBinnen = Rect.fromLTRB(
+      middenBinnenX + 1.5,
+      binnen.top,
+      binnen.right,
+      binnen.bottom,
+    );
+
+    canvas.drawRect(linksBinnen, dunneLijn);
+    canvas.drawRect(rechtsBinnen, dunneLijn);
+
+    _tekenOpeningsLijnen(
+      canvas: canvas,
+      scharnierX: linksBinnen.left,
+      bovenY: linksBinnen.top,
+      onderY: linksBinnen.bottom,
+      punt: Offset(linksBinnen.right, puntY),
+      paint: accent,
+    );
+    _tekenOpeningsLijnen(
+      canvas: canvas,
+      scharnierX: rechtsBinnen.right,
+      bovenY: rechtsBinnen.top,
+      onderY: rechtsBinnen.bottom,
+      punt: Offset(rechtsBinnen.left, puntY),
+      paint: accent,
+    );
+
+    final krukOpRechterdeel = krukZijde == OpmetingRaamKrukZijde.rechts;
+    if (krukOpRechterdeel) {
+      _tekenKruk(
+        canvas: canvas,
+        x: rechtsBinnen.left + 3.5,
+        y: puntY,
+        naarRechts: true,
+        paint: lijn,
+      );
+    } else {
+      _tekenKruk(
+        canvas: canvas,
+        x: linksBinnen.right - 3.5,
+        y: puntY,
+        naarRechts: false,
+        paint: lijn,
+      );
+    }
+
+    _tekenScharnieren(
+      canvas: canvas,
+      x: linksBinnen.left,
+      bovenY: linksBinnen.top + 8,
+      onderY: linksBinnen.bottom - 8,
+      paint: dunneLijn,
+    );
+    _tekenScharnieren(
+      canvas: canvas,
+      x: rechtsBinnen.right,
+      bovenY: rechtsBinnen.top + 8,
+      onderY: rechtsBinnen.bottom - 8,
+      paint: dunneLijn,
+    );
+  }
+
+  double _puntY(Rect binnen) {
+    final midden = (binnen.top + binnen.bottom) / 2;
+    final verschuiving = (binnen.height * 0.08).clamp(1.0, 4.5).toDouble();
+
+    if (draairichting == OpmetingRaamDeurDraairichting.binnendraaiend) {
+      return midden - verschuiving;
+    }
+
+    return midden + verschuiving;
+  }
+
+  void _tekenOpeningsLijnen({
+    required Canvas canvas,
+    required double scharnierX,
+    required double bovenY,
+    required double onderY,
+    required Offset punt,
+    required Paint paint,
+  }) {
+    canvas.drawLine(Offset(scharnierX, bovenY), punt, paint);
+    canvas.drawLine(Offset(scharnierX, onderY), punt, paint);
+  }
+
+  void _tekenKruk({
+    required Canvas canvas,
+    required double x,
+    required double y,
+    required bool naarRechts,
+    required Paint paint,
+  }) {
+    final lengte = naarRechts ? 8.5 : -8.5;
+    canvas.drawLine(Offset(x, y), Offset(x + lengte, y), paint);
+    canvas.drawCircle(
+      Offset(x, y),
+      1.8,
+      Paint()..color = const Color(0xFF111827),
+    );
+  }
+
+  void _tekenScharnieren({
+    required Canvas canvas,
+    required double x,
+    required double bovenY,
+    required double onderY,
+    required Paint paint,
+  }) {
+    canvas.drawLine(Offset(x - 2.5, bovenY), Offset(x + 2.5, bovenY), paint);
+    canvas.drawLine(Offset(x - 2.5, onderY), Offset(x + 2.5, onderY), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DeurVleugelVoorbeeldPainter oldDelegate) {
+    return oldDelegate.aantal != aantal ||
+        oldDelegate.krukZijde != krukZijde ||
+        oldDelegate.draairichting != draairichting ||
+        oldDelegate.geselecteerd != geselecteerd;
   }
 }
 

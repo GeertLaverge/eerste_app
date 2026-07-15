@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../sync/onedrive_sync_service.dart';
 import 'opmeting_deurpaneel_toewijzing_model.dart';
 
 class OpmetingDeurpaneelToewijzingStorageHelper {
@@ -11,6 +12,11 @@ class OpmetingDeurpaneelToewijzingStorageHelper {
 
   static String _sleutelVoorOpmetingId(String opmetingId) {
     return '$_prefix${opmetingId.trim()}';
+  }
+
+  static Future<void> _registreerWijzigingVoorSync() async {
+    await OneDriveSyncService.registreerLokaleWijziging();
+    OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   static Future<List<OpmetingDeurpaneelToewijzing>> laadVoorOpmetingId({
@@ -70,6 +76,7 @@ class OpmetingDeurpaneelToewijzingStorageHelper {
 
     if (toewijzingen.isEmpty) {
       await prefs.remove(sleutel);
+      await _registreerWijzigingVoorSync();
       return;
     }
 
@@ -80,6 +87,7 @@ class OpmetingDeurpaneelToewijzingStorageHelper {
     );
 
     await prefs.setString(sleutel, encoded);
+    await _registreerWijzigingVoorSync();
   }
 
   static Future<void> wisVoorOpmetingId({required String opmetingId}) async {
@@ -91,5 +99,6 @@ class OpmetingDeurpaneelToewijzingStorageHelper {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_sleutelVoorOpmetingId(id));
+    await _registreerWijzigingVoorSync();
   }
 }

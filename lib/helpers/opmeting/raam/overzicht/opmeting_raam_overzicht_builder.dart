@@ -36,6 +36,7 @@ class OpmetingRaamOverzichtBuilder {
     required List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten,
     List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen =
         const <OpmetingDeurpaneelToewijzing>[],
+    String profielSamenvatting = '',
     required String notities,
   }) {
     final tekeningData =
@@ -58,6 +59,7 @@ class OpmetingRaamOverzichtBuilder {
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
       deurpaneelToewijzingen: deurpaneelToewijzingen,
+      profielSamenvatting: profielSamenvatting,
       technischeKaderGroepen: technischeKaderGroepen,
     );
 
@@ -79,6 +81,9 @@ class OpmetingRaamOverzichtBuilder {
       technischeRegels: context.maakTechnischeRegels(),
       technischeContainers: context.maakTechnischeContainers(),
       keuzeSelectiesPerKader: _kopieKeuzeSelecties(keuzeSelectiesPerKader),
+      deurpaneelToewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+        deurpaneelToewijzingen,
+      ),
       notities: notities.trim(),
     );
   }
@@ -101,6 +106,16 @@ class OpmetingRaamOverzichtBuilder {
       case 'alu_raam':
       case 'ALU Raam':
         return 'aluRaam';
+
+      case 'pvcDeur':
+      case 'pvc_deur':
+      case 'PVC Deur':
+        return 'pvcDeur';
+
+      case 'aluDeur':
+      case 'alu_deur':
+      case 'ALU Deur':
+        return 'aluDeur';
 
       case 'pvcRaam':
       case 'pvc_raam':
@@ -147,6 +162,7 @@ class _OpmetingRaamOverzichtContext {
     required this.gekozenOpvullingen,
     required this.gekozenKleinhouten,
     required this.deurpaneelToewijzingen,
+    required this.profielSamenvatting,
     required this.technischeKaderGroepen,
   });
 
@@ -162,6 +178,7 @@ class _OpmetingRaamOverzichtContext {
   final List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen;
   final List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten;
   final List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen;
+  final String profielSamenvatting;
   final Map<String, Set<String>> technischeKaderGroepen;
 
   List<OpmetingOverzichtTechnischeContainer> maakTechnischeContainers() {
@@ -266,6 +283,15 @@ class _OpmetingRaamOverzichtContext {
                 return '${kleinhout.nummer}. ${_maakLeesbaar(kleinhout.type.name)} · ${_maakLeesbaar(kleinhout.patroon.name)}';
               })
               .join('\n'),
+        ),
+      );
+    }
+
+    if (profielSamenvatting.trim().isNotEmpty) {
+      regels.add(
+        OpmetingOverzichtTechnischeRegel(
+          titel: 'Profiel',
+          waarde: profielSamenvatting.trim(),
         ),
       );
     }
@@ -456,9 +482,23 @@ class _OpmetingRaamOverzichtContext {
   }
 
   String _deurpanelenSamenvattingVoorOverzicht() {
+    final geldigeDeurVleugelIds = _deurVleugelIds();
+
+    if (geldigeDeurVleugelIds.isEmpty) {
+      return '';
+    }
+
+    final geldigeToewijzingen = deurpaneelToewijzingen.where((toewijzing) {
+      return geldigeDeurVleugelIds.contains(toewijzing.deurVleugelId);
+    }).toList();
+
+    if (geldigeToewijzingen.isEmpty) {
+      return '';
+    }
+
     final samenvatting =
         OpmetingDeurpaneelTekstHelper.samenvattingVoorToewijzingen(
-          deurpaneelToewijzingen,
+          geldigeToewijzingen,
         ).trim();
 
     if (samenvatting.isEmpty) {
@@ -472,6 +512,26 @@ class _OpmetingRaamOverzichtContext {
     }).toList();
 
     return regels.join('\n');
+  }
+
+  Set<String> _deurVleugelIds() {
+    final ids = <String>{};
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (vleugel.isDeurVleugel) {
+          ids.add(vleugel.id);
+        }
+      }
+    }
+
+    voegToe(tekeningData.vleugels);
+
+    for (final lijst in tekeningData.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    return ids;
   }
 
   String _opvullingTekstVoorOverzicht(int aantalVlakken) {

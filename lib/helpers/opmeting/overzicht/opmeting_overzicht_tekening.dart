@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../deurpanelen/opmeting_deurpaneel_teken_helper.dart';
 import '../raam/opmeting_raam_tekenvlak_painter.dart';
 import 'opmeting_overzicht_model.dart';
 
@@ -22,7 +23,7 @@ class OpmetingOverzichtTekening extends CustomPainter {
     final dx = (size.width - virtueleGrootte.width * schaal) / 2;
     final dy = (size.height - virtueleGrootte.height * schaal) / 2;
 
-    final painter = OpmetingRaamTekenvlakPainter(
+    final basisPainter = OpmetingRaamTekenvlakPainter(
       breedteMm: item.raammaatBreedteMm,
       hoogteMm: item.raammaatHoogteMm,
       geselecteerdeLijn: null,
@@ -53,7 +54,22 @@ class OpmetingOverzichtTekening extends CustomPainter {
     canvas.save();
     canvas.translate(dx, dy);
     canvas.scale(schaal);
-    painter.paint(canvas, virtueleGrootte);
+
+    basisPainter.paint(canvas, virtueleGrootte);
+
+    if (item.deurpaneelToewijzingen.isNotEmpty) {
+      final deurpaneelPainter = OpmetingDeurpaneelTekenvlakPainter(
+        breedteMm: item.raammaatBreedteMm,
+        hoogteMm: item.raammaatHoogteMm,
+        vleugels: data.vleugels,
+        vleugelsPerKader: data.vleugelsPerKader,
+        kaderSamenstelling: item.kaderSamenstelling,
+        toewijzingen: item.deurpaneelToewijzingen,
+      );
+
+      deurpaneelPainter.paint(canvas, virtueleGrootte);
+    }
+
     canvas.restore();
   }
 

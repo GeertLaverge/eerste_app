@@ -442,9 +442,28 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _verwerkOverzichtTekeningData(OpmetingOverzichtTekeningData data) {
+    final opgeschoondeToewijzingen = _schoonDeurpaneelToewijzingenOp(data);
+    final deurpaneelToewijzingenGewijzigd = !_zijnDeurpaneelToewijzingenGelijk(
+      _deurpaneelToewijzingen,
+      opgeschoondeToewijzingen,
+    );
+
     setState(() {
       _overzichtTekeningData = data;
+
+      if (deurpaneelToewijzingenGewijzigd) {
+        _deurpaneelToewijzingen =
+            List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+              opgeschoondeToewijzingen,
+            );
+      }
     });
+
+    if (deurpaneelToewijzingenGewijzigd) {
+      OpmetingDeurpaneelActieveKeuzeController.werkToewijzingenBij(
+        opgeschoondeToewijzingen,
+      );
+    }
 
     _herstelLegendaUitTekeningData(data, metSetState: true);
   }
@@ -500,6 +519,44 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     return true;
   }
 
+  Set<String> _deurVleugelIdsUitTekeningData(
+    OpmetingOverzichtTekeningData data,
+  ) {
+    final ids = <String>{};
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (vleugel.isDeurVleugel) {
+          ids.add(vleugel.id);
+        }
+      }
+    }
+
+    voegToe(data.vleugels);
+
+    for (final lijst in data.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    return ids;
+  }
+
+  List<OpmetingDeurpaneelToewijzing> _schoonDeurpaneelToewijzingenOp(
+    OpmetingOverzichtTekeningData data,
+  ) {
+    final geldigeDeurVleugelIds = _deurVleugelIdsUitTekeningData(data);
+
+    if (geldigeDeurVleugelIds.isEmpty) {
+      return const <OpmetingDeurpaneelToewijzing>[];
+    }
+
+    return List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+      _deurpaneelToewijzingen.where((toewijzing) {
+        return geldigeDeurVleugelIds.contains(toewijzing.deurVleugelId);
+      }),
+    );
+  }
+
   String get _deurVleugelSamenvatting {
     final data = _overzichtTekeningData;
 
@@ -549,12 +606,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     if (deurpanelenTekst.trim().isNotEmpty) {
       regels.add(deurpanelenTekst);
-    } else if (_actieveDeurpaneelKeuze != null) {
-      regels.add(
-        OpmetingDeurpaneelTekstHelper.samenvattingVoorKeuze(
-          _actieveDeurpaneelKeuze!,
-        ),
-      );
     }
 
     return regels.where((regel) => regel.trim().isNotEmpty).join('\n');
@@ -652,6 +703,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   String get _profielSamenvatting {
     final uitzagenTand = _waarde(uitzagenTandController).round();
     final buitensteProfiel = _waarde(buitensteLipController).round();
+
+    if (uitzagenTand == 0 && buitensteProfiel == 0) {
+      return '';
+    }
 
     return 'uitzagen tand $uitzagenTand mm buitenste profiel $buitensteProfiel mm';
   }
@@ -1275,7 +1330,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     await OpmetingDeurpaneelToewijzingStorageHelper.bewaarVoorOpmetingId(
       opmetingId: bewaardeOpmeting.id,
-      toewijzingen: _deurpaneelToewijzingen,
+      toewijzingen: opmeting.deurpaneelToewijzingen,
     );
 
     return bewaardeOpmeting;
@@ -1402,6 +1457,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   OpmetingOverzichtRaamItem _maakOverzichtItem() {
+    final deurpaneelToewijzingenVoorOverzicht = _overzichtTekeningData == null
+        ? const <OpmetingDeurpaneelToewijzing>[]
+        : _schoonDeurpaneelToewijzingenOp(_overzichtTekeningData!);
+
     final nieuweOpmeting = OpmetingRaamOverzichtBuilder.maak(
       klantNaam: widget.klantNaam?.trim() ?? '',
       formulierType: _formulierType,
@@ -1421,7 +1480,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       keuzemenus: _keuzemenus,
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
-      deurpaneelToewijzingen: _deurpaneelToewijzingen,
+      deurpaneelToewijzingen: deurpaneelToewijzingenVoorOverzicht,
+      profielSamenvatting: _profielSamenvatting,
       notities: notitiesController.text.trim(),
     );
 
