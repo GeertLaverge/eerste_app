@@ -706,108 +706,45 @@ class AppStorage {
 
   static Future<List<OpmetingAgendaKlantInfo>>
   laadAgendaKlantenVoorOpmeting() async {
-    final prefs = await openBox();
-    final jsonString = prefs.getString(_agendaItemsNieuwKey);
-
-    if (jsonString == null || jsonString.isEmpty) {
-      return <OpmetingAgendaKlantInfo>[];
-    }
-
     try {
-      final decoded = jsonDecode(jsonString);
-
-      if (decoded is! Map) {
-        return <OpmetingAgendaKlantInfo>[];
-      }
-
+      final itemsPerDag = await laadAgendaItemsNieuwVoorSync();
       final perKlant = <String, OpmetingAgendaKlantInfo>{};
 
-      decoded.forEach((datumKey, lijst) {
-        if (lijst is! List) {
-          return;
-        }
-
-        for (final item in lijst) {
-          if (item is! Map) {
+      for (final dagEntry in itemsPerDag.entries) {
+        for (final item in dagEntry.value) {
+          if (item.isVerwijderd ||
+              item.type.trim().toLowerCase() != 'afspraak') {
             continue;
           }
 
-          final map = Map<String, dynamic>.from(item);
+          final klantNaam = item.naamKlant.trim().isNotEmpty
+              ? item.naamKlant.trim()
+              : item.titel.trim();
 
-          if (map['isVerwijderd'] == true) {
-            continue;
-          }
-
-          if (!_isBlauweAgendaAfspraak(map)) {
-            continue;
-          }
-
-          final klant = _leesEersteTekst(map, const <String>[
-            'klantNaam',
-            'klant',
-            'naamKlant',
-            'naam',
-            'titel',
-            'title',
-            'onderwerp',
-          ]).trim();
-
-          if (klant.isEmpty || klant.toLowerCase() == 'afspraak') {
+          if (klantNaam.isEmpty || klantNaam.toLowerCase() == 'afspraak') {
             continue;
           }
 
           final info = OpmetingAgendaKlantInfo(
-            klantNaam: klant,
-            contactpersoon: _leesEersteTekst(map, const <String>[
-              'contactpersoon',
-              'contact',
-            ]),
-            adres: _leesEersteTekst(map, const <String>[
-              'adres',
-              'straat',
-              'straatNaam',
-              'werfAdres',
-            ]),
-            postcode: _leesEersteTekst(map, const <String>[
-              'postcode',
-              'postCode',
-            ]),
-            gemeente: _leesEersteTekst(map, const <String>[
-              'gemeente',
-              'plaats',
-              'stad',
-              'woonplaats',
-            ]),
-            gsm: _leesEersteTekst(map, const <String>[
-              'gsm',
-              'gsm1',
-              'mobiel',
-              'mobile',
-            ]),
-            telefoon: _leesEersteTekst(map, const <String>[
-              'telefoon',
-              'tel',
-              'telefoonnummer',
-            ]),
-            email: _leesEersteTekst(map, const <String>[
-              'email',
-              'eMail',
-              'mail',
-            ]),
-            omschrijving: _leesEersteTekst(map, const <String>[
-              'omschrijving',
-              'beschrijving',
-              'notitie',
-              'notities',
-            ]),
-            datumKey: datumKey.toString(),
+            klantNaam: klantNaam,
+            adres: item.straatnaam.trim(),
+            huisnummer: item.huisNr.trim(),
+            postcode: item.postcode.trim(),
+            gemeente: item.gemeente.trim(),
+            gsm: item.gsm.trim(),
+            telefoon: item.gsm2.trim(),
+            email: item.email.trim(),
+            omschrijving: item.opmerkingen.trim(),
+            datumKey: dagEntry.key,
           );
 
-          final sleutel = klant.trim().toLowerCase();
-
-          perKlant.putIfAbsent(sleutel, () => info);
+          final sleutel = klantNaam.toLowerCase();
+          final bestaand = perKlant[sleutel];
+          perKlant[sleutel] = bestaand == null
+              ? info
+              : bestaand.combineerMet(info);
         }
-      });
+      }
 
       final resultaat = perKlant.values.toList()
         ..sort((eerste, tweede) {
@@ -1008,6 +945,61 @@ class AppStorage {
     OpmetingOverzichtRaamItem opmeting,
   ) async {
     return voegOpmetingToe(opmeting);
+  }
+
+  static Future<bool> verplaatsOpmetingBinnenKlant({
+    required String klantNaam,
+    required String opmetingId,
+    required int richting,
+  }) async {
+    if (richting != -1 && richting != 1) {
+      return false;
+    }
+
+    final alleOpmetingen = await laadOpmetingenVoorSync();
+    final klantSleutel = klantNaam.trim().toLowerCase();
+    final klantIndices = <int>[];
+
+    for (var index = 0; index < alleOpmetingen.length; index++) {
+      final opmeting = alleOpmetingen[index];
+
+      if (opmeting.isVerwijderd) {
+        continue;
+      }
+
+      if (opmeting.klantNaam.trim().toLowerCase() != klantSleutel) {
+        continue;
+      }
+
+      klantIndices.add(index);
+    }
+
+    final huidigePositie = klantIndices.indexWhere((index) {
+      return alleOpmetingen[index].id == opmetingId;
+    });
+
+    if (huidigePositie < 0) {
+      return false;
+    }
+
+    final nieuwePositie = huidigePositie + richting;
+
+    if (nieuwePositie < 0 || nieuwePositie >= klantIndices.length) {
+      return false;
+    }
+
+    final huidigeIndex = klantIndices[huidigePositie];
+    final nieuweIndex = klantIndices[nieuwePositie];
+    final nu = DateTime.now().toUtc().toIso8601String();
+    final huidige = alleOpmetingen[huidigeIndex];
+    final andere = alleOpmetingen[nieuweIndex];
+
+    alleOpmetingen[huidigeIndex] = andere.copyWith(gewijzigdOp: nu);
+    alleOpmetingen[nieuweIndex] = huidige.copyWith(gewijzigdOp: nu);
+
+    await bewaarOpmetingen(alleOpmetingen);
+
+    return true;
   }
 
   static Future<void> verwijderOpmeting(String id) async {

@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
+import '../helpers/opmeting/fotos/opmeting_foto_model.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_tekening.dart';
 import '../helpers/opmeting/project/opmeting_project_kleur_model.dart';
-import '../helpers/opmeting/project/opmeting_project_titelhoofd_model.dart';
-import '../helpers/opmeting/project/opmeting_project_titelhoofd_kaart.dart';
+import '../helpers/opmeting/project/opmeting_project_titelhoofd_model.dart'
+    show OpmetingAgendaKlantInfo, OpmetingProjectTitelhoofd;
+import '../helpers/opmeting/project/opmeting_project_titelhoofd_kaart.dart'
+    show OpmetingProjectTitelhoofdKaart, toonOpmetingAgendaKlantKeuzeDialog;
 import 'opmeting_raam_pagina.dart';
 
 class OpmetingPagina extends StatefulWidget {
@@ -118,12 +121,21 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     });
   }
 
-  Future<String?> _vraagKlantNaam() async {
-    final naam = await showDialog<String>(
+  Future<_NieuweOpmetingKlantResultaat?> _vraagKlantNaam() async {
+    final agendaKlanten = await AppStorage.laadAgendaKlantenVoorOpmeting();
+
+    if (!mounted) {
+      return null;
+    }
+
+    final resultaat = await showDialog<_NieuweOpmetingKlantResultaat>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return _KlantNaamDialog(beginNaam: _klantNaam);
+        return _KlantNaamDialog(
+          beginNaam: _klantNaam,
+          agendaKlanten: agendaKlanten,
+        );
       },
     );
 
@@ -133,20 +145,37 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       await WidgetsBinding.instance.endOfFrame;
     }
 
-    return naam?.trim();
+    return resultaat;
+  }
+
+  Future<OpmetingProjectTitelhoofd> _maakTitelhoofdVoorNieuweKlant(
+    _NieuweOpmetingKlantResultaat keuze,
+  ) async {
+    final bestaand = await AppStorage.laadOpmetingProjectTitelhoofd(
+      keuze.klantNaam,
+    );
+
+    final basis = bestaand.copyWith(klantNaam: keuze.klantNaam);
+    final uitAgenda = keuze.agendaKlant?.naarTitelhoofd(bestaand: basis);
+
+    return (uitAgenda ?? basis).metWijzigingsDatum();
   }
 
   Future<void> _nieuwBestand() async {
-    final naam = await _vraagKlantNaam();
+    final keuze = await _vraagKlantNaam();
 
-    if (naam == null || naam.trim().isEmpty || !mounted) {
+    if (keuze == null || keuze.klantNaam.trim().isEmpty || !mounted) {
       return;
     }
 
-    final klantNaam = naam.trim();
-    final titelhoofd = await AppStorage.laadOpmetingProjectTitelhoofd(
-      klantNaam,
-    );
+    final klantNaam = keuze.klantNaam.trim();
+    final titelhoofd = await _maakTitelhoofdVoorNieuweKlant(keuze);
+
+    if (!mounted) {
+      return;
+    }
+
+    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
 
     if (!mounted) {
       return;
@@ -154,9 +183,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
     setState(() {
       _klantNaam = klantNaam;
-      _projectTitelhoofd = titelhoofd.klantNaam.trim().isEmpty
-          ? titelhoofd.copyWith(klantNaam: klantNaam)
-          : titelhoofd;
+      _projectTitelhoofd = titelhoofd;
       _raamOpmetingen.clear();
       _verborgenFormulierTypes.clear();
     });
@@ -594,16 +621,28 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       var klantNaam = _klantNaam.trim();
 
       if (klantNaam.isEmpty) {
-        final naam = await _vraagKlantNaam();
+        final keuze = await _vraagKlantNaam();
 
-        if (naam == null || naam.trim().isEmpty || !mounted) {
+        if (keuze == null || keuze.klantNaam.trim().isEmpty || !mounted) {
           return;
         }
 
-        klantNaam = naam.trim();
+        klantNaam = keuze.klantNaam.trim();
+        final titelhoofd = await _maakTitelhoofdVoorNieuweKlant(keuze);
+
+        if (!mounted) {
+          return;
+        }
+
+        await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
+
+        if (!mounted) {
+          return;
+        }
 
         setState(() {
           _klantNaam = klantNaam;
+          _projectTitelhoofd = titelhoofd;
           _raamOpmetingen.clear();
         });
       }
@@ -710,6 +749,37 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     _toonMelding('Opmeting verwijderd en synchronisatie gestart.');
+  }
+
+  Future<void> _verplaatsRaamopmeting(
+    OpmetingOverzichtRaamItem item,
+    int richting,
+  ) async {
+    final huidigeIndex = _raamOpmetingen.indexWhere(
+      (opmeting) => opmeting.id == item.id,
+    );
+    final nieuweIndex = huidigeIndex + richting;
+
+    if (huidigeIndex < 0 ||
+        nieuweIndex < 0 ||
+        nieuweIndex >= _raamOpmetingen.length) {
+      return;
+    }
+
+    final verplaatst = await AppStorage.verplaatsOpmetingBinnenKlant(
+      klantNaam: _klantNaam,
+      opmetingId: item.id,
+      richting: richting,
+    );
+
+    if (!verplaatst || !mounted) {
+      return;
+    }
+
+    setState(() {
+      final opmeting = _raamOpmetingen.removeAt(huidigeIndex);
+      _raamOpmetingen.insert(nieuweIndex, opmeting);
+    });
   }
 
   void _verwerkTitelhoofdWijziging(OpmetingProjectTitelhoofd titelhoofd) {
@@ -1135,6 +1205,16 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 onVerwijderen: () {
                   _verwijderRaamopmeting(item);
                 },
+                onOmhoog: zichtbaarItem.volgnummer > 1
+                    ? () {
+                        _verplaatsRaamopmeting(item, -1);
+                      }
+                    : null,
+                onOmlaag: zichtbaarItem.volgnummer < _raamOpmetingen.length
+                    ? () {
+                        _verplaatsRaamopmeting(item, 1);
+                      }
+                    : null,
               ),
             );
           }),
@@ -1153,10 +1233,24 @@ class _OpmetingOverzichtItemMetPositie {
   final int volgnummer;
 }
 
+class _NieuweOpmetingKlantResultaat {
+  const _NieuweOpmetingKlantResultaat({
+    required this.klantNaam,
+    this.agendaKlant,
+  });
+
+  final String klantNaam;
+  final OpmetingAgendaKlantInfo? agendaKlant;
+}
+
 class _KlantNaamDialog extends StatefulWidget {
-  const _KlantNaamDialog({required this.beginNaam});
+  const _KlantNaamDialog({
+    required this.beginNaam,
+    required this.agendaKlanten,
+  });
 
   final String beginNaam;
+  final List<OpmetingAgendaKlantInfo> agendaKlanten;
 
   @override
   State<_KlantNaamDialog> createState() {
@@ -1166,13 +1260,25 @@ class _KlantNaamDialog extends StatefulWidget {
 
 class _KlantNaamDialogState extends State<_KlantNaamDialog> {
   static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
 
   late final TextEditingController _controller;
+  OpmetingAgendaKlantInfo? _geselecteerdeAgendaKlant;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.beginNaam);
+
+    final beginSleutel = widget.beginNaam.trim().toLowerCase();
+
+    for (final klant in widget.agendaKlanten) {
+      if (klant.klantNaam.trim().toLowerCase() == beginSleutel) {
+        _geselecteerdeAgendaKlant = klant;
+        break;
+      }
+    }
   }
 
   @override
@@ -1182,12 +1288,38 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
   }
 
   void _aanmaken() {
-    Navigator.of(context).pop(_controller.text.trim());
+    final naam = _controller.text.trim();
+
+    if (naam.isEmpty) {
+      return;
+    }
+
+    final geselecteerde = _geselecteerdeAgendaKlant;
+    final agendaKlant =
+        geselecteerde != null &&
+            geselecteerde.klantNaam.trim().toLowerCase() == naam.toLowerCase()
+        ? geselecteerde
+        : null;
+
+    Navigator.of(context).pop(
+      _NieuweOpmetingKlantResultaat(klantNaam: naam, agendaKlant: agendaKlant),
+    );
+  }
+
+  String _agendaKlantWaarde(OpmetingAgendaKlantInfo klant) {
+    return klant.klantNaam.trim().toLowerCase();
   }
 
   @override
   Widget build(BuildContext context) {
     final basisTheme = Theme.of(context);
+    final geselecteerde = _geselecteerdeAgendaKlant;
+    final adres = geselecteerde == null
+        ? ''
+        : <String>[
+            geselecteerde.adresRegel,
+            geselecteerde.plaats,
+          ].where((deel) => deel.trim().isNotEmpty).join(', ');
 
     return Theme(
       data: basisTheme.copyWith(
@@ -1221,7 +1353,7 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
         title: Container(
           padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
           decoration: const BoxDecoration(
-            color: Color(0xFFE7F6EC),
+            color: _lichtGroen,
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: const Row(
@@ -1237,18 +1369,124 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
             ],
           ),
         ),
-        content: TextField(
-          controller: _controller,
-          autofocus: true,
-          cursorColor: _groen,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Naam klant',
-            border: OutlineInputBorder(),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DropdownButtonFormField<String>(
+                value: geselecteerde == null
+                    ? null
+                    : _agendaKlantWaarde(geselecteerde),
+                isExpanded: true,
+                menuMaxHeight: 420,
+                hint: Text(
+                  widget.agendaKlanten.isEmpty
+                      ? 'Geen klanten in de blauwe agenda gevonden'
+                      : 'Selecteer een klant',
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Klant uit blauwe agenda',
+                  prefixIcon: Icon(Icons.event_available_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: widget.agendaKlanten
+                    .map<DropdownMenuItem<String>>((
+                      OpmetingAgendaKlantInfo klant,
+                    ) {
+                      return DropdownMenuItem<String>(
+                        value: _agendaKlantWaarde(klant),
+                        child: Text(
+                          klant.klantNaam,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    })
+                    .toList(growable: false),
+                onChanged: widget.agendaKlanten.isEmpty
+                    ? null
+                    : (waarde) {
+                        if (waarde == null) {
+                          return;
+                        }
+
+                        final klant = widget.agendaKlanten.firstWhere(
+                          (item) => _agendaKlantWaarde(item) == waarde,
+                        );
+
+                        setState(() {
+                          _geselecteerdeAgendaKlant = klant;
+                          _controller.text = klant.klantNaam;
+                          _controller.selection = TextSelection.collapsed(
+                            offset: _controller.text.length,
+                          );
+                        });
+                      },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _controller,
+                autofocus: widget.agendaKlanten.isEmpty,
+                cursorColor: _groen,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Naam klant',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (waarde) {
+                  final geselecteerdeKlant = _geselecteerdeAgendaKlant;
+
+                  if (geselecteerdeKlant != null &&
+                      geselecteerdeKlant.klantNaam.trim().toLowerCase() !=
+                          waarde.trim().toLowerCase()) {
+                    setState(() {
+                      _geselecteerdeAgendaKlant = null;
+                    });
+                  }
+                },
+                onSubmitted: (_) {
+                  _aanmaken();
+                },
+              ),
+              if (geselecteerde != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFAFAFA),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _rand),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        geselecteerde.klantNaam,
+                        style: const TextStyle(
+                          color: _groen,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      if (adres.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(adres),
+                      ],
+                      if (geselecteerde.gsm.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(geselecteerde.gsm.trim()),
+                      ],
+                      if (geselecteerde.email.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(geselecteerde.email.trim()),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
-          onSubmitted: (_) {
-            _aanmaken();
-          },
         ),
         actions: [
           TextButton(
@@ -1277,12 +1515,16 @@ class _RaamOverzichtKaart extends StatelessWidget {
     required this.volgnummer,
     required this.onOpenen,
     required this.onVerwijderen,
+    required this.onOmhoog,
+    required this.onOmlaag,
   });
 
   final OpmetingOverzichtRaamItem item;
   final int volgnummer;
   final VoidCallback onOpenen;
   final VoidCallback onVerwijderen;
+  final VoidCallback? onOmhoog;
+  final VoidCallback? onOmlaag;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
@@ -1359,6 +1601,7 @@ class _RaamOverzichtKaart extends StatelessWidget {
                   color: Color(0xFFDC2626),
                 ),
               ),
+              _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
             ],
           ),
           const SizedBox(height: 10),
@@ -1409,7 +1652,7 @@ class _RaamOverzichtKaart extends StatelessWidget {
               ),
             ],
           ),
-          if (item.notities.trim().isNotEmpty) ...[
+          if (item.notities.trim().isNotEmpty || item.fotos.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(10),
@@ -1418,13 +1661,35 @@ class _RaamOverzichtKaart extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: _rand),
               ),
-              child: Text(
-                item.notities.trim(),
-                style: const TextStyle(
-                  color: _tekstDonker,
-                  fontSize: 12,
-                  height: 1.3,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (item.notities.trim().isNotEmpty)
+                    Text(
+                      item.notities.trim(),
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  if (item.notities.trim().isNotEmpty && item.fotos.isNotEmpty)
+                    const SizedBox(height: 9),
+                  if (item.fotos.isNotEmpty)
+                    SizedBox(
+                      height: 74,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: item.fotos.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          return _OverzichtFotoMiniatuur(
+                            foto: item.fotos[index],
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
           ],
@@ -1495,6 +1760,141 @@ class _RaamOverzichtKaart extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+class _OverzichtFotoMiniatuur extends StatelessWidget {
+  const _OverzichtFotoMiniatuur({required this.foto});
+
+  final OpmetingFoto foto;
+
+  Future<void> _toonGroot(BuildContext context) async {
+    final bytes = foto.bytes;
+
+    if (bytes.isEmpty) {
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(24),
+          backgroundColor: Colors.black,
+          child: Stack(
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(dialogContext).width - 48,
+                  maxHeight: MediaQuery.sizeOf(dialogContext).height - 48,
+                ),
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 5,
+                  child: Image.memory(bytes, fit: BoxFit.contain),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton.filled(
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                  },
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bytes = foto.bytes;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(9),
+      onTap: bytes.isEmpty ? null : () => _toonGroot(context),
+      child: Container(
+        width: 96,
+        height: 72,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: bytes.isEmpty
+            ? const Icon(Icons.broken_image_outlined, color: Color(0xFF9CA3AF))
+            : Image.memory(bytes, fit: BoxFit.cover, gaplessPlayback: true),
+      ),
+    );
+  }
+}
+
+class _PositieVerplaatsKnop extends StatelessWidget {
+  const _PositieVerplaatsKnop({required this.onOmhoog, required this.onOmlaag});
+
+  final VoidCallback? onOmhoog;
+  final VoidCallback? onOmlaag;
+
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _rand = Color(0xFFE5E7EB);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 40,
+      margin: const EdgeInsets.only(left: 2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: _rand),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(8),
+              ),
+              onTap: onOmhoog,
+              child: Center(
+                child: Icon(
+                  Icons.keyboard_arrow_up_rounded,
+                  size: 19,
+                  color: onOmhoog == null ? Colors.grey.shade300 : _groen,
+                ),
+              ),
+            ),
+          ),
+          Container(height: 1, color: _rand),
+          Expanded(
+            child: InkWell(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(8),
+              ),
+              onTap: onOmlaag,
+              child: Center(
+                child: Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 19,
+                  color: onOmlaag == null ? Colors.grey.shade300 : _groen,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -154,6 +154,8 @@ class OpmetingAgendaKlantInfo {
     required this.klantNaam,
     this.contactpersoon = '',
     this.adres = '',
+    this.huisnummer = '',
+    this.busNummer = '',
     this.postcode = '',
     this.gemeente = '',
     this.gsm = '',
@@ -166,6 +168,8 @@ class OpmetingAgendaKlantInfo {
   final String klantNaam;
   final String contactpersoon;
   final String adres;
+  final String huisnummer;
+  final String busNummer;
   final String postcode;
   final String gemeente;
   final String gsm;
@@ -181,11 +185,25 @@ class OpmetingAgendaKlantInfo {
     ].where((deel) => deel.isNotEmpty).join(' ');
   }
 
+  String get adresRegel {
+    final nummer = <String>[
+      huisnummer.trim(),
+      if (busNummer.trim().isNotEmpty) 'bus ${busNummer.trim()}',
+    ].where((deel) => deel.isNotEmpty).join(' ');
+
+    return <String>[
+      adres.trim(),
+      nummer,
+    ].where((deel) => deel.isNotEmpty).join(' ');
+  }
+
   String get zoekTekst {
     return <String>[
       klantNaam,
       contactpersoon,
       adres,
+      huisnummer,
+      busNummer,
       postcode,
       gemeente,
       gsm,
@@ -194,6 +212,27 @@ class OpmetingAgendaKlantInfo {
       omschrijving,
       datumKey,
     ].join(' ').toLowerCase();
+  }
+
+  OpmetingAgendaKlantInfo combineerMet(OpmetingAgendaKlantInfo ander) {
+    String kies(String huidig, String nieuw) {
+      return huidig.trim().isNotEmpty ? huidig : nieuw;
+    }
+
+    return OpmetingAgendaKlantInfo(
+      klantNaam: kies(klantNaam, ander.klantNaam),
+      contactpersoon: kies(contactpersoon, ander.contactpersoon),
+      adres: kies(adres, ander.adres),
+      huisnummer: kies(huisnummer, ander.huisnummer),
+      busNummer: kies(busNummer, ander.busNummer),
+      postcode: kies(postcode, ander.postcode),
+      gemeente: kies(gemeente, ander.gemeente),
+      gsm: kies(gsm, ander.gsm),
+      telefoon: kies(telefoon, ander.telefoon),
+      email: kies(email, ander.email),
+      omschrijving: kies(omschrijving, ander.omschrijving),
+      datumKey: kies(datumKey, ander.datumKey),
+    );
   }
 
   OpmetingProjectTitelhoofd naarTitelhoofd({
@@ -207,6 +246,8 @@ class OpmetingAgendaKlantInfo {
           ? huidige.contactpersoon
           : contactpersoon,
       adres: adres.trim().isEmpty ? huidige.adres : adres,
+      huisnummer: huisnummer.trim().isEmpty ? huidige.huisnummer : huisnummer,
+      busNummer: busNummer.trim().isEmpty ? huidige.busNummer : busNummer,
       postcode: postcode.trim().isEmpty ? huidige.postcode : postcode,
       gemeente: gemeente.trim().isEmpty ? huidige.gemeente : gemeente,
       gsm: gsm.trim().isEmpty ? huidige.gsm : gsm,

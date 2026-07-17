@@ -1,4 +1,5 @@
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
+import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_kleinhout_model.dart';
 import '../raam/opmeting_raam_keuzemenu_model.dart';
@@ -329,6 +330,7 @@ class OpmetingOverzichtRaamItem {
     this.keuzeSelectiesPerKader =
         const <String, Map<String, OpmetingRaamKeuzeSelectie>>{},
     this.deurpaneelToewijzingen = const <OpmetingDeurpaneelToewijzing>[],
+    this.fotos = const <OpmetingFoto>[],
     this.notities = '',
   });
 
@@ -351,6 +353,7 @@ class OpmetingOverzichtRaamItem {
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
   keuzeSelectiesPerKader;
   final List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen;
+  final List<OpmetingFoto> fotos;
   final String notities;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
@@ -437,6 +440,7 @@ class OpmetingOverzichtRaamItem {
     List<OpmetingOverzichtTechnischeContainer>? technischeContainers,
     Map<String, Map<String, OpmetingRaamKeuzeSelectie>>? keuzeSelectiesPerKader,
     List<OpmetingDeurpaneelToewijzing>? deurpaneelToewijzingen,
+    List<OpmetingFoto>? fotos,
     String? notities,
   }) {
     return OpmetingOverzichtRaamItem(
@@ -458,6 +462,7 @@ class OpmetingOverzichtRaamItem {
           keuzeSelectiesPerKader ?? this.keuzeSelectiesPerKader,
       deurpaneelToewijzingen:
           deurpaneelToewijzingen ?? this.deurpaneelToewijzingen,
+      fotos: fotos ?? this.fotos,
       notities: notities ?? this.notities,
     );
   }
@@ -500,6 +505,7 @@ class OpmetingOverzichtRaamItem {
       'deurpaneelToewijzingen': deurpaneelToewijzingen
           .map((toewijzing) => toewijzing.toJson())
           .toList(),
+      'fotos': fotos.map((foto) => foto.toJson()).toList(),
       'notities': notities,
     };
   }
@@ -555,6 +561,7 @@ class OpmetingOverzichtRaamItem {
         json['deurpaneelToewijzingen'],
         OpmetingDeurpaneelToewijzing.fromJson,
       ),
+      fotos: _leesLijst(json['fotos'], OpmetingFoto.fromJson),
       notities: json['notities']?.toString() ?? '',
     );
   }

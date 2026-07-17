@@ -25,7 +25,7 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
     required this.titelhoofd,
     required this.opmetingen,
     required this.verborgenFormulierTypes,
-    required this.kleurMenus,
+    this.kleurMenus = const <OpmetingProjectKleurSubmenu>[],
     required this.onTitelhoofdGewijzigd,
     required this.onKlantLaden,
     required this.onToggleFormulierType,

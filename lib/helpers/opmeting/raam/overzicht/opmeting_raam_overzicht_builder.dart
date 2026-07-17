@@ -1,3 +1,4 @@
+import '../../fotos/opmeting_foto_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
 import '../../deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
@@ -38,6 +39,7 @@ class OpmetingRaamOverzichtBuilder {
     List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen =
         const <OpmetingDeurpaneelToewijzing>[],
     String profielSamenvatting = '',
+    List<OpmetingFoto> fotos = const <OpmetingFoto>[],
     required String notities,
   }) {
     final tekeningData =
@@ -85,6 +87,7 @@ class OpmetingRaamOverzichtBuilder {
       deurpaneelToewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
         deurpaneelToewijzingen,
       ),
+      fotos: List<OpmetingFoto>.unmodifiable(fotos),
       notities: notities.trim(),
     );
   }

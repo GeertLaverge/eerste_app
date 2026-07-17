@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import 'opmeting_raam_basis_maten.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
@@ -71,6 +72,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.onKaderSamenstellingGewijzigd,
     required this.onToolGekozen,
     required this.notitiesController,
+    required this.fotos,
+    required this.onFotosGewijzigd,
     required this.gekozenOpvullingen,
     required this.gekozenKleinhouten,
     required this.keuzemenus,
@@ -157,6 +160,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
 
   final ValueChanged<String> onToolGekozen;
   final TextEditingController notitiesController;
+  final List<OpmetingFoto> fotos;
+  final ValueChanged<List<OpmetingFoto>> onFotosGewijzigd;
 
   final List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen;
   final List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten;
@@ -299,7 +304,11 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       },
                     ),
                     const SizedBox(height: 8),
-                    OpmetingRaamNotities(controller: notitiesController),
+                    OpmetingRaamNotities(
+                      controller: notitiesController,
+                      fotos: fotos,
+                      onFotosGewijzigd: onFotosGewijzigd,
+                    ),
                   ],
                 ),
               ),

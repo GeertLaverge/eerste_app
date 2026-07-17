@@ -9,6 +9,7 @@ import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_model.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_storage_helper.dart';
+import '../helpers/opmeting/fotos/opmeting_foto_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
@@ -142,6 +143,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   List<OpmetingDeurpaneelToewijzing> _deurpaneelToewijzingen =
       const <OpmetingDeurpaneelToewijzing>[];
 
+  List<OpmetingFoto> _fotos = <OpmetingFoto>[];
+
   @override
   void initState() {
     super.initState();
@@ -224,6 +227,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         bestaandeOpmeting.kaderSamenstelling.slagOnderMm,
       );
       notitiesController.text = bestaandeOpmeting.notities;
+      _fotos = List<OpmetingFoto>.from(bestaandeOpmeting.fotos);
 
       _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling;
       _overzichtTekeningData = bestaandeOpmeting.tekeningData;
@@ -1634,6 +1638,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       gekozenKleinhouten: gekozenKleinhouten,
       deurpaneelToewijzingen: deurpaneelToewijzingenVoorOverzicht,
       profielSamenvatting: _profielSamenvatting,
+      fotos: _fotos,
       notities: notitiesController.text.trim(),
     );
 
@@ -1648,6 +1653,12 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       gewijzigdOp: bestaandeOpmeting.gewijzigdOp,
       isVerwijderd: bestaandeOpmeting.isVerwijderd,
     );
+  }
+
+  void _verwerkFotos(List<OpmetingFoto> fotos) {
+    setState(() {
+      _fotos = List<OpmetingFoto>.unmodifiable(fotos);
+    });
   }
 
   void _toonMelding(String tekst, {bool fout = false}) {
@@ -1730,6 +1741,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       onKaderSamenstellingGewijzigd: _wijzigKaderSamenstelling,
       onToolGekozen: _toolGekozen,
       notitiesController: notitiesController,
+      fotos: _fotos,
+      onFotosGewijzigd: _verwerkFotos,
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
       keuzemenus: _keuzemenus,
