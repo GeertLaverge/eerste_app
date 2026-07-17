@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../deurpanelen/opmeting_deurpaneel_teken_helper.dart';
+import '../raam/opmeting_raam_model.dart';
 import '../raam/opmeting_raam_tekenvlak_painter.dart';
 import 'opmeting_overzicht_model.dart';
 
@@ -49,6 +50,7 @@ class OpmetingOverzichtTekening extends CustomPainter {
       geselecteerdeKaderIds: const <String>{},
       kaderSamenstelling: item.kaderSamenstelling,
       actiefKaderId: '__overzicht_geen_actief_kader__',
+      schuifraamSamenstelling: data.schuifraamSamenstelling,
     );
 
     canvas.save();
@@ -61,9 +63,7 @@ class OpmetingOverzichtTekening extends CustomPainter {
       final deurpaneelPainter = OpmetingDeurpaneelTekenvlakPainter(
         breedteMm: item.raammaatBreedteMm,
         hoogteMm: item.raammaatHoogteMm,
-        vleugels: data.vleugels,
-        vleugelsPerKader: data.vleugelsPerKader,
-        kaderSamenstelling: item.kaderSamenstelling,
+        vleugels: _alleVleugelsVoorOverzicht(data),
         toewijzingen: item.deurpaneelToewijzingen,
       );
 
@@ -71,6 +71,32 @@ class OpmetingOverzichtTekening extends CustomPainter {
     }
 
     canvas.restore();
+  }
+
+  List<OpmetingRaamVleugel> _alleVleugelsVoorOverzicht(
+    OpmetingOverzichtTekeningData data,
+  ) {
+    final resultaat = <OpmetingRaamVleugel>[];
+    final ids = <String>{};
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (ids.contains(vleugel.id)) {
+          continue;
+        }
+
+        ids.add(vleugel.id);
+        resultaat.add(vleugel);
+      }
+    }
+
+    voegToe(data.vleugels);
+
+    for (final lijst in data.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    return List<OpmetingRaamVleugel>.unmodifiable(resultaat);
   }
 
   Size _virtueleTekeningGrootte(OpmetingOverzichtRaamItem item) {

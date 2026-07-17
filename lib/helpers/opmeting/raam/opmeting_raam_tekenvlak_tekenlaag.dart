@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
+import '../schuifraam/opmeting_schuifraam_model.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
@@ -39,52 +40,39 @@ class OpmetingRaamTekenvlakTekenlaag extends StatelessWidget {
     this.geselecteerdeKaderIds = const <String>{},
     this.kaderSamenstelling,
     this.actiefKaderId,
+    this.schuifraamSamenstelling,
   });
 
   final int breedteMm;
   final int hoogteMm;
-
   final GestureTapDownCallback onTapDown;
-
   final OpmetingRaamLijn? geselecteerdeLijn;
   final Offset? previewPunt;
-
   final List<OpmetingRaamTStijl> tStijlen;
   final Map<String, List<OpmetingRaamTStijl>> tStijlenPerKader;
-
   final List<OpmetingRaamVleugel> vleugels;
   final Map<String, List<OpmetingRaamVleugel>> vleugelsPerKader;
-
   final List<OpmetingRaamVulvlak> vulvlakken;
   final Map<String, List<OpmetingRaamVulvlak>> vulvlakkenPerKader;
-
   final List<OpmetingRaamVullingToewijzing> vullingToewijzingen;
   final Map<String, List<OpmetingRaamVullingToewijzing>>
   vullingToewijzingenPerKader;
-
   final Set<String> geselecteerdeVulvlakIds;
   final Map<String, Set<String>> geselecteerdeVulvlakIdsPerKader;
-
   final List<OpmetingRaamKleinhout> kleinhouten;
   final Map<String, List<OpmetingRaamKleinhout>> kleinhoutenPerKader;
-
   final Set<String> geselecteerdeKleinhoutVlakIds;
   final Map<String, Set<String>> geselecteerdeKleinhoutVlakIdsPerKader;
-
   final List<OpmetingRaamTechnischeTekeningInstelling> technischeTekeningen;
-
   final Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
   technischeTekeningenPerKader;
-
   final Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
   technischeTekeningenPerKaderGroep;
-
   final Map<String, Set<String>> technischeKaderGroepen;
-
   final Set<String> geselecteerdeKaderIds;
-
   final OpmetingKaderSamenstelling? kaderSamenstelling;
   final String? actiefKaderId;
+  final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +107,7 @@ class OpmetingRaamTekenvlakTekenlaag extends StatelessWidget {
           geselecteerdeKaderIds: geselecteerdeKaderIds,
           kaderSamenstelling: kaderSamenstelling,
           actiefKaderId: actiefKaderId,
+          schuifraamSamenstelling: schuifraamSamenstelling,
         ),
         child: const SizedBox.expand(),
       ),

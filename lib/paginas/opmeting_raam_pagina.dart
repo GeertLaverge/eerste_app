@@ -28,6 +28,8 @@ import 'package:eerste_app/helpers/opmeting/raam/overzicht/opmeting_raam_overzic
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_layout_helper.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
+import '../helpers/opmeting/schuifraam/opmeting_schuifraam_model.dart';
+import '../helpers/opmeting/schuifraam/opmeting_schuifraam_samenstelling_dialog.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
   const OpmetingRaamPagina({
@@ -96,6 +98,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     text: '0',
   );
 
+  final TextEditingController onderkantSchuifraamController =
+      TextEditingController();
+
   final TextEditingController notitiesController = TextEditingController();
 
   final TextEditingController positieController = TextEditingController();
@@ -125,6 +130,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   Set<String> _geselecteerdeKaderIdsVoorKeuzes = <String>{};
 
   OpmetingOverzichtTekeningData? _overzichtTekeningData;
+  OpmetingSchuifraamSamenstelling? _schuifraamSamenstelling;
 
   bool _keuzemenusLaden = true;
   bool _keuzemenusBewaren = false;
@@ -148,6 +154,13 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     final bestaandeOpmeting = widget.bestaandeOpmeting;
 
     if (bestaandeOpmeting == null) {
+      if (_isSchuifraamFiche) {
+        // Een nieuwe PVC-schuifraamfiche start standaard met een
+        // overmeten raammaat van 2500 x 2200 mm.
+        dagmaatBreedteController.text = '2460';
+        dagmaatHoogteController.text = '2180';
+      }
+
       final slagLinksMm = _waarde(slagLinksController).round();
       final slagRechtsMm = _waarde(slagRechtsController).round();
       final slagBovenMm = _waarde(slagBovenController).round();
@@ -214,9 +227,22 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
       _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling;
       _overzichtTekeningData = bestaandeOpmeting.tekeningData;
+      _schuifraamSamenstelling =
+          bestaandeOpmeting.tekeningData.schuifraamSamenstelling;
       _herstelLegendaUitTekeningData(bestaandeOpmeting.tekeningData);
       _keuzeSelectiesPerKader.addAll(
         _kopieKeuzeSelecties(bestaandeOpmeting.keuzeSelectiesPerKader),
+      );
+    }
+
+    if (_formulierType == 'pvcSchuifraam' && _schuifraamSamenstelling == null) {
+      _schuifraamSamenstelling = const OpmetingSchuifraamSamenstelling();
+    }
+
+    final onderkantVloerpasMm = _schuifraamSamenstelling?.onderkantVloerpasMm;
+    if (onderkantVloerpasMm != null) {
+      onderkantSchuifraamController.text = _zonderNuttelozeDecimalen(
+        onderkantVloerpasMm,
       );
     }
 
@@ -247,6 +273,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     buitenTabletController.dispose();
     uitzagenTandController.dispose();
     buitensteLipController.dispose();
+    onderkantSchuifraamController.dispose();
 
     notitiesController.dispose();
     positieController.dispose();
@@ -268,6 +295,12 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       case 'alu_raam':
       case 'ALU Raam':
         return 'aluRaam';
+
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+      case 'schuifraam':
+        return 'pvcSchuifraam';
 
       case 'pvcDeur':
       case 'pvc_deur':
@@ -296,6 +329,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       case 'aluRaam':
         return 'Opmeting ALU Raam';
 
+      case 'pvcSchuifraam':
+        return 'Opmeting PVC Schuifraam';
+
       case 'pvcDeur':
         return 'Opmeting PVC Deur';
 
@@ -310,6 +346,115 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
   bool get _isDeurFiche {
     return _formulierType == 'pvcDeur' || _formulierType == 'aluDeur';
+  }
+
+  bool get _isSchuifraamFiche {
+    return _formulierType == 'pvcSchuifraam';
+  }
+
+  String _zonderNuttelozeDecimalen(double waarde) {
+    if (waarde == waarde.roundToDouble()) {
+      return waarde.round().toString();
+    }
+
+    return waarde.toStringAsFixed(1);
+  }
+
+  double? get _onderkantSchuifraamMm {
+    final tekst = onderkantSchuifraamController.text.trim().replaceAll(
+      ',',
+      '.',
+    );
+
+    if (tekst.isEmpty) {
+      return null;
+    }
+
+    final waarde = double.tryParse(tekst);
+
+    if (waarde == null || !waarde.isFinite || waarde < 0) {
+      return null;
+    }
+
+    return waarde;
+  }
+
+  void _verwerkOnderkantSchuifraamGewijzigd() {
+    if (!_isSchuifraamFiche) {
+      return;
+    }
+
+    final huidige =
+        _schuifraamSamenstelling ?? const OpmetingSchuifraamSamenstelling();
+    final waarde = _onderkantSchuifraamMm;
+    final bijgewerkt = waarde == null
+        ? huidige.copyWith(wisOnderkantVloerpasMm: true)
+        : huidige.copyWith(onderkantVloerpasMm: waarde);
+
+    setState(() {
+      _schuifraamSamenstelling = bijgewerkt;
+      _overzichtTekeningData =
+          (_overzichtTekeningData ?? OpmetingOverzichtTekeningData.leeg())
+              .copyWith(schuifraamSamenstelling: bijgewerkt);
+    });
+  }
+
+  String get _schuifraamSamenvatting {
+    if (!_isSchuifraamFiche) {
+      return '';
+    }
+
+    final samenstelling = _schuifraamSamenstelling;
+
+    if (samenstelling == null || !samenstelling.isGeldig) {
+      return '';
+    }
+
+    final regels = <String>[samenstelling.samenvatting];
+    final onderkantMm = _onderkantSchuifraamMm;
+
+    if (onderkantMm != null) {
+      regels.add(
+        'Onderkant schuifraam ${_zonderNuttelozeDecimalen(onderkantMm)} mm onder vloerpas',
+      );
+    }
+
+    return regels.join('\n');
+  }
+
+  Future<void> _openSchuifraamSamenstellen() async {
+    final resultaat = await toonOpmetingSchuifraamSamenstellingDialog(
+      context: context,
+      breedteMm: raammaatBreedte,
+      hoogteMm: raammaatHoogte,
+      bestaandeSamenstelling: _schuifraamSamenstelling,
+    );
+
+    if (!mounted || resultaat == null) {
+      return;
+    }
+
+    final onderkantMm = _onderkantSchuifraamMm;
+    final samenstelling = onderkantMm == null
+        ? resultaat.samenstelling.copyWith(wisOnderkantVloerpasMm: true)
+        : resultaat.samenstelling.copyWith(onderkantVloerpasMm: onderkantMm);
+
+    _zetControllerTekst(raammaatBreedteController, resultaat.breedteMm);
+    _zetControllerTekst(raammaatHoogteController, resultaat.hoogteMm);
+
+    setState(() {
+      _schuifraamSamenstelling = samenstelling;
+      actieveTool = 'lijn';
+      _overzichtTekeningData =
+          (_overzichtTekeningData ?? OpmetingOverzichtTekeningData.leeg())
+              .copyWith(schuifraamSamenstelling: samenstelling);
+    });
+
+    // De dagmaat, het kader, de schuifraamgeometrie en de maatpijlen worden
+    // onmiddellijk opnieuw berekend met de maten uit het samenstellingsmenu.
+    _herberekenVanRaammaat();
+
+    _toonMelding('${samenstelling.samenvatting} werd samengesteld.');
   }
 
   Future<void> _laadDeurpaneelToewijzingenVoorOpmeting(
@@ -450,6 +595,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     setState(() {
       _overzichtTekeningData = data;
+      if (data.schuifraamSamenstelling != null) {
+        _schuifraamSamenstelling = data.schuifraamSamenstelling;
+      }
 
       if (deurpaneelToewijzingenGewijzigd) {
         _deurpaneelToewijzingen =
@@ -701,6 +849,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   String get _profielSamenvatting {
+    if (_isSchuifraamFiche) {
+      return '';
+    }
+
     final uitzagenTand = _waarde(uitzagenTandController).round();
     final buitensteProfiel = _waarde(buitensteLipController).round();
 
@@ -1530,6 +1682,10 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       profielSamenvatting: _profielSamenvatting,
       onDeurVleugel: _openDeurVleugel,
       onDeurPanelen: _openDeurPanelen,
+      toonSchuifraamKnoppen: _isSchuifraamFiche,
+      schuifraamSamenstelling: _schuifraamSamenstelling,
+      schuifraamSamenvatting: _schuifraamSamenvatting,
+      onSchuifraamSamenstellen: _openSchuifraamSamenstellen,
       onTerug: _vraagToevoegenAanOverzichtBijTerug,
       onToevoegen: _voegOpmetingToeAanOverzicht,
       onAnnuleren: _vraagAnnulerenZonderToevoegen,
@@ -1545,6 +1701,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       buitenTabletController: buitenTabletController,
       uitzagenTandController: uitzagenTandController,
       buitensteLipController: buitensteLipController,
+      onderkantSchuifraamController: onderkantSchuifraamController,
+      onOnderkantSchuifraamGewijzigd: _verwerkOnderkantSchuifraamGewijzigd,
       raammaatBreedte: raammaatBreedte,
       raammaatHoogte: raammaatHoogte,
       verschilTablet: verschilTablet,

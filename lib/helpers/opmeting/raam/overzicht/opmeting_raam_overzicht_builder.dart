@@ -2,6 +2,7 @@ import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
 import '../../deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
 import '../../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
+import '../../schuifraam/opmeting_schuifraam_model.dart';
 import '../opmeting_raam_keuzemenu_model.dart';
 import '../opmeting_raam_kleinhout_helper.dart';
 import '../opmeting_raam_kleinhout_model.dart';
@@ -107,6 +108,12 @@ class OpmetingRaamOverzichtBuilder {
       case 'ALU Raam':
         return 'aluRaam';
 
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+      case 'schuifraam':
+        return 'pvcSchuifraam';
+
       case 'pvcDeur':
       case 'pvc_deur':
       case 'PVC Deur':
@@ -133,6 +140,9 @@ class OpmetingRaamOverzichtBuilder {
     switch (formulierType) {
       case 'aluRaam':
         return 'ALU Raam';
+
+      case 'pvcSchuifraam':
+        return 'PVC Schuifraam';
 
       case 'pvcRaam':
         return 'PVC Raam';
@@ -220,6 +230,14 @@ class _OpmetingRaamOverzichtContext {
     return List<OpmetingOverzichtTechnischeContainer>.unmodifiable(containers);
   }
 
+  String _formateerMaat(double waarde) {
+    if (waarde == waarde.roundToDouble()) {
+      return waarde.round().toString();
+    }
+
+    return waarde.toStringAsFixed(1);
+  }
+
   List<OpmetingOverzichtTechnischeRegel> maakTechnischeRegels() {
     final regels = <OpmetingOverzichtTechnischeRegel>[];
 
@@ -237,6 +255,28 @@ class _OpmetingRaamOverzichtContext {
           waarde: '${kaderSamenstelling.kaders.length} kaders',
         ),
       );
+    }
+
+    final schuifraam = tekeningData.schuifraamSamenstelling;
+
+    if (schuifraam != null && schuifraam.isGeldig) {
+      regels.add(
+        OpmetingOverzichtTechnischeRegel(
+          titel: 'Schuifraam',
+          waarde: schuifraam.samenvatting,
+        ),
+      );
+
+      final onderkantVloerpasMm = schuifraam.onderkantVloerpasMm;
+
+      if (onderkantVloerpasMm != null) {
+        regels.add(
+          OpmetingOverzichtTechnischeRegel(
+            titel: 'Onderkant schuifraam',
+            waarde: '${_formateerMaat(onderkantVloerpasMm)} mm onder vloerpas',
+          ),
+        );
+      }
     }
 
     final deurVleugelTekst = _deurVleugelSamenvatting();

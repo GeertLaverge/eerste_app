@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_storage.dart';
 import 'opmeting_raam_keuze_menu_helper.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_niet_combineerbaar_keuzemenu.dart';
@@ -105,10 +106,14 @@ class OpmetingRaamMenuBeheerHelper {
         OpmetingRaamKeuzeMenuHelper.beschikbareNietCombineerbareKeuzes(
           keuzemenus: keuzemenus,
         );
+    final oplaadbareKeuzes = await _laadOplaadbareKeuzes(
+      huidigeMenus: keuzemenus,
+    );
 
     final resultaat = await toonOpmetingRaamTechnischMenuDialoog(
       context: context,
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
+      oplaadbareKeuzes: oplaadbareKeuzes,
     );
 
     if (resultaat == null) {
@@ -159,6 +164,10 @@ class OpmetingRaamMenuBeheerHelper {
           keuzemenus: keuzemenus,
           uitTeSluitenMenuId: menu.id,
         );
+    final oplaadbareKeuzes = await _laadOplaadbareKeuzes(
+      huidigeMenus: keuzemenus,
+      uitTeSluitenMenuId: menu.id,
+    );
 
     final resultaat = await toonOpmetingRaamTechnischMenuDialoog(
       context: context,
@@ -169,6 +178,7 @@ class OpmetingRaamMenuBeheerHelper {
         actief: menu.actief,
       ),
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
+      oplaadbareKeuzes: oplaadbareKeuzes,
     );
 
     if (resultaat == null) {
@@ -316,6 +326,86 @@ class OpmetingRaamMenuBeheerHelper {
     }
 
     return nieuweMenus;
+  }
+
+  static Future<List<OpmetingRaamTechnischeOplaadbareKeuze>>
+  _laadOplaadbareKeuzes({
+    required List<OpmetingRaamKeuzeMenu> huidigeMenus,
+    String? uitTeSluitenMenuId,
+  }) async {
+    final resultaat = <OpmetingRaamTechnischeOplaadbareKeuze>[];
+    final gebruikteSleutels = <String>{};
+
+    void verzamelMenus({
+      required String formulierNaam,
+      required List<OpmetingRaamKeuzeMenu> menus,
+    }) {
+      for (final menu in menus) {
+        if (menu.id == uitTeSluitenMenuId) {
+          continue;
+        }
+
+        final menuTitel = menu.titel.trim();
+
+        if (menuTitel.isEmpty) {
+          continue;
+        }
+
+        final items = menu.boomItems.where((item) {
+          return !_isGeenItem(item);
+        }).toList();
+
+        if (items.isEmpty) {
+          continue;
+        }
+
+        final sleutel = _normaliseerOplaadbareKeuzeSleutel(menuTitel);
+
+        if (!gebruikteSleutels.add(sleutel)) {
+          continue;
+        }
+
+        resultaat.add(
+          OpmetingRaamTechnischeOplaadbareKeuze(
+            id: '${formulierNaam}_${menu.id}_${resultaat.length}',
+            formulierNaam: formulierNaam,
+            titel: menuTitel,
+            items: List<OpmetingRaamKeuzeMenuItem>.unmodifiable(items),
+          ),
+        );
+      }
+    }
+
+    verzamelMenus(formulierNaam: 'Huidige fiche', menus: huidigeMenus);
+
+    final formulieren = <String, String>{
+      'pvcRaam': 'PVC raam',
+      'aluRaam': 'ALU raam',
+      'pvcDeur': 'PVC deur',
+      'aluDeur': 'ALU deur',
+    };
+
+    for (final formulier in formulieren.entries) {
+      try {
+        final menus = await AppStorage.laadOpmetingRaamKeuzemenusVoorFormulier(
+          formulier.key,
+        );
+
+        verzamelMenus(formulierNaam: formulier.value, menus: menus);
+      } catch (_) {
+        // Als één fiche niet geladen kan worden, blijven de andere keuzes bruikbaar.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
+    });
+
+    return List<OpmetingRaamTechnischeOplaadbareKeuze>.unmodifiable(resultaat);
+  }
+
+  static String _normaliseerOplaadbareKeuzeSleutel(String waarde) {
+    return waarde.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static bool _isGeenItem(OpmetingRaamKeuzeMenuItem item) {

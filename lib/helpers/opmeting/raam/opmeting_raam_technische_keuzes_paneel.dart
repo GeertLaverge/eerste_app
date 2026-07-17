@@ -9,6 +9,7 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   const OpmetingRaamTechnischeKeuzesPaneel({
     super.key,
     this.deurVleugelSamenvatting = '',
+    this.schuifraamSamenvatting = '',
     this.profielSamenvatting = '',
     required this.gekozenOpvullingen,
     required this.gekozenKleinhouten,
@@ -31,6 +32,7 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   });
 
   final String deurVleugelSamenvatting;
+  final String schuifraamSamenvatting;
   final String profielSamenvatting;
   final List<OpmetingRaamVullingLegendaItem> gekozenOpvullingen;
   final List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten;
@@ -111,6 +113,8 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
             const SizedBox(height: 3),
             if (widget.deurVleugelSamenvatting.trim().isNotEmpty)
               _bouwDeurVleugelRij(),
+            if (widget.schuifraamSamenvatting.trim().isNotEmpty)
+              _bouwSchuifraamRij(),
             _bouwCompacteOpvullingRij(),
             _bouwCompacteKleinhoutRij(),
             if (widget.profielSamenvatting.trim().isNotEmpty) _bouwProfielRij(),
@@ -155,6 +159,28 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
       child: Text(
         widget.deurVleugelSamenvatting.trim(),
         maxLines: 4,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.left,
+        style: const TextStyle(
+          color: groen,
+          fontSize: 11.5,
+          height: 1.1,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwSchuifraamRij() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 5.5),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: rand)),
+      ),
+      child: Text(
+        widget.schuifraamSamenvatting.trim(),
+        maxLines: 2,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.left,
         style: const TextStyle(

@@ -4,6 +4,7 @@ import '../raam/opmeting_raam_kleinhout_model.dart';
 import '../raam/opmeting_raam_keuzemenu_model.dart';
 import '../raam/opmeting_raam_model.dart';
 import '../raam/opmeting_raam_vulling_helper.dart';
+import '../schuifraam/opmeting_schuifraam_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -93,6 +94,7 @@ class OpmetingOverzichtTekeningData {
     this.technischeTekeningenPerKaderGroep =
         const <String, List<OpmetingRaamTechnischeTekeningInstelling>>{},
     this.technischeKaderGroepen = const <String, Set<String>>{},
+    this.schuifraamSamenstelling,
   });
 
   final double tekenvlakBreedtePx;
@@ -124,6 +126,7 @@ class OpmetingOverzichtTekeningData {
   final Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>
   technischeTekeningenPerKaderGroep;
   final Map<String, Set<String>> technischeKaderGroepen;
+  final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
 
   factory OpmetingOverzichtTekeningData.leeg() {
     return const OpmetingOverzichtTekeningData();
@@ -149,6 +152,8 @@ class OpmetingOverzichtTekeningData {
     Map<String, List<OpmetingRaamTechnischeTekeningInstelling>>?
     technischeTekeningenPerKaderGroep,
     Map<String, Set<String>>? technischeKaderGroepen,
+    OpmetingSchuifraamSamenstelling? schuifraamSamenstelling,
+    bool wisSchuifraamSamenstelling = false,
   }) {
     return OpmetingOverzichtTekeningData(
       tekenvlakBreedtePx: tekenvlakBreedtePx ?? this.tekenvlakBreedtePx,
@@ -172,11 +177,14 @@ class OpmetingOverzichtTekeningData {
           this.technischeTekeningenPerKaderGroep,
       technischeKaderGroepen:
           technischeKaderGroepen ?? this.technischeKaderGroepen,
+      schuifraamSamenstelling: wisSchuifraamSamenstelling
+          ? null
+          : schuifraamSamenstelling ?? this.schuifraamSamenstelling,
     );
   }
 
   String get wijzigingsSignatuur {
-    return <Object>[
+    return <Object?>[
       tekenvlakBreedtePx,
       tekenvlakHoogtePx,
       tStijlen,
@@ -193,6 +201,7 @@ class OpmetingOverzichtTekeningData {
       technischeTekeningenPerKader,
       technischeTekeningenPerKaderGroep,
       technischeKaderGroepen,
+      schuifraamSamenstelling?.toJson(),
     ].join('|');
   }
 
@@ -241,6 +250,8 @@ class OpmetingOverzichtTekeningData {
       'technischeKaderGroepen': technischeKaderGroepen.map((sleutel, ids) {
         return MapEntry(sleutel, ids.toList());
       }),
+      if (schuifraamSamenstelling != null)
+        'schuifraamSamenstelling': schuifraamSamenstelling!.toJson(),
     };
   }
 
@@ -292,6 +303,9 @@ class OpmetingOverzichtTekeningData {
         OpmetingRaamTechnischeTekeningInstelling.fromJson,
       ),
       technischeKaderGroepen: _leesMapSet(json['technischeKaderGroepen']),
+      schuifraamSamenstelling: _leesSchuifraamSamenstelling(
+        json['schuifraamSamenstelling'],
+      ),
     );
   }
 }
@@ -356,6 +370,12 @@ class OpmetingOverzichtRaamItem {
       case 'ALU Raam':
         return 'aluRaam';
 
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+      case 'schuifraam':
+        return 'pvcSchuifraam';
+
       case 'pvcDeur':
       case 'pvc_deur':
       case 'PVC Deur':
@@ -382,6 +402,9 @@ class OpmetingOverzichtRaamItem {
     switch (formulierTypeGenormaliseerd) {
       case 'aluRaam':
         return 'ALU Raam';
+
+      case 'pvcSchuifraam':
+        return 'PVC Schuifraam';
 
       case 'pvcDeur':
         return 'PVC Deur';
@@ -565,6 +588,16 @@ Map<String, List<T>> _leesMapLijst<T>(
   });
 
   return resultaat;
+}
+
+OpmetingSchuifraamSamenstelling? _leesSchuifraamSamenstelling(Object? waarde) {
+  if (waarde is! Map) {
+    return null;
+  }
+
+  return OpmetingSchuifraamSamenstelling.fromJson(
+    Map<String, dynamic>.from(waarde),
+  );
 }
 
 Map<String, dynamic> _schrijfMapLijst<T>(

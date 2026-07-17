@@ -16,6 +16,9 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required this.buitenTabletController,
     required this.uitzagenTandController,
     required this.buitensteLipController,
+    required this.onderkantSchuifraamController,
+    required this.onOnderkantSchuifraamGewijzigd,
+    this.isSchuifraam = false,
     required this.raammaatBreedte,
     required this.raammaatHoogte,
     required this.verschilTablet,
@@ -43,6 +46,9 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   final TextEditingController buitenTabletController;
   final TextEditingController uitzagenTandController;
   final TextEditingController buitensteLipController;
+  final TextEditingController onderkantSchuifraamController;
+  final VoidCallback onOnderkantSchuifraamGewijzigd;
+  final bool isSchuifraam;
 
   final int raammaatBreedte;
   final int raammaatHoogte;
@@ -194,60 +200,126 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 9),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Uitzagen tand',
-                        controller: uitzagenTandController,
-                        onChanged: onChanged,
+                if (isSchuifraam)
+                  _bouwPositieOnderkantSchuifraamVeld()
+                else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _bouwGetalVeld(
+                          label: 'Uitzagen tand',
+                          controller: uitzagenTandController,
+                          onChanged: onChanged,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Buitenste lip',
-                        controller: buitensteLipController,
-                        onChanged: onChanged,
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: _bouwGetalVeld(
+                          label: 'Buitenste lip',
+                          controller: buitensteLipController,
+                          onChanged: onChanged,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Tablet binnen',
-                        controller: binnenTabletController,
-                        onChanged: onChanged,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Tablet buiten',
-                        controller: buitenTabletController,
-                        onChanged: onChanged,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Verschil tablet: $verschilTablet mm',
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _bouwGetalVeld(
+                          label: 'Tablet binnen',
+                          controller: binnenTabletController,
+                          onChanged: onChanged,
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: _bouwGetalVeld(
+                          label: 'Tablet buiten',
+                          controller: buitenTabletController,
+                          onChanged: onChanged,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Verschil tablet: $verschilTablet mm',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: _tekstGrijs,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _bouwPositieOnderkantSchuifraamVeld() {
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: onderkantSchuifraamController,
+      builder: (context, waarde, child) {
+        final heeftGetal = waarde.text.trim().isNotEmpty;
+
+        return TextField(
+          controller: onderkantSchuifraamController,
+          cursorColor: _groen,
+          keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (_) {
+            onOnderkantSchuifraamGewijzigd();
+          },
+          decoration: InputDecoration(
+            labelText: 'Positie onder schuifraam',
+            floatingLabelBehavior: FloatingLabelBehavior.always,
+            hintText: 'gelijk met vloerpas',
+            suffixText: heeftGetal ? 'mm onder vloerpas' : null,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 8,
+            ),
+            labelStyle: const TextStyle(
+              color: _tekstGrijs,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: _groen,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+            hintStyle: const TextStyle(
+              color: _tekstGrijs,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
+            suffixStyle: const TextStyle(
+              color: _tekstGrijs,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+            border: const OutlineInputBorder(),
+            enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: _rand),
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: _groen, width: 1.4),
+            ),
+          ),
+          style: const TextStyle(
+            color: _tekstDonker,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+          ),
+        );
+      },
     );
   }
 

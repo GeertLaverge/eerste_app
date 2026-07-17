@@ -9,6 +9,11 @@ import '../deurpanelen/opmeting_deurpaneel_geometrie_helper.dart';
 import '../deurpanelen/opmeting_deurpaneel_dxf_bibliotheek.dart';
 import '../deurpanelen/opmeting_deurpaneel_teken_helper.dart';
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
+import '../schuifraam/opmeting_schuifraam_model.dart';
+import '../schuifraam/opmeting_schuifraam_teken_helper.dart'
+    as schuifraam_teken;
+import '../schuifraam/opmeting_schuifraam_vulvlak_helper.dart'
+    as schuifraam_vulvlak;
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
 import 'opmeting_raam_opvulling_model.dart';
@@ -77,6 +82,7 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
     this.technischeTekeningenPerKaderGroep =
         const <String, List<OpmetingRaamTechnischeTekeningInstelling>>{},
     this.technischeKaderGroepen = const <String, Set<String>>{},
+    this.schuifraamSamenstelling,
   });
 
   final int breedteMm;
@@ -118,6 +124,7 @@ class OpmetingRaamTekenvlak extends StatefulWidget {
   technischeTekeningenPerKaderGroep;
 
   final Map<String, Set<String>> technischeKaderGroepen;
+  final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
 
   @override
   State<OpmetingRaamTekenvlak> createState() {
@@ -199,6 +206,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   final Set<String> _geselecteerdeKaderIds = <String>{};
 
   String _laatsteOverzichtTekeningSignatuur = '';
+  String _laatsteSchuifraamStructuurSignatuur = '';
   bool _deurpaneelToewijzingenUitControllerBijwerken = false;
 
   final TextEditingController _kaderBreedteController = TextEditingController();
@@ -357,6 +365,45 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       _deurpaneelToewijzingen,
     );
     _deurpaneelToewijzingenUitControllerBijwerken = false;
+  }
+
+  Set<String> _bestaandeDeurVleugelIds() {
+    final ids = <String>{};
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (!vleugel.isDeurVleugel) {
+          continue;
+        }
+
+        final id = vleugel.id.trim();
+
+        if (id.isNotEmpty) {
+          ids.add(id);
+        }
+      }
+    }
+
+    voegToe(_vleugels);
+
+    for (final vleugels in _vleugelsPerKader.values) {
+      voegToe(vleugels);
+    }
+
+    return ids;
+  }
+
+  void _schoonDeurpaneelToewijzingenOp() {
+    final bestaandeDeurVleugelIds = _bestaandeDeurVleugelIds();
+    final aantalVoor = _deurpaneelToewijzingen.length;
+
+    _deurpaneelToewijzingen.removeWhere((toewijzing) {
+      return !bestaandeDeurVleugelIds.contains(toewijzing.deurVleugelId.trim());
+    });
+
+    if (_deurpaneelToewijzingen.length != aantalVoor) {
+      _werkDeurpaneelControllerBij();
+    }
   }
 
   void _verwerkDxfBibliotheekWijziging() {
@@ -1801,7 +1848,199 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     return Offset(lokaleX, lokaleY);
   }
 
+  void _synchroniseerSchuifraamStructuur(Size size) {
+    final samenstelling = widget.schuifraamSamenstelling;
+
+    if (samenstelling == null || !samenstelling.isGeldig) {
+      final heeftSchuifraamStructuur =
+          _tStijlen.any(
+            schuifraam_teken.OpmetingSchuifraamTekenHelper.isStructuurTStijl,
+          ) ||
+          _vleugels.any(
+            schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+          );
+
+      if (!heeftSchuifraamStructuur &&
+          _laatsteSchuifraamStructuurSignatuur == 'geen') {
+        return;
+      }
+
+      _tStijlen.removeWhere(
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.isStructuurTStijl,
+      );
+      _vleugels.removeWhere(
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+      );
+      _laatsteSchuifraamStructuurSignatuur = 'geen';
+      return;
+    }
+
+    final geometrie =
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.berekenGeometrie(
+          tekenvlakGrootte: size,
+          breedteMm: _actiefWerkBreedteMm,
+          hoogteMm: _actiefWerkHoogteMm,
+          samenstelling: samenstelling,
+        );
+
+    final verwachteSignatuur = _maakSchuifraamStructuurSignatuur(
+      samenstelling: samenstelling,
+      size: size,
+      structuurTStijlen: geometrie.structuurTStijlen,
+      logischeVleugels: geometrie.logischeVleugels,
+    );
+
+    final huidigeSignatuur = _maakSchuifraamStructuurSignatuur(
+      samenstelling: samenstelling,
+      size: size,
+      structuurTStijlen: _tStijlen
+          .where(
+            schuifraam_teken.OpmetingSchuifraamTekenHelper.isStructuurTStijl,
+          )
+          .toList(growable: false),
+      logischeVleugels: _vleugels
+          .where(
+            schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+          )
+          .toList(growable: false),
+    );
+
+    if (huidigeSignatuur == verwachteSignatuur &&
+        _laatsteSchuifraamStructuurSignatuur == verwachteSignatuur) {
+      return;
+    }
+
+    final oudeVleugels = <String, OpmetingRaamVleugel>{
+      for (final vleugel in _vleugels.where(
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+      ))
+        vleugel.id: vleugel,
+    };
+
+    _tStijlen.removeWhere(
+      schuifraam_teken.OpmetingSchuifraamTekenHelper.isStructuurTStijl,
+    );
+    _vleugels.removeWhere(
+      schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+    );
+
+    final nieuweVleugels = <String, OpmetingRaamVleugel>{
+      for (final vleugel in geometrie.logischeVleugels) vleugel.id: vleugel,
+    };
+
+    for (var index = 0; index < _tStijlen.length; index++) {
+      final stijl = _tStijlen[index];
+
+      if (!stijl.werkvlakId.startsWith('vleugel_') ||
+          !stijl.werkvlakId.endsWith('_enkel')) {
+        continue;
+      }
+
+      final vleugelId = stijl.werkvlakId
+          .substring('vleugel_'.length)
+          .replaceFirst(RegExp(r'_enkel$'), '');
+      final oud = oudeVleugels[vleugelId];
+      final nieuw = nieuweVleugels[vleugelId];
+
+      if (oud == null ||
+          nieuw == null ||
+          oud.vlak.width <= 0 ||
+          oud.vlak.height <= 0) {
+        continue;
+      }
+
+      Offset pasPuntAan(Offset punt) {
+        final fractieX = ((punt.dx - oud.vlak.left) / oud.vlak.width)
+            .clamp(0.0, 1.0)
+            .toDouble();
+        final fractieY = ((punt.dy - oud.vlak.top) / oud.vlak.height)
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+        return Offset(
+          nieuw.vlak.left + fractieX * nieuw.vlak.width,
+          nieuw.vlak.top + fractieY * nieuw.vlak.height,
+        );
+      }
+
+      _tStijlen[index] = stijl.copyWith(
+        start: pasPuntAan(stijl.start),
+        einde: pasPuntAan(stijl.einde),
+      );
+    }
+
+    _tStijlen.addAll(geometrie.structuurTStijlen);
+    _vleugels.addAll(geometrie.logischeVleugels);
+    _laatsteSchuifraamStructuurSignatuur = verwachteSignatuur;
+  }
+
+  String _maakSchuifraamStructuurSignatuur({
+    required OpmetingSchuifraamSamenstelling samenstelling,
+    required Size size,
+    required List<OpmetingRaamTStijl> structuurTStijlen,
+    required List<OpmetingRaamVleugel> logischeVleugels,
+  }) {
+    String getal(double waarde) => waarde.toStringAsFixed(4);
+
+    final stijlen =
+        structuurTStijlen
+            .map(
+              (stijl) => <Object>[
+                stijl.id,
+                stijl.richting,
+                getal(stijl.start.dx),
+                getal(stijl.start.dy),
+                getal(stijl.einde.dx),
+                getal(stijl.einde.dy),
+                getal(stijl.breedteMm),
+              ].join(':'),
+            )
+            .toList(growable: false)
+          ..sort();
+
+    final vleugels =
+        logischeVleugels
+            .map(
+              (vleugel) => <Object>[
+                vleugel.id,
+                getal(vleugel.vlak.left),
+                getal(vleugel.vlak.top),
+                getal(vleugel.vlak.right),
+                getal(vleugel.vlak.bottom),
+              ].join(':'),
+            )
+            .toList(growable: false)
+          ..sort();
+
+    return <Object>[
+      samenstelling.type.name,
+      samenstelling.code,
+      samenstelling.genormaliseerdeBreedtes
+          .map((waarde) => getal(waarde))
+          .join(','),
+      getal(size.width),
+      getal(size.height),
+      _actiefWerkBreedteMm,
+      _actiefWerkHoogteMm,
+      stijlen.join('|'),
+      vleugels.join('|'),
+    ].join('#');
+  }
+
   List<OpmetingRaamVulvlak> _bepaalVulvlakken(Size size) {
+    final schuifraamSamenstelling = widget.schuifraamSamenstelling;
+
+    if (schuifraamSamenstelling != null && schuifraamSamenstelling.isGeldig) {
+      return schuifraam_vulvlak.OpmetingSchuifraamVulvlakHelper.bepaal(
+        tekenvlakGrootte: size,
+        breedteMm: _actiefWerkBreedteMm,
+        hoogteMm: _actiefWerkHoogteMm,
+        samenstelling: schuifraamSamenstelling,
+        tStijlen: _tStijlen,
+        vleugels: _vleugels,
+      );
+    }
+
     return OpmetingRaamVulvlakBerekeningHelper.bereken(
       tekenvlakGrootte: size,
       breedteMm: _actiefWerkBreedteMm,
@@ -1815,6 +2054,10 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     required Size size,
     required String kaderId,
   }) {
+    if (widget.schuifraamSamenstelling?.isGeldig == true) {
+      return _bepaalVulvlakken(size);
+    }
+
     final samenstelling = _bruikbareKaderSamenstelling;
 
     if (samenstelling == null) {
@@ -3140,15 +3383,22 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     final deurLijnInfo = _vindDeurVleugelBinnenLijn(punt: punt, size: size);
+    final schuifraamLijn = _vindSchuifraamStartLijn(punt: punt, size: size);
 
     final lijn =
         deurLijnInfo?.lijn ??
+        schuifraamLijn ??
         OpmetingRaamTStijlActieHelper.vindStartLijn(
           punt: punt,
           tekenvlakGrootte: size,
           breedteMm: _actiefTStijlBreedteMm,
           hoogteMm: _actiefTStijlHoogteMm,
-          tStijlen: _tStijlen,
+          tStijlen: _tStijlen
+              .where(
+                (stijl) => !schuifraam_teken
+                    .OpmetingSchuifraamTekenHelper.isStructuurTStijl(stijl),
+              )
+              .toList(),
           vleugels: _vleugels,
         );
 
@@ -3159,6 +3409,52 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         _menuZichtbaarheid.toonTStijlMenu();
       }
     });
+  }
+
+  OpmetingRaamLijn? _vindSchuifraamStartLijn({
+    required Offset punt,
+    required Size size,
+  }) {
+    final samenstelling = widget.schuifraamSamenstelling;
+
+    if (samenstelling == null || !samenstelling.isGeldig) {
+      return null;
+    }
+
+    final geometrie =
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.berekenGeometrie(
+          tekenvlakGrootte: size,
+          breedteMm: _actiefTStijlBreedteMm,
+          hoogteMm: _actiefTStijlHoogteMm,
+          samenstelling: samenstelling,
+        );
+
+    final selecteerbareLijnen =
+        OpmetingRaamTStijlHelper.selecteerbareStartLijnen(
+          binnenKader: geometrie.binnenKader,
+          buitenKader: geometrie.buitenKader,
+          breedteMm: _actiefTStijlBreedteMm,
+          hoogteMm: _actiefTStijlHoogteMm,
+          tStijlen: _tStijlen
+              .where(
+                (stijl) => !schuifraam_teken
+                    .OpmetingSchuifraamTekenHelper.isStructuurTStijl(stijl),
+              )
+              .toList(growable: false),
+          vleugels: _vleugels
+              .where(
+                schuifraam_teken
+                    .OpmetingSchuifraamTekenHelper
+                    .isLogischeVleugel,
+              )
+              .toList(growable: false),
+        );
+
+    return OpmetingRaamTStijlHelper.vindLijn(
+      punt: punt,
+      lijnen: selecteerbareLijnen,
+      maxAfstand: 18,
+    );
   }
 
   _DeurVleugelBinnenLijnInfo? _vindDeurVleugelBinnenLijn({
@@ -3414,7 +3710,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    final data = OpmetingRaamTekenvlakOverzichtDataHelper.maakTekeningData(
+    final basisData = OpmetingRaamTekenvlakOverzichtDataHelper.maakTekeningData(
       tekenvlakGrootte: tekenvlakGrootte,
       tStijlen: _tStijlen,
       tStijlenPerKader: tStijlenPerKader,
@@ -3431,6 +3727,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       technischeTekeningenPerKaderGroep:
           widget.technischeTekeningenPerKaderGroep,
       technischeKaderGroepen: widget.technischeKaderGroepen,
+    );
+
+    final data = basisData.copyWith(
+      schuifraamSamenstelling: widget.schuifraamSamenstelling,
+      wisSchuifraamSamenstelling: widget.schuifraamSamenstelling == null,
     );
 
     final signatuur = data.wijzigingsSignatuur;
@@ -3451,8 +3752,35 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   Offset? _previewPunt(Size size) {
+    final lijn = _geselecteerdeLijn;
+    final samenstelling = widget.schuifraamSamenstelling;
+
+    if (lijn != null && samenstelling != null && samenstelling.isGeldig) {
+      final geometrie =
+          schuifraam_teken.OpmetingSchuifraamTekenHelper.berekenGeometrie(
+            tekenvlakGrootte: size,
+            breedteMm: _actiefTStijlBreedteMm,
+            hoogteMm: _actiefTStijlHoogteMm,
+            samenstelling: samenstelling,
+          );
+      final positieMm =
+          double.tryParse(
+            widget.positieController.text.trim().replaceAll(',', '.'),
+          ) ??
+          0;
+
+      return OpmetingRaamTStijlHelper.positieOpLijn(
+        lijn: lijn,
+        buitenKader: geometrie.buitenKader,
+        breedteMm: _actiefTStijlBreedteMm,
+        hoogteMm: _actiefTStijlHoogteMm,
+        positieType: _positieType,
+        positieMm: positieMm,
+      );
+    }
+
     return OpmetingRaamTStijlActieHelper.bepaalPreviewPunt(
-      geselecteerdeLijn: _geselecteerdeLijn,
+      geselecteerdeLijn: lijn,
       tekenvlakGrootte: size,
       breedteMm: _actiefTStijlBreedteMm,
       hoogteMm: _actiefTStijlHoogteMm,
@@ -3469,6 +3797,10 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     if (_voegTStijlToeInDeurVleugel(size)) {
+      return;
+    }
+
+    if (_voegTStijlToeInSchuifraam(size)) {
       return;
     }
 
@@ -3499,6 +3831,65 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     });
 
     _planAlleLegendaMeldingen();
+  }
+
+  bool _voegTStijlToeInSchuifraam(Size size) {
+    final samenstelling = widget.schuifraamSamenstelling;
+    final lijn = _geselecteerdeLijn;
+
+    if (samenstelling == null || !samenstelling.isGeldig || lijn == null) {
+      return false;
+    }
+
+    final geometrie =
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.berekenGeometrie(
+          tekenvlakGrootte: size,
+          breedteMm: _actiefTStijlBreedteMm,
+          hoogteMm: _actiefTStijlHoogteMm,
+          samenstelling: samenstelling,
+        );
+
+    final positieMm =
+        double.tryParse(
+          widget.positieController.text.trim().replaceAll(',', '.'),
+        ) ??
+        0;
+
+    final startPunt = OpmetingRaamTStijlHelper.positieOpLijn(
+      lijn: lijn,
+      buitenKader: geometrie.buitenKader,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
+      positieType: _positieType,
+      positieMm: positieMm,
+    );
+
+    final nieuweTStijl = OpmetingRaamTStijlHelper.maakHaakseTStijl(
+      startLijn: lijn,
+      startPunt: startPunt,
+      binnenKader: geometrie.binnenKader,
+      buitenKader: geometrie.buitenKader,
+      breedteMm: _actiefTStijlBreedteMm,
+      hoogteMm: _actiefTStijlHoogteMm,
+      bestaandeTStijlen: _tStijlen,
+      vleugels: _vleugels
+          .where(
+            schuifraam_teken.OpmetingSchuifraamTekenHelper.isLogischeVleugel,
+          )
+          .toList(growable: false),
+    );
+
+    _bewaarVoorWijziging();
+
+    setState(() {
+      _vervangTStijlen(<OpmetingRaamTStijl>[..._tStijlen, nieuweTStijl]);
+      _bewaarTStijlenVoorActiefKader();
+      _wisTekeningSelecties();
+      _schoonVullingEnKleinhoutenOp();
+    });
+
+    _planAlleLegendaMeldingen();
+    return true;
   }
 
   bool _voegTStijlToeInDeurVleugel(Size size) {
@@ -3823,6 +4214,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
           _bewaarVleugelsVoorActiefKader();
           _bewaarTStijlenVoorActiefKader();
+          _schoonDeurpaneelToewijzingenOp();
           _geselecteerdeLijn = null;
           _wisTekeningSelecties();
           _schoonVullingEnKleinhoutenOp();
@@ -5223,12 +5615,49 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     final nieuweActieveKaderId = overblijvendeKaders.first.id;
+    final huidigeTStijlKaderId = _huidigTStijlKaderId;
+    final huidigeVleugelKaderId = _huidigVleugelKaderId;
+    final huidigeOpvullingKaderId = _huidigOpvullingKaderId;
+    final huidigeKleinhoutKaderId = _huidigKleinhoutKaderId;
     final herberekendeKaders =
         OpmetingKaderSamenstellingLayoutHelper.herberekenGekoppeldeKaders(
           kaders: overblijvendeKaders,
         );
 
     setState(() {
+      if (huidigeTStijlKaderId != actiefKader.id) {
+        _tStijlenPerKader[huidigeTStijlKaderId] =
+            List<OpmetingRaamTStijl>.unmodifiable(_tStijlen);
+      }
+
+      if (huidigeVleugelKaderId != actiefKader.id) {
+        _vleugelsPerKader[huidigeVleugelKaderId] =
+            List<OpmetingRaamVleugel>.unmodifiable(_vleugels);
+      }
+
+      if (huidigeOpvullingKaderId != actiefKader.id) {
+        _vullingToewijzingenPerKader[huidigeOpvullingKaderId] =
+            List<OpmetingRaamVullingToewijzing>.unmodifiable(
+              _vullingToewijzingen,
+            );
+        _geselecteerdeVulvlakIdsPerKader[huidigeOpvullingKaderId] =
+            Set<String>.unmodifiable(_geselecteerdeVulvlakIds);
+      }
+
+      if (huidigeKleinhoutKaderId != actiefKader.id) {
+        _kleinhoutenPerKader[huidigeKleinhoutKaderId] =
+            List<OpmetingRaamKleinhout>.unmodifiable(_kleinhouten);
+        _geselecteerdeKleinhoutVlakIdsPerKader[huidigeKleinhoutKaderId] =
+            Set<String>.unmodifiable(_geselecteerdeKleinhoutVlakIds);
+      }
+
+      _tStijlenPerKader.remove(actiefKader.id);
+      _vleugelsPerKader.remove(actiefKader.id);
+      _vullingToewijzingenPerKader.remove(actiefKader.id);
+      _geselecteerdeVulvlakIdsPerKader.remove(actiefKader.id);
+      _kleinhoutenPerKader.remove(actiefKader.id);
+      _geselecteerdeKleinhoutVlakIdsPerKader.remove(actiefKader.id);
+
       _geselecteerdeKaderIds
         ..clear()
         ..add(nieuweActieveKaderId);
@@ -5238,6 +5667,12 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       _actiefKleinhoutKaderId = nieuweActieveKaderId;
       _kaderWijzigMenuGesloten = false;
       _geselecteerdeLijn = null;
+
+      _laadTStijlenVoorKader(nieuweActieveKaderId);
+      _laadVleugelsVoorKader(nieuweActieveKaderId);
+      _laadOpvullingVoorKader(nieuweActieveKaderId);
+      _laadKleinhoutenVoorKader(nieuweActieveKaderId);
+      _schoonDeurpaneelToewijzingenOp();
     });
 
     widget.onKaderSamenstellingGewijzigd?.call(
@@ -5625,6 +6060,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
   Widget _bouwTekenvlakInhoud(Size size) {
     _registreerTekenvlakGrootte(size);
+    _synchroniseerSchuifraamStructuur(size);
 
     _legendaMeldingen.planEersteMeldingen();
 
@@ -5728,12 +6164,13 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
             ),
             kaderSamenstelling: widget.kaderSamenstelling,
             actiefKaderId: _actiefKaderIdVoorWeergave,
+            schuifraamSamenstelling: widget.schuifraamSamenstelling,
           ),
           IgnorePointer(
             child: CustomPaint(
               painter: OpmetingDeurpaneelTekenvlakPainter(
-                breedteMm: widget.breedteMm,
-                hoogteMm: widget.hoogteMm,
+                breedteMm: _effectieveBreedteMm,
+                hoogteMm: _effectieveHoogteMm,
                 vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
                 vleugelsPerKader: vleugelsPerKaderVoorWeergave,
                 kaderSamenstelling: widget.kaderSamenstelling,

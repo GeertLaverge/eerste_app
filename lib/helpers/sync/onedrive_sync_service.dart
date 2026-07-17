@@ -34,6 +34,12 @@ class OneDriveSyncService {
   static const String _deurpaneelToewijzingenPrefix =
       'thimaco_deurpaneel_toewijzingen_';
 
+  static const String _opmetingProjectTitelhoofdenKey =
+      'thimaco_opmeting_project_titelhoofden';
+
+  static const String _opmetingProjectKleurenKey =
+      'thimaco_opmeting_project_kleuren';
+
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
 
@@ -246,6 +252,16 @@ class OneDriveSyncService {
           'opmeting_deur_keuzemenus_alu',
         ),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
+        'opmetingProjectTitelhoofden':
+            prefs.getString(_opmetingProjectTitelhoofdenKey) ??
+            (cloudBackup['opmetingProjectTitelhoofden'] is String
+                ? cloudBackup['opmetingProjectTitelhoofden'] as String
+                : null),
+        'opmetingProjectKleuren':
+            prefs.getString(_opmetingProjectKleurenKey) ??
+            (cloudBackup['opmetingProjectKleuren'] is String
+                ? cloudBackup['opmetingProjectKleuren'] as String
+                : null),
         'deurpanelenBibliotheek': deurpanelenBibliotheek.waarde,
         'deurpanelenBibliotheekGewijzigdOp': deurpanelenBibliotheek.gewijzigdOp,
         'deurpanelenDxfBibliotheek': deurpanelenDxfBibliotheek.waarde,
@@ -618,6 +634,20 @@ class OneDriveSyncService {
       );
 
       await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
+
+      if (data['opmetingProjectTitelhoofden'] is String) {
+        await prefs.setString(
+          _opmetingProjectTitelhoofdenKey,
+          data['opmetingProjectTitelhoofden'] as String,
+        );
+      }
+
+      if (data['opmetingProjectKleuren'] is String) {
+        await prefs.setString(
+          _opmetingProjectKleurenKey,
+          data['opmetingProjectKleuren'] as String,
+        );
+      }
 
       if (data['dagtaakTemplates'] is String) {
         await prefs.setString('dagtaak_templates', data['dagtaakTemplates']);

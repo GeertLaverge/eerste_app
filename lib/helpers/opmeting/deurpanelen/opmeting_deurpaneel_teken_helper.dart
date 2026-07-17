@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
+import '../kader_samenstelling/opmeting_kader_samenstelling_teken_helper.dart';
 import '../raam/opmeting_raam_kader_helper.dart';
 import '../raam/opmeting_raam_model.dart';
 import 'opmeting_deurpaneel_dxf_bibliotheek.dart';
@@ -127,36 +128,46 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
       return const <_DeurpaneelVleugelWeergave>[];
     }
 
+    // Belangrijk bij meerdere kaders en schermrotatie:
+    // Gebruik exact dezelfde kaderweergave als de hoofdtekening.
+    // Een eigen mm->pixel berekening lijkt eerst juist, maar verschilt bij
+    // liggend/staand, extra kaders en technische layout. Daardoor kwamen het
+    // deurpaneel en de openingslijnen los van de deurvleugel te staan.
+    final maatLayout = OpmetingKaderSamenstellingTekenHelper.berekenWeergave(
+      tekenGebied: Rect.zero,
+      samenstelling: samenstelling,
+    ).layout;
+
     final compositieBuitenKader = OpmetingRaamKaderHelper.buitenKader(
       size: size,
-      breedteMm: breedteMm,
-      hoogteMm: hoogteMm,
+      breedteMm: maatLayout.breedteMm,
+      hoogteMm: maatLayout.hoogteMm,
     );
 
-    final minLinks = samenstelling.kaders
-        .map((kader) => kader.linksMm)
-        .reduce((a, b) => a < b ? a : b);
-    final minBoven = samenstelling.kaders
-        .map((kader) => kader.bovenMm)
-        .reduce((a, b) => a < b ? a : b);
+    if (!OpmetingDeurpaneelGeometrieHelper.isGeldigVlak(
+      compositieBuitenKader,
+    )) {
+      return const <_DeurpaneelVleugelWeergave>[];
+    }
+
+    final weergave = OpmetingKaderSamenstellingTekenHelper.berekenWeergave(
+      tekenGebied: compositieBuitenKader,
+      samenstelling: samenstelling,
+    );
 
     final resultaat = <_DeurpaneelVleugelWeergave>[];
 
-    for (final kader in samenstelling.kaders) {
+    for (final kader in weergave.layout.kaders) {
       final lokaleVleugels = vleugelsPerKader[kader.id];
 
       if (lokaleVleugels == null || lokaleVleugels.isEmpty) {
         continue;
       }
 
-      final kaderBuitenKader = _buitenKaderVoorSamenstellingsKader(
-        compositieBuitenKader: compositieBuitenKader,
-        kader: kader,
-        minLinksMm: minLinks,
-        minBovenMm: minBoven,
-      );
+      final kaderBuitenKader = weergave.rectVoorKaderId(kader.id);
 
-      if (!OpmetingDeurpaneelGeometrieHelper.isGeldigVlak(kaderBuitenKader)) {
+      if (kaderBuitenKader == null ||
+          !OpmetingDeurpaneelGeometrieHelper.isGeldigVlak(kaderBuitenKader)) {
         continue;
       }
 
@@ -195,27 +206,6 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
     }
 
     return List<_DeurpaneelVleugelWeergave>.unmodifiable(resultaat);
-  }
-
-  Rect _buitenKaderVoorSamenstellingsKader({
-    required Rect compositieBuitenKader,
-    required OpmetingKaderDeel kader,
-    required int minLinksMm,
-    required int minBovenMm,
-  }) {
-    if (breedteMm <= 0 || hoogteMm <= 0) {
-      return Rect.zero;
-    }
-
-    final schaalX = compositieBuitenKader.width / breedteMm;
-    final schaalY = compositieBuitenKader.height / hoogteMm;
-
-    return Rect.fromLTRB(
-      compositieBuitenKader.left + (kader.linksMm - minLinksMm) * schaalX,
-      compositieBuitenKader.top + (kader.bovenMm - minBovenMm) * schaalY,
-      compositieBuitenKader.left + (kader.rechtsMm - minLinksMm) * schaalX,
-      compositieBuitenKader.top + (kader.onderMm - minBovenMm) * schaalY,
-    );
   }
 
   Rect _schaalRectVanLokaalNaarKader({

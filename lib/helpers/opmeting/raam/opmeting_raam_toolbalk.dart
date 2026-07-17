@@ -12,20 +12,21 @@ class OpmetingRaamToolbalk extends StatelessWidget {
     this.toonDeurTools = false,
     this.onDeurVleugel,
     this.onDeurPanelen,
+    this.toonSchuifraamTools = false,
+    this.onSchuifraamSamenstellen,
   });
 
   final String actieveTool;
   final ValueChanged<String> onToolGekozen;
-
   final bool kanOngedaanMaken;
   final bool kanHerstellen;
-
   final VoidCallback onOngedaanMaken;
   final VoidCallback onHerstellen;
-
   final bool toonDeurTools;
   final VoidCallback? onDeurVleugel;
   final VoidCallback? onDeurPanelen;
+  final bool toonSchuifraamTools;
+  final VoidCallback? onSchuifraamSamenstellen;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
@@ -33,17 +34,9 @@ class OpmetingRaamToolbalk extends StatelessWidget {
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
-  bool get _kaderActief {
-    return actieveTool == 'kader';
-  }
-
-  bool get _kadergroepActief {
-    return actieveTool == 'kadergroep';
-  }
-
-  bool get _kaderToevoegenActief {
-    return actieveTool == 'kadertoevoegen';
-  }
+  bool get _kaderActief => actieveTool == 'kader';
+  bool get _kadergroepActief => actieveTool == 'kadergroep';
+  bool get _kaderToevoegenActief => actieveTool == 'kadertoevoegen';
 
   @override
   Widget build(BuildContext context) {
@@ -78,32 +71,43 @@ class OpmetingRaamToolbalk extends StatelessWidget {
                 onToolGekozen(_kaderActief ? 'lijn' : 'kader');
               },
             ),
-            _toolKnop(
-              waarde: 'kadertoevoegen',
-              label: 'Kader +',
-              icoon: Icons.add_box_outlined,
-              tooltip: _kaderToevoegenActief
-                  ? 'Kader toevoegen uitzetten'
-                  : 'Extra kader toevoegen',
-              breedte: 74,
-              onTap: () {
-                onToolGekozen(
-                  _kaderToevoegenActief ? 'lijn' : 'kadertoevoegen',
-                );
-              },
-            ),
-            _toolKnop(
-              waarde: 'kadergroep',
-              label: 'Selecteren',
-              icoon: Icons.north_west_rounded,
-              tooltip: _kadergroepActief
-                  ? 'Selecteren uitzetten'
-                  : 'Kaders selecteren voor technische keuzes',
-              breedte: 86,
-              onTap: () {
-                onToolGekozen(_kadergroepActief ? 'lijn' : 'kadergroep');
-              },
-            ),
+            if (!toonSchuifraamTools)
+              _toolKnop(
+                waarde: 'kadertoevoegen',
+                label: 'Kader +',
+                icoon: Icons.add_box_outlined,
+                tooltip: _kaderToevoegenActief
+                    ? 'Kader toevoegen uitzetten'
+                    : 'Extra kader toevoegen',
+                breedte: 74,
+                onTap: () {
+                  onToolGekozen(
+                    _kaderToevoegenActief ? 'lijn' : 'kadertoevoegen',
+                  );
+                },
+              ),
+            if (!toonSchuifraamTools)
+              _toolKnop(
+                waarde: 'kadergroep',
+                label: 'Selecteren',
+                icoon: Icons.north_west_rounded,
+                tooltip: _kadergroepActief
+                    ? 'Selecteren uitzetten'
+                    : 'Kaders selecteren voor technische keuzes',
+                breedte: 86,
+                onTap: () {
+                  onToolGekozen(_kadergroepActief ? 'lijn' : 'kadergroep');
+                },
+              ),
+            if (toonSchuifraamTools)
+              _toolKnop(
+                waarde: 'schuifraam_samenstellen',
+                label: 'Schuifraam\nsamenstellen',
+                icoon: Icons.view_week_outlined,
+                tooltip: 'Mono- of duo-schuifraam samenstellen',
+                breedte: 104,
+                onTap: onSchuifraamSamenstellen,
+              ),
             _toolKnop(
               waarde: 'tstijl',
               label: 'T-stijl',
@@ -111,13 +115,14 @@ class OpmetingRaamToolbalk extends StatelessWidget {
               tooltip: 'T-stijl toevoegen',
               breedte: 70,
             ),
-            _toolKnop(
-              waarde: 'vleugel',
-              label: 'Raam\nvleugel',
-              icoon: Icons.crop_square_rounded,
-              tooltip: 'Raamvleugel toevoegen',
-              breedte: toonDeurTools ? 72 : 82,
-            ),
+            if (!toonSchuifraamTools)
+              _toolKnop(
+                waarde: 'vleugel',
+                label: 'Raam\nvleugel',
+                icoon: Icons.crop_square_rounded,
+                tooltip: 'Raamvleugel toevoegen',
+                breedte: toonDeurTools ? 72 : 82,
+              ),
             if (toonDeurTools)
               _toolKnop(
                 waarde: 'deurvleugel',
@@ -194,11 +199,7 @@ class OpmetingRaamToolbalk extends StatelessWidget {
         message: tooltip,
         child: InkWell(
           borderRadius: BorderRadius.circular(11),
-          onTap:
-              onTap ??
-              () {
-                onToolGekozen(waarde);
-              },
+          onTap: onTap ?? () => onToolGekozen(waarde),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             width: breedte,

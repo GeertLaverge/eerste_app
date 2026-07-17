@@ -11,6 +11,8 @@ import '../helpers/notities/notitie_model.dart';
 import 'opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 import 'opmeting/overzicht/opmeting_overzicht_model.dart';
+import 'opmeting/project/opmeting_project_kleur_model.dart';
+import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
@@ -35,6 +37,12 @@ class AppStorage {
 
   static const String _opmetingDeurKeuzemenusAluKey =
       'opmeting_deur_keuzemenus_alu';
+
+  static const String _opmetingProjectTitelhoofdenKey =
+      'thimaco_opmeting_project_titelhoofden';
+
+  static const String _opmetingProjectKleurenKey =
+      'thimaco_opmeting_project_kleuren';
 
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
@@ -522,6 +530,373 @@ class AppStorage {
 
       return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
     });
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - PROJECT TITELHOOFD
+  // ------------------------------------------------------------
+
+  static Map<String, OpmetingProjectTitelhoofd> _decodeProjectTitelhoofden(
+    String? jsonString,
+  ) {
+    if (jsonString == null || jsonString.isEmpty) {
+      return <String, OpmetingProjectTitelhoofd>{};
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! Map) {
+        return <String, OpmetingProjectTitelhoofd>{};
+      }
+
+      final resultaat = <String, OpmetingProjectTitelhoofd>{};
+
+      decoded.forEach((sleutel, waarde) {
+        if (waarde is! Map) {
+          return;
+        }
+
+        final titelhoofd = OpmetingProjectTitelhoofd.fromJson(
+          Map<String, dynamic>.from(waarde),
+        );
+
+        resultaat[sleutel.toString()] = titelhoofd;
+      });
+
+      return resultaat;
+    } catch (_) {
+      return <String, OpmetingProjectTitelhoofd>{};
+    }
+  }
+
+  static String encodeOpmetingProjectTitelhoofdenVoorSync(
+    Map<String, OpmetingProjectTitelhoofd> titelhoofden,
+  ) {
+    return jsonEncode(
+      titelhoofden.map((sleutel, titelhoofd) {
+        return MapEntry(sleutel, titelhoofd.toJson());
+      }),
+    );
+  }
+
+  static Future<Map<String, OpmetingProjectTitelhoofd>>
+  laadOpmetingProjectTitelhoofdenVoorSync() async {
+    final prefs = await openBox();
+
+    return _decodeProjectTitelhoofden(
+      prefs.getString(_opmetingProjectTitelhoofdenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingProjectTitelhoofdenVoorSync(
+    Map<String, OpmetingProjectTitelhoofd> titelhoofden,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingProjectTitelhoofdenKey,
+      encodeOpmetingProjectTitelhoofdenVoorSync(titelhoofden),
+    );
+  }
+
+  static Future<OpmetingProjectTitelhoofd> laadOpmetingProjectTitelhoofd(
+    String klantNaam,
+  ) async {
+    final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
+    final sleutel = opmetingProjectTitelhoofdSleutel(klantNaam);
+
+    return titelhoofden[sleutel] ??
+        OpmetingProjectTitelhoofd(klantNaam: klantNaam.trim());
+  }
+
+  static Future<void> bewaarOpmetingProjectTitelhoofd(
+    OpmetingProjectTitelhoofd titelhoofd,
+  ) async {
+    final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
+    final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+
+    titelhoofden[sleutel] = titelhoofd.metWijzigingsDatum();
+
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingProjectTitelhoofdenKey,
+      encodeOpmetingProjectTitelhoofdenVoorSync(titelhoofden),
+    );
+
+    await _syncBackup();
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - PROJECTKLEUREN RAAMLEVERANCIER
+  // ------------------------------------------------------------
+
+  static List<OpmetingProjectKleurSubmenu> _decodeProjectKleuren(
+    String? jsonString,
+  ) {
+    if (jsonString == null || jsonString.isEmpty) {
+      return <OpmetingProjectKleurSubmenu>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! List) {
+        return <OpmetingProjectKleurSubmenu>[];
+      }
+
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => OpmetingProjectKleurSubmenu.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((submenu) {
+            return submenu.id.trim().isNotEmpty &&
+                submenu.naam.trim().isNotEmpty;
+          })
+          .toList();
+    } catch (_) {
+      return <OpmetingProjectKleurSubmenu>[];
+    }
+  }
+
+  static String encodeOpmetingProjectKleurenVoorSync(
+    List<OpmetingProjectKleurSubmenu> kleuren,
+  ) {
+    return jsonEncode(kleuren.map((submenu) => submenu.toJson()).toList());
+  }
+
+  static Future<List<OpmetingProjectKleurSubmenu>>
+  laadOpmetingProjectKleuren() async {
+    final prefs = await openBox();
+
+    return _decodeProjectKleuren(prefs.getString(_opmetingProjectKleurenKey));
+  }
+
+  static Future<void> bewaarOpmetingProjectKleuren(
+    List<OpmetingProjectKleurSubmenu> kleuren,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingProjectKleurenKey,
+      encodeOpmetingProjectKleurenVoorSync(kleuren),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingProjectKleurenVoorSync(
+    List<OpmetingProjectKleurSubmenu> kleuren,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingProjectKleurenKey,
+      encodeOpmetingProjectKleurenVoorSync(kleuren),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - KLANTEN UIT BLAUWE AGENDA
+  // ------------------------------------------------------------
+
+  static Future<List<OpmetingAgendaKlantInfo>>
+  laadAgendaKlantenVoorOpmeting() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_agendaItemsNieuwKey);
+
+    if (jsonString == null || jsonString.isEmpty) {
+      return <OpmetingAgendaKlantInfo>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! Map) {
+        return <OpmetingAgendaKlantInfo>[];
+      }
+
+      final perKlant = <String, OpmetingAgendaKlantInfo>{};
+
+      decoded.forEach((datumKey, lijst) {
+        if (lijst is! List) {
+          return;
+        }
+
+        for (final item in lijst) {
+          if (item is! Map) {
+            continue;
+          }
+
+          final map = Map<String, dynamic>.from(item);
+
+          if (map['isVerwijderd'] == true) {
+            continue;
+          }
+
+          if (!_isBlauweAgendaAfspraak(map)) {
+            continue;
+          }
+
+          final klant = _leesEersteTekst(map, const <String>[
+            'klantNaam',
+            'klant',
+            'naamKlant',
+            'naam',
+            'titel',
+            'title',
+            'onderwerp',
+          ]).trim();
+
+          if (klant.isEmpty || klant.toLowerCase() == 'afspraak') {
+            continue;
+          }
+
+          final info = OpmetingAgendaKlantInfo(
+            klantNaam: klant,
+            contactpersoon: _leesEersteTekst(map, const <String>[
+              'contactpersoon',
+              'contact',
+            ]),
+            adres: _leesEersteTekst(map, const <String>[
+              'adres',
+              'straat',
+              'straatNaam',
+              'werfAdres',
+            ]),
+            postcode: _leesEersteTekst(map, const <String>[
+              'postcode',
+              'postCode',
+            ]),
+            gemeente: _leesEersteTekst(map, const <String>[
+              'gemeente',
+              'plaats',
+              'stad',
+              'woonplaats',
+            ]),
+            gsm: _leesEersteTekst(map, const <String>[
+              'gsm',
+              'gsm1',
+              'mobiel',
+              'mobile',
+            ]),
+            telefoon: _leesEersteTekst(map, const <String>[
+              'telefoon',
+              'tel',
+              'telefoonnummer',
+            ]),
+            email: _leesEersteTekst(map, const <String>[
+              'email',
+              'eMail',
+              'mail',
+            ]),
+            omschrijving: _leesEersteTekst(map, const <String>[
+              'omschrijving',
+              'beschrijving',
+              'notitie',
+              'notities',
+            ]),
+            datumKey: datumKey.toString(),
+          );
+
+          final sleutel = klant.trim().toLowerCase();
+
+          perKlant.putIfAbsent(sleutel, () => info);
+        }
+      });
+
+      final resultaat = perKlant.values.toList()
+        ..sort((eerste, tweede) {
+          return eerste.klantNaam.toLowerCase().compareTo(
+            tweede.klantNaam.toLowerCase(),
+          );
+        });
+
+      return resultaat;
+    } catch (_) {
+      return <OpmetingAgendaKlantInfo>[];
+    }
+  }
+
+  static bool _isBlauweAgendaAfspraak(Map<String, dynamic> map) {
+    final waarden = <String>[
+      _leesEersteTekst(map, const <String>[
+        'type',
+        'soort',
+        'categorie',
+        'agendaType',
+        'itemType',
+        'status',
+        'label',
+      ]),
+      _leesEersteTekst(map, const <String>[
+        'kleur',
+        'color',
+        'kleurCode',
+        'colorCode',
+      ]),
+    ].join(' ').toLowerCase();
+
+    if (waarden.contains('afspraak') ||
+        waarden.contains('blauw') ||
+        waarden.contains('blue') ||
+        waarden.contains('2196f3') ||
+        waarden.contains('1976d2') ||
+        waarden.contains('0xff42a5f5')) {
+      return true;
+    }
+
+    if (waarden.contains('vakantie') ||
+        waarden.contains('verlof') ||
+        waarden.contains('dagtaak') ||
+        waarden.contains('planning') ||
+        waarden.contains('opvolging')) {
+      return false;
+    }
+
+    final heeftKlantGegevens = _leesEersteTekst(map, const <String>[
+      'klantNaam',
+      'klant',
+      'naamKlant',
+    ]).trim().isNotEmpty;
+
+    final titel = _leesEersteTekst(map, const <String>[
+      'titel',
+      'title',
+      'onderwerp',
+      'naam',
+    ]).toLowerCase();
+
+    return heeftKlantGegevens || titel.contains('afspraak');
+  }
+
+  static String _leesEersteTekst(
+    Map<String, dynamic> map,
+    List<String> sleutels,
+  ) {
+    for (final sleutel in sleutels) {
+      if (!map.containsKey(sleutel)) {
+        continue;
+      }
+
+      final waarde = map[sleutel];
+
+      if (waarde == null) {
+        continue;
+      }
+
+      final tekst = waarde.toString().trim();
+
+      if (tekst.isNotEmpty && tekst.toLowerCase() != 'null') {
+        return tekst;
+      }
+    }
+
+    return '';
   }
 
   // ------------------------------------------------------------

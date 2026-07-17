@@ -47,6 +47,51 @@ class OpmetingRaamTechnischeSoortResultaat {
   }
 }
 
+class OpmetingRaamTechnischeOplaadbareKeuze {
+  const OpmetingRaamTechnischeOplaadbareKeuze({
+    required this.id,
+    required this.formulierNaam,
+    required this.titel,
+    required this.items,
+  });
+
+  final String id;
+  final String formulierNaam;
+  final String titel;
+  final List<OpmetingRaamKeuzeMenuItem> items;
+
+  int get aantalKeuzes {
+    var totaal = 0;
+
+    void telItem(OpmetingRaamKeuzeMenuItem item) {
+      if (item.isKeuze && item.optie?.isGeenKeuze != true) {
+        totaal++;
+      }
+
+      for (final kind in item.kinderen) {
+        telItem(kind);
+      }
+    }
+
+    for (final item in items) {
+      telItem(item);
+    }
+
+    return totaal;
+  }
+
+  String get bronTekst {
+    final aantal = aantalKeuzes;
+    final keuzeTekst = aantal == 1 ? '1 keuze' : '$aantal keuzes';
+
+    if (formulierNaam.trim().isEmpty) {
+      return keuzeTekst;
+    }
+
+    return '${formulierNaam.trim()} · $keuzeTekst';
+  }
+}
+
 class OpmetingRaamTechnischMenuResultaat {
   const OpmetingRaamTechnischMenuResultaat({
     required this.titel,
@@ -68,6 +113,8 @@ toonOpmetingRaamTechnischMenuDialoog({
   List<OpmetingRaamBeschikbareNietCombineerbareKeuze>
       beschikbareNietCombineerbareKeuzes =
       const <OpmetingRaamBeschikbareNietCombineerbareKeuze>[],
+  List<OpmetingRaamTechnischeOplaadbareKeuze> oplaadbareKeuzes =
+      const <OpmetingRaamTechnischeOplaadbareKeuze>[],
 }) {
   const groen = Color(0xFF0B7A3B);
 
@@ -104,6 +151,7 @@ toonOpmetingRaamTechnischMenuDialoog({
           bestaandMenu: bestaandMenu,
           beschikbareNietCombineerbareKeuzes:
               beschikbareNietCombineerbareKeuzes,
+          oplaadbareKeuzes: oplaadbareKeuzes,
         ),
       );
     },
@@ -116,11 +164,13 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
     this.bestaandMenu,
     this.beschikbareNietCombineerbareKeuzes =
         const <OpmetingRaamBeschikbareNietCombineerbareKeuze>[],
+    this.oplaadbareKeuzes = const <OpmetingRaamTechnischeOplaadbareKeuze>[],
   });
 
   final OpmetingRaamTechnischMenuResultaat? bestaandMenu;
   final List<OpmetingRaamBeschikbareNietCombineerbareKeuze>
   beschikbareNietCombineerbareKeuzes;
+  final List<OpmetingRaamTechnischeOplaadbareKeuze> oplaadbareKeuzes;
 
   @override
   State<OpmetingRaamTechnischMenuDialoog> createState() {
@@ -166,8 +216,6 @@ class _OpmetingRaamTechnischMenuDialoogState
         for (final soort in bestaandeSoorten) {
           _items.add(_TechnischMenuItemConcept.vanResultaat(soort));
         }
-      } else {
-        _items.add(_TechnischMenuItemConcept.nieuweKeuze(ingeklapt: false));
       }
     }
   }
@@ -227,6 +275,166 @@ class _OpmetingRaamTechnischMenuDialoogState
           ingeklapt: false,
         ),
       );
+
+      _foutmelding = null;
+    });
+  }
+
+  Future<void> _openKeuzeOpladen({
+    List<_TechnischMenuItemConcept>? doelLijst,
+  }) async {
+    if (widget.oplaadbareKeuzes.isEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            title: const Text('Keuze opladen'),
+            content: const Text(
+              'Er zijn nog geen keuzes gevonden in de andere opmeetfiches.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Sluiten'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
+    final gekozen = await showDialog<OpmetingRaamTechnischeOplaadbareKeuze>(
+      context: context,
+      builder: (dialogContext) {
+        final basisTheme = Theme.of(dialogContext);
+
+        return Theme(
+          data: basisTheme.copyWith(
+            colorScheme: basisTheme.colorScheme.copyWith(
+              primary: groen,
+              secondary: groen,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(foregroundColor: groen),
+            ),
+          ),
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            titlePadding: EdgeInsets.zero,
+            title: Container(
+              padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+              decoration: const BoxDecoration(
+                color: lichtGroen,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.download_outlined, color: groen, size: 21),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Keuze opladen',
+                      style: TextStyle(
+                        color: groen,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            content: SizedBox(
+              width: 540,
+              height: 420,
+              child: ListView.separated(
+                itemCount: widget.oplaadbareKeuzes.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final keuze = widget.oplaadbareKeuzes[index];
+
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(
+                      Icons.check_box_outline_blank,
+                      color: groen,
+                      size: 20,
+                    ),
+                    title: Text(
+                      keuze.titel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      keuze.bronTekst,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () {
+                      Navigator.pop(dialogContext, keuze);
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text('Annuleren'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (gekozen == null) {
+      return;
+    }
+
+    setState(() {
+      final nieuweItems = gekozen.items
+          .map(
+            (item) => _TechnischMenuItemConcept.kopieVanMenuItem(
+              item,
+              nieuwId: _nieuwId,
+            ),
+          )
+          .toList();
+
+      _zetAllesIngeklapt(_items);
+
+      if (doelLijst == null) {
+        for (final item in _items) {
+          item.dispose();
+        }
+
+        _items
+          ..clear()
+          ..addAll(nieuweItems);
+
+        if (_titelController.text.trim().isEmpty) {
+          _titelController.text = gekozen.titel;
+        }
+      } else {
+        doelLijst.addAll(nieuweItems);
+      }
+
+      if (nieuweItems.isNotEmpty) {
+        nieuweItems.first.ingeklapt = false;
+      }
 
       _foutmelding = null;
     });
@@ -567,6 +775,22 @@ class _OpmetingRaamTechnischMenuDialoogState
                         diepte: 0,
                       );
                     }),
+                    if (_items.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: achtergrond,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: rand),
+                        ),
+                        child: const Text(
+                          'Nog geen keuzes toegevoegd. Gebruik Submenu, + keuze of Keuze opladen.',
+                          style: TextStyle(
+                            color: Color(0xFF6B7280),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     if (_foutmelding != null) ...[
                       const SizedBox(height: 4),
                       Container(
@@ -617,30 +841,48 @@ class _OpmetingRaamTechnischMenuDialoogState
               ),
             ),
           ),
-          OutlinedButton.icon(
-            onPressed: () {
-              _voegSubmenuToe();
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: groen,
-              side: const BorderSide(color: groen),
-              visualDensity: VisualDensity.compact,
-            ),
-            icon: const Icon(Icons.account_tree_outlined, size: 17),
-            label: const Text('Submenu'),
-          ),
-          const SizedBox(width: 6),
-          FilledButton.icon(
-            onPressed: () {
-              _voegKeuzeToe();
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: groen,
-              foregroundColor: Colors.white,
-              visualDensity: VisualDensity.compact,
-            ),
-            icon: const Icon(Icons.add, size: 17),
-            label: const Text('Keuze'),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            alignment: WrapAlignment.end,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () {
+                  _openKeuzeOpladen();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: groen,
+                  side: const BorderSide(color: groen),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.download_outlined, size: 17),
+                label: const Text('Keuze opladen'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _voegSubmenuToe();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: groen,
+                  side: const BorderSide(color: groen),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.account_tree_outlined, size: 17),
+                label: const Text('Submenu'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  _voegKeuzeToe();
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: groen,
+                  foregroundColor: Colors.white,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.add, size: 17),
+                label: const Text('+ keuze'),
+              ),
+            ],
           ),
         ],
       ),
@@ -876,6 +1118,21 @@ class _OpmetingRaamTechnischMenuDialoogState
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: () {
+                  _openKeuzeOpladen(doelLijst: item.kinderen);
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: groen,
+                  side: const BorderSide(color: groen),
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.download_outlined, size: 17),
+                label: const Text('Keuze opladen'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () {
                   _voegSubmenuToe(doelLijst: item.kinderen);
                 },
                 style: OutlinedButton.styleFrom(
@@ -899,7 +1156,7 @@ class _OpmetingRaamTechnischMenuDialoogState
                   visualDensity: VisualDensity.compact,
                 ),
                 icon: const Icon(Icons.add, size: 17),
-                label: const Text('Keuze'),
+                label: const Text('+ keuze'),
               ),
             ),
           ],
@@ -1124,6 +1381,49 @@ class _TechnischMenuItemConcept {
         optie?.nietCombineerbaarMet ??
             const <OpmetingRaamNietCombineerbareKeuze>[],
       ),
+      kinderen: <_TechnischMenuItemConcept>[],
+      ingeklapt: true,
+    );
+  }
+
+  factory _TechnischMenuItemConcept.kopieVanMenuItem(
+    OpmetingRaamKeuzeMenuItem item, {
+    required String Function(String prefix) nieuwId,
+  }) {
+    if (item.isSubmenu) {
+      return _TechnischMenuItemConcept(
+        id: nieuwId('submenu'),
+        type: OpmetingRaamKeuzeMenuItemType.submenu,
+        naamController: TextEditingController(text: item.naam.trim()),
+        tekeningen: <OpmetingRaamTechnischeTekeningConcept>[],
+        nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
+        kinderen: item.kinderen
+            .map(
+              (kind) => _TechnischMenuItemConcept.kopieVanMenuItem(
+                kind,
+                nieuwId: nieuwId,
+              ),
+            )
+            .toList(),
+        ingeklapt: true,
+      );
+    }
+
+    final optie = item.optie;
+
+    return _TechnischMenuItemConcept(
+      id: nieuwId('soort'),
+      type: OpmetingRaamKeuzeMenuItemType.keuze,
+      naamController: TextEditingController(
+        text: (optie?.naam ?? item.naam).trim(),
+      ),
+      tekeningen:
+          (optie?.alleTechnischeTekeningen ??
+                  const <OpmetingRaamTechnischeTekeningInstelling>[])
+              .take(4)
+              .map(OpmetingRaamTechnischeTekeningConcept.vanInstelling)
+              .toList(),
+      nietCombineerbaarMet: <OpmetingRaamNietCombineerbareKeuze>[],
       kinderen: <_TechnischMenuItemConcept>[],
       ingeklapt: true,
     );

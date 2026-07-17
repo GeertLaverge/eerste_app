@@ -11,6 +11,7 @@ import 'opmeting_raam_tekenvlak.dart';
 import 'opmeting_raam_toolbalk.dart';
 import 'opmeting_raam_vulling_helper.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
+import '../schuifraam/opmeting_schuifraam_model.dart';
 
 class OpmetingRaamFormulierLayout extends StatelessWidget {
   const OpmetingRaamFormulierLayout({
@@ -22,6 +23,10 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     this.profielSamenvatting = '',
     this.onDeurVleugel,
     this.onDeurPanelen,
+    this.toonSchuifraamKnoppen = false,
+    this.schuifraamSamenstelling,
+    this.schuifraamSamenvatting = '',
+    this.onSchuifraamSamenstellen,
     required this.onTerug,
     required this.onToevoegen,
     required this.onAnnuleren,
@@ -37,6 +42,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.buitenTabletController,
     required this.uitzagenTandController,
     required this.buitensteLipController,
+    required this.onderkantSchuifraamController,
+    required this.onOnderkantSchuifraamGewijzigd,
     required this.raammaatBreedte,
     required this.raammaatHoogte,
     required this.verschilTablet,
@@ -91,6 +98,10 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final String profielSamenvatting;
   final VoidCallback? onDeurVleugel;
   final VoidCallback? onDeurPanelen;
+  final bool toonSchuifraamKnoppen;
+  final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
+  final String schuifraamSamenvatting;
+  final VoidCallback? onSchuifraamSamenstellen;
   final Future<void> Function() onTerug;
   final Future<void> Function() onToevoegen;
   final Future<void> Function() onAnnuleren;
@@ -107,6 +118,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final TextEditingController buitenTabletController;
   final TextEditingController uitzagenTandController;
   final TextEditingController buitensteLipController;
+  final TextEditingController onderkantSchuifraamController;
+  final VoidCallback onOnderkantSchuifraamGewijzigd;
 
   final int raammaatBreedte;
   final int raammaatHoogte;
@@ -262,6 +275,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                         kaderSamenstelling: kaderSamenstelling,
                         onKaderSamenstellingGewijzigd:
                             onKaderSamenstellingGewijzigd,
+                        schuifraamSamenstelling: schuifraamSamenstelling,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -279,6 +293,8 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                           toonDeurTools: toonDeurKnoppen,
                           onDeurVleugel: onDeurVleugel,
                           onDeurPanelen: onDeurPanelen,
+                          toonSchuifraamTools: toonSchuifraamKnoppen,
+                          onSchuifraamSamenstellen: onSchuifraamSamenstellen,
                         );
                       },
                     ),
@@ -307,6 +323,11 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       buitenTabletController: buitenTabletController,
                       uitzagenTandController: uitzagenTandController,
                       buitensteLipController: buitensteLipController,
+                      onderkantSchuifraamController:
+                          onderkantSchuifraamController,
+                      isSchuifraam: toonSchuifraamKnoppen,
+                      onOnderkantSchuifraamGewijzigd:
+                          onOnderkantSchuifraamGewijzigd,
                       raammaatBreedte: raammaatBreedte,
                       raammaatHoogte: raammaatHoogte,
                       verschilTablet: verschilTablet,
@@ -318,6 +339,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                     const SizedBox(height: 8),
                     OpmetingRaamTechnischeKeuzesPaneel(
                       deurVleugelSamenvatting: deurVleugelSamenvatting,
+                      schuifraamSamenvatting: schuifraamSamenvatting,
                       profielSamenvatting: profielSamenvatting,
                       gekozenOpvullingen: gekozenOpvullingen,
                       gekozenKleinhouten: gekozenKleinhouten,

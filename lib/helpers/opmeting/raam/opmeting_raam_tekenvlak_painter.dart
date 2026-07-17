@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_teken_helper.dart';
+import '../schuifraam/opmeting_schuifraam_model.dart';
+import '../schuifraam/opmeting_schuifraam_teken_helper.dart'
+    as schuifraam_teken;
 import 'opmeting_raam_kader_helper.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
@@ -60,6 +63,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     this.geselecteerdeKaderIds = const <String>{},
     this.kaderSamenstelling,
     this.actiefKaderId,
+    this.schuifraamSamenstelling,
   });
 
   final int breedteMm;
@@ -104,6 +108,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
 
   final OpmetingKaderSamenstelling? kaderSamenstelling;
   final String? actiefKaderId;
+  final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
 
   static const Color _maatKleur = Color(0xFF111827);
   static const double _kwartDraai = 1.5707963267948966;
@@ -675,26 +680,65 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       ...teTekenenGeselecteerdeKleinhoutVlakIds,
     };
 
+    final actiefSchuifraam = schuifraamSamenstelling?.isGeldig == true
+        ? schuifraamSamenstelling
+        : null;
+
+    final teTekenenNormaleTStijlen = actiefSchuifraam == null
+        ? teTekenenTStijlen
+        : teTekenenTStijlen
+              .where(
+                (stijl) => !schuifraam_teken
+                    .OpmetingSchuifraamTekenHelper.isStructuurTStijl(stijl),
+              )
+              .toList();
+
+    final teTekenenNormaleVleugels = actiefSchuifraam == null
+        ? teTekenenVleugels
+        : teTekenenVleugels
+              .where(
+                (vleugel) => !schuifraam_teken
+                    .OpmetingSchuifraamTekenHelper.isLogischeVleugel(vleugel),
+              )
+              .toList();
+
+    final schuifraamGeometrie = actiefSchuifraam == null
+        ? null
+        : schuifraam_teken
+              .OpmetingSchuifraamTekenHelper.berekenGeometrieVoorBuitenKader(
+            buitenKader: buiten,
+            breedteMm: effectieveBreedteMm,
+            hoogteMm: effectieveHoogteMm,
+            samenstelling: actiefSchuifraam,
+          );
+
     OpmetingRaamVullingTekenHelper.tekenAchtergrond(
       canvas: canvas,
       vulvlakken: teTekenenVulvlakken,
       toewijzingen: teTekenenVullingToewijzingen,
     );
 
-    final heeftDeurVleugel = teTekenenVleugels.any(
+    final heeftDeurVleugel = teTekenenNormaleVleugels.any(
       (vleugel) => vleugel.isDeurVleugel,
     );
 
     if (tekenKader) {
-      _tekenKader(
-        canvas,
-        buiten,
-        binnen,
-        toonOnderVerstekken: !heeftDeurVleugel,
-      );
+      if (schuifraamGeometrie != null) {
+        schuifraam_teken.OpmetingSchuifraamTekenHelper.tekenKaderProfiel(
+          canvas: canvas,
+          geometrie: schuifraamGeometrie,
+        );
+      } else {
+        _tekenKader(
+          canvas,
+          buiten,
+          binnen,
+          toonOnderVerstekken: !heeftDeurVleugel,
+        );
+      }
     }
 
-    for (final vleugel in teTekenenVleugels) {
+    for (final vleugel in teTekenenNormaleVleugels) {
       if (vleugel.isDeurVleugel) {
         _tekenDeurVleugel(
           canvas: canvas,
@@ -717,17 +761,17 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
 
     _tekenDubbeleDeurMaatvoering(
       canvas: canvas,
-      vleugels: teTekenenVleugels,
+      vleugels: teTekenenNormaleVleugels,
       buitenKader: buiten,
       breedteMm: effectieveBreedteMm,
     );
 
-    for (final stijl in teTekenenTStijlen) {
+    for (final stijl in teTekenenNormaleTStijlen) {
       if (stijl.werkvlakId.startsWith('deurvleugel_')) {
         _tekenDeurVleugelTStijl(
           canvas: canvas,
           stijl: stijl,
-          deurVleugels: teTekenenVleugels,
+          deurVleugels: teTekenenNormaleVleugels,
           buitenKader: buiten,
           breedteMm: effectieveBreedteMm,
           hoogteMm: effectieveHoogteMm,
@@ -741,6 +785,16 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
           hoogteMm: effectieveHoogteMm,
         );
       }
+    }
+
+    // De vleugelprofielen worden na de T-stijlen opnieuw als voorgrond
+    // getekend. Zo verdwijnt een horizontale T-stijl correct onder het
+    // 100 mm vleugelprofiel van een mono- of duoschuifraam.
+    if (schuifraamGeometrie != null) {
+      schuifraam_teken.OpmetingSchuifraamTekenHelper.tekenVleugelProfielen(
+        canvas: canvas,
+        geometrie: schuifraamGeometrie,
+      );
     }
 
     OpmetingRaamKleinhoutHelper.tekenKleinhouten(
@@ -759,6 +813,14 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       toewijzingen: teTekenenVullingToewijzingen,
       geselecteerdeVulvlakIds: teTekenenGeselecteerdeVoorgrondVlakIds,
     );
+
+    if (schuifraamGeometrie != null && actiefSchuifraam != null) {
+      schuifraam_teken.OpmetingSchuifraamTekenHelper.tekenSymbolen(
+        canvas: canvas,
+        samenstelling: actiefSchuifraam,
+        geometrie: schuifraamGeometrie,
+      );
+    }
 
     if (toonSelectie) {
       _tekenGeselecteerdeLijn(canvas);
@@ -1677,6 +1739,35 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required int maatHoogteMm,
     required bool toonTStijlKetting,
   }) {
+    final actiefSchuifraam = schuifraamSamenstelling;
+
+    if (actiefSchuifraam != null && actiefSchuifraam.isGeldig) {
+      final geometrie =
+          schuifraam_teken
+              .OpmetingSchuifraamTekenHelper.berekenGeometrieVoorBuitenKader(
+            buitenKader: buiten,
+            breedteMm: maatBreedteMm,
+            hoogteMm: maatHoogteMm,
+            samenstelling: actiefSchuifraam,
+          );
+
+      schuifraam_teken.OpmetingSchuifraamTekenHelper.tekenBreedteMaatvoering(
+        canvas: canvas,
+        geometrie: geometrie,
+        breedteMm: maatBreedteMm,
+        maatLijnY: buiten.bottom + 14,
+        totaleMaatLijnY: buiten.bottom + 42,
+      );
+
+      _tekenTotaleHoogtemaat(
+        canvas: canvas,
+        buiten: buiten,
+        maatLijnX: buiten.right + 28,
+        maatHoogteMm: maatHoogteMm,
+      );
+      return;
+    }
+
     final verticaleTStijlPosities = <double>[];
     final horizontaleTStijlPosities = <double>[];
 
@@ -2208,6 +2299,8 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         ) ||
         !identical(geselecteerdeKaderIds, oldDelegate.geselecteerdeKaderIds) ||
         !identical(kaderSamenstelling, oldDelegate.kaderSamenstelling) ||
-        actiefKaderId != oldDelegate.actiefKaderId;
+        actiefKaderId != oldDelegate.actiefKaderId ||
+        schuifraamSamenstelling?.toJson().toString() !=
+            oldDelegate.schuifraamSamenstelling?.toJson().toString();
   }
 }
