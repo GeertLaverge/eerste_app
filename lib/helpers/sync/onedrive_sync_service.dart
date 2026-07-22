@@ -40,6 +40,9 @@ class OneDriveSyncService {
   static const String _opmetingProjectKleurenKey =
       'thimaco_opmeting_project_kleuren';
 
+  static const String _offertePrijsProfielenKey =
+      'thimaco_offerte_prijs_profielen';
+
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
 
@@ -261,6 +264,11 @@ class OneDriveSyncService {
             prefs.getString(_opmetingProjectKleurenKey) ??
             (cloudBackup['opmetingProjectKleuren'] is String
                 ? cloudBackup['opmetingProjectKleuren'] as String
+                : null),
+        'offertePrijsProfielen':
+            prefs.getString(_offertePrijsProfielenKey) ??
+            (cloudBackup['offertePrijsProfielen'] is String
+                ? cloudBackup['offertePrijsProfielen'] as String
                 : null),
         'deurpanelenBibliotheek': deurpanelenBibliotheek.waarde,
         'deurpanelenBibliotheekGewijzigdOp': deurpanelenBibliotheek.gewijzigdOp,
@@ -646,6 +654,13 @@ class OneDriveSyncService {
         await prefs.setString(
           _opmetingProjectKleurenKey,
           data['opmetingProjectKleuren'] as String,
+        );
+      }
+
+      if (data['offertePrijsProfielen'] is String) {
+        await prefs.setString(
+          _offertePrijsProfielenKey,
+          data['offertePrijsProfielen'] as String,
         );
       }
 

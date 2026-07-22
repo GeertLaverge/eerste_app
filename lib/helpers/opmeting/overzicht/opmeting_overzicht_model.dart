@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OVERZICHT-MODEL-PRIJSdata-BEHOUDEN-TECHNISCHE-REGEL-ZICHTBAAR-20260720
+import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
@@ -6,6 +8,7 @@ import '../raam/opmeting_raam_keuzemenu_model.dart';
 import '../raam/opmeting_raam_model.dart';
 import '../raam/opmeting_raam_vulling_helper.dart';
 import '../schuifraam/opmeting_schuifraam_model.dart';
+import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -17,7 +20,7 @@ class OpmetingOverzichtTechnischeRegel {
   final String waarde;
 
   bool get isZichtbaar {
-    return titel.trim().isNotEmpty && waarde.trim().isNotEmpty;
+    return titel.trim().isNotEmpty || waarde.trim().isNotEmpty;
   }
 
   Map<String, dynamic> toJson() {
@@ -311,6 +314,27 @@ class OpmetingOverzichtTekeningData {
   }
 }
 
+enum OfferteOptiePlaatsing {
+  positieBehouden('positieBehouden'),
+  apartePagina('apartePagina');
+
+  const OfferteOptiePlaatsing(this.jsonWaarde);
+
+  final String jsonWaarde;
+
+  static OfferteOptiePlaatsing fromJson(Object? waarde) {
+    final tekst = waarde?.toString().trim();
+
+    for (final plaatsing in OfferteOptiePlaatsing.values) {
+      if (plaatsing.jsonWaarde == tekst || plaatsing.name == tekst) {
+        return plaatsing;
+      }
+    }
+
+    return OfferteOptiePlaatsing.apartePagina;
+  }
+}
+
 class OpmetingOverzichtRaamItem {
   const OpmetingOverzichtRaamItem({
     required this.id,
@@ -324,6 +348,10 @@ class OpmetingOverzichtRaamItem {
     this.formulierType = 'pvcRaam',
     this.gewijzigdOp = '',
     this.isVerwijderd = false,
+    this.isOfferteOptie = false,
+    this.offerteOptiePlaatsing = OfferteOptiePlaatsing.apartePagina,
+    this.offerteOptieHoofdpositieId = '',
+    this.gekopieerdVanPositieId = '',
     this.tekeningData = const OpmetingOverzichtTekeningData(),
     this.technischeRegels = const <OpmetingOverzichtTechnischeRegel>[],
     this.technischeContainers = const <OpmetingOverzichtTechnischeContainer>[],
@@ -332,6 +360,8 @@ class OpmetingOverzichtRaamItem {
     this.deurpaneelToewijzingen = const <OpmetingDeurpaneelToewijzing>[],
     this.fotos = const <OpmetingFoto>[],
     this.notities = '',
+    this.offertePrijsData = const OfferteArtikelPrijsDataModel(),
+    this.vasteInzethorData,
   });
 
   final String id;
@@ -340,6 +370,24 @@ class OpmetingOverzichtRaamItem {
   final String formulierType;
   final String gewijzigdOp;
   final bool isVerwijderd;
+  final bool isOfferteOptie;
+  final OfferteOptiePlaatsing offerteOptiePlaatsing;
+  final String offerteOptieHoofdpositieId;
+  final String gekopieerdVanPositieId;
+
+  bool get teltMeeInHoofdofferte => !isVerwijderd && !isOfferteOptie;
+  bool get heeftOptieHoofdpositie =>
+      offerteOptieHoofdpositieId.trim().isNotEmpty;
+  bool get isZichtbareOfferteOptie => !isVerwijderd && isOfferteOptie;
+  bool get isOfferteOptieOpPositie {
+    return isZichtbareOfferteOptie &&
+        offerteOptiePlaatsing == OfferteOptiePlaatsing.positieBehouden;
+  }
+
+  bool get isOfferteOptieOpApartePagina {
+    return isZichtbareOfferteOptie &&
+        offerteOptiePlaatsing == OfferteOptiePlaatsing.apartePagina;
+  }
 
   final int dagmaatBreedteMm;
   final int dagmaatHoogteMm;
@@ -355,6 +403,8 @@ class OpmetingOverzichtRaamItem {
   final List<OpmetingDeurpaneelToewijzing> deurpaneelToewijzingen;
   final List<OpmetingFoto> fotos;
   final String notities;
+  final OfferteArtikelPrijsDataModel offertePrijsData;
+  final OpmetingVasteInzethorModel? vasteInzethorData;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -379,6 +429,11 @@ class OpmetingOverzichtRaamItem {
       case 'schuifraam':
         return 'pvcSchuifraam';
 
+      case 'aluSchuifraam':
+      case 'alu_schuifraam':
+      case 'ALU Schuifraam':
+        return 'aluSchuifraam';
+
       case 'pvcDeur':
       case 'pvc_deur':
       case 'PVC Deur':
@@ -388,6 +443,12 @@ class OpmetingOverzichtRaamItem {
       case 'alu_deur':
       case 'ALU Deur':
         return 'aluDeur';
+
+      case 'vasteInzethor':
+      case 'vaste_inzethor':
+      case 'Vaste inzethor':
+      case 'Vaste Inzethor':
+        return 'vasteInzethor';
 
       case 'pvcRaam':
       case 'pvc_raam':
@@ -409,11 +470,17 @@ class OpmetingOverzichtRaamItem {
       case 'pvcSchuifraam':
         return 'PVC Schuifraam';
 
+      case 'aluSchuifraam':
+        return 'ALU Schuifraam';
+
       case 'pvcDeur':
         return 'PVC Deur';
 
       case 'aluDeur':
         return 'ALU Deur';
+
+      case 'vasteInzethor':
+        return 'Vaste inzethor';
 
       case 'pvcRaam':
         return 'PVC Raam';
@@ -430,6 +497,10 @@ class OpmetingOverzichtRaamItem {
     String? formulierType,
     String? gewijzigdOp,
     bool? isVerwijderd,
+    bool? isOfferteOptie,
+    OfferteOptiePlaatsing? offerteOptiePlaatsing,
+    String? offerteOptieHoofdpositieId,
+    String? gekopieerdVanPositieId,
     int? dagmaatBreedteMm,
     int? dagmaatHoogteMm,
     int? raammaatBreedteMm,
@@ -442,6 +513,8 @@ class OpmetingOverzichtRaamItem {
     List<OpmetingDeurpaneelToewijzing>? deurpaneelToewijzingen,
     List<OpmetingFoto>? fotos,
     String? notities,
+    OfferteArtikelPrijsDataModel? offertePrijsData,
+    OpmetingVasteInzethorModel? vasteInzethorData,
   }) {
     return OpmetingOverzichtRaamItem(
       id: id ?? this.id,
@@ -450,6 +523,13 @@ class OpmetingOverzichtRaamItem {
       formulierType: formulierType ?? this.formulierType,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
       isVerwijderd: isVerwijderd ?? this.isVerwijderd,
+      isOfferteOptie: isOfferteOptie ?? this.isOfferteOptie,
+      offerteOptiePlaatsing:
+          offerteOptiePlaatsing ?? this.offerteOptiePlaatsing,
+      offerteOptieHoofdpositieId:
+          offerteOptieHoofdpositieId ?? this.offerteOptieHoofdpositieId,
+      gekopieerdVanPositieId:
+          gekopieerdVanPositieId ?? this.gekopieerdVanPositieId,
       dagmaatBreedteMm: dagmaatBreedteMm ?? this.dagmaatBreedteMm,
       dagmaatHoogteMm: dagmaatHoogteMm ?? this.dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm ?? this.raammaatBreedteMm,
@@ -464,6 +544,8 @@ class OpmetingOverzichtRaamItem {
           deurpaneelToewijzingen ?? this.deurpaneelToewijzingen,
       fotos: fotos ?? this.fotos,
       notities: notities ?? this.notities,
+      offertePrijsData: offertePrijsData ?? this.offertePrijsData,
+      vasteInzethorData: vasteInzethorData ?? this.vasteInzethorData,
     );
   }
 
@@ -482,6 +564,10 @@ class OpmetingOverzichtRaamItem {
       'formulierType': formulierType,
       'gewijzigdOp': gewijzigdOp,
       'isVerwijderd': isVerwijderd,
+      'isOfferteOptie': isOfferteOptie,
+      'offerteOptiePlaatsing': offerteOptiePlaatsing.jsonWaarde,
+      'offerteOptieHoofdpositieId': offerteOptieHoofdpositieId,
+      'gekopieerdVanPositieId': gekopieerdVanPositieId,
       'dagmaatBreedteMm': dagmaatBreedteMm,
       'dagmaatHoogteMm': dagmaatHoogteMm,
       'raammaatBreedteMm': raammaatBreedteMm,
@@ -507,6 +593,9 @@ class OpmetingOverzichtRaamItem {
           .toList(),
       'fotos': fotos.map((foto) => foto.toJson()).toList(),
       'notities': notities,
+      'offertePrijsData': offertePrijsData.toJson(),
+      if (vasteInzethorData != null)
+        'vasteInzethorData': vasteInzethorData!.toJson(),
     };
   }
 
@@ -536,6 +625,18 @@ class OpmetingOverzichtRaamItem {
       formulierType: json['formulierType']?.toString() ?? 'pvcRaam',
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,
+      isOfferteOptie: json['isOfferteOptie'] == true || json['isOptie'] == true,
+      offerteOptiePlaatsing: OfferteOptiePlaatsing.fromJson(
+        json['offerteOptiePlaatsing'] ?? json['optiePlaatsing'],
+      ),
+      offerteOptieHoofdpositieId:
+          json['offerteOptieHoofdpositieId']?.toString() ??
+          json['optieHoofdpositieId']?.toString() ??
+          '',
+      gekopieerdVanPositieId:
+          json['gekopieerdVanPositieId']?.toString() ??
+          json['kopieBronPositieId']?.toString() ??
+          '',
       dagmaatBreedteMm: dagmaatBreedteMm,
       dagmaatHoogteMm: dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm,
@@ -563,6 +664,16 @@ class OpmetingOverzichtRaamItem {
       ),
       fotos: _leesLijst(json['fotos'], OpmetingFoto.fromJson),
       notities: json['notities']?.toString() ?? '',
+      offertePrijsData: json['offertePrijsData'] is Map
+          ? OfferteArtikelPrijsDataModel.fromJson(
+              Map<String, dynamic>.from(json['offertePrijsData'] as Map),
+            )
+          : const OfferteArtikelPrijsDataModel(),
+      vasteInzethorData: json['vasteInzethorData'] is Map
+          ? OpmetingVasteInzethorModel.fromJson(
+              Map<String, dynamic>.from(json['vasteInzethorData'] as Map),
+            )
+          : null,
     );
   }
 }

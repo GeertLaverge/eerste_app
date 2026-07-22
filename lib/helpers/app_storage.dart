@@ -13,6 +13,8 @@ import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
+import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
+import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
@@ -38,11 +40,20 @@ class AppStorage {
   static const String _opmetingDeurKeuzemenusAluKey =
       'opmeting_deur_keuzemenus_alu';
 
+  static const String _opmetingSchuifraamKeuzemenusPvcKey =
+      'opmeting_schuifraam_keuzemenus_pvc';
+
+  static const String _opmetingSchuifraamKeuzemenusAluKey =
+      'opmeting_schuifraam_keuzemenus_alu';
+
   static const String _opmetingProjectTitelhoofdenKey =
       'thimaco_opmeting_project_titelhoofden';
 
   static const String _opmetingProjectKleurenKey =
       'thimaco_opmeting_project_kleuren';
+
+  static const String _offertePrijsProfielenKey =
+      'thimaco_offerte_prijs_profielen';
 
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
@@ -382,6 +393,16 @@ class AppStorage {
       case 'ALU Deur':
         return _opmetingDeurKeuzemenusAluKey;
 
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+        return _opmetingSchuifraamKeuzemenusPvcKey;
+
+      case 'aluSchuifraam':
+      case 'alu_schuifraam':
+      case 'ALU Schuifraam':
+        return _opmetingSchuifraamKeuzemenusAluKey;
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -396,9 +417,42 @@ class AppStorage {
 
   static Future<List<OpmetingRaamKeuzeMenu>>
   laadOpmetingRaamKeuzemenusVoorFormulier(String formulierType) async {
-    return _laadOpmetingRaamKeuzemenusMetKey(
-      _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType),
+    final key = _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType);
+    final menus = await _laadOpmetingRaamKeuzemenusMetKey(key);
+
+    if (menus.isNotEmpty || !_isPvcSchuifraamFormulier(formulierType)) {
+      return menus;
+    }
+
+    // Bestaande PVC-schuifraamfiches gebruikten vroeger dezelfde technische
+    // keuzes als PVC raam. We kopiëren die één keer naar de eigen opslag,
+    // zodat beide fiches vanaf nu volledig onafhankelijk verder werken.
+    final oudeMenus = await _laadOpmetingRaamKeuzemenusMetKey(
+      _opmetingRaamKeuzemenusKey,
     );
+
+    if (oudeMenus.isEmpty) {
+      return menus;
+    }
+
+    await _bewaarOpmetingRaamKeuzemenusMetKey(
+      key: _opmetingSchuifraamKeuzemenusPvcKey,
+      menus: oudeMenus,
+      sync: false,
+    );
+
+    return List<OpmetingRaamKeuzeMenu>.unmodifiable(oudeMenus);
+  }
+
+  static bool _isPvcSchuifraamFormulier(String formulierType) {
+    switch (formulierType.trim()) {
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+        return true;
+      default:
+        return false;
+    }
   }
 
   static Future<List<OpmetingRaamKeuzeMenu>> _laadOpmetingRaamKeuzemenusMetKey(
@@ -530,6 +584,83 @@ class AppStorage {
 
       return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
     });
+  }
+
+  // ------------------------------------------------------------
+  // OFFERTEPRIJZEN
+  // ------------------------------------------------------------
+
+  static Future<List<OffertePrijsprofielModel>>
+  laadOffertePrijsProfielen() async {
+    final prefs = await openBox();
+
+    return OffertePrijsOpslagCodec.decode(
+      prefs.getString(_offertePrijsProfielenKey),
+    );
+  }
+
+  static Future<void> bewaarOffertePrijsProfielen(
+    List<OffertePrijsprofielModel> profielen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _offertePrijsProfielenKey,
+      OffertePrijsOpslagCodec.encode(profielen),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<OffertePrijsprofielModel?> laadOffertePrijsProfiel(
+    String formulierType,
+  ) async {
+    final sleutel = formulierType.trim().toLowerCase();
+
+    if (sleutel.isEmpty) {
+      return null;
+    }
+
+    final profielen = await laadOffertePrijsProfielen();
+
+    for (final profiel in profielen) {
+      if (profiel.formulierType.trim().toLowerCase() == sleutel) {
+        return profiel;
+      }
+    }
+
+    return null;
+  }
+
+  static Future<void> bewaarOffertePrijsProfiel(
+    OffertePrijsprofielModel profiel,
+  ) async {
+    final formulierType = profiel.formulierType.trim();
+
+    if (formulierType.isEmpty) {
+      return;
+    }
+
+    final profielen = await laadOffertePrijsProfielen();
+    final sleutel = formulierType.toLowerCase();
+    final bijgewerkt = profiel.metWijzigingsDatum();
+    final index = profielen.indexWhere((bestaand) {
+      return bestaand.formulierType.trim().toLowerCase() == sleutel;
+    });
+
+    if (index >= 0) {
+      profielen[index] = bijgewerkt;
+    } else {
+      profielen.add(bijgewerkt);
+    }
+
+    profielen.sort((eerste, tweede) {
+      return eerste.formulierNaam.toLowerCase().compareTo(
+        tweede.formulierNaam.toLowerCase(),
+      );
+    });
+
+    await bewaarOffertePrijsProfielen(profielen);
   }
 
   // ------------------------------------------------------------
@@ -701,6 +832,131 @@ class AppStorage {
   }
 
   // ------------------------------------------------------------
+  // OPMETING - KLANTEN UIT KLANTENFICHES
+  // ------------------------------------------------------------
+
+  static Future<List<OpmetingAgendaKlantInfo>> laadKlantenVoorOpmeting() async {
+    try {
+      final fiches = await laadKlantenFiches();
+      final perKlant = <String, OpmetingAgendaKlantInfo>{};
+
+      for (final fiche in fiches) {
+        final verwijderd =
+            fiche['isVerwijderd'] == true ||
+            fiche['verwijderd'] == true ||
+            fiche['deleted'] == true ||
+            _leesEersteTekst(fiche, const <String>['deletedAt']).isNotEmpty;
+
+        if (verwijderd) {
+          continue;
+        }
+
+        final klantNaam = _leesEersteTekst(fiche, const <String>[
+          'naam',
+          'klantNaam',
+          'naamKlant',
+          'klant',
+        ]).trim();
+
+        if (klantNaam.isEmpty) {
+          continue;
+        }
+
+        final info = OpmetingAgendaKlantInfo(
+          klantNaam: klantNaam,
+          klantnummer: _leesEersteTekst(fiche, const <String>[
+            'klantNr',
+            'klantnummer',
+            'klantNummer',
+            'klantnr',
+            'customerNumber',
+          ]),
+          contactpersoon: _leesEersteTekst(fiche, const <String>[
+            'contactpersoon',
+            'contactPersoon',
+            'contact',
+          ]),
+          adres: _leesEersteTekst(fiche, const <String>[
+            'straatnaam',
+            'straatNaam',
+            'straat',
+            'adres',
+          ]),
+          huisnummer: _leesEersteTekst(fiche, const <String>[
+            'huisNr',
+            'huisnummer',
+            'huisNummer',
+            'nummer',
+            'nr',
+          ]),
+          busNummer: _leesEersteTekst(fiche, const <String>[
+            'busNr',
+            'busNummer',
+            'busnummer',
+            'bus',
+          ]),
+          postcode: _leesEersteTekst(fiche, const <String>[
+            'postcode',
+            'postCode',
+          ]),
+          gemeente: _leesEersteTekst(fiche, const <String>[
+            'gemeente',
+            'plaats',
+            'stad',
+            'woonplaats',
+          ]),
+          gsm: _leesEersteTekst(fiche, const <String>[
+            'gsm',
+            'gsm1',
+            'mobiel',
+            'mobile',
+          ]),
+          telefoon: _leesEersteTekst(fiche, const <String>[
+            'gsm2',
+            'telefoon',
+            'tel',
+            'telefoonnummer',
+          ]),
+          email: _leesEersteTekst(fiche, const <String>[
+            'email',
+            'eMail',
+            'mail',
+          ]),
+          omschrijving: _leesEersteTekst(fiche, const <String>[
+            'notities',
+            'opmerkingen',
+            'omschrijving',
+            'beschrijving',
+            'notitie',
+          ]),
+          datumKey: 'klantenfiche',
+        );
+
+        final sleutel = klantNaam.trim().toLowerCase().replaceAll(
+          RegExp(r'\s+'),
+          ' ',
+        );
+        final bestaand = perKlant[sleutel];
+
+        perKlant[sleutel] = bestaand == null
+            ? info
+            : bestaand.combineerMet(info);
+      }
+
+      final resultaat = perKlant.values.toList()
+        ..sort((eerste, tweede) {
+          return eerste.klantNaam.toLowerCase().compareTo(
+            tweede.klantNaam.toLowerCase(),
+          );
+        });
+
+      return resultaat;
+    } catch (_) {
+      return <OpmetingAgendaKlantInfo>[];
+    }
+  }
+
+  // ------------------------------------------------------------
   // OPMETING - KLANTEN UIT BLAUWE AGENDA
   // ------------------------------------------------------------
 
@@ -727,6 +983,7 @@ class AppStorage {
 
           final info = OpmetingAgendaKlantInfo(
             klantNaam: klantNaam,
+            klantnummer: item.klantNr.trim(),
             adres: item.straatnaam.trim(),
             huisnummer: item.huisNr.trim(),
             postcode: item.postcode.trim(),

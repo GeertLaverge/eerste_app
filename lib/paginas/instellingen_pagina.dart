@@ -9,6 +9,7 @@ import '../helpers/notities/notitie_acties_pagina.dart';
 import '../helpers/opmeting/raam/opmeting_raam_opvullingen_pagina.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_beheer_dialog.dart';
 import '../helpers/opmeting/project/opmeting_project_kleuren_pagina.dart';
+import 'instellingen/offerte_prijzen/offerte_prijzen_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
   const InstellingenPagina({super.key});
@@ -253,6 +254,22 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.palette_outlined),
                 label: const Text('Kleuren raamleverancier'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OffertePrijzenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.euro_rounded),
+                label: const Text('Offerteprijzen'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),

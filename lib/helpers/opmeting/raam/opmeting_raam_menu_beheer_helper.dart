@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: MENU-BEHEER-BEWAART-HOE-UITSCHRIJVEN-20260720
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -381,6 +382,8 @@ class OpmetingRaamMenuBeheerHelper {
     final formulieren = <String, String>{
       'pvcRaam': 'PVC raam',
       'aluRaam': 'ALU raam',
+      'pvcSchuifraam': 'PVC schuifraam',
+      'aluSchuifraam': 'ALU schuifraam',
       'pvcDeur': 'PVC deur',
       'aluDeur': 'ALU deur',
     };
@@ -497,6 +500,7 @@ class OpmetingRaamMenuBeheerHelper {
           OpmetingRaamTechnischeSoortResultaat(
             id: optie.id,
             naam: optie.naam,
+            hoeUitschrijven: optie.hoeUitschrijven,
             tekeningen: optie.alleTechnischeTekeningen,
             nietCombineerbaarMet: List<OpmetingRaamNietCombineerbareKeuze>.from(
               optie.nietCombineerbaarMet,
@@ -523,7 +527,7 @@ class OpmetingRaamMenuBeheerHelper {
     return OpmetingRaamKeuzeOptie(
       id: soort.id,
       naam: soort.naam,
-      uitvoerTekst: '',
+      uitvoerTekst: soort.effectieveUitschrijftekst,
       isGeenKeuze: false,
       tekenfunctie: OpmetingRaamTekenfunctie.geen,
       technischeTekeningen: soort.alleTekeningen,

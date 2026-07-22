@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALLEEN-HOE-UITSCHRIJVEN-LINKS-20260720
 import '../../fotos/opmeting_foto_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
@@ -117,6 +118,11 @@ class OpmetingRaamOverzichtBuilder {
       case 'schuifraam':
         return 'pvcSchuifraam';
 
+      case 'aluSchuifraam':
+      case 'alu_schuifraam':
+      case 'ALU Schuifraam':
+        return 'aluSchuifraam';
+
       case 'pvcDeur':
       case 'pvc_deur':
       case 'PVC Deur':
@@ -146,6 +152,9 @@ class OpmetingRaamOverzichtBuilder {
 
       case 'pvcSchuifraam':
         return 'PVC Schuifraam';
+
+      case 'aluSchuifraam':
+        return 'ALU Schuifraam';
 
       case 'pvcRaam':
         return 'PVC Raam';
@@ -348,8 +357,6 @@ class _OpmetingRaamOverzichtContext {
         continue;
       }
 
-      final kaderNaam = _naamVoorOverzichtSleutel(sleutel);
-
       for (final menu in keuzemenus) {
         if (!menu.actief) {
           continue;
@@ -367,20 +374,23 @@ class _OpmetingRaamOverzichtContext {
           continue;
         }
 
-        final waarde = _overzichtTekstVoorOptie(
+        final hoeUitschrijven = _overzichtTitelVoorOptie(optie);
+        final extraTekst = _overzichtExtraTekstVoorOptie(
           optie: optie,
           selectie: selectie,
         );
+        final titel = hoeUitschrijven.trim();
+        final waarde = _technischeKeuzeExtraWaarde(
+          hoeUitschrijven: hoeUitschrijven,
+          extraTekst: extraTekst,
+        );
 
-        if (waarde.trim().isEmpty) {
+        if (titel.isEmpty && waarde.isEmpty) {
           continue;
         }
 
         regels.add(
-          OpmetingOverzichtTechnischeRegel(
-            titel: '$kaderNaam · ${menu.titel}',
-            waarde: waarde,
-          ),
+          OpmetingOverzichtTechnischeRegel(titel: titel, waarde: waarde),
         );
       }
     }
@@ -457,18 +467,52 @@ class _OpmetingRaamOverzichtContext {
         continue;
       }
 
-      final waarde = _overzichtTekstVoorOptie(optie: optie, selectie: selectie);
+      final hoeUitschrijven = _overzichtTitelVoorOptie(optie);
+      final extraTekst = _overzichtExtraTekstVoorOptie(
+        optie: optie,
+        selectie: selectie,
+      );
+      final titel = hoeUitschrijven.trim();
+      final waarde = _technischeKeuzeExtraWaarde(
+        hoeUitschrijven: hoeUitschrijven,
+        extraTekst: extraTekst,
+      );
 
-      if (waarde.trim().isEmpty) {
+      if (titel.isEmpty && waarde.isEmpty) {
         continue;
       }
 
       regels.add(
-        OpmetingOverzichtTechnischeRegel(titel: menu.titel, waarde: waarde),
+        OpmetingOverzichtTechnischeRegel(titel: titel, waarde: waarde),
       );
     }
 
     return regels;
+  }
+
+  String _technischeKeuzeExtraWaarde({
+    required String hoeUitschrijven,
+    required String extraTekst,
+  }) {
+    final uitschrijftekst = hoeUitschrijven.trim();
+    final extra = extraTekst.trim();
+
+    if (extra.isEmpty || _zelfdeTechnischeTekst(extra, uitschrijftekst)) {
+      return '';
+    }
+
+    return extra;
+  }
+
+  bool _zelfdeTechnischeTekst(String eerste, String tweede) {
+    String normaliseer(String waarde) {
+      return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
+    }
+
+    final links = normaliseer(eerste);
+    final rechts = normaliseer(tweede);
+
+    return links.isNotEmpty && links == rechts;
   }
 
   List<T> _lijstVoorKader<T>({
@@ -710,17 +754,15 @@ class _OpmetingRaamOverzichtContext {
     return menu.zoekOptie(selectie.optieId) ?? menu.geenOptie;
   }
 
-  String _overzichtTekstVoorOptie({
+  String _overzichtTitelVoorOptie(OpmetingRaamKeuzeOptie optie) {
+    return optie.hoeUitschrijven;
+  }
+
+  String _overzichtExtraTekstVoorOptie({
     required OpmetingRaamKeuzeOptie optie,
     required OpmetingRaamKeuzeSelectie selectie,
   }) {
     final delen = <String>[];
-
-    if (optie.uitvoerTekst.trim().isNotEmpty) {
-      delen.add(optie.uitvoerTekst.trim());
-    } else if (optie.naam.trim().isNotEmpty) {
-      delen.add(optie.naam.trim());
-    }
 
     for (final veld in optie.extraVelden) {
       final waarde = selectie.extraWaarden[veld.id]?.toString().trim() ?? '';
@@ -729,10 +771,11 @@ class _OpmetingRaamOverzichtContext {
         continue;
       }
 
+      final label = veld.label.trim();
       final eenheid = veld.eenheid.trim().isEmpty
           ? ''
           : ' ${veld.eenheid.trim()}';
-      delen.add('${veld.label}: $waarde$eenheid');
+      delen.add(label.isEmpty ? '$waarde$eenheid' : '$label: $waarde$eenheid');
     }
 
     return delen.join('\n');

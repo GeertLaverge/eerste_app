@@ -1,9 +1,15 @@
+// THIMACO-CONTROLE: KLANTVELDEN-VISUEEL-ALLEMAAL-27PX-20260720
+// THIMACO-CONTROLE: COMPACTE-KLANTGEGEVENS-PROJECTKLEUR-ZONDER-ZWEVENDE-LABELS-20260720
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+// THIMACO-CONTROLE: KLANTVELDEN-ZELFDE-HOOGTE-EN-KAART-VOLLEDIG-BENUT-20260720
 
 import '../overzicht/opmeting_overzicht_model.dart';
 import 'opmeting_project_kleur_keuze_dialoog.dart';
 import 'opmeting_project_kleur_model.dart';
 import 'opmeting_project_titelhoofd_model.dart';
+import 'ral_classic_kleuren.dart';
 
 class OpmetingProjectTypeSamenvatting {
   const OpmetingProjectTypeSamenvatting({
@@ -68,8 +74,14 @@ class _OpmetingProjectTitelhoofdKaartState
   late final TextEditingController _emailController;
   late final TextEditingController _kleurBinnenController;
   late final TextEditingController _kleurBuitenController;
+  late final TextEditingController _ralKleurToebehorenController;
+  late final FocusNode _ralKleurToebehorenFocusNode;
   late final TextEditingController _kleurAfwijkingController;
-  late final TextEditingController _opmerkingController;
+  late final TextEditingController _kortingOmschrijvingController;
+  late final List<TextEditingController> _offerteJaarControllers;
+  late final List<TextEditingController> _klantnummerControllers;
+  late final List<TextEditingController> _offerteVolgnummerControllers;
+  late String _btwTarief;
 
   @override
   void initState() {
@@ -87,8 +99,23 @@ class _OpmetingProjectTitelhoofdKaartState
     _emailController = TextEditingController();
     _kleurBinnenController = TextEditingController();
     _kleurBuitenController = TextEditingController();
+    _ralKleurToebehorenController = TextEditingController();
+    _ralKleurToebehorenFocusNode = FocusNode();
     _kleurAfwijkingController = TextEditingController();
-    _opmerkingController = TextEditingController();
+    _kortingOmschrijvingController = TextEditingController();
+    _offerteJaarControllers = List<TextEditingController>.generate(
+      2,
+      (_) => TextEditingController(),
+    );
+    _klantnummerControllers = List<TextEditingController>.generate(
+      4,
+      (_) => TextEditingController(),
+    );
+    _offerteVolgnummerControllers = List<TextEditingController>.generate(
+      2,
+      (_) => TextEditingController(),
+    );
+    _btwTarief = OpmetingProjectTitelhoofd.standaardBtwTarief;
 
     _zetControllers(widget.titelhoofd);
   }
@@ -114,8 +141,18 @@ class _OpmetingProjectTitelhoofdKaartState
     _emailController.dispose();
     _kleurBinnenController.dispose();
     _kleurBuitenController.dispose();
+    _ralKleurToebehorenController.dispose();
+    _ralKleurToebehorenFocusNode.dispose();
     _kleurAfwijkingController.dispose();
-    _opmerkingController.dispose();
+    _kortingOmschrijvingController.dispose();
+
+    for (final controller in <TextEditingController>[
+      ..._offerteJaarControllers,
+      ..._klantnummerControllers,
+      ..._offerteVolgnummerControllers,
+    ]) {
+      controller.dispose();
+    }
 
     super.dispose();
   }
@@ -133,8 +170,50 @@ class _OpmetingProjectTitelhoofdKaartState
     _zetControllerTekst(_emailController, titelhoofd.email);
     _zetControllerTekst(_kleurBinnenController, titelhoofd.projectKleurBinnen);
     _zetControllerTekst(_kleurBuitenController, titelhoofd.projectKleurBuiten);
+    _zetControllerTekst(
+      _ralKleurToebehorenController,
+      titelhoofd.ralKleurToebehoren,
+    );
     _zetControllerTekst(_kleurAfwijkingController, titelhoofd.kleurAfwijking);
-    _zetControllerTekst(_opmerkingController, titelhoofd.opmerking);
+    _zetControllerTekst(
+      _kortingOmschrijvingController,
+      titelhoofd.kortingOmschrijving,
+    );
+
+    _btwTarief =
+        OpmetingProjectTitelhoofd.btwTarieven.contains(titelhoofd.btwTarief)
+        ? titelhoofd.btwTarief
+        : OpmetingProjectTitelhoofd.standaardBtwTarief;
+
+    _zetCijferControllers(
+      _offerteJaarControllers,
+      titelhoofd.offerteJaar,
+      standaardWaarde: OpmetingProjectTitelhoofd.standaardOfferteJaar,
+    );
+    _zetCijferControllers(_klantnummerControllers, titelhoofd.klantnummer);
+    _zetCijferControllers(
+      _offerteVolgnummerControllers,
+      titelhoofd.offerteVolgnummer,
+      standaardWaarde: OpmetingProjectTitelhoofd.standaardOfferteVolgnummer,
+    );
+  }
+
+  void _zetCijferControllers(
+    List<TextEditingController> controllers,
+    String waarde, {
+    String standaardWaarde = '',
+  }) {
+    final cijfers = waarde.replaceAll(RegExp(r'\D'), '');
+    final bron = cijfers.isEmpty ? standaardWaarde : cijfers;
+
+    for (var index = 0; index < controllers.length; index++) {
+      final cijfer = index < bron.length ? bron[index] : '';
+      _zetControllerTekst(controllers[index], cijfer);
+    }
+  }
+
+  String _combineerCijfers(List<TextEditingController> controllers) {
+    return controllers.map((controller) => controller.text).join();
   }
 
   void _zetControllerTekst(TextEditingController controller, String tekst) {
@@ -148,9 +227,12 @@ class _OpmetingProjectTitelhoofdKaartState
     );
   }
 
-  void _meldWijziging() {
+  void _meldWijziging({
+    bool? berekenPrijzen,
+    bool? buitenkleurGelijkAanToebehoren,
+  }) {
     widget.onTitelhoofdGewijzigd(
-      OpmetingProjectTitelhoofd(
+      widget.titelhoofd.copyWith(
         klantNaam: _klantNaamController.text,
         contactpersoon: _contactpersoonController.text,
         adres: _adresController.text,
@@ -163,8 +245,19 @@ class _OpmetingProjectTitelhoofdKaartState
         email: _emailController.text,
         projectKleurBinnen: _kleurBinnenController.text,
         projectKleurBuiten: _kleurBuitenController.text,
+        ralKleurToebehoren: _ralKleurToebehorenController.text,
+        buitenkleurGelijkAanToebehoren:
+            buitenkleurGelijkAanToebehoren ??
+            widget.titelhoofd.buitenkleurGelijkAanToebehoren,
         kleurAfwijking: _kleurAfwijkingController.text,
-        opmerking: _opmerkingController.text,
+        btwTarief: _btwTarief,
+        offerteJaar: _combineerCijfers(_offerteJaarControllers),
+        klantnummer: _combineerCijfers(_klantnummerControllers),
+        offerteVolgnummer: _combineerCijfers(_offerteVolgnummerControllers),
+        kortingOmschrijving: _kortingOmschrijvingController.text.trim().isEmpty
+            ? OpmetingProjectTitelhoofd.standaardKortingOmschrijving
+            : _kortingOmschrijvingController.text.trim(),
+        berekenPrijzen: berekenPrijzen ?? widget.titelhoofd.berekenPrijzen,
       ),
     );
   }
@@ -173,8 +266,8 @@ class _OpmetingProjectTitelhoofdKaartState
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final breed = constraints.maxWidth >= 980;
-        const kaartHoogte = 258.0;
+        final breed = constraints.maxWidth >= 1050;
+        const kaartHoogte = 276.0;
 
         if (breed) {
           return SizedBox(
@@ -182,11 +275,13 @@ class _OpmetingProjectTitelhoofdKaartState
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(flex: 11, child: _bouwKlantKaart()),
-                const SizedBox(width: 12),
-                Expanded(flex: 10, child: _bouwProjectKleurKaart()),
-                const SizedBox(width: 12),
-                Expanded(flex: 10, child: _bouwInhoudKaart()),
+                Expanded(flex: 10, child: _bouwKlantKaart()),
+                const SizedBox(width: 10),
+                Expanded(flex: 8, child: _bouwProjectKleurKaart()),
+                const SizedBox(width: 10),
+                Expanded(flex: 8, child: _bouwInhoudKaart()),
+                const SizedBox(width: 10),
+                Expanded(flex: 7, child: _bouwOfferteInstellingenKaart()),
               ],
             ),
           );
@@ -200,6 +295,11 @@ class _OpmetingProjectTitelhoofdKaartState
             SizedBox(height: kaartHoogte, child: _bouwProjectKleurKaart()),
             const SizedBox(height: 10),
             SizedBox(height: kaartHoogte, child: _bouwInhoudKaart()),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: kaartHoogte,
+              child: _bouwOfferteInstellingenKaart(),
+            ),
           ],
         );
       },
@@ -207,141 +307,142 @@ class _OpmetingProjectTitelhoofdKaartState
   }
 
   Widget _bouwKlantKaart() {
+    const klantVeldHoogte = 27.0;
+
     return _basisKaart(
       titel: 'Klantgegevens',
       icoon: Icons.person_outline_rounded,
-      kind: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _bouwVeld(
-                    controller: _klantNaamController,
-                    label: 'Klantnaam',
-                    icoon: Icons.badge_outlined,
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 42,
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onKlantLaden,
-                    icon: const Icon(Icons.event_available_outlined, size: 16),
-                    label: const Text('Klant laden'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _groen,
-                      side: const BorderSide(color: _groen),
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 9),
-                      textStyle: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+      actie: SizedBox(
+        height: 28,
+        child: OutlinedButton.icon(
+          onPressed: widget.onKlantLaden,
+          icon: const Icon(Icons.event_available_outlined, size: 13),
+          label: const Text('Klant laden'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _groen,
+            side: const BorderSide(color: _groen),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: const VisualDensity(horizontal: -3, vertical: -4),
+            padding: const EdgeInsets.symmetric(horizontal: 7),
+            textStyle: const TextStyle(
+              fontSize: 10.25,
+              fontWeight: FontWeight.w900,
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: _bouwVeld(
-                    controller: _adresController,
-                    label: 'Straat',
-                    icoon: Icons.location_on_outlined,
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _bouwVeld(
-                    controller: _huisnummerController,
-                    label: 'Huisnr.',
-                    keyboardType: TextInputType.streetAddress,
-                    textCapitalization: TextCapitalization.characters,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _bouwVeld(
-                    controller: _busNummerController,
-                    label: 'Bus',
-                    keyboardType: TextInputType.streetAddress,
-                    textCapitalization: TextCapitalization.characters,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: _bouwVeld(
-                    controller: _postcodeController,
-                    label: 'Postcode',
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 3,
-                  child: _bouwVeld(
-                    controller: _gemeenteController,
-                    label: 'Gemeente',
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 4,
-                  child: _bouwVeld(
-                    controller: _contactpersoonController,
-                    label: 'Contactpersoon',
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _bouwVeld(
-                    controller: _gsmController,
-                    label: 'Gsm',
-                    icoon: Icons.phone_iphone_outlined,
-                    keyboardType: TextInputType.phone,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _bouwVeld(
-                    controller: _telefoonController,
-                    label: 'Telefoon',
-                    keyboardType: TextInputType.phone,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            _bouwVeld(
-              controller: _emailController,
-              label: 'E-mail',
-              icoon: Icons.mail_outline_rounded,
-              keyboardType: TextInputType.emailAddress,
-              textCapitalization: TextCapitalization.none,
-            ),
-          ],
+          ),
         ),
+      ),
+      kind: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _bouwVeld(
+            controller: _klantNaamController,
+            label: 'Klantnaam',
+            icoon: Icons.badge_outlined,
+            textCapitalization: TextCapitalization.words,
+            extraCompact: true,
+            vasteHoogte: klantVeldHoogte,
+          ),
+          _bouwVeld(
+            controller: _contactpersoonController,
+            label: 'Contactpersoon',
+            textCapitalization: TextCapitalization.words,
+            extraCompact: true,
+            vasteHoogte: klantVeldHoogte,
+          ),
+          _bouwVeld(
+            controller: _adresController,
+            label: 'Straat',
+            icoon: Icons.location_on_outlined,
+            textCapitalization: TextCapitalization.words,
+            extraCompact: true,
+            vasteHoogte: klantVeldHoogte,
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _bouwVeld(
+                  controller: _huisnummerController,
+                  label: 'Huisnr.',
+                  keyboardType: TextInputType.streetAddress,
+                  textCapitalization: TextCapitalization.characters,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: _bouwVeld(
+                  controller: _busNummerController,
+                  label: 'Bus',
+                  keyboardType: TextInputType.streetAddress,
+                  textCapitalization: TextCapitalization.characters,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: _bouwVeld(
+                  controller: _postcodeController,
+                  label: 'Postcode',
+                  keyboardType: TextInputType.number,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                flex: 3,
+                child: _bouwVeld(
+                  controller: _gemeenteController,
+                  label: 'Gemeente',
+                  textCapitalization: TextCapitalization.words,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _bouwVeld(
+                  controller: _gsmController,
+                  label: 'Gsm',
+                  icoon: Icons.phone_iphone_outlined,
+                  keyboardType: TextInputType.phone,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: _bouwVeld(
+                  controller: _telefoonController,
+                  label: 'Telefoon',
+                  keyboardType: TextInputType.phone,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+            ],
+          ),
+          _bouwVeld(
+            controller: _emailController,
+            label: 'E-mail',
+            icoon: Icons.mail_outline_rounded,
+            keyboardType: TextInputType.emailAddress,
+            textCapitalization: TextCapitalization.none,
+            extraCompact: true,
+            vasteHoogte: klantVeldHoogte,
+          ),
+        ],
       ),
     );
   }
@@ -355,30 +456,55 @@ class _OpmetingProjectTitelhoofdKaartState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _bouwKleurVeld(
-                    controller: _kleurBinnenController,
-                    label: 'Binnenkleur',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _bouwKleurVeld(
-                    controller: _kleurBuitenController,
-                    label: 'Buitenkleur',
-                  ),
-                ),
-              ],
+            _bouwKleurVeld(
+              controller: _kleurBinnenController,
+              label: 'Binnenkleur',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 5),
+            _bouwKleurVeld(
+              controller: _kleurBuitenController,
+              label: 'Buitenkleur',
+              onChanged: _verwerkBuitenkleurGewijzigd,
+            ),
+            const SizedBox(height: 5),
+            _bouwRalKleurToebehorenVeld(),
+            CheckboxListTile(
+              value: widget.titelhoofd.buitenkleurGelijkAanToebehoren,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: _groen,
+              title: const Text(
+                'Buitenkleur gelijk aan toebehoren',
+                style: TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              onChanged: (waarde) {
+                final gekoppeld = waarde ?? false;
+                if (gekoppeld) {
+                  final kleur = _kleurBuitenController.text.trim().isNotEmpty
+                      ? _kleurBuitenController.text
+                      : _ralKleurToebehorenController.text;
+                  _zetControllerTekst(_kleurBuitenController, kleur);
+                  _zetControllerTekst(_ralKleurToebehorenController, kleur);
+                }
+                setState(() {});
+                _meldWijziging(buitenkleurGelijkAanToebehoren: gekoppeld);
+              },
+            ),
+            const SizedBox(height: 1),
             _bouwVeld(
               controller: _kleurAfwijkingController,
               label: 'Afwijkende posities',
               icoon: Icons.warning_amber_rounded,
-              maxLines: 3,
-              hint: 'bv. Pos 4 voordeur eik motief',
+              minLines: 1,
+              maxLines: null,
+              keyboardType: TextInputType.multiline,
+              hint: 'bv. Pos 4: voordeur eik motief',
               achtergrondKleur: _kleurAfwijkingController.text.trim().isEmpty
                   ? const Color(0xFFF9FAFB)
                   : _oranjeLicht,
@@ -389,15 +515,268 @@ class _OpmetingProjectTitelhoofdKaartState
                   ? _tekstGrijs
                   : _oranje,
             ),
-            const SizedBox(height: 8),
-            _bouwVeld(
-              controller: _opmerkingController,
-              label: 'Opmerking',
-              icoon: Icons.notes_outlined,
-              maxLines: 2,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwOfferteInstellingenKaart() {
+    return _basisKaart(
+      titel: 'Offerte-instellingen',
+      icoon: Icons.receipt_long_outlined,
+      titelFontSize: 12.5,
+      kind: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: _bouwBtwEnOffertenummer(),
+      ),
+    );
+  }
+
+  Widget _bouwBtwEnOffertenummer() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CheckboxListTile(
+          value: widget.titelhoofd.berekenPrijzen,
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          visualDensity: VisualDensity.compact,
+          controlAffinity: ListTileControlAffinity.leading,
+          activeColor: _groen,
+          title: const Text(
+            'Berekenen',
+            style: TextStyle(
+              color: _tekstDonker,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          subtitle: const Text(
+            'Offerteprijzen en totalen berekenen',
+            style: TextStyle(
+              color: _tekstGrijs,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onChanged: (waarde) {
+            _meldWijziging(berekenPrijzen: waarde ?? false);
+          },
+        ),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: 122,
+          child: DropdownButtonFormField<String>(
+            value: _btwTarief,
+            isExpanded: true,
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
+            style: const TextStyle(
+              color: _tekstDonker,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w900,
+            ),
+            decoration: InputDecoration(
+              labelText: 'BTW tarief',
+              isDense: true,
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              contentPadding: const EdgeInsets.fromLTRB(9, 7, 5, 7),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: _rand),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: _rand),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: _groen, width: 1.4),
+              ),
+              floatingLabelStyle: const TextStyle(
+                color: _groen,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            items: OpmetingProjectTitelhoofd.btwTarieven
+                .map((tarief) {
+                  return DropdownMenuItem<String>(
+                    value: tarief,
+                    child: Text(
+                      tarief,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                })
+                .toList(growable: false),
+            onChanged: (waarde) {
+              if (waarde == null) {
+                return;
+              }
+
+              setState(() {
+                _btwTarief = waarde;
+              });
+              _meldWijziging();
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+        _bouwOffertenummerInvoer(),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _kortingOmschrijvingController,
+          maxLines: 2,
+          minLines: 1,
+          textCapitalization: TextCapitalization.sentences,
+          style: const TextStyle(
+            color: _tekstDonker,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+          ),
+          decoration: InputDecoration(
+            labelText: 'Tekst korting op offerte',
+            hintText: 'Korting',
+            helperText: 'bv. Korting geldig tot 20/07/2026',
+            helperMaxLines: 2,
+            isDense: true,
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            contentPadding: const EdgeInsets.fromLTRB(9, 9, 9, 9),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _rand),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _rand),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _groen, width: 1.4),
+            ),
+            floatingLabelStyle: const TextStyle(
+              color: _groen,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          onChanged: (_) => _meldWijziging(),
+        ),
+      ],
+    );
+  }
+
+  Widget _bouwOffertenummerInvoer() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Offertenummer',
+          style: TextStyle(
+            color: _tekstGrijs,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            _bouwCijferGroep(
+              label: 'jaar',
+              controllers: _offerteJaarControllers,
+            ),
+            const SizedBox(width: 4),
+            _bouwCijferGroep(
+              label: 'klantnr.',
+              controllers: _klantnummerControllers,
+            ),
+            const SizedBox(width: 4),
+            _bouwCijferGroep(
+              label: 'volgnr.',
+              controllers: _offerteVolgnummerControllers,
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _bouwCijferGroep({
+    required String label,
+    required List<TextEditingController> controllers,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: _tekstGrijs,
+            fontSize: 8,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 1),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(controllers.length, (index) {
+            return Padding(
+              padding: EdgeInsets.only(
+                right: index == controllers.length - 1 ? 0 : 2,
+              ),
+              child: _bouwCijferVak(controllers[index]),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _bouwCijferVak(TextEditingController controller) {
+    return SizedBox(
+      width: 20,
+      height: 29,
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        maxLines: 1,
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(1),
+        ],
+        style: const TextStyle(
+          color: _tekstDonker,
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFF9FAFB),
+          counterText: '',
+          contentPadding: EdgeInsets.zero,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(5),
+            borderSide: const BorderSide(color: _groen, width: 1.4),
+          ),
+        ),
+        onChanged: (_) {
+          _meldWijziging();
+        },
       ),
     );
   }
@@ -438,9 +817,11 @@ class _OpmetingProjectTitelhoofdKaartState
     required String titel,
     required IconData icoon,
     required Widget kind,
+    Widget? actie,
+    double titelFontSize = 14,
   }) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
       decoration: BoxDecoration(
         color: _achtergrondKaart,
         borderRadius: BorderRadius.circular(18),
@@ -459,30 +840,31 @@ class _OpmetingProjectTitelhoofdKaartState
           Row(
             children: [
               Container(
-                width: 30,
-                height: 30,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
                   color: _lichtGroen,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icoon, color: _groen, size: 18),
+                child: Icon(icoon, color: _groen, size: 17),
               ),
-              const SizedBox(width: 9),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   titel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: _tekstDonker,
-                    fontSize: 15,
+                    fontSize: titelFontSize,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
+              if (actie != null) ...[const SizedBox(width: 6), actie],
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Expanded(child: kind),
         ],
       ),
@@ -493,55 +875,83 @@ class _OpmetingProjectTitelhoofdKaartState
     required TextEditingController controller,
     required String label,
     IconData? icoon,
-    int maxLines = 1,
+    int? maxLines = 1,
+    int? minLines,
     String? hint,
     TextInputType? keyboardType,
     TextCapitalization textCapitalization = TextCapitalization.sentences,
     Color? achtergrondKleur,
     Color? randKleur,
     Color? icoonKleur,
+    bool extraCompact = false,
+    double? vasteHoogte,
   }) {
-    return TextField(
+    final heeftVasteHoogte = vasteHoogte != null;
+
+    final veld = TextField(
       controller: controller,
-      maxLines: maxLines,
-      minLines: maxLines,
+      maxLines: heeftVasteHoogte ? null : maxLines,
+      minLines: heeftVasteHoogte
+          ? null
+          : minLines ?? (maxLines == null ? 1 : maxLines),
+      expands: heeftVasteHoogte,
       keyboardType: keyboardType,
       textCapitalization: textCapitalization,
-      style: const TextStyle(
+      textAlignVertical: heeftVasteHoogte ? TextAlignVertical.center : null,
+      strutStyle: heeftVasteHoogte
+          ? const StrutStyle(
+              fontSize: 10.5,
+              height: 1.0,
+              forceStrutHeight: true,
+            )
+          : null,
+      style: TextStyle(
         color: _tekstDonker,
-        fontSize: 12.5,
-        fontWeight: FontWeight.w800,
-        height: 1.2,
+        fontSize: extraCompact ? 10.5 : 11.25,
+        fontWeight: FontWeight.w700,
+        height: extraCompact ? 1.0 : 1.1,
       ),
       decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
+        hintText: hint == null ? label : '$label · $hint',
+        hintStyle: const TextStyle(
+          color: _tekstGrijs,
+          fontSize: 10.75,
+          fontWeight: FontWeight.w600,
+          height: 1.0,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+        constraints: heeftVasteHoogte
+            ? BoxConstraints.tightFor(height: vasteHoogte)
+            : null,
         isDense: true,
         filled: true,
         fillColor: achtergrondKleur ?? const Color(0xFFF9FAFB),
         prefixIcon: icoon == null
             ? null
-            : Icon(icoon, color: icoonKleur ?? _tekstGrijs, size: 17),
-        prefixIconConstraints: const BoxConstraints(
-          minWidth: 34,
-          minHeight: 34,
+            : Icon(
+                icoon,
+                color: icoonKleur ?? _tekstGrijs,
+                size: extraCompact ? 14 : 15,
+              ),
+        prefixIconConstraints: BoxConstraints.tightFor(
+          width: icoon == null ? 0 : (extraCompact ? 27 : 30),
+          height: heeftVasteHoogte ? vasteHoogte : (extraCompact ? 27 : 30),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: extraCompact ? 7 : 8,
+          vertical: heeftVasteHoogte ? 0 : (extraCompact ? 3 : 5),
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(extraCompact ? 8 : 9),
           borderSide: BorderSide(color: randKleur ?? _rand),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(extraCompact ? 8 : 9),
           borderSide: BorderSide(color: randKleur ?? _rand),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(extraCompact ? 8 : 9),
           borderSide: const BorderSide(color: _groen, width: 1.4),
-        ),
-        floatingLabelStyle: const TextStyle(
-          color: _groen,
-          fontWeight: FontWeight.w900,
         ),
       ),
       onChanged: (_) {
@@ -549,11 +959,156 @@ class _OpmetingProjectTitelhoofdKaartState
         _meldWijziging();
       },
     );
+
+    if (!heeftVasteHoogte) {
+      return veld;
+    }
+
+    return SizedBox(
+      height: vasteHoogte,
+      child: SizedBox.expand(child: veld),
+    );
+  }
+
+  Widget _bouwRalKleurToebehorenVeld() {
+    return RawAutocomplete<String>(
+      textEditingController: _ralKleurToebehorenController,
+      focusNode: _ralKleurToebehorenFocusNode,
+      displayStringForOption: (optie) => optie,
+      optionsBuilder: (waarde) {
+        return RalClassicKleuren.zoek(waarde.text);
+      },
+      onSelected: (waarde) {
+        _ralKleurToebehorenController.value = TextEditingValue(
+          text: waarde,
+          selection: TextSelection.collapsed(offset: waarde.length),
+        );
+        setState(() {});
+        _verwerkToebehorenKleurGewijzigd(waarde);
+      },
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        final tekst = controller.text.trim();
+        return TextField(
+          controller: controller,
+          focusNode: focusNode,
+          style: const TextStyle(
+            color: _tekstDonker,
+            fontSize: 10.75,
+            fontWeight: FontWeight.w900,
+          ),
+          decoration: InputDecoration(
+            hintText: 'RAL-kleur toebehoren',
+            hintStyle: const TextStyle(
+              color: _tekstGrijs,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
+            floatingLabelBehavior: FloatingLabelBehavior.never,
+            isDense: true,
+            filled: true,
+            fillColor: const Color(0xFFF9FAFB),
+            prefixIcon: Padding(
+              padding: const EdgeInsets.all(7),
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: _kleurSwatchVoorTekst(tekst),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: const Color(0xFF9CA3AF)),
+                ),
+              ),
+            ),
+            prefixIconConstraints: const BoxConstraints(
+              minWidth: 30,
+              minHeight: 30,
+            ),
+            suffixIcon: IconButton(
+              tooltip: 'RAL-kleuren tonen',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
+              onPressed: () {
+                focusNode.requestFocus();
+                controller.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: controller.text.length,
+                );
+              },
+            ),
+            suffixIconConstraints: const BoxConstraints(
+              minWidth: 30,
+              minHeight: 30,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 5,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _rand),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _rand),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(9),
+              borderSide: const BorderSide(color: _groen, width: 1.4),
+            ),
+          ),
+          onChanged: (waarde) {
+            setState(() {});
+            _verwerkToebehorenKleurGewijzigd(waarde);
+          },
+          onSubmitted: (_) => onFieldSubmitted(),
+        );
+      },
+      optionsViewBuilder: (context, onSelected, opties) {
+        final lijst = opties.toList(growable: false);
+        if (lijst.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(12),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 360, maxHeight: 280),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                shrinkWrap: true,
+                itemCount: lijst.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final optie = lijst[index];
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      optie,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    onTap: () => onSelected(optie),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _bouwKleurVeld({
     required TextEditingController controller,
     required String label,
+    ValueChanged<String>? onChanged,
   }) {
     final tekst = controller.text.trim();
 
@@ -561,19 +1116,25 @@ class _OpmetingProjectTitelhoofdKaartState
       controller: controller,
       style: const TextStyle(
         color: _tekstDonker,
-        fontSize: 12.5,
+        fontSize: 10.75,
         fontWeight: FontWeight.w900,
       ),
       decoration: InputDecoration(
-        labelText: label,
+        hintText: label,
+        hintStyle: const TextStyle(
+          color: _tekstGrijs,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+        ),
+        floatingLabelBehavior: FloatingLabelBehavior.never,
         isDense: true,
         filled: true,
         fillColor: const Color(0xFFF9FAFB),
         prefixIcon: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(7),
           child: Container(
-            width: 14,
-            height: 14,
+            width: 12,
+            height: 12,
             decoration: BoxDecoration(
               color: _kleurSwatchVoorTekst(tekst),
               borderRadius: BorderRadius.circular(3),
@@ -582,12 +1143,14 @@ class _OpmetingProjectTitelhoofdKaartState
           ),
         ),
         prefixIconConstraints: const BoxConstraints(
-          minWidth: 34,
-          minHeight: 34,
+          minWidth: 30,
+          minHeight: 30,
         ),
         suffixIcon: IconButton(
           tooltip: 'Kleur kiezen',
-          icon: const Icon(Icons.keyboard_arrow_down_rounded),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
           onPressed: () async {
             final waarde = await toonOpmetingProjectKleurKeuzeDialoog(
               context: context,
@@ -605,32 +1168,54 @@ class _OpmetingProjectTitelhoofdKaartState
                 offset: controller.text.length,
               );
             });
-            _meldWijziging();
+            if (onChanged != null) {
+              onChanged(waarde);
+            } else {
+              _meldWijziging();
+            }
           },
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+        suffixIconConstraints: const BoxConstraints(
+          minWidth: 30,
+          minHeight: 30,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(9),
           borderSide: const BorderSide(color: _rand),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(9),
           borderSide: const BorderSide(color: _rand),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(11),
+          borderRadius: BorderRadius.circular(9),
           borderSide: const BorderSide(color: _groen, width: 1.4),
         ),
-        floatingLabelStyle: const TextStyle(
-          color: _groen,
-          fontWeight: FontWeight.w900,
-        ),
       ),
-      onChanged: (_) {
+      onChanged: (waarde) {
         setState(() {});
-        _meldWijziging();
+        if (onChanged != null) {
+          onChanged(waarde);
+        } else {
+          _meldWijziging();
+        }
       },
     );
+  }
+
+  void _verwerkBuitenkleurGewijzigd(String waarde) {
+    if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
+      _zetControllerTekst(_ralKleurToebehorenController, waarde);
+    }
+    _meldWijziging();
+  }
+
+  void _verwerkToebehorenKleurGewijzigd(String waarde) {
+    if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
+      _zetControllerTekst(_kleurBuitenController, waarde);
+    }
+    _meldWijziging();
   }
 
   Widget _inhoudRegel(OpmetingProjectTypeSamenvatting item) {

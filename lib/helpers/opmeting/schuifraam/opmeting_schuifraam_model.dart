@@ -34,7 +34,13 @@ extension OpmetingSchuifraamTypeInfo on OpmetingSchuifraamType {
   }
 }
 
-enum OpmetingSchuifraamSysteem { s150, ct70Hefschuif, xmovePvcLi82 }
+enum OpmetingSchuifraamSysteem {
+  s150,
+  ct70Hefschuif,
+  xmovePvcLi82,
+  hefSchuifVgVleugelBinnenzijde,
+  hefSchuifUgVleugelBinnenzijde,
+}
 
 extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
   String get label {
@@ -45,7 +51,16 @@ extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
         return 'S150';
       case OpmetingSchuifraamSysteem.xmovePvcLi82:
         return 'XMove PVC LI82';
+      case OpmetingSchuifraamSysteem.hefSchuifVgVleugelBinnenzijde:
+        return 'Hefschuif VG vleugel binnenzijde';
+      case OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde:
+        return 'Hefschuif UG vleugel binnenzijde';
     }
+  }
+
+  bool get isAluminiumSysteem {
+    return this == OpmetingSchuifraamSysteem.hefSchuifVgVleugelBinnenzijde ||
+        this == OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde;
   }
 
   OpmetingSchuifraamType get verplichtType {
@@ -54,12 +69,42 @@ extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
       case OpmetingSchuifraamSysteem.s150:
         return OpmetingSchuifraamType.duo;
       case OpmetingSchuifraamSysteem.xmovePvcLi82:
+      case OpmetingSchuifraamSysteem.hefSchuifVgVleugelBinnenzijde:
+      case OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde:
         return OpmetingSchuifraamType.mono;
     }
   }
 
   bool ondersteuntType(OpmetingSchuifraamType type) {
     return verplichtType == type;
+  }
+
+  bool pastBijFormulier(String formulierType) {
+    final genormaliseerd = formulierType.trim().toLowerCase();
+    final isAlu =
+        genormaliseerd == 'aluschuifraam' ||
+        genormaliseerd == 'alu_schuifraam' ||
+        genormaliseerd == 'alu schuifraam';
+
+    return isAlu ? isAluminiumSysteem : !isAluminiumSysteem;
+  }
+
+  static List<OpmetingSchuifraamSysteem> voorFormulier(String formulierType) {
+    return OpmetingSchuifraamSysteem.values
+        .where((systeem) => systeem.pastBijFormulier(formulierType))
+        .toList(growable: false);
+  }
+
+  static OpmetingSchuifraamSysteem standaardVoorFormulier(
+    String formulierType,
+  ) {
+    final beschikbareSystemen = voorFormulier(formulierType);
+
+    if (beschikbareSystemen.isNotEmpty) {
+      return beschikbareSystemen.first;
+    }
+
+    return OpmetingSchuifraamSysteem.s150;
   }
 
   static OpmetingSchuifraamSysteem vanOpslagWaarde(
@@ -185,6 +230,19 @@ class OpmetingSchuifraamSamenstelling {
     this.onderkantVloerpasMm,
   });
 
+  factory OpmetingSchuifraamSamenstelling.standaardVoorFormulier(
+    String formulierType,
+  ) {
+    final systeem = OpmetingSchuifraamSysteemInfo.standaardVoorFormulier(
+      formulierType,
+    );
+
+    return OpmetingSchuifraamSamenstelling(
+      systeem: systeem,
+      type: systeem.verplichtType,
+    );
+  }
+
   final OpmetingSchuifraamSysteem systeem;
   final OpmetingSchuifraamType type;
   final List<OpmetingSchuifraamVakType> vakken;
@@ -214,8 +272,72 @@ class OpmetingSchuifraamSamenstelling {
 
   String get opbouwTekst => vakken.map((vak) => vak.label).join('-');
 
+  String get schuifrichtingTekst {
+    final richtingen = <int>{};
+
+    for (var index = 0; index < vakken.length; index++) {
+      if (vakken[index] != OpmetingSchuifraamVakType.schuif) {
+        continue;
+      }
+
+      richtingen.add(_pijlRichtingVoorVak(index));
+    }
+
+    if (richtingen.isEmpty) {
+      return '';
+    }
+
+    if (richtingen.length > 1) {
+      return 'Schuifrichtingen links en rechts';
+    }
+
+    return richtingen.first < 0
+        ? 'Schuifrichting links'
+        : 'Schuifrichting rechts';
+  }
+
+  int _pijlRichtingVoorVak(int index) {
+    var afstandLinks = 999;
+    var afstandRechts = 999;
+
+    for (var linksIndex = index - 1; linksIndex >= 0; linksIndex--) {
+      if (vakken[linksIndex] == OpmetingSchuifraamVakType.vast) {
+        afstandLinks = index - linksIndex;
+        break;
+      }
+    }
+
+    for (
+      var rechtsIndex = index + 1;
+      rechtsIndex < vakken.length;
+      rechtsIndex++
+    ) {
+      if (vakken[rechtsIndex] == OpmetingSchuifraamVakType.vast) {
+        afstandRechts = rechtsIndex - index;
+        break;
+      }
+    }
+
+    if (afstandLinks < afstandRechts) {
+      return -1;
+    }
+
+    if (afstandRechts < afstandLinks) {
+      return 1;
+    }
+
+    return index < vakken.length / 2 ? -1 : 1;
+  }
+
   String get samenvatting {
-    return '${systeem.label} ${type.korteLabel} ($opbouwTekst)';
+    final basis = '${systeem.label} ${type.korteLabel} ($opbouwTekst)';
+
+    if (!systeem.isAluminiumSysteem) {
+      return basis;
+    }
+
+    final richting = schuifrichtingTekst;
+    return richting.isEmpty ? basis : '$basis · $richting';
   }
 
   List<double> get genormaliseerdeBreedtes {

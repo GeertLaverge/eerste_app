@@ -22,6 +22,7 @@ class OpmetingSchuifraamSamenstellingResultaat {
 Future<OpmetingSchuifraamSamenstellingResultaat?>
 toonOpmetingSchuifraamSamenstellingDialog({
   required BuildContext context,
+  required String formulierType,
   required int breedteMm,
   required int hoogteMm,
   OpmetingSchuifraamSamenstelling? bestaandeSamenstelling,
@@ -76,6 +77,7 @@ toonOpmetingSchuifraamSamenstellingDialog({
           ),
         ),
         child: _OpmetingSchuifraamSamenstellingDialog(
+          formulierType: formulierType,
           bestaandeSamenstelling: bestaandeSamenstelling,
           breedteMm: breedteMm,
           hoogteMm: hoogteMm,
@@ -115,11 +117,13 @@ extension _SchuifraamBreedteKeuzeInfo on _SchuifraamBreedteKeuze {
 
 class _OpmetingSchuifraamSamenstellingDialog extends StatefulWidget {
   const _OpmetingSchuifraamSamenstellingDialog({
+    required this.formulierType,
     required this.bestaandeSamenstelling,
     required this.breedteMm,
     required this.hoogteMm,
   });
 
+  final String formulierType;
   final OpmetingSchuifraamSamenstelling? bestaandeSamenstelling;
   final int breedteMm;
   final int hoogteMm;
@@ -138,6 +142,7 @@ class _OpmetingSchuifraamSamenstellingDialogState
   static const Color _achtergrond = Color(0xFFF9FAFB);
   static const Color _rood = Color(0xFFDC2626);
 
+  late final List<OpmetingSchuifraamSysteem> _beschikbareSystemen;
   late OpmetingSchuifraamSysteem _systeem;
   late OpmetingSchuifraamType _type;
   late _SchuifraamBreedteKeuze _breedteKeuze;
@@ -157,11 +162,18 @@ class _OpmetingSchuifraamSamenstellingDialogState
   void initState() {
     super.initState();
 
-    final bestaand =
-        widget.bestaandeSamenstelling ??
-        const OpmetingSchuifraamSamenstelling();
+    _beschikbareSystemen = OpmetingSchuifraamSysteemInfo.voorFormulier(
+      widget.formulierType,
+    );
 
-    _systeem = bestaand.systeem;
+    final standaard = OpmetingSchuifraamSamenstelling.standaardVoorFormulier(
+      widget.formulierType,
+    );
+    final bestaand = widget.bestaandeSamenstelling ?? standaard;
+
+    _systeem = bestaand.systeem.pastBijFormulier(widget.formulierType)
+        ? bestaand.systeem
+        : standaard.systeem;
     _type = _systeem.verplichtType;
     _breedteKeuze = _bepaalBreedteKeuze(bestaand);
     _verschuivingController = TextEditingController(
@@ -203,7 +215,9 @@ class _OpmetingSchuifraamSamenstellingDialogState
     final opbouwen = List<OpmetingSchuifraamOpbouwType>.from(geladen);
     final bestaand =
         widget.bestaandeSamenstelling ??
-        const OpmetingSchuifraamSamenstelling();
+        OpmetingSchuifraamSamenstelling.standaardVoorFormulier(
+          widget.formulierType,
+        );
     final bestaandeSleutel = bestaand.vakken.map((vak) => vak.code).join();
 
     String? geselecteerdeId;
@@ -692,7 +706,7 @@ class _OpmetingSchuifraamSamenstellingDialogState
                   border: OutlineInputBorder(),
                   labelText: 'Systeem',
                 ),
-                items: OpmetingSchuifraamSysteem.values.map((systeem) {
+                items: _beschikbareSystemen.map((systeem) {
                   return DropdownMenuItem<OpmetingSchuifraamSysteem>(
                     value: systeem,
                     child: Text(systeem.label),
@@ -706,9 +720,8 @@ class _OpmetingSchuifraamSamenstellingDialogState
               ),
               const SizedBox(height: 8),
               Text(
-                _systeem == OpmetingSchuifraamSysteem.xmovePvcLi82
-                    ? 'Bij XMove PVC LI82 is alleen Mono beschikbaar.'
-                    : 'Bij ${_systeem.label} is alleen Duo beschikbaar.',
+                'Bij ${_systeem.label} is alleen '
+                '${_systeem.verplichtType.korteLabel} beschikbaar.',
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
               ),
               const SizedBox(height: 14),

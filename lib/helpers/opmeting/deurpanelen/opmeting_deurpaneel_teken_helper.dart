@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: DEURPANEEL-BLIJFT-BINNEN-VLEUGELKADER-20260722
 import 'package:flutter/material.dart';
 
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
@@ -72,6 +73,13 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
         continue;
       }
 
+      // Een deurpaneel hoort uitsluitend bij het kader waarin zijn
+      // deurvleugel staat. Deze clip is een laatste veiligheidsgrens voor
+      // oudere fiches en voorkomt dat een paneel ooit over een bovenlicht,
+      // zijlicht of ander gekoppeld kader kan tekenen.
+      canvas.save();
+      canvas.clipRect(weergave.buitenKader);
+
       _tekenPaneelAchtergrond(
         canvas: canvas,
         paneelVlak: paneelVlak,
@@ -98,6 +106,8 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
         paneelVlak: paneelVlak,
         toewijzing: toewijzing,
       );
+
+      canvas.restore();
     }
   }
 
@@ -156,9 +166,20 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
     );
 
     final resultaat = <_DeurpaneelVleugelWeergave>[];
+    final heeftDeurVleugelsPerKader = vleugelsPerKader.values.any(
+      (lijst) => lijst.any((vleugel) => vleugel.isDeurVleugel),
+    );
+    final fallbackKaderId = heeftDeurVleugelsPerKader
+        ? null
+        : _fallbackKaderIdVoorLosseVleugels(
+            size: size,
+            samenstelling: samenstelling,
+          );
 
     for (final kader in weergave.layout.kaders) {
-      final lokaleVleugels = vleugelsPerKader[kader.id];
+      final lokaleVleugels =
+          vleugelsPerKader[kader.id] ??
+          (fallbackKaderId == kader.id ? vleugels : null);
 
       if (lokaleVleugels == null || lokaleVleugels.isEmpty) {
         continue;
@@ -186,13 +207,21 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
           continue;
         }
 
-        final geschaaldeVleugel = lokaleVleugel.copyWith(
-          vlak: _schaalRectVanLokaalNaarKader(
-            rect: lokaleVleugel.vlak,
-            lokaalBuitenKader: lokaalBuitenKader,
-            kaderBuitenKader: kaderBuitenKader,
-          ),
+        final geschaaldVlak = _schaalRectVanLokaalNaarKader(
+          rect: lokaleVleugel.vlak,
+          lokaalBuitenKader: lokaalBuitenKader,
+          kaderBuitenKader: kaderBuitenKader,
         );
+        final begrensdVlak = _begrensRectBinnenKader(
+          rect: geschaaldVlak,
+          kader: kaderBuitenKader,
+        );
+
+        if (!OpmetingDeurpaneelGeometrieHelper.isGeldigVlak(begrensdVlak)) {
+          continue;
+        }
+
+        final geschaaldeVleugel = lokaleVleugel.copyWith(vlak: begrensdVlak);
 
         resultaat.add(
           _DeurpaneelVleugelWeergave(
@@ -206,6 +235,98 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
     }
 
     return List<_DeurpaneelVleugelWeergave>.unmodifiable(resultaat);
+  }
+
+  String? _fallbackKaderIdVoorLosseVleugels({
+    required Size size,
+    required OpmetingKaderSamenstelling samenstelling,
+  }) {
+    if (samenstelling.kaders.isEmpty) {
+      return null;
+    }
+
+    final deurVleugels = vleugels
+        .where((vleugel) => vleugel.isDeurVleugel)
+        .toList(growable: false);
+
+    if (deurVleugels.isEmpty) {
+      final actiefKaderId = samenstelling.actiefKaderId.trim();
+      final actiefBestaat = samenstelling.kaders.any(
+        (kader) => kader.id == actiefKaderId,
+      );
+      return actiefBestaat ? actiefKaderId : samenstelling.kaders.first.id;
+    }
+
+    var gecombineerdVlak = deurVleugels.first.vlak;
+    for (final vleugel in deurVleugels.skip(1)) {
+      gecombineerdVlak = gecombineerdVlak.expandToInclude(vleugel.vlak);
+    }
+
+    final vleugelOppervlakte = _oppervlakte(gecombineerdVlak);
+    String? besteKaderId;
+    var besteScore = -1.0;
+    var besteKaderOppervlakteMm = -1;
+
+    for (final kader in samenstelling.kaders) {
+      final lokaalBuitenKader = OpmetingRaamKaderHelper.buitenKader(
+        size: size,
+        breedteMm: kader.breedteMm,
+        hoogteMm: kader.hoogteMm,
+      );
+      final overlap = _overlapOppervlakte(gecombineerdVlak, lokaalBuitenKader);
+      final dekking = vleugelOppervlakte <= 0
+          ? 0.0
+          : overlap / vleugelOppervlakte;
+      final middenBonus =
+          lokaalBuitenKader.inflate(2).contains(gecombineerdVlak.center)
+          ? 1.0
+          : 0.0;
+      final score = dekking + middenBonus;
+      final kaderOppervlakteMm = kader.breedteMm * kader.hoogteMm;
+
+      if (score > besteScore ||
+          (score == besteScore &&
+              kaderOppervlakteMm > besteKaderOppervlakteMm)) {
+        besteScore = score;
+        besteKaderOppervlakteMm = kaderOppervlakteMm;
+        besteKaderId = kader.id;
+      }
+    }
+
+    return besteKaderId ?? samenstelling.kaders.first.id;
+  }
+
+  double _oppervlakte(Rect rect) {
+    if (rect.width <= 0 || rect.height <= 0) {
+      return 0;
+    }
+    return rect.width * rect.height;
+  }
+
+  double _overlapOppervlakte(Rect eerste, Rect tweede) {
+    final links = eerste.left > tweede.left ? eerste.left : tweede.left;
+    final boven = eerste.top > tweede.top ? eerste.top : tweede.top;
+    final rechts = eerste.right < tweede.right ? eerste.right : tweede.right;
+    final onder = eerste.bottom < tweede.bottom ? eerste.bottom : tweede.bottom;
+
+    if (rechts <= links || onder <= boven) {
+      return 0;
+    }
+
+    return (rechts - links) * (onder - boven);
+  }
+
+  Rect _begrensRectBinnenKader({required Rect rect, required Rect kader}) {
+    final links = rect.left.clamp(kader.left, kader.right).toDouble();
+    final boven = rect.top.clamp(kader.top, kader.bottom).toDouble();
+    final rechts = rect.right.clamp(kader.left, kader.right).toDouble();
+    final onder = rect.bottom.clamp(kader.top, kader.bottom).toDouble();
+
+    if (rechts <= links || onder <= boven) {
+      return Rect.zero;
+    }
+
+    return Rect.fromLTRB(links, boven, rechts, onder);
   }
 
   Rect _schaalRectVanLokaalNaarKader({

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: HOE-UITSCHRIJVEN-OPSLAG-COMPATIBEL-20260720
 enum OpmetingRaamTechnischeMaatKeuze { vasteMaat, volledigeRaammaat }
 
 extension OpmetingRaamTechnischeMaatKeuzeExtension
@@ -588,6 +589,17 @@ class OpmetingRaamKeuzeOptie {
   final String naam;
   final String uitvoerTekst;
   final bool isGeenKeuze;
+
+  /// Korte, universele tekst voor het overzicht, de offerte en prijsregels.
+  ///
+  /// Bestaande keuzes van vóór dit veld blijven bruikbaar: wanneer nog geen
+  /// aparte uitschrijftekst werd opgeslagen, wordt de naam van de keuze
+  /// gebruikt.
+  String get hoeUitschrijven {
+    final tekst = uitvoerTekst.trim();
+    return tekst.isNotEmpty ? tekst : naam.trim();
+  }
+
   final OpmetingRaamTekenfunctie tekenfunctie;
 
   final List<OpmetingRaamExtraVeldDefinitie> extraVelden;
@@ -711,6 +723,9 @@ class OpmetingRaamKeuzeOptie {
       'id': id,
       'naam': naam,
       'uitvoerTekst': uitvoerTekst,
+      // Dubbele sleutel voor compatibiliteit met reeds opgeslagen en
+      // toekomstige technische keuzes.
+      'hoeUitschrijven': uitvoerTekst,
       'isGeenKeuze': isGeenKeuze,
       'tekenfunctie': tekenfunctie.opslagWaarde,
       'extraVelden': extraVelden.map((veld) => veld.toJson()).toList(),
@@ -807,7 +822,11 @@ class OpmetingRaamKeuzeOptie {
     return OpmetingRaamKeuzeOptie(
       id: json['id']?.toString() ?? '',
       naam: json['naam']?.toString() ?? '',
-      uitvoerTekst: json['uitvoerTekst']?.toString() ?? '',
+      uitvoerTekst:
+          json['uitvoerTekst']?.toString() ??
+          json['hoeUitschrijven']?.toString() ??
+          json['uitschrijfTekst']?.toString() ??
+          '',
       isGeenKeuze: json['isGeenKeuze'] == true,
       tekenfunctie: OpmetingRaamTekenfunctieExtension.vanOpslagWaarde(
         json['tekenfunctie'],

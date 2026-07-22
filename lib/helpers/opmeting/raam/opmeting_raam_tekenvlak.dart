@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: KADERLOKALE-DATA-ROTATIE-EN-HEROPENEN-20260722
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -304,6 +305,64 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
   }
 
+  void _initialiseerActieveKaderDataNaLaden() {
+    final samenstelling = _bruikbareKaderSamenstelling;
+
+    if (samenstelling == null || samenstelling.kaders.isEmpty) {
+      _actiefTStijlKaderId = 'basis';
+      _actiefVleugelKaderId = 'basis';
+      _actiefOpvullingKaderId = 'basis';
+      _actiefKleinhoutKaderId = 'basis';
+      return;
+    }
+
+    final opgeslagenActiefKaderId = samenstelling.actiefKaderId.trim();
+    final actiefKaderId =
+        samenstelling.kaders.any((kader) => kader.id == opgeslagenActiefKaderId)
+        ? opgeslagenActiefKaderId
+        : samenstelling.kaders.first.id;
+
+    // Oudere fiches konden de actieve tekenlijst alleen vlak opslaan. Maak
+    // daarvan bij het openen één lokale kaderlijst, zonder modellen of JSON
+    // te wijzigen. Nieuwe fiches hebben deze per-kaderlijsten al.
+    if (!_tStijlenPerKader.containsKey(actiefKaderId) && _tStijlen.isNotEmpty) {
+      _tStijlenPerKader[actiefKaderId] = List<OpmetingRaamTStijl>.unmodifiable(
+        _tStijlen,
+      );
+    }
+    if (!_vleugelsPerKader.containsKey(actiefKaderId) && _vleugels.isNotEmpty) {
+      _vleugelsPerKader[actiefKaderId] = List<OpmetingRaamVleugel>.unmodifiable(
+        _vleugels,
+      );
+    }
+    if (!_vullingToewijzingenPerKader.containsKey(actiefKaderId) &&
+        _vullingToewijzingen.isNotEmpty) {
+      _vullingToewijzingenPerKader[actiefKaderId] =
+          List<OpmetingRaamVullingToewijzing>.unmodifiable(
+            _vullingToewijzingen,
+          );
+    }
+    if (!_kleinhoutenPerKader.containsKey(actiefKaderId) &&
+        _kleinhouten.isNotEmpty) {
+      _kleinhoutenPerKader[actiefKaderId] =
+          List<OpmetingRaamKleinhout>.unmodifiable(_kleinhouten);
+    }
+
+    _actiefTStijlKaderId = actiefKaderId;
+    _actiefVleugelKaderId = actiefKaderId;
+    _actiefOpvullingKaderId = actiefKaderId;
+    _actiefKleinhoutKaderId = actiefKaderId;
+
+    _geselecteerdeKaderIds
+      ..clear()
+      ..add(actiefKaderId);
+
+    _laadTStijlenVoorKader(actiefKaderId);
+    _laadVleugelsVoorKader(actiefKaderId);
+    _laadOpvullingVoorKader(actiefKaderId);
+    _laadKleinhoutenVoorKader(actiefKaderId);
+  }
+
   bool _zijnDeurpaneelToewijzingenGelijk(
     List<OpmetingDeurpaneelToewijzing> eerste,
     List<OpmetingDeurpaneelToewijzing> tweede,
@@ -419,6 +478,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     super.initState();
 
     _laadBeginTekeningData();
+    _initialiseerActieveKaderDataNaLaden();
     _verwerkDeurpaneelToewijzingenUitController();
     OpmetingDeurpaneelActieveKeuzeController.toewijzingen.addListener(
       _verwerkDeurpaneelToewijzingenUitController,
@@ -442,11 +502,6 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       breedteMm: widget.breedteMm,
       hoogteMm: widget.hoogteMm,
     );
-
-    _actiefTStijlKaderId = 'basis';
-    _actiefVleugelKaderId = 'basis';
-    _actiefOpvullingKaderId = 'basis';
-    _actiefKleinhoutKaderId = 'basis';
 
     _koppelController(widget.controller);
     _laadOpvullingen();
@@ -908,19 +963,139 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     }
 
     final samenstelling = _bruikbareKaderSamenstelling;
-    final heeftMeerdereKaders = (samenstelling?.kaders.length ?? 0) > 1;
 
-    // Bij meerdere kaders wordt de samenstelling zelf via de kaderlayout
-    // getransformeerd. Bij één kader moet de opgeslagen tekening wél mee
-    // schalen met het actuele tekenvlak, anders blijft een deurvleugel op
-    // oude canvas-pixels staan na schermrotatie of venstergrootte wijzigen.
-    if (heeftMeerdereKaders) {
+    if (samenstelling != null && samenstelling.kaders.isNotEmpty) {
+      final geschaaldeTStijlenPerKader = <String, List<OpmetingRaamTStijl>>{};
+      final geschaaldeVleugelsPerKader = <String, List<OpmetingRaamVleugel>>{};
+      final geschaaldeVullingenPerKader =
+          <String, List<OpmetingRaamVullingToewijzing>>{};
+      final geschaaldeKleinhoutenPerKader =
+          <String, List<OpmetingRaamKleinhout>>{};
+
+      final enkelKader = samenstelling.kaders.length == 1;
+
+      // Iedere kaderinhoud is lokaal in schermpixels opgeslagen. Bij een
+      // vensterwijziging of iPad-rotatie moet daarom elk kader afzonderlijk
+      // van het oude naar het nieuwe tekenvlak worden omgerekend.
+      for (final kader in samenstelling.kaders) {
+        final kaderId = kader.id;
+
+        final bestaandeTStijlen = kaderId == _huidigTStijlKaderId
+            ? List<OpmetingRaamTStijl>.from(_tStijlen)
+            : List<OpmetingRaamTStijl>.from(
+                _tStijlenPerKader[kaderId] ?? const <OpmetingRaamTStijl>[],
+              );
+        final bestaandeVleugels = kaderId == _huidigVleugelKaderId
+            ? List<OpmetingRaamVleugel>.from(_vleugels)
+            : List<OpmetingRaamVleugel>.from(
+                _vleugelsPerKader[kaderId] ?? const <OpmetingRaamVleugel>[],
+              );
+        final bestaandeVullingen = kaderId == _huidigOpvullingKaderId
+            ? List<OpmetingRaamVullingToewijzing>.from(_vullingToewijzingen)
+            : List<OpmetingRaamVullingToewijzing>.from(
+                _vullingToewijzingenPerKader[kaderId] ??
+                    const <OpmetingRaamVullingToewijzing>[],
+              );
+        final bestaandeKleinhouten = kaderId == _huidigKleinhoutKaderId
+            ? List<OpmetingRaamKleinhout>.from(_kleinhouten)
+            : List<OpmetingRaamKleinhout>.from(
+                _kleinhoutenPerKader[kaderId] ??
+                    const <OpmetingRaamKleinhout>[],
+              );
+
+        final kaderWijziging = OpmetingRaamSchaalWijziging(
+          oudeTekenvlakGrootte: wijziging.oudeTekenvlakGrootte,
+          nieuweTekenvlakGrootte: wijziging.nieuweTekenvlakGrootte,
+          oudeBreedteMm: enkelKader ? wijziging.oudeBreedteMm : kader.breedteMm,
+          oudeHoogteMm: enkelKader ? wijziging.oudeHoogteMm : kader.hoogteMm,
+          nieuweBreedteMm: enkelKader
+              ? wijziging.nieuweBreedteMm
+              : kader.breedteMm,
+          nieuweHoogteMm: enkelKader
+              ? wijziging.nieuweHoogteMm
+              : kader.hoogteMm,
+        );
+
+        final resultaat = OpmetingRaamSchaalAanpassingHelper.bereken(
+          wijziging: kaderWijziging,
+          bestaandeTStijlen: bestaandeTStijlen,
+          bestaandeVleugels: bestaandeVleugels,
+          bestaandeVullingToewijzingen: bestaandeVullingen,
+          bestaandeKleinhouten: bestaandeKleinhouten,
+        );
+
+        if (resultaat == null) {
+          geschaaldeTStijlenPerKader[kaderId] =
+              List<OpmetingRaamTStijl>.unmodifiable(bestaandeTStijlen);
+          geschaaldeVleugelsPerKader[kaderId] =
+              List<OpmetingRaamVleugel>.unmodifiable(bestaandeVleugels);
+          geschaaldeVullingenPerKader[kaderId] =
+              List<OpmetingRaamVullingToewijzing>.unmodifiable(
+                bestaandeVullingen,
+              );
+          geschaaldeKleinhoutenPerKader[kaderId] =
+              List<OpmetingRaamKleinhout>.unmodifiable(bestaandeKleinhouten);
+          continue;
+        }
+
+        final geschaaldeVleugels = _herstelDeurVleugelGegevensNaSchaal(
+          oudeVleugels: bestaandeVleugels,
+          nieuweVleugels: resultaat.vleugels,
+        );
+
+        geschaaldeTStijlenPerKader[kaderId] =
+            List<OpmetingRaamTStijl>.unmodifiable(resultaat.tStijlen);
+        geschaaldeVleugelsPerKader[kaderId] =
+            List<OpmetingRaamVleugel>.unmodifiable(geschaaldeVleugels);
+        geschaaldeVullingenPerKader[kaderId] =
+            List<OpmetingRaamVullingToewijzing>.unmodifiable(
+              resultaat.vullingToewijzingen,
+            );
+        geschaaldeKleinhoutenPerKader[kaderId] =
+            List<OpmetingRaamKleinhout>.unmodifiable(resultaat.kleinhouten);
+      }
+
+      setState(() {
+        _tStijlenPerKader
+          ..clear()
+          ..addAll(geschaaldeTStijlenPerKader);
+        _vleugelsPerKader
+          ..clear()
+          ..addAll(geschaaldeVleugelsPerKader);
+        _vullingToewijzingenPerKader
+          ..clear()
+          ..addAll(geschaaldeVullingenPerKader);
+        _kleinhoutenPerKader
+          ..clear()
+          ..addAll(geschaaldeKleinhoutenPerKader);
+
+        _vervangTStijlen(
+          geschaaldeTStijlenPerKader[_huidigTStijlKaderId] ??
+              const <OpmetingRaamTStijl>[],
+        );
+        _vervangVleugels(
+          geschaaldeVleugelsPerKader[_huidigVleugelKaderId] ??
+              const <OpmetingRaamVleugel>[],
+        );
+        _vervangVullingToewijzingen(
+          geschaaldeVullingenPerKader[_huidigOpvullingKaderId] ??
+              const <OpmetingRaamVullingToewijzing>[],
+        );
+        _vervangKleinhouten(
+          geschaaldeKleinhoutenPerKader[_huidigKleinhoutKaderId] ??
+              const <OpmetingRaamKleinhout>[],
+        );
+
+        _wisTekeningSelecties();
+      });
+
       _schaalController.bevestigWijziging(wijziging);
+      _wisGeschiedenis();
+      _planAlleLegendaMeldingen();
       return;
     }
 
     final oudeVleugelsVoorSchaal = List<OpmetingRaamVleugel>.from(_vleugels);
-
     final resultaat = OpmetingRaamSchaalAanpassingHelper.bereken(
       wijziging: wijziging,
       bestaandeTStijlen: _tStijlen,
@@ -930,6 +1105,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     );
 
     if (resultaat == null) {
+      _schaalController.bevestigWijziging(wijziging);
       return;
     }
 
@@ -945,17 +1121,10 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         vullingToewijzingen: resultaat.vullingToewijzingen,
         kleinhouten: resultaat.kleinhouten,
       );
-
-      if (samenstelling != null) {
-        _bewaarTStijlenVoorActiefKader();
-        _bewaarVleugelsVoorActiefKader();
-      }
-
       _wisTekeningSelecties();
     });
 
     _schaalController.bevestigWijziging(wijziging);
-
     _wisGeschiedenis();
     _planAlleLegendaMeldingen();
   }

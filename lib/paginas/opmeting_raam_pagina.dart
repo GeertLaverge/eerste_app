@@ -158,7 +158,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     if (bestaandeOpmeting == null) {
       if (_isSchuifraamFiche) {
-        // Een nieuwe PVC-schuifraamfiche start standaard met een
+        // Een nieuwe schuifraamfiche start standaard met een
         // overmeten raammaat van 2500 x 2200 mm.
         dagmaatBreedteController.text = '2460';
         dagmaatHoogteController.text = '2180';
@@ -239,8 +239,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       );
     }
 
-    if (_formulierType == 'pvcSchuifraam' && _schuifraamSamenstelling == null) {
-      _schuifraamSamenstelling = const OpmetingSchuifraamSamenstelling();
+    if (_isSchuifraamFiche && _schuifraamSamenstelling == null) {
+      _schuifraamSamenstelling =
+          OpmetingSchuifraamSamenstelling.standaardVoorFormulier(
+            _formulierType,
+          );
     }
 
     final onderkantVloerpasMm = _schuifraamSamenstelling?.onderkantVloerpasMm;
@@ -306,6 +309,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       case 'schuifraam':
         return 'pvcSchuifraam';
 
+      case 'aluSchuifraam':
+      case 'alu_schuifraam':
+      case 'ALU Schuifraam':
+        return 'aluSchuifraam';
+
       case 'pvcDeur':
       case 'pvc_deur':
       case 'PVC Deur':
@@ -336,6 +344,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       case 'pvcSchuifraam':
         return 'Opmeting PVC Schuifraam';
 
+      case 'aluSchuifraam':
+        return 'Opmeting ALU Schuifraam';
+
       case 'pvcDeur':
         return 'Opmeting PVC Deur';
 
@@ -353,7 +364,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   bool get _isSchuifraamFiche {
-    return _formulierType == 'pvcSchuifraam';
+    return _formulierType == 'pvcSchuifraam' ||
+        _formulierType == 'aluSchuifraam';
   }
 
   String _zonderNuttelozeDecimalen(double waarde) {
@@ -389,7 +401,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     final huidige =
-        _schuifraamSamenstelling ?? const OpmetingSchuifraamSamenstelling();
+        _schuifraamSamenstelling ??
+        OpmetingSchuifraamSamenstelling.standaardVoorFormulier(_formulierType);
     final waarde = _onderkantSchuifraamMm;
     final bijgewerkt = waarde == null
         ? huidige.copyWith(wisOnderkantVloerpasMm: true)
@@ -429,6 +442,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   Future<void> _openSchuifraamSamenstellen() async {
     final resultaat = await toonOpmetingSchuifraamSamenstellingDialog(
       context: context,
+      formulierType: _formulierType,
       breedteMm: raammaatBreedte,
       hoogteMm: raammaatHoogte,
       bestaandeSamenstelling: _schuifraamSamenstelling,
@@ -1652,6 +1666,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       id: bestaandeOpmeting.id,
       gewijzigdOp: bestaandeOpmeting.gewijzigdOp,
       isVerwijderd: bestaandeOpmeting.isVerwijderd,
+      isOfferteOptie: bestaandeOpmeting.isOfferteOptie,
+      offerteOptiePlaatsing: bestaandeOpmeting.offerteOptiePlaatsing,
+      offerteOptieHoofdpositieId: bestaandeOpmeting.offerteOptieHoofdpositieId,
+      gekopieerdVanPositieId: bestaandeOpmeting.gekopieerdVanPositieId,
+      offertePrijsData: bestaandeOpmeting.offertePrijsData,
     );
   }
 

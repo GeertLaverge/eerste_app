@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../paginas/agenda_pagina_nieuw.dart';
+import '../../paginas/agenda_pagina_nieuw.dart' as agenda;
 import '../../paginas/klanten_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
 import '../../paginas/opmeting_pagina.dart' as opmeting;
@@ -67,7 +67,7 @@ class HomeZijMenu extends StatelessWidget {
         if (titel == 'Agenda') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AgendaPaginaNieuw()),
+            MaterialPageRoute(builder: (_) => const agenda.AgendaPaginaNieuw()),
           );
           return;
         }
@@ -91,7 +91,7 @@ class HomeZijMenu extends StatelessWidget {
         if (titel == 'Opmeting') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => opmeting.OpmetingPagina()),
+            MaterialPageRoute(builder: (_) => const opmeting.OpmetingPagina()),
           );
           return;
         }
