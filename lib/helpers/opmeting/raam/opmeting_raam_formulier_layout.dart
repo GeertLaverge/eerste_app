@@ -248,7 +248,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
         body: Row(
           children: [
             Expanded(
-              flex: 60,
+              flex: 55,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(12, 12, 6, 12),
                 child: Column(
@@ -314,7 +314,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
               ),
             ),
             Expanded(
-              flex: 40,
+              flex: 45,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(6, 12, 12, 12),
                 child: ListView(
@@ -335,6 +335,7 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       onderkantSchuifraamController:
                           onderkantSchuifraamController,
                       isSchuifraam: toonSchuifraamKnoppen,
+                      isDeur: toonDeurKnoppen,
                       onOnderkantSchuifraamGewijzigd:
                           onOnderkantSchuifraamGewijzigd,
                       raammaatBreedte: raammaatBreedte,

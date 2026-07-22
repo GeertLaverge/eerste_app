@@ -867,18 +867,18 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   String get _profielSamenvatting {
-    if (_isSchuifraamFiche) {
+    if (!_isDeurFiche) {
       return '';
     }
 
     final uitzagenTand = _waarde(uitzagenTandController).round();
-    final buitensteProfiel = _waarde(buitensteLipController).round();
+    final buitensteLip = _waarde(buitensteLipController).round();
 
-    if (uitzagenTand == 0 && buitensteProfiel == 0) {
+    if (uitzagenTand == 0 && buitensteLip == 0) {
       return '';
     }
 
-    return 'uitzagen tand $uitzagenTand mm buitenste profiel $buitensteProfiel mm';
+    return 'Uitzagen tand $uitzagenTand mm · Buitenste lip $buitensteLip mm';
   }
 
   int _positieveMaat(int waarde) {

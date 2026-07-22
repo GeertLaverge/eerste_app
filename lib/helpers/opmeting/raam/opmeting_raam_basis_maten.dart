@@ -19,6 +19,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     required this.onderkantSchuifraamController,
     required this.onOnderkantSchuifraamGewijzigd,
     this.isSchuifraam = false,
+    this.isDeur = false,
     required this.raammaatBreedte,
     required this.raammaatHoogte,
     required this.verschilTablet,
@@ -49,6 +50,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   final TextEditingController onderkantSchuifraamController;
   final VoidCallback onOnderkantSchuifraamGewijzigd;
   final bool isSchuifraam;
+  final bool isDeur;
 
   final int raammaatBreedte;
   final int raammaatHoogte;
@@ -203,26 +205,28 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
                 if (isSchuifraam)
                   _bouwPositieOnderkantSchuifraamVeld()
                 else ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _bouwGetalVeld(
-                          label: 'Uitzagen tand',
-                          controller: uitzagenTandController,
-                          onChanged: onChanged,
+                  if (isDeur) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _bouwGetalVeld(
+                            label: 'Uitzagen tand',
+                            controller: uitzagenTandController,
+                            onChanged: onChanged,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: _bouwGetalVeld(
-                          label: 'Buitenste lip',
-                          controller: buitensteLipController,
-                          onChanged: onChanged,
+                        const SizedBox(width: 7),
+                        Expanded(
+                          child: _bouwGetalVeld(
+                            label: 'Buitenste lip',
+                            controller: buitensteLipController,
+                            onChanged: onChanged,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
                   Row(
                     children: [
                       Expanded(

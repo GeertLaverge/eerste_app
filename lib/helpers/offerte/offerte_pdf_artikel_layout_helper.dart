@@ -1,8 +1,7 @@
 // THIMACO-CONTROLE: ALGEMENE-ARTIKEL-LAYOUT-VOLLE-BREEDTE-20260720
-import 'dart:math' as math;
-
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'dart:math' as math;
 
 class OffertePdfTechnischeRegel {
   const OffertePdfTechnischeRegel({
@@ -27,8 +26,13 @@ class OffertePdfArtikelLayoutHelper {
 
   // Verwachte kolombreedte binnen de offerte-detailpagina.
   // De echte breedte wordt in bouwArtikelLayout flexibel verdeeld.
-  static const double kolomBreedte = 257.64;
+  static const double totaleFlexBreedte = 515.28;
   static const double kolomTussenruimte = 12;
+  static const int tekenvlakFlex = 45;
+  static const int technischeKolomFlex = 55;
+  static const double kolomBreedte =
+      totaleFlexBreedte * tekenvlakFlex / (tekenvlakFlex + technischeKolomFlex);
+  static const double prijsZoneBreedte = 60;
   static const double ruimteVoorPrijsBlok = 10;
   static const double minimumKolomHoogte = 230;
   static const double maximumKolomHoogte = 650;
@@ -43,9 +47,9 @@ class OffertePdfArtikelLayoutHelper {
 
     for (final regel in regels) {
       final netteRegel = OffertePdfTechnischeRegel(
-        titel: regel.titel.trim(),
-        waarde: regel.waarde.trim(),
-        prijsTekst: regel.prijsTekst.trim(),
+        titel: _opEenRegel(regel.titel),
+        waarde: _opEenRegel(regel.waarde),
+        prijsTekst: _opEenRegel(regel.prijsTekst),
       );
       final sleutel = _technischeRegelSleutel(netteRegel);
 
@@ -91,16 +95,8 @@ class OffertePdfArtikelLayoutHelper {
     if (samengevoegdeRegels.isEmpty) {
       benodigdeHoogte += 20;
     } else {
-      for (final regel in samengevoegdeRegels) {
-        final titelRegels = _geschatAantalRegels(
-          regel.titel,
-          tekensPerRegel: 21,
-        );
-        final waardeRegels = _geschatAantalRegels(
-          regel.waarde,
-          tekensPerRegel: regel.prijsTekst.trim().isEmpty ? 31 : 22,
-        );
-        benodigdeHoogte += 5.5 + (math.max(titelRegels, waardeRegels) * 7.2);
+      for (final _ in samengevoegdeRegels) {
+        benodigdeHoogte += 12.7;
       }
     }
 
@@ -135,10 +131,12 @@ class OffertePdfArtikelLayoutHelper {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: <pw.Widget>[
             pw.Expanded(
+              flex: tekenvlakFlex,
               child: pw.SizedBox(height: kolomHoogte, child: tekenvlak),
             ),
             pw.SizedBox(width: kolomTussenruimte),
             pw.Expanded(
+              flex: technischeKolomFlex,
               child: pw.SizedBox(height: kolomHoogte, child: technischeKolom),
             ),
           ],
@@ -296,48 +294,59 @@ class OffertePdfArtikelLayoutHelper {
             : const pw.Border(bottom: pw.BorderSide(color: rand, width: 0.4)),
       ),
       child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: <pw.Widget>[
-          pw.SizedBox(
-            width: 76,
-            child: pw.Text(
-              regel.titel.trim(),
-              style: pw.TextStyle(
-                color: tekstGrijs,
-                fontSize: compact ? 6.6 : 7.2,
-              ),
-            ),
-          ),
-          pw.SizedBox(width: 5),
           pw.Expanded(
-            child: pw.Text(
-              regel.waarde.trim(),
-              style: pw.TextStyle(
-                color: tekstDonker,
-                fontSize: compact ? 6.7 : 7.3,
-                fontWeight: pw.FontWeight.bold,
-                lineSpacing: 1.15,
-              ),
-            ),
-          ),
-          if (regel.prijsTekst.trim().isNotEmpty) ...<pw.Widget>[
-            pw.SizedBox(width: 8),
-            pw.SizedBox(
-              width: 56,
-              child: pw.Text(
-                regel.prijsTekst.trim(),
-                textAlign: pw.TextAlign.right,
-                style: pw.TextStyle(
-                  color: tekstDonker,
-                  fontSize: compact ? 6.8 : 7.4,
-                  fontWeight: pw.FontWeight.bold,
+            child: pw.FittedBox(
+              fit: pw.BoxFit.scaleDown,
+              alignment: pw.Alignment.centerLeft,
+              child: pw.RichText(
+                text: pw.TextSpan(
+                  children: [
+                    pw.TextSpan(
+                      text: regel.titel,
+                      style: pw.TextStyle(
+                        color: tekstGrijs,
+                        fontSize: compact ? 6.6 : 7.2,
+                      ),
+                    ),
+                    if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
+                      pw.TextSpan(text: ': '),
+                    if (regel.waarde.isNotEmpty)
+                      pw.TextSpan(
+                        text: regel.waarde,
+                        style: pw.TextStyle(
+                          color: tekstDonker,
+                          fontSize: compact ? 6.7 : 7.3,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
-          ],
+          ),
+          pw.SizedBox(width: 8),
+          pw.SizedBox(
+            width: prijsZoneBreedte,
+            child: pw.Text(
+              regel.prijsTekst,
+              maxLines: 1,
+              textAlign: pw.TextAlign.right,
+              style: pw.TextStyle(
+                color: tekstDonker,
+                fontSize: compact ? 6.8 : 7.4,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  static String _opEenRegel(String waarde) {
+    return waarde.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static String _technischeRegelSleutel(OffertePdfTechnischeRegel regel) {

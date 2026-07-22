@@ -30,6 +30,9 @@ class OpmetingOverzichtArtikelLayoutHelper {
   static const Color technischAchtergrond = Color(0xFFFAFAFA);
 
   static const double tussenruimte = 14;
+  static const int tekenvlakFlex = 45;
+  static const int technischeKolomFlex = 55;
+  static const double prijsZoneBreedte = 88;
   static const double minimumHoogte = 500;
   static const double maximumHoogte = 1450;
 
@@ -41,8 +44,8 @@ class OpmetingOverzichtArtikelLayoutHelper {
 
     for (final regel in technischeRegels) {
       final netteRegel = OpmetingOverzichtTechnischeRegel(
-        titel: regel.titel.trim(),
-        waarde: regel.waarde.trim(),
+        titel: _opEenRegel(regel.titel),
+        waarde: _opEenRegel(regel.waarde),
       );
       final sleutel = _technischeRegelSleutel(netteRegel);
 
@@ -75,8 +78,8 @@ class OpmetingOverzichtArtikelLayoutHelper {
 
     for (final weergave in technischeRegels) {
       final netteRegel = OpmetingOverzichtTechnischeRegel(
-        titel: weergave.regel.titel.trim(),
-        waarde: weergave.regel.waarde.trim(),
+        titel: _opEenRegel(weergave.regel.titel),
+        waarde: _opEenRegel(weergave.regel.waarde),
       );
       final sleutel = _technischeRegelSleutel(netteRegel);
 
@@ -141,9 +144,9 @@ class OpmetingOverzichtArtikelLayoutHelper {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Expanded(child: tekenvlak),
+          Expanded(flex: tekenvlakFlex, child: tekenvlak),
           const SizedBox(width: tussenruimte),
-          Expanded(child: rechterkolom),
+          Expanded(flex: technischeKolomFlex, child: rechterkolom),
         ],
       ),
     );
@@ -295,37 +298,56 @@ class OpmetingOverzichtArtikelLayoutHelper {
                     : const Border(bottom: BorderSide(color: rand, width: 0.8)),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
-                  SizedBox(
-                    width: 132,
-                    child: Text(
-                      regel.titel,
-                      style: const TextStyle(
-                        color: tekstGrijs,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        height: 1.25,
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text.rich(
+                          TextSpan(
+                            children: <InlineSpan>[
+                              TextSpan(
+                                text: regel.titel,
+                                style: const TextStyle(
+                                  color: tekstGrijs,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1.25,
+                                ),
+                              ),
+                              if (regel.titel.isNotEmpty &&
+                                  regel.waarde.isNotEmpty)
+                                const TextSpan(text: ': '),
+                              if (regel.waarde.isNotEmpty)
+                                TextSpan(
+                                  text: regel.waarde,
+                                  style: const TextStyle(
+                                    color: tekstDonker,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.25,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          softWrap: false,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Expanded(
+                  SizedBox(
+                    width: prijsZoneBreedte,
                     child: Text(
-                      regel.waarde,
-                      textAlign: TextAlign.left,
-                      style: const TextStyle(
-                        color: tekstDonker,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                      ),
-                    ),
-                  ),
-                  if (weergave.heeftBedrag) ...<Widget>[
-                    const SizedBox(width: 10),
-                    Text(
-                      _formatteerBedrag(weergave.bedragExclBtw!),
+                      weergave.heeftBedrag
+                          ? _formatteerBedrag(weergave.bedragExclBtw!)
+                          : '',
+                      maxLines: 1,
+                      softWrap: false,
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         color: tekstDonker,
@@ -334,7 +356,7 @@ class OpmetingOverzichtArtikelLayoutHelper {
                         height: 1.25,
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             );
@@ -342,6 +364,10 @@ class OpmetingOverzichtArtikelLayoutHelper {
         ),
       ),
     );
+  }
+
+  static String _opEenRegel(String waarde) {
+    return waarde.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   static String _formatteerBedrag(double bedrag) {

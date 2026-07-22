@@ -51,6 +51,10 @@ class OpmetingRaamOverzichtBuilder {
           technischeKaderGroepen: technischeKaderGroepen,
         );
 
+    final formulierTypeGenormaliseerd = _normaliseerFormulierType(
+      formulierType,
+    );
+
     final context = _OpmetingRaamOverzichtContext(
       dagmaatBreedteMm: dagmaatBreedteMm,
       dagmaatHoogteMm: dagmaatHoogteMm,
@@ -63,12 +67,10 @@ class OpmetingRaamOverzichtBuilder {
       gekozenOpvullingen: gekozenOpvullingen,
       gekozenKleinhouten: gekozenKleinhouten,
       deurpaneelToewijzingen: deurpaneelToewijzingen,
-      profielSamenvatting: profielSamenvatting,
+      profielSamenvatting: _isDeurFormulierType(formulierTypeGenormaliseerd)
+          ? profielSamenvatting
+          : '',
       technischeKaderGroepen: technischeKaderGroepen,
-    );
-
-    final formulierTypeGenormaliseerd = _normaliseerFormulierType(
-      formulierType,
     );
 
     return OpmetingOverzichtRaamItem(
@@ -143,6 +145,10 @@ class OpmetingRaamOverzichtBuilder {
       default:
         return waarde.trim().isEmpty ? 'pvcRaam' : waarde.trim();
     }
+  }
+
+  static bool _isDeurFormulierType(String formulierType) {
+    return formulierType == 'pvcDeur' || formulierType == 'aluDeur';
   }
 
   static String _formulierTypeLabel(String formulierType) {
@@ -343,7 +349,7 @@ class _OpmetingRaamOverzichtContext {
       regels.add(
         OpmetingOverzichtTechnischeRegel(
           titel: 'Profiel',
-          waarde: profielSamenvatting.trim(),
+          waarde: _opEenRegel(profielSamenvatting),
         ),
       );
     }
@@ -379,10 +385,12 @@ class _OpmetingRaamOverzichtContext {
           optie: optie,
           selectie: selectie,
         );
-        final titel = hoeUitschrijven.trim();
-        final waarde = _technischeKeuzeExtraWaarde(
-          hoeUitschrijven: hoeUitschrijven,
-          extraTekst: extraTekst,
+        final titel = _opEenRegel(hoeUitschrijven);
+        final waarde = _opEenRegel(
+          _technischeKeuzeExtraWaarde(
+            hoeUitschrijven: hoeUitschrijven,
+            extraTekst: extraTekst,
+          ),
         );
 
         if (titel.isEmpty && waarde.isEmpty) {
@@ -472,10 +480,12 @@ class _OpmetingRaamOverzichtContext {
         optie: optie,
         selectie: selectie,
       );
-      final titel = hoeUitschrijven.trim();
-      final waarde = _technischeKeuzeExtraWaarde(
-        hoeUitschrijven: hoeUitschrijven,
-        extraTekst: extraTekst,
+      final titel = _opEenRegel(hoeUitschrijven);
+      final waarde = _opEenRegel(
+        _technischeKeuzeExtraWaarde(
+          hoeUitschrijven: hoeUitschrijven,
+          extraTekst: extraTekst,
+        ),
       );
 
       if (titel.isEmpty && waarde.isEmpty) {
@@ -488,6 +498,10 @@ class _OpmetingRaamOverzichtContext {
     }
 
     return regels;
+  }
+
+  String _opEenRegel(String waarde) {
+    return waarde.trim().replaceAll(RegExp(r'\s+'), ' ');
   }
 
   String _technischeKeuzeExtraWaarde({

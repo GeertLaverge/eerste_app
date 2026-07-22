@@ -336,7 +336,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
   }) {
     final tekst = heeftWaarde && waarde.trim().isNotEmpty
         ? waarde.trim()
-        : '${_korteTitel(titel)}   ${waarde.trim()}';
+        : '${titel.trim()}   ${waarde.trim()}';
 
     return Container(
       decoration: const BoxDecoration(
@@ -483,7 +483,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                   const SizedBox(width: 5),
                   Expanded(
                     child: Text(
-                      _korteTitel(item.naam),
+                      item.naam.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -825,17 +825,6 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         },
       ),
     );
-  }
-
-  String _korteTitel(String tekst) {
-    final waarde = tekst.trim();
-    final tekens = waarde.runes.toList();
-
-    if (tekens.length <= 20) {
-      return waarde;
-    }
-
-    return String.fromCharCodes(tekens.take(20));
   }
 
   String _maakLeesbaar(String tekst) {
