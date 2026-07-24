@@ -62,6 +62,7 @@ class _OpmetingProjectTitelhoofdKaartState
   static const Color _oranjeLicht = Color(0xFFFFF7ED);
   static const Color _oranje = Color(0xFFEA580C);
 
+  late String _aanspreking;
   late final TextEditingController _klantNaamController;
   late final TextEditingController _contactpersoonController;
   late final TextEditingController _adresController;
@@ -87,6 +88,7 @@ class _OpmetingProjectTitelhoofdKaartState
   void initState() {
     super.initState();
 
+    _aanspreking = '';
     _klantNaamController = TextEditingController();
     _contactpersoonController = TextEditingController();
     _adresController = TextEditingController();
@@ -158,7 +160,11 @@ class _OpmetingProjectTitelhoofdKaartState
   }
 
   void _zetControllers(OpmetingProjectTitelhoofd titelhoofd) {
-    _zetControllerTekst(_klantNaamController, titelhoofd.klantNaam);
+    _aanspreking = normaliseerOpmetingAanspreking(titelhoofd.aanspreking);
+    _zetControllerTekst(
+      _klantNaamController,
+      opmetingKlantNaamZonderAanspreking(titelhoofd.klantNaam),
+    );
     _zetControllerTekst(_contactpersoonController, titelhoofd.contactpersoon);
     _zetControllerTekst(_adresController, titelhoofd.adres);
     _zetControllerTekst(_huisnummerController, titelhoofd.huisnummer);
@@ -233,7 +239,10 @@ class _OpmetingProjectTitelhoofdKaartState
   }) {
     widget.onTitelhoofdGewijzigd(
       widget.titelhoofd.copyWith(
-        klantNaam: _klantNaamController.text,
+        aanspreking: _aanspreking,
+        klantNaam: opmetingKlantNaamZonderAanspreking(
+          _klantNaamController.text,
+        ),
         contactpersoon: _contactpersoonController.text,
         adres: _adresController.text,
         huisnummer: _huisnummerController.text,
@@ -336,13 +345,21 @@ class _OpmetingProjectTitelhoofdKaartState
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _bouwVeld(
-            controller: _klantNaamController,
-            label: 'Klantnaam',
-            icoon: Icons.badge_outlined,
-            textCapitalization: TextCapitalization.words,
-            extraCompact: true,
-            vasteHoogte: klantVeldHoogte,
+          Row(
+            children: [
+              SizedBox(width: 96, child: _bouwAansprekingVeld(klantVeldHoogte)),
+              const SizedBox(width: 5),
+              Expanded(
+                child: _bouwVeld(
+                  controller: _klantNaamController,
+                  label: 'Klantnaam',
+                  icoon: Icons.badge_outlined,
+                  textCapitalization: TextCapitalization.words,
+                  extraCompact: true,
+                  vasteHoogte: klantVeldHoogte,
+                ),
+              ),
+            ],
           ),
           _bouwVeld(
             controller: _contactpersoonController,
@@ -443,6 +460,58 @@ class _OpmetingProjectTitelhoofdKaartState
             vasteHoogte: klantVeldHoogte,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _bouwAansprekingVeld(double hoogte) {
+    return SizedBox(
+      height: hoogte,
+      child: DropdownButtonFormField<String>(
+        value: _aanspreking,
+        isExpanded: true,
+        iconSize: 14,
+        style: const TextStyle(
+          color: _tekstDonker,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFF9FAFB),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 6,
+            vertical: 3,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(7),
+            borderSide: const BorderSide(color: _groen, width: 1.2),
+          ),
+        ),
+        items: <DropdownMenuItem<String>>[
+          const DropdownMenuItem<String>(value: '', child: Text('Geen')),
+          ...opmetingAansprekingKeuzes.map(
+            (keuze) => DropdownMenuItem<String>(
+              value: keuze,
+              child: Text(keuze, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: (waarde) {
+          setState(() {
+            _aanspreking = waarde ?? '';
+          });
+          _meldWijziging();
+        },
       ),
     );
   }
@@ -1412,7 +1481,7 @@ class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
                             color: _groen,
                           ),
                           title: Text(
-                            klant.klantNaam,
+                            klant.klantNaamMetAanspreking,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w900),

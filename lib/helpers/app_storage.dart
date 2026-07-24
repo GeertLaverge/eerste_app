@@ -862,8 +862,21 @@ class AppStorage {
           continue;
         }
 
+        final opgeslagenAanspreking = normaliseerOpmetingAanspreking(
+          _leesEersteTekst(fiche, const <String>[
+            'aanspreking',
+            'aanhef',
+            'salutation',
+          ]),
+        );
+        final aanspreking = opgeslagenAanspreking.isNotEmpty
+            ? opgeslagenAanspreking
+            : opmetingAansprekingUitKlantNaam(klantNaam);
+        final schoneKlantNaam = opmetingKlantNaamZonderAanspreking(klantNaam);
+
         final info = OpmetingAgendaKlantInfo(
-          klantNaam: klantNaam,
+          klantNaam: schoneKlantNaam,
+          aanspreking: aanspreking,
           klantnummer: _leesEersteTekst(fiche, const <String>[
             'klantNr',
             'klantnummer',
@@ -932,10 +945,10 @@ class AppStorage {
           datumKey: 'klantenfiche',
         );
 
-        final sleutel = klantNaam.trim().toLowerCase().replaceAll(
-          RegExp(r'\s+'),
-          ' ',
-        );
+        final sleutel = opmetingKlantNaamSleutel(schoneKlantNaam);
+        if (sleutel.isEmpty) {
+          continue;
+        }
         final bestaand = perKlant[sleutel];
 
         perKlant[sleutel] = bestaand == null
@@ -945,8 +958,8 @@ class AppStorage {
 
       final resultaat = perKlant.values.toList()
         ..sort((eerste, tweede) {
-          return eerste.klantNaam.toLowerCase().compareTo(
-            tweede.klantNaam.toLowerCase(),
+          return eerste.klantNaamMetAanspreking.toLowerCase().compareTo(
+            tweede.klantNaamMetAanspreking.toLowerCase(),
           );
         });
 
@@ -965,27 +978,40 @@ class AppStorage {
     try {
       final itemsPerDag = await laadAgendaItemsNieuwVoorSync();
       final perKlant = <String, OpmetingAgendaKlantInfo>{};
+      const klantTypes = <String>{
+        'planning',
+        'opvolging',
+        'nadienst',
+        'afspraak',
+      };
 
       for (final dagEntry in itemsPerDag.entries) {
         for (final item in dagEntry.value) {
-          if (item.isVerwijderd ||
-              item.type.trim().toLowerCase() != 'afspraak') {
+          final type = item.type.trim().toLowerCase();
+          if (item.isVerwijderd || !klantTypes.contains(type)) {
             continue;
           }
 
-          final klantNaam = item.naamKlant.trim().isNotEmpty
-              ? item.naamKlant.trim()
-              : item.titel.trim();
-
-          if (klantNaam.isEmpty || klantNaam.toLowerCase() == 'afspraak') {
+          final ruweKlantNaam = item.naamKlant.trim();
+          final opgeslagenAanspreking = normaliseerOpmetingAanspreking(
+            item.aanspreking,
+          );
+          final aanspreking = opgeslagenAanspreking.isNotEmpty
+              ? opgeslagenAanspreking
+              : opmetingAansprekingUitKlantNaam(ruweKlantNaam);
+          final klantNaam = opmetingKlantNaamZonderAanspreking(ruweKlantNaam);
+          final sleutel = opmetingKlantNaamSleutel(klantNaam);
+          if (sleutel.isEmpty || _isGeenEchteAgendaKlantNaam(klantNaam)) {
             continue;
           }
 
           final info = OpmetingAgendaKlantInfo(
             klantNaam: klantNaam,
+            aanspreking: aanspreking,
             klantnummer: item.klantNr.trim(),
             adres: item.straatnaam.trim(),
             huisnummer: item.huisNr.trim(),
+            busNummer: item.busNr.trim(),
             postcode: item.postcode.trim(),
             gemeente: item.gemeente.trim(),
             gsm: item.gsm.trim(),
@@ -995,7 +1021,6 @@ class AppStorage {
             datumKey: dagEntry.key,
           );
 
-          final sleutel = klantNaam.toLowerCase();
           final bestaand = perKlant[sleutel];
           perKlant[sleutel] = bestaand == null
               ? info
@@ -1005,8 +1030,8 @@ class AppStorage {
 
       final resultaat = perKlant.values.toList()
         ..sort((eerste, tweede) {
-          return eerste.klantNaam.toLowerCase().compareTo(
-            tweede.klantNaam.toLowerCase(),
+          return eerste.klantNaamMetAanspreking.toLowerCase().compareTo(
+            tweede.klantNaamMetAanspreking.toLowerCase(),
           );
         });
 
@@ -1014,6 +1039,17 @@ class AppStorage {
     } catch (_) {
       return <OpmetingAgendaKlantInfo>[];
     }
+  }
+
+  static bool _isGeenEchteAgendaKlantNaam(String waarde) {
+    final naam = waarde.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    return naam.isEmpty ||
+        naam == 'afspraak' ||
+        naam == 'planning' ||
+        naam == 'opvolging' ||
+        naam == 'nadienst' ||
+        naam == 'klant' ||
+        naam == 'onbekend';
   }
 
   static bool _isBlauweAgendaAfspraak(Map<String, dynamic> map) {

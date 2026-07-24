@@ -283,6 +283,7 @@ class _OffertePrijsregelsZwevendVensterState
           ),
           actions: <Widget>[
             TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
               onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Annuleren'),
             ),
@@ -565,11 +566,16 @@ class _OffertePrijsregelsZwevendVensterState
                       runSpacing: 8,
                       children: <Widget>[
                         TextButton(
+                          style: TextButton.styleFrom(foregroundColor: _groen),
                           onPressed: () => Navigator.pop(context),
                           child: const Text('Annuleren'),
                         ),
                         if (widget.toonToepassenOpDezePositie)
                           OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _groen,
+                              side: const BorderSide(color: _groen),
+                            ),
                             onPressed: () => _sluitMetActie(
                               OffertePrijsregelsVensterActie
                                   .toepassenOpDezePositie,
@@ -578,6 +584,10 @@ class _OffertePrijsregelsZwevendVensterState
                           ),
                         if (widget.toonToepassenOpAlleGelijkePosities)
                           OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _groen,
+                              side: const BorderSide(color: _groen),
+                            ),
                             onPressed: () => _sluitMetActie(
                               OffertePrijsregelsVensterActie
                                   .toepassenOpAlleGelijkePosities,
@@ -588,6 +598,16 @@ class _OffertePrijsregelsZwevendVensterState
                           ),
                         if (widget.toonToepassenOpOfferte)
                           OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _gekozenPrijsregel == null
+                                  ? _tekstGrijs
+                                  : _groen,
+                              side: BorderSide(
+                                color: _gekozenPrijsregel == null
+                                    ? _rand
+                                    : _groen,
+                              ),
+                            ),
                             onPressed: _gekozenPrijsregel == null
                                 ? null
                                 : () => _sluitMetActie(

@@ -166,47 +166,47 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                   ],
                 ),
               ),
-              if (berekenPrijzen &&
-                  OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
-                    item,
-                  ))
-                IconButton(
-                  tooltip: 'Vrije prijsregels bewerken',
-                  onPressed: onPrijsMenuOpenen,
-                  icon: const Icon(Icons.post_add_outlined, color: _groen),
-                ),
-              IconButton(
-                tooltip: 'Openen',
-                onPressed: onOpenen,
-                icon: const Icon(Icons.open_in_new_rounded, color: _groen),
-              ),
-              IconButton(
-                tooltip: 'Groep kopiëren',
-                onPressed: onKopieren,
-                icon: const Icon(Icons.copy_all_outlined, color: _groen),
-              ),
-              IconButton(
-                tooltip: item.isOfferteOptie
-                    ? 'Optieweergave aanpassen'
-                    : 'Groep in optie plaatsen',
-                onPressed: onOptieWijzigen,
-                icon: Icon(
-                  item.isOfferteOptie
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.bookmark_add_outlined,
-                  color: item.isOfferteOptie ? const Color(0xFFF15A24) : _groen,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Verwijderen',
-                onPressed: onVerwijderen,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Color(0xFFDC2626),
-                ),
-              ),
-              _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
             ],
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              runSpacing: 6,
+              children: <Widget>[
+                if (berekenPrijzen &&
+                    OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
+                      item,
+                    ))
+                  _ArtikelActieTekstKnop(
+                    tekst: 'Prijs toevoegen',
+                    onPressed: onPrijsMenuOpenen,
+                    gevuld: true,
+                  ),
+                _ArtikelActieTekstKnop(tekst: 'Aanpassen', onPressed: onOpenen),
+                _ArtikelActieTekstKnop(
+                  tekst: 'Groep kopiëren',
+                  onPressed: onKopieren,
+                ),
+                _ArtikelActieTekstKnop(
+                  tekst: 'Groep in optie plaatsen',
+                  onPressed: onOptieWijzigen,
+                  oranje: item.isOfferteOptie,
+                ),
+                IconButton(
+                  tooltip: 'Verwijderen',
+                  onPressed: onVerwijderen,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+                _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
+              ],
+            ),
           ),
           const SizedBox(height: 10),
           if (vasteInzethor != null)
@@ -671,6 +671,52 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           }),
         ),
       ),
+    );
+  }
+}
+
+class _ArtikelActieTekstKnop extends StatelessWidget {
+  const _ArtikelActieTekstKnop({
+    required this.tekst,
+    required this.onPressed,
+    this.gevuld = false,
+    this.oranje = false,
+  });
+
+  final String tekst;
+  final VoidCallback onPressed;
+  final bool gevuld;
+  final bool oranje;
+
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _oranje = Color(0xFFF15A24);
+
+  @override
+  Widget build(BuildContext context) {
+    final voorgrond = oranje ? _oranje : _groen;
+    final achtergrond = gevuld
+        ? _lichtGroen
+        : oranje
+        ? const Color(0xFFFFF7ED)
+        : Colors.white;
+    final randkleur = oranje ? const Color(0xFFFED7AA) : _rand;
+
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: voorgrond,
+        backgroundColor: achtergrond,
+        side: BorderSide(color: randkleur),
+        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+      onPressed: onPressed,
+      child: Text(tekst),
     );
   }
 }

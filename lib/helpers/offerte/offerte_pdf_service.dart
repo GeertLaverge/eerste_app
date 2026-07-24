@@ -268,10 +268,7 @@ class OffertePdfService {
 
   static pw.Widget _bouwKlantblok(OfferteDocumentData data) {
     final datum = _formatteerDatum(data.offerteDatum);
-    final klantNaam = data.klant.naam.trim();
-    final aanspreking = klantNaam.isEmpty
-        ? 'Dhr. & Mevr.'
-        : 'Dhr. & Mevr. $klantNaam';
+    final klantNaam = data.klant.weergaveNaam.trim();
 
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(18, 17, 18, 16),
@@ -284,7 +281,7 @@ class OffertePdfService {
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: <pw.Widget>[
           pw.Text(
-            aanspreking,
+            klantNaam,
             style: pw.TextStyle(
               color: tekstDonker,
               fontSize: 13,
@@ -667,7 +664,13 @@ class OffertePdfService {
               btwRegelLabel: data.btwRegelLabel,
             )
           else if (artikel.positie.vliegendeurData != null)
-            OffertePdfVliegendeurWidget.bouwPositie(positie: artikel.positie)
+            OffertePdfVliegendeurWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
           else
             OffertePdfPvcRaamWidget.bouwPositie(
               positie: artikel.positie,
@@ -898,6 +901,8 @@ class OffertePdfService {
     } else if (positie.vliegendeurData != null) {
       inhoudHoogte = OffertePdfVliegendeurWidget.berekenTotalePositieHoogte(
         positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
       );
     } else {
       inhoudHoogte = OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(

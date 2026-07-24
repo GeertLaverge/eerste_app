@@ -10,6 +10,7 @@ import 'prijzen/offerte_toegepaste_prijsregel_model.dart';
 class OfferteKlantgegevens {
   const OfferteKlantgegevens({
     required this.naam,
+    this.aanspreking = '',
     required this.adres,
     required this.postcodeEnGemeente,
     required this.telefoon,
@@ -19,12 +20,17 @@ class OfferteKlantgegevens {
   });
 
   final String naam;
+  final String aanspreking;
   final String contactpersoon;
   final String adres;
   final String postcodeEnGemeente;
   final String telefoon;
   final String email;
   final String projectAdres;
+
+  String get weergaveNaam {
+    return opmetingKlantWeergaveNaam(aanspreking: aanspreking, klantNaam: naam);
+  }
 
   factory OfferteKlantgegevens.vanTitelhoofd(
     OpmetingProjectTitelhoofd titelhoofd,
@@ -42,7 +48,8 @@ class OfferteKlantgegevens {
         : titelhoofd.telefoon.trim();
 
     return OfferteKlantgegevens(
-      naam: titelhoofd.klantNaam.trim(),
+      naam: opmetingKlantNaamZonderAanspreking(titelhoofd.klantNaam),
+      aanspreking: normaliseerOpmetingAanspreking(titelhoofd.aanspreking),
       contactpersoon: titelhoofd.contactpersoon.trim(),
       adres: volledigAdres,
       postcodeEnGemeente: titelhoofd.plaats.trim(),

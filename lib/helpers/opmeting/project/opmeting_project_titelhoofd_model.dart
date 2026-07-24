@@ -4,6 +4,7 @@ import '../../offerte/prijzen/offerte_prijsregel_model.dart';
 
 class OpmetingProjectTitelhoofd {
   const OpmetingProjectTitelhoofd({
+    this.aanspreking = '',
     this.klantNaam = '',
     this.contactpersoon = '',
     this.adres = '',
@@ -42,6 +43,7 @@ class OpmetingProjectTitelhoofd {
     'BTW verlegd',
   ];
 
+  final String aanspreking;
   final String klantNaam;
   final String contactpersoon;
   final String adres;
@@ -68,6 +70,13 @@ class OpmetingProjectTitelhoofd {
   offertePrijsinstellingenMomentopnames;
   final String gewijzigdOp;
 
+  String get klantNaamMetAanspreking {
+    return opmetingKlantWeergaveNaam(
+      aanspreking: aanspreking,
+      klantNaam: klantNaam,
+    );
+  }
+
   String get plaats {
     return <String>[
       postcode.trim(),
@@ -80,7 +89,8 @@ class OpmetingProjectTitelhoofd {
   }
 
   bool get heeftKlantGegevens {
-    return klantNaam.trim().isNotEmpty ||
+    return aanspreking.trim().isNotEmpty ||
+        klantNaam.trim().isNotEmpty ||
         contactpersoon.trim().isNotEmpty ||
         adres.trim().isNotEmpty ||
         huisnummer.trim().isNotEmpty ||
@@ -111,6 +121,7 @@ class OpmetingProjectTitelhoofd {
   }
 
   OpmetingProjectTitelhoofd copyWith({
+    String? aanspreking,
     String? klantNaam,
     String? contactpersoon,
     String? adres,
@@ -138,6 +149,9 @@ class OpmetingProjectTitelhoofd {
     String? gewijzigdOp,
   }) {
     return OpmetingProjectTitelhoofd(
+      aanspreking: normaliseerOpmetingAanspreking(
+        aanspreking ?? this.aanspreking,
+      ),
       klantNaam: klantNaam ?? this.klantNaam,
       contactpersoon: contactpersoon ?? this.contactpersoon,
       adres: adres ?? this.adres,
@@ -201,6 +215,7 @@ class OpmetingProjectTitelhoofd {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
+      'aanspreking': normaliseerOpmetingAanspreking(aanspreking),
       'klantNaam': klantNaam,
       'contactpersoon': contactpersoon,
       'adres': adres,
@@ -235,8 +250,19 @@ class OpmetingProjectTitelhoofd {
   }
 
   factory OpmetingProjectTitelhoofd.fromJson(Map<String, dynamic> json) {
+    final ruweKlantNaam = json['klantNaam']?.toString().trim() ?? '';
+    final opgeslagenAanspreking = normaliseerOpmetingAanspreking(
+      json['aanspreking'] ?? json['aanhef'] ?? json['salutation'],
+    );
+    final aanspreking = opgeslagenAanspreking.isNotEmpty
+        ? opgeslagenAanspreking
+        : opmetingAansprekingUitKlantNaam(ruweKlantNaam);
+
     return OpmetingProjectTitelhoofd(
-      klantNaam: json['klantNaam']?.toString() ?? '',
+      aanspreking: aanspreking,
+      klantNaam: aanspreking.isEmpty
+          ? ruweKlantNaam
+          : opmetingKlantNaamZonderAanspreking(ruweKlantNaam),
       contactpersoon: json['contactpersoon']?.toString() ?? '',
       adres: json['adres']?.toString() ?? '',
       huisnummer: json['huisnummer']?.toString() ?? '',
@@ -294,6 +320,7 @@ class OpmetingProjectTitelhoofd {
 class OpmetingAgendaKlantInfo {
   const OpmetingAgendaKlantInfo({
     required this.klantNaam,
+    this.aanspreking = '',
     this.klantnummer = '',
     this.contactpersoon = '',
     this.adres = '',
@@ -309,6 +336,7 @@ class OpmetingAgendaKlantInfo {
   });
 
   final String klantNaam;
+  final String aanspreking;
   final String klantnummer;
   final String contactpersoon;
   final String adres;
@@ -321,6 +349,13 @@ class OpmetingAgendaKlantInfo {
   final String email;
   final String omschrijving;
   final String datumKey;
+
+  String get klantNaamMetAanspreking {
+    return opmetingKlantWeergaveNaam(
+      aanspreking: aanspreking,
+      klantNaam: klantNaam,
+    );
+  }
 
   String get plaats {
     return <String>[
@@ -343,6 +378,7 @@ class OpmetingAgendaKlantInfo {
 
   String get zoekTekst {
     return <String>[
+      aanspreking,
       klantNaam,
       klantnummer,
       contactpersoon,
@@ -359,6 +395,107 @@ class OpmetingAgendaKlantInfo {
     ].join(' ').toLowerCase();
   }
 
+  OpmetingAgendaKlantInfo copyWith({
+    String? klantNaam,
+    String? aanspreking,
+    String? klantnummer,
+    String? contactpersoon,
+    String? adres,
+    String? huisnummer,
+    String? busNummer,
+    String? postcode,
+    String? gemeente,
+    String? gsm,
+    String? telefoon,
+    String? email,
+    String? omschrijving,
+    String? datumKey,
+  }) {
+    return OpmetingAgendaKlantInfo(
+      klantNaam: klantNaam ?? this.klantNaam,
+      aanspreking: normaliseerOpmetingAanspreking(
+        aanspreking ?? this.aanspreking,
+      ),
+      klantnummer: klantnummer ?? this.klantnummer,
+      contactpersoon: contactpersoon ?? this.contactpersoon,
+      adres: adres ?? this.adres,
+      huisnummer: huisnummer ?? this.huisnummer,
+      busNummer: busNummer ?? this.busNummer,
+      postcode: postcode ?? this.postcode,
+      gemeente: gemeente ?? this.gemeente,
+      gsm: gsm ?? this.gsm,
+      telefoon: telefoon ?? this.telefoon,
+      email: email ?? this.email,
+      omschrijving: omschrijving ?? this.omschrijving,
+      datumKey: datumKey ?? this.datumKey,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return <String, dynamic>{
+      'klantNaam': klantNaam,
+      'aanspreking': normaliseerOpmetingAanspreking(aanspreking),
+      'klantnummer': klantnummer,
+      'contactpersoon': contactpersoon,
+      'adres': adres,
+      'huisnummer': huisnummer,
+      'busNummer': busNummer,
+      'postcode': postcode,
+      'gemeente': gemeente,
+      'gsm': gsm,
+      'telefoon': telefoon,
+      'email': email,
+      'omschrijving': omschrijving,
+      'datumKey': datumKey,
+    };
+  }
+
+  factory OpmetingAgendaKlantInfo.fromJson(Map<String, dynamic> json) {
+    final ruweKlantNaam =
+        json['klantNaam']?.toString().trim() ??
+        json['naamKlant']?.toString().trim() ??
+        json['naam']?.toString().trim() ??
+        '';
+    final opgeslagenAanspreking = normaliseerOpmetingAanspreking(
+      json['aanspreking'] ?? json['aanhef'] ?? json['salutation'],
+    );
+    final aanspreking = opgeslagenAanspreking.isNotEmpty
+        ? opgeslagenAanspreking
+        : opmetingAansprekingUitKlantNaam(ruweKlantNaam);
+
+    return OpmetingAgendaKlantInfo(
+      klantNaam: aanspreking.isEmpty
+          ? ruweKlantNaam
+          : opmetingKlantNaamZonderAanspreking(ruweKlantNaam),
+      aanspreking: aanspreking,
+      klantnummer:
+          json['klantnummer']?.toString() ??
+          json['klantNummer']?.toString() ??
+          json['klantNr']?.toString() ??
+          '',
+      contactpersoon: json['contactpersoon']?.toString() ?? '',
+      adres: json['adres']?.toString() ?? json['straatnaam']?.toString() ?? '',
+      huisnummer:
+          json['huisnummer']?.toString() ?? json['huisNr']?.toString() ?? '',
+      busNummer:
+          json['busNummer']?.toString() ??
+          json['busnummer']?.toString() ??
+          json['busNr']?.toString() ??
+          '',
+      postcode: json['postcode']?.toString() ?? '',
+      gemeente:
+          json['gemeente']?.toString() ?? json['plaats']?.toString() ?? '',
+      gsm: json['gsm']?.toString() ?? '',
+      telefoon: json['telefoon']?.toString() ?? json['gsm2']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      omschrijving:
+          json['omschrijving']?.toString() ??
+          json['opmerkingen']?.toString() ??
+          '',
+      datumKey: json['datumKey']?.toString() ?? '',
+    );
+  }
+
   OpmetingAgendaKlantInfo combineerMet(OpmetingAgendaKlantInfo ander) {
     String kies(String huidig, String nieuw) {
       return huidig.trim().isNotEmpty ? huidig : nieuw;
@@ -366,6 +503,9 @@ class OpmetingAgendaKlantInfo {
 
     return OpmetingAgendaKlantInfo(
       klantNaam: kies(klantNaam, ander.klantNaam),
+      aanspreking: normaliseerOpmetingAanspreking(
+        kies(aanspreking, ander.aanspreking),
+      ),
       klantnummer: kies(klantnummer, ander.klantnummer),
       contactpersoon: kies(contactpersoon, ander.contactpersoon),
       adres: kies(adres, ander.adres),
@@ -389,7 +529,12 @@ class OpmetingAgendaKlantInfo {
     final bronKlantnummer = _beperkTotCijfers(klantnummer, maxLengte: 4);
 
     return huidige.copyWith(
-      klantNaam: klantNaam.trim().isEmpty ? huidige.klantNaam : klantNaam,
+      aanspreking: aanspreking.trim().isEmpty
+          ? huidige.aanspreking
+          : normaliseerOpmetingAanspreking(aanspreking),
+      klantNaam: klantNaam.trim().isEmpty
+          ? huidige.klantNaam
+          : opmetingKlantNaamZonderAanspreking(klantNaam),
       klantnummer: overschrijfKlantnummer
           ? bronKlantnummer
           : bronKlantnummer.isEmpty
@@ -410,12 +555,68 @@ class OpmetingAgendaKlantInfo {
   }
 }
 
-String opmetingProjectTitelhoofdSleutel(String klantNaam) {
-  final sleutel = klantNaam.trim().toLowerCase().replaceAll(
-    RegExp(r'\s+'),
-    ' ',
-  );
+const List<String> opmetingAansprekingKeuzes = <String>[
+  'Dhr.',
+  'Mevr.',
+  'Dhr. & Mevr.',
+];
 
+String normaliseerOpmetingAanspreking(Object? waarde) {
+  final tekst = waarde?.toString().trim() ?? '';
+  for (final keuze in opmetingAansprekingKeuzes) {
+    if (keuze.toLowerCase() == tekst.toLowerCase()) return keuze;
+  }
+  return '';
+}
+
+String opmetingAansprekingUitKlantNaam(String klantNaam) {
+  final naam = klantNaam.trim().replaceAll(RegExp(r'\s+'), ' ');
+  for (final keuze in <String>['Dhr. & Mevr.', 'Dhr.', 'Mevr.']) {
+    final patroon = RegExp(
+      '^${RegExp.escape(keuze)}(?:\\s+|\$)',
+      caseSensitive: false,
+    );
+    if (patroon.hasMatch(naam)) return keuze;
+  }
+  return '';
+}
+
+String opmetingKlantNaamZonderAanspreking(String klantNaam) {
+  var resultaat = klantNaam.trim().replaceAll(RegExp(r'\s+'), ' ');
+  for (final keuze in <String>['Dhr. & Mevr.', 'Dhr.', 'Mevr.']) {
+    final patroon = RegExp(
+      '^${RegExp.escape(keuze)}(?:\\s+|\$)',
+      caseSensitive: false,
+    );
+    if (patroon.hasMatch(resultaat)) {
+      resultaat = resultaat.replaceFirst(patroon, '').trim();
+      break;
+    }
+  }
+  return resultaat;
+}
+
+String opmetingKlantWeergaveNaam({
+  required String aanspreking,
+  required String klantNaam,
+}) {
+  final genormaliseerdeNaam = klantNaam.trim().replaceAll(RegExp(r'\s+'), ' ');
+  final veiligeAanspreking = normaliseerOpmetingAanspreking(aanspreking);
+  if (veiligeAanspreking.isEmpty) return genormaliseerdeNaam;
+
+  final naam = opmetingKlantNaamZonderAanspreking(genormaliseerdeNaam);
+  if (naam.isEmpty) return veiligeAanspreking;
+  return '$veiligeAanspreking $naam';
+}
+
+String opmetingKlantNaamSleutel(String klantNaam) {
+  return opmetingKlantNaamZonderAanspreking(
+    klantNaam,
+  ).toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+String opmetingProjectTitelhoofdSleutel(String klantNaam) {
+  final sleutel = opmetingKlantNaamSleutel(klantNaam);
   return sleutel.isEmpty ? 'zonder_klantnaam' : sleutel;
 }
 

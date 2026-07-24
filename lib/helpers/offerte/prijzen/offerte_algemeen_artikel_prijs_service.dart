@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VERDEELKOST-DOELMARKERING-20260724-ALGEMEEN
 import 'dart:convert';
 
 import '../../opmeting/raam/opmeting_raam_keuzemenu_model.dart';
@@ -179,7 +180,11 @@ class OfferteAlgemeenArtikelPrijsService {
     required String formulierType,
   }) {
     final regels = prijsData.vrijeArtikelPrijsSelecties
-        .where(_isTijdelijkeVrijePrijsSelectie)
+        .where(
+          (selectie) =>
+              _isTijdelijkeVrijePrijsSelectie(selectie) &&
+              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
+        )
         .map((selectie) {
           return OffertePrijsregelModel(
             id: selectie.bronPrijsregelId,
@@ -348,6 +353,13 @@ class OfferteAlgemeenArtikelPrijsService {
         .where((id) => id.isNotEmpty)
         .toSet();
 
+    final verdeelkostMarkeringen = prijsData.vrijeArtikelPrijsSelecties
+        .where(
+          (selectie) =>
+              _isTijdelijkeVrijePrijsSelectie(selectie) &&
+              selectie.uitschrijfmodus.isVerdeeldeInterneKost,
+        )
+        .toList(growable: false);
     final bestaandeAutomatischeSelecties = prijsData.vrijeArtikelPrijsSelecties
         .where(
           (selectie) =>
@@ -384,6 +396,7 @@ class OfferteAlgemeenArtikelPrijsService {
     return prijsData.copyWith(
       vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
         ...bestaandeAutomatischeSelecties,
+        ...verdeelkostMarkeringen,
         ...tijdelijkeSelecties,
       ],
     );
@@ -404,7 +417,10 @@ class OfferteAlgemeenArtikelPrijsService {
     final vrijeArtikelPrijsregels = prijsData.vrijeArtikelPrijsSelecties
         .where(
           (selectie) =>
-              selectie.actief && selectie.isGeldig && selectie.heeftBedrag,
+              selectie.actief &&
+              selectie.isGeldig &&
+              selectie.heeftBedrag &&
+              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .map((selectie) {
           final hoeveelheid = selectie.hoeveelheidVoorMaten(

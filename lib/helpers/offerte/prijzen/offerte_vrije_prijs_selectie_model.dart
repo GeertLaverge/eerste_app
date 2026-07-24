@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VERDEELKOST-DOELMARKERING-20260724
 import 'offerte_prijs_eenheid.dart';
 import 'offerte_prijs_uitschrijfmodus.dart';
 
@@ -172,6 +173,8 @@ class OfferteVrijePrijsSelectieModel {
         modus == OffertePrijsUitschrijfmodus.invullenEnOfferteZonderPrijs ||
         modus == OffertePrijsUitschrijfmodus.overzichtEnOfferteMetPrijs ||
         modus == OffertePrijsUitschrijfmodus.alleenOverzicht ||
+        modus ==
+            OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht ||
         modus == OffertePrijsUitschrijfmodus.optie;
   }
 

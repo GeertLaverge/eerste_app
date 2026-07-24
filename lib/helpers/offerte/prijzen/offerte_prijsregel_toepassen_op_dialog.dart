@@ -1,12 +1,24 @@
+// THIMACO-CONTROLE: GROEP-ID-COMPILEFIX-20260724
+// THIMACO-CONTROLE: VERDEELKOST-DYNAMISCH-BEREIK-20260724-DIALOG
 import 'package:flutter/material.dart';
 
 class OffertePrijsregelToepassenOpResultaat {
   const OffertePrijsregelToepassenOpResultaat({
     required this.artikelIds,
+    required this.volledigeGroepIds,
+    required this.alleBeschikbareArtikelen,
     required this.kiesNogEenPrijsregel,
   });
 
   final Set<String> artikelIds;
+
+  /// Artikelgroepen die in hun geheel geselecteerd zijn. Nieuwe posities uit
+  /// zo'n groep mogen later automatisch in dezelfde verdeelkost opgenomen worden.
+  final Set<String> volledigeGroepIds;
+
+  /// Geeft aan dat werkelijk alle beschikbare artikelen geselecteerd zijn.
+  /// Nieuwe ondersteunde hoofdpositie-artikelen worden dan automatisch toegevoegd.
+  final bool alleBeschikbareArtikelen;
   final bool kiesNogEenPrijsregel;
 }
 
@@ -18,6 +30,7 @@ class OffertePrijsregelToepassenOpKeuze {
     required this.groepId,
     required this.groepLabel,
     required this.bedragExclBtw,
+    this.aantalArtikelen = 1,
     this.beschikbaar = true,
     this.nietBeschikbaarReden = '',
   });
@@ -28,6 +41,7 @@ class OffertePrijsregelToepassenOpKeuze {
   final String groepId;
   final String groepLabel;
   final double bedragExclBtw;
+  final int aantalArtikelen;
   final bool beschikbaar;
   final String nietBeschikbaarReden;
 }
@@ -37,6 +51,7 @@ toonOffertePrijsregelToepassenOpDialog({
   required BuildContext context,
   required String prijsregelOmschrijving,
   required List<OffertePrijsregelToepassenOpKeuze> keuzes,
+  double? verdeelProjectTotaalExclBtw,
 }) {
   return showDialog<OffertePrijsregelToepassenOpResultaat>(
     context: context,
@@ -45,6 +60,7 @@ toonOffertePrijsregelToepassenOpDialog({
       return _OffertePrijsregelToepassenOpDialog(
         prijsregelOmschrijving: prijsregelOmschrijving,
         keuzes: keuzes,
+        verdeelProjectTotaalExclBtw: verdeelProjectTotaalExclBtw,
       );
     },
   );
@@ -54,10 +70,12 @@ class _OffertePrijsregelToepassenOpDialog extends StatefulWidget {
   const _OffertePrijsregelToepassenOpDialog({
     required this.prijsregelOmschrijving,
     required this.keuzes,
+    required this.verdeelProjectTotaalExclBtw,
   });
 
   final String prijsregelOmschrijving;
   final List<OffertePrijsregelToepassenOpKeuze> keuzes;
+  final double? verdeelProjectTotaalExclBtw;
 
   @override
   State<_OffertePrijsregelToepassenOpDialog> createState() {
@@ -74,6 +92,8 @@ class _OffertePrijsregelToepassenOpDialogState
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   final Set<String> _geselecteerdeArtikelIds = <String>{};
+  final Set<String> _explicietVolledigeGroepIds = <String>{};
+  bool _explicietAlleArtikelen = false;
 
   List<OffertePrijsregelToepassenOpKeuze> get _beschikbareKeuzes {
     return widget.keuzes
@@ -108,18 +128,90 @@ class _OffertePrijsregelToepassenOpDialogState
     return _geselecteerdeArtikelIds.isNotEmpty && !_alleBeschikbareGeselecteerd;
   }
 
-  double get _selectieTotaalExclBtw {
-    var totaal = 0.0;
-    for (final keuze in _beschikbareKeuzes) {
-      if (_geselecteerdeArtikelIds.contains(keuze.artikelId)) {
-        totaal += keuze.bedragExclBtw;
+  Set<String> get _dynamischeVolledigeGroepIds {
+    final resultaat = <String>{};
+    for (final groepId in _explicietVolledigeGroepIds) {
+      final groepKeuzes = _keuzesPerGroep[groepId];
+      if (groepKeuzes != null && _heleGroepGeselecteerd(groepKeuzes)) {
+        resultaat.add(groepId);
       }
+    }
+    return resultaat;
+  }
+
+  bool get _isVerdeeldeProjectkost {
+    final totaal = widget.verdeelProjectTotaalExclBtw;
+    return totaal != null && totaal.isFinite && totaal > 0.0;
+  }
+
+  List<OffertePrijsregelToepassenOpKeuze> get _geselecteerdeKeuzes {
+    return _beschikbareKeuzes
+        .where((keuze) => _geselecteerdeArtikelIds.contains(keuze.artikelId))
+        .toList(growable: false);
+  }
+
+  int get _geselecteerdAantalArtikelen {
+    return _geselecteerdeKeuzes.fold<int>(0, (som, keuze) {
+      final aantal = keuze.aantalArtikelen < 1 ? 1 : keuze.aantalArtikelen;
+      return som + aantal;
+    });
+  }
+
+  double get _selectieTotaalExclBtw {
+    if (_isVerdeeldeProjectkost) {
+      return _geselecteerdeArtikelIds.isEmpty
+          ? 0.0
+          : _rondBedragAf(widget.verdeelProjectTotaalExclBtw!);
+    }
+
+    var totaal = 0.0;
+    for (final keuze in _geselecteerdeKeuzes) {
+      totaal += keuze.bedragExclBtw;
     }
     return _rondBedragAf(totaal);
   }
 
+  double _verdeeldBedragVoorKeuze(OffertePrijsregelToepassenOpKeuze doelKeuze) {
+    if (!_isVerdeeldeProjectkost ||
+        !_geselecteerdeArtikelIds.contains(doelKeuze.artikelId)) {
+      return 0.0;
+    }
+
+    final totaalAantal = _geselecteerdAantalArtikelen;
+    if (totaalAantal <= 0) return 0.0;
+
+    final totaalCenten =
+        (_rondBedragAf(widget.verdeelProjectTotaalExclBtw!) * 100.0).round();
+    final basisCentenPerArtikel = totaalCenten ~/ totaalAantal;
+    var resterendeCenten = totaalCenten % totaalAantal;
+
+    for (final keuze in _geselecteerdeKeuzes) {
+      final aantal = keuze.aantalArtikelen < 1 ? 1 : keuze.aantalArtikelen;
+      final extraCenten = resterendeCenten > aantal ? aantal : resterendeCenten;
+      final positieCenten = (basisCentenPerArtikel * aantal) + extraCenten;
+      resterendeCenten -= extraCenten;
+      if (keuze.artikelId == doelKeuze.artikelId) {
+        return positieCenten.toDouble() / 100.0;
+      }
+    }
+
+    return 0.0;
+  }
+
+  String _bedragTekstVoorKeuze(OffertePrijsregelToepassenOpKeuze keuze) {
+    if (!_isVerdeeldeProjectkost) {
+      return _bedrag(keuze.bedragExclBtw);
+    }
+    if (!_geselecteerdeArtikelIds.contains(keuze.artikelId)) {
+      return 'Te verdelen';
+    }
+    return _bedrag(_verdeeldBedragVoorKeuze(keuze));
+  }
+
   void _wisselAlles(bool? geselecteerd) {
     setState(() {
+      _explicietVolledigeGroepIds.clear();
+      _explicietAlleArtikelen = geselecteerd == true;
       if (geselecteerd == true) {
         _geselecteerdeArtikelIds
           ..clear()
@@ -131,6 +223,7 @@ class _OffertePrijsregelToepassenOpDialogState
   }
 
   void _wisselGroep(
+    String groepId,
     List<OffertePrijsregelToepassenOpKeuze> groepKeuzes,
     bool? geselecteerd,
   ) {
@@ -140,9 +233,12 @@ class _OffertePrijsregelToepassenOpDialogState
         .toSet();
 
     setState(() {
+      _explicietAlleArtikelen = false;
       if (geselecteerd == true) {
+        _explicietVolledigeGroepIds.add(groepId);
         _geselecteerdeArtikelIds.addAll(beschikbareGroepIds);
       } else {
+        _explicietVolledigeGroepIds.remove(groepId);
         _geselecteerdeArtikelIds.removeAll(beschikbareGroepIds);
       }
     });
@@ -155,6 +251,8 @@ class _OffertePrijsregelToepassenOpDialogState
     if (!keuze.beschikbaar) return;
 
     setState(() {
+      _explicietAlleArtikelen = false;
+      _explicietVolledigeGroepIds.remove(keuze.groepId);
       if (geselecteerd == true) {
         _geselecteerdeArtikelIds.add(keuze.artikelId);
       } else {
@@ -203,6 +301,11 @@ class _OffertePrijsregelToepassenOpDialogState
     Navigator.of(context).pop(
       OffertePrijsregelToepassenOpResultaat(
         artikelIds: Set<String>.unmodifiable(_geselecteerdeArtikelIds),
+        volledigeGroepIds: Set<String>.unmodifiable(
+          _dynamischeVolledigeGroepIds,
+        ),
+        alleBeschikbareArtikelen:
+            _explicietAlleArtikelen && _alleBeschikbareGeselecteerd,
         kiesNogEenPrijsregel: kiesNogEenPrijsregel,
       ),
     );
@@ -385,6 +488,7 @@ class _OffertePrijsregelToepassenOpDialogState
                                       activeColor: _groen,
                                       onChanged: groepBeschikbaar
                                           ? (waarde) => _wisselGroep(
+                                              groep.key,
                                               groepKeuzes,
                                               waarde,
                                             )
@@ -557,7 +661,7 @@ class _OffertePrijsregelToepassenOpDialogState
             const SizedBox(width: 10),
             Text(
               keuze.beschikbaar
-                  ? _bedrag(keuze.bedragExclBtw)
+                  ? _bedragTekstVoorKeuze(keuze)
                   : 'Niet mogelijk',
               textAlign: TextAlign.right,
               style: TextStyle(

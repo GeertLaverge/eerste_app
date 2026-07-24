@@ -29,6 +29,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   final naamController = TextEditingController();
   final straatController = TextEditingController();
   final huisNrController = TextEditingController();
+  final busNrController = TextEditingController();
   final gemeenteController = TextEditingController();
   final postcodeController = TextEditingController();
   final gsmController = TextEditingController();
@@ -40,6 +41,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   final postcodeFocusNode = FocusNode();
 
   String type = 'afspraak';
+  String aanspreking = '';
   String meldingVooraf = '1 uur';
   bool notitiesOpen = false;
 
@@ -92,9 +94,13 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     if (item != null) {
       titelController.text = item.titel;
       klantNrController.text = item.klantNr;
+      aanspreking = AgendaItem.aansprekingKeuzes.contains(item.aanspreking)
+          ? item.aanspreking
+          : '';
       naamController.text = item.naamKlant;
       straatController.text = item.straatnaam;
       huisNrController.text = item.huisNr;
+      busNrController.text = item.busNr;
       gemeenteController.text = item.gemeente;
       postcodeController.text = item.postcode;
       gsmController.text = item.gsm;
@@ -141,6 +147,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     naamController.dispose();
     straatController.dispose();
     huisNrController.dispose();
+    busNrController.dispose();
     gemeenteController.dispose();
     postcodeController.dispose();
     gsmController.dispose();
@@ -148,9 +155,9 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     emailController.dispose();
     opmerkingenController.dispose();
     titelController.dispose();
-    super.dispose();
     gemeenteFocusNode.dispose();
     postcodeFocusNode.dispose();
+    super.dispose();
   }
 
   int minuten(TimeOfDay tijd) {
@@ -287,9 +294,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
           _ => 60,
         },
         klantNr: klantNrController.text.trim(),
+        aanspreking: aanspreking,
         naamKlant: naamController.text.trim(),
         straatnaam: straatController.text.trim(),
         huisNr: huisNrController.text.trim(),
+        busNr: busNrController.text.trim(),
         gemeente: gemeenteController.text.trim(),
         postcode: postcodeController.text.trim(),
         gsm: gsmController.text.trim(),
@@ -331,6 +340,44 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
           const SizedBox(width: 10),
           Text(tekst),
         ],
+      ),
+    );
+  }
+
+  Widget aansprekingVeld() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: DropdownButtonFormField<String>(
+        value: aanspreking,
+        isExpanded: true,
+        decoration: InputDecoration(
+          hintText: 'Aanspreking',
+          isDense: true,
+          contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 6),
+          border: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey.shade400),
+          ),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(color: Colors.grey.shade400),
+          ),
+          focusedBorder: const UnderlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 1.6),
+          ),
+        ),
+        items: <DropdownMenuItem<String>>[
+          const DropdownMenuItem<String>(value: '', child: Text('Geen')),
+          ...AgendaItem.aansprekingKeuzes.map(
+            (keuze) => DropdownMenuItem<String>(
+              value: keuze,
+              child: Text(keuze, overflow: TextOverflow.ellipsis),
+            ),
+          ),
+        ],
+        onChanged: (waarde) {
+          setState(() {
+            aanspreking = waarde ?? '';
+          });
+        },
       ),
     );
   }
@@ -817,12 +864,21 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 ),
                 const SizedBox(height: 12),
                 veld(klantNrController, 'Klantnr'),
-                veld(naamController, 'Naam klant'),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 132, child: aansprekingVeld()),
+                    const SizedBox(width: 10),
+                    Expanded(child: veld(naamController, 'Naam klant')),
+                  ],
+                ),
                 Row(
                   children: [
                     Expanded(flex: 3, child: veld(straatController, 'Straat')),
                     const SizedBox(width: 8),
                     Expanded(child: veld(huisNrController, 'Nr')),
+                    const SizedBox(width: 8),
+                    Expanded(child: veld(busNrController, 'Bus')),
                   ],
                 ),
                 Row(

@@ -1,7 +1,4 @@
 // THIMACO-CONTROLE: TECHNISCHE-UITSCHRIJFTEKST-EN-PRIJS-KOPPELING-20260720
-import 'dart:async';
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
@@ -9,35 +6,22 @@ import '../helpers/offerte/offerte_controller.dart';
 import '../helpers/offerte/offerte_validatie_service.dart';
 import '../helpers/offerte/offerte_pdf_preview_pagina.dart';
 import 'offerte_prijs_overzicht_pagina.dart';
-import '../helpers/offerte/prijzen/offerte_prijsregels_zwevend_venster.dart';
-import '../helpers/offerte/prijzen/offerte_prijsregel_toepassen_op_dialog.dart';
-import '../helpers/offerte/prijzen/offerte_prijs_berekening_service.dart';
-import '../helpers/offerte/prijzen/offerte_algemeen_artikel_prijs_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
-import '../helpers/offerte/prijzen/offerte_artikel_prijs_mutatie_service.dart';
-import '../helpers/offerte/prijzen/offerte_artikel_toepassen_op_dialog.dart';
-import '../helpers/offerte/prijzen/offerte_prijs_categorie.dart';
-import '../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
-import '../helpers/offerte/prijzen/offerte_prijsregel_beheer_service.dart';
-import '../helpers/offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
-import '../helpers/offerte/prijzen/offerte_prijsprofiel_model.dart';
-import '../helpers/offerte/prijzen/offerte_project_prijs_overzicht_kaart.dart';
-import '../helpers/offerte/prijzen/offerte_project_prijs_service.dart';
-import '../helpers/offerte/prijzen/offerte_toegepaste_prijsregel_model.dart';
-import '../helpers/offerte/prijzen/offerte_verdeelkost_service.dart';
+import '../helpers/offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
+import '../helpers/offerte/prijzen/offerte_project_prijsregel_controller.dart';
+import '../helpers/offerte/prijzen/offerte_prijsinstellingen_controller.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
-import '../helpers/opmeting/overzicht/opmeting_overzicht_artikel_kaart.dart'
-    as overzicht_artikel_kaart;
+import '../helpers/offerte/artikelen/offerte_artikel_register.dart';
+import '../helpers/offerte/artikelen/offerte_positie_beheer_controller.dart';
+import '../helpers/opmeting/overzicht/opmeting_overzicht_bovenbalk.dart';
+import '../helpers/opmeting/overzicht/opmeting_overzicht_lijst.dart';
 import '../helpers/opmeting/project/opmeting_project_kleur_model.dart';
 import '../helpers/opmeting/project/opmeting_project_titelhoofd_model.dart'
-    show OpmetingAgendaKlantInfo, OpmetingProjectTitelhoofd;
-import '../helpers/opmeting/project/opmeting_project_titelhoofd_kaart.dart'
-    show OpmetingProjectTitelhoofdKaart, toonOpmetingAgendaKlantKeuzeDialog;
-import 'opmeting_raam_pagina.dart';
-import '../helpers/opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_fiche.dart';
-import '../helpers/opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
-import '../helpers/opmeting/toebehoren/vliegendeur/opmeting_vliegendeur_fiche.dart';
+    show OpmetingProjectTitelhoofd;
+import '../helpers/opmeting/project/opmeting_project_titelhoofd_controller.dart';
+import '../helpers/opmeting/project/opmeting_project_bestand_controller.dart';
+import '../helpers/opmeting/navigatie/opmeting_formulier_navigatie_controller.dart';
 
 class OpmetingPagina extends StatefulWidget {
   const OpmetingPagina({super.key});
@@ -50,10 +34,7 @@ class OpmetingPagina extends StatefulWidget {
 
 class _OpmetingPaginaState extends State<OpmetingPagina> {
   static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
   static const Color _achtergrond = Color(0xFFF7F8FA);
-  static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   String _klantNaam = '';
@@ -69,23 +50,15 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   Set<String> _verborgenFormulierTypes = <String>{};
 
-  bool _formulierOpenenBezig = false;
-
-  final Set<String> _winstmargeDoelArtikelIds = <String>{};
-  final Set<String> _kortingDoelArtikelIds = <String>{};
-
   final OfferteController _offerteController = OfferteController.standaard();
-
-  Timer? _titelhoofdBewaarTimer;
-  Timer? _prijsHerberekenTimer;
-  Timer? _prijsInstellingenControleTimer;
-
-  bool _prijsInstellingenControleBezig = false;
-  bool _prijsHerberekeningBezig = false;
-  List<OffertePrijsinstellingenWijziging>
-  _wachtendeAutomatischePrijsWijzigingen =
-      <OffertePrijsinstellingenWijziging>[];
-  String _genegeerdePrijsinstellingenSignatuur = '';
+  late final OffertePrijsinstellingenController _prijsinstellingenController;
+  late final OfferteArtikelPrijscorrectieController
+  _artikelPrijscorrectieController;
+  late final OfferteProjectPrijsregelController _projectPrijsregelController;
+  late final OffertePositieBeheerController _positieBeheerController;
+  late final OpmetingProjectTitelhoofdController _projectTitelhoofdController;
+  late final OpmetingProjectBestandController _projectBestandController;
+  late final OpmetingFormulierNavigatieController _formulierNavigatieController;
 
   bool get _heeftOpenBestand {
     return _klantNaam.trim().isNotEmpty;
@@ -94,2499 +67,235 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   @override
   void initState() {
     super.initState();
-    _laadProjectKleuren();
-    _prijsInstellingenControleTimer = Timer.periodic(
-      const Duration(seconds: 2),
-      (_) {
-        unawaited(_controleerOpenOfferteOpPrijsinstellingen());
+    _prijsinstellingenController = OffertePrijsinstellingenController(
+      context: context,
+      isMounted: () => mounted,
+      leesIsLaden: () => _laden,
+      leesHeeftOpenBestand: () => _heeftOpenBestand,
+      leesKlantNaam: () => _klantNaam,
+      leesTitelhoofd: () => _projectTitelhoofd,
+      herlaadOpmetingen: (klantNaam, forceerPrijsinstellingen) {
+        return _projectBestandController.laadOpmetingenVanOpslag(
+          klantNaam: klantNaam,
+          forceerPrijsinstellingen: forceerPrijsinstellingen,
+        );
+      },
+      toonMelding: (tekst, fout) {
+        _toonMelding(tekst, fout: fout);
+      },
+      onHerberekeningStatusGewijzigd: () {
+        if (!mounted) return;
+        setState(() {});
       },
     );
+    _artikelPrijscorrectieController = OfferteArtikelPrijscorrectieController(
+      context: context,
+      offerteController: _offerteController,
+      isMounted: () => mounted,
+      leesArtikelen: () => _raamOpmetingen,
+      vervangArtikelen: (artikelen) {
+        if (!mounted) return;
+        setState(() {
+          _raamOpmetingen
+            ..clear()
+            ..addAll(artikelen);
+        });
+      },
+      herberekenPrijsMomentopnames: (klantNaam) {
+        return _herberekenPrijsMomentopnamesNaPrijswijziging(
+          klantNaam: klantNaam,
+        );
+      },
+      onDoelSelectieGewijzigd: () {
+        if (!mounted) return;
+        setState(() {});
+      },
+    );
+    _projectPrijsregelController = OfferteProjectPrijsregelController(
+      context: context,
+      offerteController: _offerteController,
+      isMounted: () => mounted,
+      leesArtikelen: () => _raamOpmetingen,
+      leesTitelhoofd: () => _projectTitelhoofd,
+      leesKlantNaam: () => _klantNaam,
+      laadPrijsprofiel:
+          _prijsinstellingenController.laadPrijsprofielVoorFormulierType,
+      maakPrijsinstellingenMomentopname:
+          _prijsinstellingenController.maakPrijsinstellingenMomentopname,
+      herberekenPrijsMomentopnames: (klantNaam) {
+        return _herberekenPrijsMomentopnamesNaPrijswijziging(
+          klantNaam: klantNaam,
+        );
+      },
+      vervangArtikelen: (artikelen) {
+        if (!mounted) return;
+        setState(() {
+          _raamOpmetingen
+            ..clear()
+            ..addAll(artikelen);
+        });
+      },
+      vervangTitelhoofd: (titelhoofd) {
+        if (!mounted) return;
+        setState(() {
+          _projectTitelhoofd = titelhoofd;
+        });
+      },
+      toonMelding: (tekst, fout) {
+        _toonMelding(tekst, fout: fout);
+      },
+    );
+    _positieBeheerController = OffertePositieBeheerController(
+      context: context,
+      offerteController: _offerteController,
+      isMounted: () => mounted,
+      leesArtikelen: () => _raamOpmetingen,
+      leesKlantNaam: () => _klantNaam,
+      herlaadOpmetingen: (klantNaam) {
+        return _projectBestandController.laadOpmetingenVanOpslag(
+          klantNaam: klantNaam,
+        );
+      },
+      herberekenPrijsMomentopnames: (klantNaam) {
+        return _herberekenPrijsMomentopnamesNaPrijswijziging(
+          klantNaam: klantNaam,
+        );
+      },
+      verplaatsArtikelLokaal: (huidigeIndex, nieuweIndex) {
+        if (!mounted) return;
+        setState(() {
+          final opmeting = _raamOpmetingen.removeAt(huidigeIndex);
+          _raamOpmetingen.insert(nieuweIndex, opmeting);
+        });
+      },
+      toonMelding: (tekst) {
+        _toonMelding(tekst);
+      },
+    );
+    _projectTitelhoofdController = OpmetingProjectTitelhoofdController(
+      context: context,
+      isMounted: () => mounted,
+      leesKlantNaam: () => _klantNaam,
+      leesTitelhoofd: () => _projectTitelhoofd,
+      leesOpmetingen: () => _raamOpmetingen,
+      vervangProjectState: (titelhoofd, klantNaam, opmetingen) {
+        if (!mounted) return;
+        setState(() {
+          _klantNaam = klantNaam;
+          _projectTitelhoofd = titelhoofd;
+          _raamOpmetingen
+            ..clear()
+            ..addAll(opmetingen);
+        });
+      },
+      herlaadOpmetingen: (klantNaam) {
+        return _projectBestandController.laadOpmetingenVanOpslag(
+          klantNaam: klantNaam,
+        );
+      },
+      toonMelding: (tekst, fout) {
+        _toonMelding(tekst, fout: fout);
+      },
+    );
+    _projectBestandController = OpmetingProjectBestandController(
+      context: context,
+      isMounted: () => mounted,
+      leesKlantNaam: () => _klantNaam,
+      leesTitelhoofd: () => _projectTitelhoofd,
+      leesOpmetingen: () => _raamOpmetingen,
+      leesVerborgenFormulierTypes: () => _verborgenFormulierTypes,
+      prijsinstellingenController: _prijsinstellingenController,
+      projectTitelhoofdController: _projectTitelhoofdController,
+      artikelPrijscorrectieController: _artikelPrijscorrectieController,
+      vervangProjectState:
+          (klantNaam, titelhoofd, opmetingen, verborgenFormulierTypes, laden) {
+            if (!mounted) return;
+            setState(() {
+              _klantNaam = klantNaam;
+              _projectTitelhoofd = titelhoofd;
+              _raamOpmetingen
+                ..clear()
+                ..addAll(opmetingen);
+              _verborgenFormulierTypes = verborgenFormulierTypes;
+              _laden = laden;
+            });
+          },
+      vervangProjectKleuren: (kleuren) {
+        if (!mounted) return;
+        setState(() {
+          _projectKleurMenus = kleuren;
+        });
+      },
+      zetLaden: (laden) {
+        if (!mounted) return;
+        setState(() {
+          _laden = laden;
+        });
+      },
+      toonMelding: (tekst, fout) {
+        _toonMelding(tekst, fout: fout);
+      },
+    );
+    _formulierNavigatieController = OpmetingFormulierNavigatieController(
+      context: context,
+      isMounted: () => mounted,
+      leesKlantNaam: () => _klantNaam,
+      leesTitelhoofd: () => _projectTitelhoofd,
+      zorgVoorActieveKlant: _projectBestandController.zorgVoorActieveKlant,
+      laadVasteInzethorPrijsprofiel:
+          _prijsinstellingenController.laadVasteInzethorPrijsprofiel,
+      herlaadOpmetingen: (klantNaam) {
+        return _projectBestandController.laadOpmetingenVanOpslag(
+          klantNaam: klantNaam,
+        );
+      },
+    );
+    _projectBestandController.laadProjectKleuren();
+    _prijsinstellingenController.startAutomatischeControle();
   }
 
   @override
   void dispose() {
-    _titelhoofdBewaarTimer?.cancel();
-    _prijsHerberekenTimer?.cancel();
-    _prijsInstellingenControleTimer?.cancel();
+    _projectTitelhoofdController.dispose();
+    _artikelPrijscorrectieController.dispose();
+    _prijsinstellingenController.dispose();
     super.dispose();
   }
 
-  String _normaliseerKlantNaam(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-  }
-
-  Future<OpmetingProjectTitelhoofd> _vulAanUitKlantenfiche({
-    required String klantNaam,
-    required OpmetingProjectTitelhoofd basis,
-  }) async {
-    final sleutel = _normaliseerKlantNaam(klantNaam);
-
-    if (sleutel.isEmpty) {
-      return basis;
-    }
-
-    final klanten = await AppStorage.laadKlantenVoorOpmeting();
-    OpmetingAgendaKlantInfo? gevonden;
-
-    for (final klant in klanten) {
-      if (_normaliseerKlantNaam(klant.klantNaam) == sleutel) {
-        gevonden = klant;
-        break;
-      }
-    }
-
-    if (gevonden == null) {
-      return basis.klantNaam.trim().isEmpty
-          ? basis.copyWith(klantNaam: klantNaam.trim())
-          : basis;
-    }
-
-    String behoudOfVul(String bestaand, String bron) {
-      return bestaand.trim().isNotEmpty ? bestaand : bron.trim();
-    }
-
-    return basis.copyWith(
-      klantNaam: behoudOfVul(basis.klantNaam, gevonden.klantNaam),
-      klantnummer: behoudOfVul(basis.klantnummer, gevonden.klantnummer),
-      contactpersoon: behoudOfVul(
-        basis.contactpersoon,
-        gevonden.contactpersoon,
-      ),
-      adres: behoudOfVul(basis.adres, gevonden.adres),
-      huisnummer: behoudOfVul(basis.huisnummer, gevonden.huisnummer),
-      busNummer: behoudOfVul(basis.busNummer, gevonden.busNummer),
-      postcode: behoudOfVul(basis.postcode, gevonden.postcode),
-      gemeente: behoudOfVul(basis.gemeente, gevonden.gemeente),
-      gsm: behoudOfVul(basis.gsm, gevonden.gsm),
-      telefoon: behoudOfVul(basis.telefoon, gevonden.telefoon),
-      email: behoudOfVul(basis.email, gevonden.email),
+  Future<void> _openRaamopmeting({String formulierType = 'pvcRaam'}) {
+    return _formulierNavigatieController.openRaamopmeting(
+      formulierType: formulierType,
     );
-  }
-
-  Future<OffertePrijsprofielModel> _laadPrijsprofielVoorFormulierType(
-    String formulierType,
-  ) async {
-    final canoniekFormulierType =
-        OfferteArtikelPrijsKoppelingService.canoniekFormulierType(
-          formulierType,
-        );
-    final formulierNaam = _formulierNaamVoorPrijsType(canoniekFormulierType);
-
-    return await AppStorage.laadOffertePrijsProfiel(canoniekFormulierType) ??
-        OffertePrijsprofielModel.leeg(
-          formulierType: canoniekFormulierType,
-          formulierNaam: formulierNaam,
-        );
-  }
-
-  Future<OffertePrijsprofielModel> _laadVasteInzethorPrijsprofiel() {
-    return _laadPrijsprofielVoorFormulierType('vasteInzethor');
-  }
-
-  Future<Map<String, OffertePrijsprofielModel>>
-  _laadOndersteundePrijsprofielen() async {
-    final resultaat = <String, OffertePrijsprofielModel>{};
-    for (final formulierType
-        in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-      resultaat[formulierType] = await _laadPrijsprofielVoorFormulierType(
-        formulierType,
-      );
-    }
-    return resultaat;
-  }
-
-  String _formulierNaamVoorPrijsType(String formulierType) {
-    return OfferteArtikelPrijsKoppelingService.formulierNaamVoor(formulierType);
-  }
-
-  OffertePrijsprofielModel _algemeenPrijsprofielVoorMomentopname(
-    OffertePrijsprofielModel profiel,
-  ) {
-    return profiel.copyWith(
-      prijsregels: profiel.prijsregels
-          .where(
-            (regel) =>
-                regel.categorie ==
-                    OffertePrijsCategorie.technischeKeuzePerArtikel ||
-                regel.categorie == OffertePrijsCategorie.vrijPerArtikel ||
-                regel.categorie == OffertePrijsCategorie.alleArtikelen,
-          )
-          .toList(growable: false),
-    );
-  }
-
-  OffertePrijsinstellingenMomentopname _prijsinstellingenMomentopnameVoor(
-    OffertePrijsprofielModel profiel,
-  ) {
-    final koppeling =
-        OfferteArtikelPrijsKoppelingService.koppelingVoorFormulierType(
-          profiel.formulierType,
-        );
-    final profielVoorMomentopname = koppeling?.isAlgemeenArtikel == true
-        ? _algemeenPrijsprofielVoorMomentopname(profiel)
-        : profiel;
-    return OffertePrijsinstellingenMomentopname.vanProfiel(
-      profielVoorMomentopname,
-    );
-  }
-
-  OffertePrijsinstellingenMomentopname?
-  _filterOudePrijsinstellingenMomentopname(
-    OffertePrijsinstellingenMomentopname? momentopname,
-  ) {
-    if (momentopname == null) return null;
-    return _prijsinstellingenMomentopnameVoor(momentopname.naarProfiel());
-  }
-
-  Map<String, OffertePrijsinstellingenMomentopname>
-  _maakHuidigePrijsinstellingenMomentopnames(
-    Map<String, OffertePrijsprofielModel> profielen,
-  ) {
-    return <String, OffertePrijsinstellingenMomentopname>{
-      for (final formulierType
-          in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes)
-        formulierType: _prijsinstellingenMomentopnameVoor(
-          profielen[formulierType] ??
-              OffertePrijsprofielModel.leeg(
-                formulierType: formulierType,
-                formulierNaam: _formulierNaamVoorPrijsType(formulierType),
-              ),
-        ),
-    };
-  }
-
-  Map<String, OffertePrijsinstellingenMomentopname?>
-  _leesOudePrijsinstellingenMomentopnames(
-    OpmetingProjectTitelhoofd titelhoofd,
-  ) {
-    return <String, OffertePrijsinstellingenMomentopname?>{
-      for (final formulierType
-          in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes)
-        formulierType: _filterOudePrijsinstellingenMomentopname(
-          titelhoofd.prijsinstellingenMomentopnameVoor(formulierType),
-        ),
-    };
-  }
-
-  String _samengesteldePrijsinstellingenSignatuur(
-    Iterable<OffertePrijsinstellingenMomentopname> momentopnames,
-  ) {
-    final gesorteerd = momentopnames.toList(growable: false)
-      ..sort(
-        (eerste, tweede) => _normaliseerPrijsFormulierType(
-          eerste.formulierType,
-        ).compareTo(_normaliseerPrijsFormulierType(tweede.formulierType)),
-      );
-
-    return jsonEncode(<String, String>{
-      for (final momentopname in gesorteerd)
-        _normaliseerPrijsFormulierType(momentopname.formulierType):
-            momentopname.signatuur,
-    });
-  }
-
-  Future<_TechnischePrijsMomentopnameResultaat>
-  _werkTechnischePrijsMomentopnamesBij({
-    required List<OpmetingOverzichtRaamItem> alleOpmetingen,
-    required String klantNaam,
-    required bool berekenPrijzen,
-    Map<String, OffertePrijsprofielModel>? prijsprofielen,
-    List<OffertePrijsregelModel> tijdelijkeProjectPrijsregels =
-        const <OffertePrijsregelModel>[],
-    bool forceerPrijsinstellingen = false,
-  }) async {
-    if (!berekenPrijzen || klantNaam.trim().isEmpty) {
-      return _TechnischePrijsMomentopnameResultaat(
-        opmetingen: alleOpmetingen,
-        gewijzigd: false,
-      );
-    }
-
-    OffertePrijsprofielModel combineerProjectRegels(
-      OffertePrijsprofielModel basis,
-    ) {
-      final formulierSleutel = _normaliseerPrijsFormulierType(
-        basis.formulierType,
-      );
-      final regelsPerId = <String, OffertePrijsregelModel>{
-        for (final regel in basis.prijsregels) regel.id: regel,
-      };
-
-      for (final regel in tijdelijkeProjectPrijsregels) {
-        if (regel.categorie != OffertePrijsCategorie.alleArtikelen ||
-            _normaliseerPrijsFormulierType(regel.formulierType) !=
-                formulierSleutel) {
-          continue;
-        }
-
-        regelsPerId[regel.id] = regel.copyWith(
-          categorie: OffertePrijsCategorie.alleArtikelen,
-          formulierType: basis.formulierType,
-        );
-      }
-
-      return basis.copyWith(
-        prijsregels: regelsPerId.values.toList(growable: false),
-      );
-    }
-
-    final basisProfielen =
-        prijsprofielen ?? await _laadOndersteundePrijsprofielen();
-    final profielen = <String, OffertePrijsprofielModel>{
-      for (final formulierType
-          in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes)
-        formulierType: combineerProjectRegels(
-          basisProfielen[formulierType] ??
-              OffertePrijsprofielModel.leeg(
-                formulierType: formulierType,
-                formulierNaam: _formulierNaamVoorPrijsType(formulierType),
-              ),
-        ),
-    };
-    final klantSleutel = klantNaam.trim().toLowerCase();
-    var gewijzigd = false;
-
-    final bijgewerkteOpmetingen = alleOpmetingen
-        .map((opmeting) {
-          if (opmeting.isVerwijderd ||
-              opmeting.klantNaam.trim().toLowerCase() != klantSleutel) {
-            return opmeting;
-          }
-
-          final koppeling =
-              OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-                opmeting,
-              );
-          if (koppeling == null) return opmeting;
-
-          final profiel = profielen[koppeling.formulierType];
-          if (profiel == null) return opmeting;
-
-          if (koppeling.isVasteInzethor) {
-            final model = opmeting.vasteInzethorData;
-            if (model == null) return opmeting;
-
-            var bijgewerktModel = model;
-            var modelGewijzigd = false;
-
-            if (OffertePrijsBerekeningService.moetTechnischeMomentopnameBijwerken(
-              bijgewerktModel,
-            )) {
-              bijgewerktModel =
-                  OffertePrijsBerekeningService.maakTechnischeMomentopname(
-                    model: bijgewerktModel,
-                  );
-              modelGewijzigd = true;
-            }
-
-            var prijsData = bijgewerktModel.prijsData;
-            if (OfferteAlgemeenArtikelPrijsService.moetVrijeArtikelMomentopnameBijwerken(
-              prijsData: prijsData,
-              profiel: profiel,
-              artikelSignatuur: bijgewerktModel.prijsBerekeningSignatuur,
-              forceer: forceerPrijsinstellingen,
-            )) {
-              prijsData =
-                  OfferteAlgemeenArtikelPrijsService.maakVrijeArtikelMomentopname(
-                    prijsData: prijsData,
-                    profiel: profiel,
-                    artikelSignatuur: bijgewerktModel.prijsBerekeningSignatuur,
-                  );
-              bijgewerktModel = bijgewerktModel.copyWithPrijsData(prijsData);
-              modelGewijzigd = true;
-            }
-
-            if (!modelGewijzigd) return opmeting;
-
-            gewijzigd = true;
-            return opmeting
-                .copyWith(vasteInzethorData: bijgewerktModel)
-                .metNieuweWijzigingsDatum();
-          }
-
-          var prijsData = opmeting.offertePrijsData;
-          var prijsDataGewijzigd = false;
-
-          if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
-              OfferteAlgemeenArtikelPrijsService.moetTechnischeMomentopnameBijwerken(
-                prijsData: prijsData,
-                profiel: profiel,
-                keuzeSelectiesPerKader: opmeting.keuzeSelectiesPerKader,
-                breedteMm: opmeting.raammaatBreedteMm,
-                hoogteMm: opmeting.raammaatHoogteMm,
-                forceer: forceerPrijsinstellingen,
-              )) {
-            prijsData =
-                OfferteAlgemeenArtikelPrijsService.maakTechnischeMomentopname(
-                  prijsData: prijsData,
-                  profiel: profiel,
-                  keuzeSelectiesPerKader: opmeting.keuzeSelectiesPerKader,
-                  breedteMm: opmeting.raammaatBreedteMm,
-                  hoogteMm: opmeting.raammaatHoogteMm,
-                );
-            prijsDataGewijzigd = true;
-          }
-
-          if (OfferteAlgemeenArtikelPrijsService.moetVrijeArtikelMomentopnameBijwerken(
-            prijsData: prijsData,
-            profiel: profiel,
-            forceer: forceerPrijsinstellingen,
-          )) {
-            prijsData =
-                OfferteAlgemeenArtikelPrijsService.maakVrijeArtikelMomentopname(
-                  prijsData: prijsData,
-                  profiel: profiel,
-                );
-            prijsDataGewijzigd = true;
-          }
-
-          if (!prijsDataGewijzigd) return opmeting;
-
-          gewijzigd = true;
-          return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
-            artikel: opmeting,
-            prijsData: prijsData,
-          ).metNieuweWijzigingsDatum();
-        })
-        .toList(growable: false);
-
-    final vasteVerdeelkostResultaat =
-        OfferteVerdeelkostService.werkMomentopnamesBij(
-          alleOpmetingen: bijgewerkteOpmetingen,
-          klantNaam: klantNaam,
-          profiel: profielen['vasteInzethor']!,
-          forceer: forceerPrijsinstellingen,
-        );
-    final pvcVerdeelkostResultaat =
-        OfferteVerdeelkostService.werkMomentopnamesBij(
-          alleOpmetingen: vasteVerdeelkostResultaat.opmetingen,
-          klantNaam: klantNaam,
-          profiel: profielen['pvcRaam']!,
-          forceer: forceerPrijsinstellingen,
-        );
-
-    return _TechnischePrijsMomentopnameResultaat(
-      opmetingen: pvcVerdeelkostResultaat.opmetingen,
-      gewijzigd:
-          gewijzigd ||
-          vasteVerdeelkostResultaat.gewijzigd ||
-          pvcVerdeelkostResultaat.gewijzigd,
-    );
-  }
-
-  List<OffertePrijsinstellingenWijziging> _bepaalPrijsinstellingenWijzigingen({
-    required OffertePrijsinstellingenMomentopname? oud,
-    required OffertePrijsinstellingenMomentopname huidig,
-  }) {
-    if (oud == null) {
-      return huidig.eersteKoppelingWijzigingen();
-    }
-
-    return oud.wijzigingenNaar(huidig);
-  }
-
-  Future<void> _laadOpmetingenVanOpslag({
-    String? klantNaam,
-    bool vraagPrijsinstellingenOvernemen = false,
-    bool forceerPrijsinstellingen = false,
-  }) async {
-    if (mounted) {
-      setState(() {
-        _laden = true;
-      });
-    }
-
-    final actieveKlantNaam = (klantNaam ?? _klantNaam).trim();
-    final klantGewijzigd =
-        _normaliseerKlantNaam(actieveKlantNaam) !=
-        _normaliseerKlantNaam(_klantNaam);
-    if (klantGewijzigd) {
-      _genegeerdePrijsinstellingenSignatuur = '';
-    }
-    final opgeslagenTitelhoofd = await AppStorage.laadOpmetingProjectTitelhoofd(
-      actieveKlantNaam,
-    );
-    var titelhoofd = await _vulAanUitKlantenfiche(
-      klantNaam: actieveKlantNaam,
-      basis: opgeslagenTitelhoofd,
-    );
-    final alleOpmetingenVoorSync = await AppStorage.laadOpmetingenVoorSync();
-
-    final huidigeProfielen = await _laadOndersteundePrijsprofielen();
-    final huidigeMomentopnames = _maakHuidigePrijsinstellingenMomentopnames(
-      huidigeProfielen,
-    );
-    final oudeMomentopnames = _leesOudePrijsinstellingenMomentopnames(
-      titelhoofd,
-    );
-
-    bool isGewijzigd(
-      OffertePrijsinstellingenMomentopname? oud,
-      OffertePrijsinstellingenMomentopname huidig,
-    ) {
-      return oud == null
-          ? huidig.prijsregels.isNotEmpty
-          : !oud.heeftZelfdeInhoudAls(huidig);
-    }
-
-    final gewijzigdeFormulierTypes = OfferteArtikelPrijsKoppelingService
-        .ondersteundeFormulierTypes
-        .where(
-          (formulierType) => isGewijzigd(
-            oudeMomentopnames[formulierType],
-            huidigeMomentopnames[formulierType]!,
-          ),
-        )
-        .toList(growable: false);
-    final prijsinstellingenGewijzigd = gewijzigdeFormulierTypes.isNotEmpty;
-    final wijzigingen = <OffertePrijsinstellingenWijziging>[
-      for (final formulierType in gewijzigdeFormulierTypes)
-        ..._bepaalPrijsinstellingenWijzigingen(
-          oud: oudeMomentopnames[formulierType],
-          huidig: huidigeMomentopnames[formulierType]!,
-        ),
-    ];
-
-    var huidigeInstellingenToepassen = true;
-    final profielenVoorBerekening = Map<String, OffertePrijsprofielModel>.from(
-      huidigeProfielen,
-    );
-
-    if (titelhoofd.berekenPrijzen &&
-        prijsinstellingenGewijzigd &&
-        vraagPrijsinstellingenOvernemen &&
-        !forceerPrijsinstellingen) {
-      if (!mounted) return;
-
-      final keuze = await _vraagPrijsinstellingenOvernemen(
-        wijzigingen: wijzigingen,
-        eersteKoppeling: gewijzigdeFormulierTypes.any(
-          (formulierType) => oudeMomentopnames[formulierType] == null,
-        ),
-      );
-      huidigeInstellingenToepassen = keuze == true;
-      _genegeerdePrijsinstellingenSignatuur = huidigeInstellingenToepassen
-          ? ''
-          : _samengesteldePrijsinstellingenSignatuur(
-              huidigeMomentopnames.values,
-            );
-
-      if (!huidigeInstellingenToepassen) {
-        for (final formulierType
-            in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-          profielenVoorBerekening[formulierType] =
-              oudeMomentopnames[formulierType]?.naarProfiel() ??
-              OffertePrijsprofielModel.leeg(
-                formulierType: formulierType,
-                formulierNaam: _formulierNaamVoorPrijsType(formulierType),
-              );
-        }
-      }
-    }
-
-    final magPrijsberekeningUitvoeren =
-        titelhoofd.berekenPrijzen &&
-        (huidigeInstellingenToepassen ||
-            oudeMomentopnames.values.any(
-              (momentopname) => momentopname != null,
-            ));
-
-    final momentopnameResultaat = magPrijsberekeningUitvoeren
-        ? await _werkTechnischePrijsMomentopnamesBij(
-            alleOpmetingen: alleOpmetingenVoorSync,
-            klantNaam: actieveKlantNaam,
-            berekenPrijzen: true,
-            prijsprofielen: profielenVoorBerekening,
-            tijdelijkeProjectPrijsregels:
-                titelhoofd.tijdelijkeProjectPrijsregels,
-            forceerPrijsinstellingen:
-                forceerPrijsinstellingen ||
-                (prijsinstellingenGewijzigd && huidigeInstellingenToepassen),
-          )
-        : _TechnischePrijsMomentopnameResultaat(
-            opmetingen: alleOpmetingenVoorSync,
-            gewijzigd: false,
-          );
-
-    final projectkleurResultaat =
-        _synchroniseerProjectkleurInVasteInzethorPosities(
-          momentopnameResultaat.opmetingen,
-          klantNaam: actieveKlantNaam,
-          projectkleur: titelhoofd.ralKleurToebehoren,
-        );
-    final opmetingenNaProjectkleurSynchronisatie =
-        projectkleurResultaat.opmetingen;
-
-    if (titelhoofd.berekenPrijzen && huidigeInstellingenToepassen) {
-      for (final momentopname in huidigeMomentopnames.values) {
-        titelhoofd = titelhoofd.metPrijsinstellingenMomentopname(momentopname);
-      }
-      titelhoofd = titelhoofd.metWijzigingsDatum();
-      await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-    }
-
-    if (momentopnameResultaat.gewijzigd || projectkleurResultaat.gewijzigd) {
-      await AppStorage.bewaarOpmetingenVoorSync(
-        opmetingenNaProjectkleurSynchronisatie,
-      );
-      await OneDriveSyncService.registreerLokaleWijziging();
-      OneDriveSyncService().uploadBackupOpAchtergrond();
-    }
-
-    final klantFilter = actieveKlantNaam.toLowerCase();
-    final zichtbareOpmetingen = klantFilter.isEmpty
-        ? <OpmetingOverzichtRaamItem>[]
-        : opmetingenNaProjectkleurSynchronisatie.where((opmeting) {
-            return !opmeting.isVerwijderd &&
-                opmeting.klantNaam.trim().toLowerCase() == klantFilter;
-          }).toList();
-
-    if (!mounted) return;
-
-    final bestaandeTypes = zichtbareOpmetingen
-        .map((opmeting) => opmeting.formulierTypeGenormaliseerd)
-        .toSet();
-
-    setState(() {
-      _klantNaam = actieveKlantNaam;
-      _projectTitelhoofd =
-          titelhoofd.klantNaam.trim().isEmpty && actieveKlantNaam.isNotEmpty
-          ? titelhoofd.copyWith(klantNaam: actieveKlantNaam)
-          : titelhoofd;
-      _raamOpmetingen
-        ..clear()
-        ..addAll(zichtbareOpmetingen);
-      _verborgenFormulierTypes = _verborgenFormulierTypes
-          .where(bestaandeTypes.contains)
-          .toSet();
-      if (klantGewijzigd) {
-        _winstmargeDoelArtikelIds.clear();
-        _kortingDoelArtikelIds.clear();
-      }
-      _laden = false;
-    });
-  }
-
-  Future<void> _controleerOpenOfferteOpPrijsinstellingen() async {
-    if (_prijsInstellingenControleBezig ||
-        _laden ||
-        !_heeftOpenBestand ||
-        !_projectTitelhoofd.berekenPrijzen) {
-      _toonWachtendeAutomatischePrijsMeldingIndienMogelijk();
-      return;
-    }
-
-    _prijsInstellingenControleBezig = true;
-
-    try {
-      final huidigeProfielen = await _laadOndersteundePrijsprofielen();
-      final huidigeMomentopnames = _maakHuidigePrijsinstellingenMomentopnames(
-        huidigeProfielen,
-      );
-      final oudeMomentopnames = _leesOudePrijsinstellingenMomentopnames(
-        _projectTitelhoofd,
-      );
-      final huidigeSamengesteldeSignatuur =
-          _samengesteldePrijsinstellingenSignatuur(huidigeMomentopnames.values);
-
-      if (_genegeerdePrijsinstellingenSignatuur ==
-          huidigeSamengesteldeSignatuur) {
-        _toonWachtendeAutomatischePrijsMeldingIndienMogelijk();
-        return;
-      }
-
-      bool isOngewijzigd(String formulierType) {
-        final oud = oudeMomentopnames[formulierType];
-        final huidig = huidigeMomentopnames[formulierType]!;
-        return oud == null
-            ? huidig.prijsregels.isEmpty
-            : oud.heeftZelfdeInhoudAls(huidig);
-      }
-
-      final gewijzigdeFormulierTypes = OfferteArtikelPrijsKoppelingService
-          .ondersteundeFormulierTypes
-          .where((formulierType) => !isOngewijzigd(formulierType))
-          .toList(growable: false);
-
-      if (gewijzigdeFormulierTypes.isEmpty) {
-        _toonWachtendeAutomatischePrijsMeldingIndienMogelijk();
-        return;
-      }
-
-      final wijzigingen = <OffertePrijsinstellingenWijziging>[
-        for (final formulierType in gewijzigdeFormulierTypes)
-          ..._bepaalPrijsinstellingenWijzigingen(
-            oud: oudeMomentopnames[formulierType],
-            huidig: huidigeMomentopnames[formulierType]!,
-          ),
-      ];
-
-      await _laadOpmetingenVanOpslag(
-        klantNaam: _klantNaam,
-        forceerPrijsinstellingen: true,
-      );
-
-      if (!mounted) return;
-
-      if (ModalRoute.of(context)?.isCurrent == true) {
-        _toonAutomatischePrijsMelding(wijzigingen);
-      } else {
-        _wachtendeAutomatischePrijsWijzigingen = wijzigingen;
-      }
-    } finally {
-      _prijsInstellingenControleBezig = false;
-    }
-  }
-
-  Future<void> _herberekenOfferteHandmatig() async {
-    if (_prijsHerberekeningBezig ||
-        !_heeftOpenBestand ||
-        !_projectTitelhoofd.berekenPrijzen) {
-      return;
-    }
-
-    setState(() {
-      _prijsHerberekeningBezig = true;
-    });
-    _genegeerdePrijsinstellingenSignatuur = '';
-
-    try {
-      final huidigeProfielen = await _laadOndersteundePrijsprofielen();
-      final huidigeMomentopnames = _maakHuidigePrijsinstellingenMomentopnames(
-        huidigeProfielen,
-      );
-      final oudeMomentopnames = _leesOudePrijsinstellingenMomentopnames(
-        _projectTitelhoofd,
-      );
-      final wijzigingen = <OffertePrijsinstellingenWijziging>[
-        for (final formulierType
-            in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes)
-          ..._bepaalPrijsinstellingenWijzigingen(
-            oud: oudeMomentopnames[formulierType],
-            huidig: huidigeMomentopnames[formulierType]!,
-          ),
-      ];
-
-      await _laadOpmetingenVanOpslag(
-        klantNaam: _klantNaam,
-        forceerPrijsinstellingen: true,
-      );
-
-      if (!mounted) return;
-
-      if (wijzigingen.isEmpty) {
-        _toonMelding('Offerte opnieuw berekend met de huidige instellingen.');
-      } else {
-        _toonAutomatischePrijsMelding(wijzigingen);
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _prijsHerberekeningBezig = false;
-        });
-      }
-    }
-  }
-
-  void _toonWachtendeAutomatischePrijsMeldingIndienMogelijk() {
-    if (!mounted ||
-        _wachtendeAutomatischePrijsWijzigingen.isEmpty ||
-        ModalRoute.of(context)?.isCurrent != true) {
-      return;
-    }
-
-    final wijzigingen = List<OffertePrijsinstellingenWijziging>.from(
-      _wachtendeAutomatischePrijsWijzigingen,
-    );
-    _wachtendeAutomatischePrijsWijzigingen =
-        <OffertePrijsinstellingenWijziging>[];
-    _toonAutomatischePrijsMelding(wijzigingen);
-  }
-
-  void _toonAutomatischePrijsMelding(
-    List<OffertePrijsinstellingenWijziging> wijzigingen,
-  ) {
-    if (!mounted) {
-      return;
-    }
-
-    final aantal = wijzigingen.length;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: _groen,
-        content: Text(
-          aantal == 0
-              ? 'Offerte automatisch herberekend.'
-              : 'Offerte automatisch herberekend na $aantal prijswijziging(en).',
-        ),
-        action: aantal == 0
-            ? null
-            : SnackBarAction(
-                label: 'Bekijken',
-                textColor: Colors.white,
-                onPressed: () {
-                  _toonPrijsinstellingenDetails(wijzigingen);
-                },
-              ),
-      ),
-    );
-  }
-
-  Future<bool?> _vraagPrijsinstellingenOvernemen({
-    required List<OffertePrijsinstellingenWijziging> wijzigingen,
-    required bool eersteKoppeling,
-  }) {
-    return showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Row(
-            children: <Widget>[
-              const Icon(Icons.post_add_outlined, color: _groen),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  eersteKoppeling
-                      ? 'Prijsinstellingen koppelen?'
-                      : 'Prijsinstellingen gewijzigd',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 560,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                Text(
-                  eersteKoppeling
-                      ? 'Voor deze oudere offerte is nog geen prijsinstellingenmomentopname opgeslagen. Wilt u de huidige instellingen toepassen?'
-                      : 'Onderstaande prijsinstellingen verschillen van de instellingen waarmee deze offerte het laatst werd berekend.',
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 13,
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _bouwPrijsWijzigingenLijst(wijzigingen),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Oude prijzen behouden'),
-            ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: _groen),
-              onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Nieuwe instellingen toepassen'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _toonPrijsinstellingenDetails(
-    List<OffertePrijsinstellingenWijziging> wijzigingen,
-  ) {
-    return showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Verwerkte prijswijzigingen',
-            style: TextStyle(fontWeight: FontWeight.w900),
-          ),
-          content: SizedBox(
-            width: 560,
-            child: _bouwPrijsWijzigingenLijst(wijzigingen),
-          ),
-          actions: <Widget>[
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _groen),
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Sluiten'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _bouwPrijsWijzigingenLijst(
-    List<OffertePrijsinstellingenWijziging> wijzigingen,
-  ) {
-    if (wijzigingen.isEmpty) {
-      return const Text(
-        'Er zijn geen inhoudelijke wijzigingen gevonden. De offerte wordt wel volledig opnieuw berekend.',
-        style: TextStyle(color: _tekstGrijs, fontWeight: FontWeight.w600),
-      );
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 360),
-      child: ListView.separated(
-        shrinkWrap: true,
-        itemCount: wijzigingen.length,
-        separatorBuilder: (_, _) => const Divider(height: 18),
-        itemBuilder: (context, index) {
-          final wijziging = wijzigingen[index];
-          final icoon = switch (wijziging.type) {
-            OffertePrijsinstellingenWijzigingType.toegevoegd =>
-              Icons.add_circle_outline_rounded,
-            OffertePrijsinstellingenWijzigingType.verwijderd =>
-              Icons.remove_circle_outline_rounded,
-            OffertePrijsinstellingenWijzigingType.gewijzigd =>
-              Icons.edit_outlined,
-          };
-          final kleur = switch (wijziging.type) {
-            OffertePrijsinstellingenWijzigingType.toegevoegd => _groen,
-            OffertePrijsinstellingenWijzigingType.verwijderd => const Color(
-              0xFFDC2626,
-            ),
-            OffertePrijsinstellingenWijzigingType.gewijzigd => const Color(
-              0xFFF15A24,
-            ),
-          };
-
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Icon(icoon, color: kleur, size: 21),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      wijziging.titel,
-                      style: const TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    if (wijziging.details.isNotEmpty) ...<Widget>[
-                      const SizedBox(height: 4),
-                      ...wijziging.details.map(
-                        (detail) => Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: Text(
-                            detail,
-                            style: const TextStyle(
-                              color: _tekstGrijs,
-                              fontSize: 12.5,
-                              height: 1.35,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Future<void> _laadProjectKleuren() async {
-    final kleuren = await AppStorage.laadOpmetingProjectKleuren();
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _projectKleurMenus = kleuren;
-    });
-  }
-
-  Future<_NieuweOpmetingKlantResultaat?> _vraagKlantNaam() async {
-    final klanten = await AppStorage.laadKlantenVoorOpmeting();
-
-    if (!mounted) {
-      return null;
-    }
-
-    final resultaat = await showDialog<_NieuweOpmetingKlantResultaat>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return _KlantNaamDialog(beginNaam: _klantNaam, klanten: klanten);
-      },
-    );
-
-    await Future<void>.delayed(Duration.zero);
-
-    if (mounted) {
-      await WidgetsBinding.instance.endOfFrame;
-    }
-
-    return resultaat;
-  }
-
-  Future<OpmetingProjectTitelhoofd> _maakTitelhoofdVoorNieuweKlant(
-    _NieuweOpmetingKlantResultaat keuze,
-  ) async {
-    final bestaand = await AppStorage.laadOpmetingProjectTitelhoofd(
-      keuze.klantNaam,
-    );
-
-    final basis = bestaand.copyWith(klantNaam: keuze.klantNaam);
-    final uitKlantenfiche = keuze.klantFiche?.naarTitelhoofd(
-      bestaand: basis,
-      overschrijfKlantnummer: true,
-    );
-
-    final aangevuld =
-        uitKlantenfiche ??
-        await _vulAanUitKlantenfiche(klantNaam: keuze.klantNaam, basis: basis);
-
-    return aangevuld.metWijzigingsDatum();
-  }
-
-  Future<void> _nieuwBestand() async {
-    final keuze = await _vraagKlantNaam();
-
-    if (keuze == null || keuze.klantNaam.trim().isEmpty || !mounted) {
-      return;
-    }
-
-    final klantNaam = keuze.klantNaam.trim();
-    final titelhoofd = await _maakTitelhoofdVoorNieuweKlant(keuze);
-
-    if (!mounted) {
-      return;
-    }
-
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _klantNaam = klantNaam;
-      _projectTitelhoofd = titelhoofd;
-      _raamOpmetingen.clear();
-      _verborgenFormulierTypes.clear();
-      _winstmargeDoelArtikelIds.clear();
-      _kortingDoelArtikelIds.clear();
-    });
-  }
-
-  Future<void> _wachtTotPopupEnDialogGeslotenZijn() async {
-    await Future<void>.delayed(Duration.zero);
-
-    if (!mounted) {
-      return;
-    }
-
-    await WidgetsBinding.instance.endOfFrame;
-  }
-
-  Map<String, List<OpmetingOverzichtRaamItem>> _groepeerOpmetingenPerKlant(
-    List<OpmetingOverzichtRaamItem> opmetingen,
-  ) {
-    final klanten = <String, List<OpmetingOverzichtRaamItem>>{};
-
-    for (final opmeting in opmetingen) {
-      final klantNaam = opmeting.klantNaam.trim().isEmpty
-          ? 'Zonder klantnaam'
-          : opmeting.klantNaam.trim();
-
-      klanten
-          .putIfAbsent(klantNaam, () => <OpmetingOverzichtRaamItem>[])
-          .add(opmeting);
-    }
-
-    return klanten;
-  }
-
-  List<String> _gesorteerdeKlantNamen(
-    Map<String, List<OpmetingOverzichtRaamItem>> klanten,
-  ) {
-    return klanten.keys.toList()..sort((eerste, tweede) {
-      return eerste.toLowerCase().compareTo(tweede.toLowerCase());
-    });
-  }
-
-  Future<void> _openBestand() async {
-    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
-
-    if (!mounted) {
-      return;
-    }
-
-    final alleOpmetingen = await AppStorage.laadOpmetingen();
-
-    if (!mounted) {
-      return;
-    }
-
-    if (alleOpmetingen.isEmpty) {
-      _toonMelding('Er zijn nog geen opgeslagen opmetingen.', fout: true);
-      return;
-    }
-
-    final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
-    final klantNamen = _gesorteerdeKlantNamen(klanten);
-
-    final gekozenKlant = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Klant openen',
-            style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
-          ),
-          content: SizedBox(
-            width: 430,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 420),
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  ...klantNamen.map((klantNaam) {
-                    final aantal = klanten[klantNaam]?.length ?? 0;
-
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.description_outlined,
-                        color: _groen,
-                      ),
-                      title: Text(
-                        klantNaam,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text('$aantal opmeting(en)'),
-                      onTap: () {
-                        Navigator.pop(dialogContext, klantNaam);
-                      },
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Annuleren'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (gekozenKlant == null) {
-      return;
-    }
-
-    await _laadOpmetingenVanOpslag(
-      klantNaam: gekozenKlant,
-      vraagPrijsinstellingenOvernemen: true,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    _toonMelding('Opmeetbestand “$gekozenKlant” is geopend.');
-  }
-
-  Future<void> _wisBestand() async {
-    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
-
-    if (!mounted) {
-      return;
-    }
-
-    final alleOpmetingen = await AppStorage.laadOpmetingen();
-
-    if (!mounted) {
-      return;
-    }
-
-    if (alleOpmetingen.isEmpty) {
-      _toonMelding('Er zijn nog geen opgeslagen opmeetbestanden.', fout: true);
-      return;
-    }
-
-    final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
-    final klantNamen = _gesorteerdeKlantNamen(klanten);
-
-    final gekozenKlant = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Bestand wissen',
-            style: TextStyle(
-              color: Color(0xFFDC2626),
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          content: SizedBox(
-            width: 430,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 420),
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  ...klantNamen.map((klantNaam) {
-                    final aantal = klanten[klantNaam]?.length ?? 0;
-
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.delete_outline,
-                        color: Color(0xFFDC2626),
-                      ),
-                      title: Text(
-                        klantNaam,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text('$aantal opmeting(en)'),
-                      onTap: () {
-                        Navigator.pop(dialogContext, klantNaam);
-                      },
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Annuleren'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (gekozenKlant == null || !mounted) {
-      return;
-    }
-
-    final teWissenOpmetingen =
-        klanten[gekozenKlant] ?? const <OpmetingOverzichtRaamItem>[];
-
-    if (teWissenOpmetingen.isEmpty) {
-      _toonMelding('Dit bestand kon niet gevonden worden.', fout: true);
-      return;
-    }
-
-    final bevestigen = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Bestand definitief wissen?'),
-          content: Text(
-            'Bent u zeker dat u het volledige opmeetbestand “$gekozenKlant” wilt wissen? '
-            'Alle ${teWissenOpmetingen.length} positie(s) van deze klant worden verwijderd.',
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Annuleren'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Wissen'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (bevestigen != true) {
-      return;
-    }
-
-    setState(() {
-      _laden = true;
-    });
-
-    for (final opmeting in teWissenOpmetingen) {
-      await AppStorage.verwijderOpmeting(opmeting.id);
-    }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-
-    final syncResultaat = await OneDriveSyncService().slimmeSync(
-      magLoginVragen: true,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    final gewisteKlantIsOpen =
-        _klantNaam.trim().toLowerCase() == gekozenKlant.trim().toLowerCase();
-
-    if (gewisteKlantIsOpen) {
-      setState(() {
-        _klantNaam = '';
-        _projectTitelhoofd = const OpmetingProjectTitelhoofd();
-        _raamOpmetingen.clear();
-        _verborgenFormulierTypes.clear();
-        _winstmargeDoelArtikelIds.clear();
-        _kortingDoelArtikelIds.clear();
-        _laden = false;
-      });
-    } else {
-      await _laadOpmetingenVanOpslag(
-        klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
-      );
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    final syncOk =
-        !syncResultaat.startsWith('FOUT') &&
-        !syncResultaat.contains('FOUT') &&
-        !syncResultaat.contains('OVERGESLAGEN');
-
-    _toonMelding(
-      syncOk
-          ? 'Opmeetbestand “$gekozenKlant” is gewist en gesynchroniseerd.'
-          : 'Opmeetbestand “$gekozenKlant” is lokaal gewist, maar synchronisatie is niet gelukt: $syncResultaat',
-      fout: !syncOk,
-    );
-  }
-
-  Future<bool> _opslaanBestand({bool toonMelding = true}) async {
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-
-    if (!mounted) {
-      return false;
-    }
-
-    if (alleOpmetingen.isEmpty) {
-      if (toonMelding) {
-        _toonMelding(
-          'Er is nog geen opmeting om op te slaan. Voeg eerst een raamopmeting toe.',
-          fout: true,
-        );
-      }
-      return false;
-    }
-
-    await AppStorage.bewaarOpmetingenVoorSync(alleOpmetingen);
-    await OneDriveSyncService.registreerLokaleWijziging();
-
-    final syncResultaat = await OneDriveSyncService().slimmeSync(
-      magLoginVragen: true,
-    );
-
-    if (!mounted) {
-      return false;
-    }
-
-    final syncOk =
-        !syncResultaat.startsWith('FOUT') &&
-        !syncResultaat.contains('FOUT') &&
-        !syncResultaat.contains('OVERGESLAGEN');
-
-    if (toonMelding) {
-      _toonMelding(
-        syncOk
-            ? 'Bestand opgeslagen en synchronisatie uitgevoerd.'
-            : 'Bestand lokaal opgeslagen, maar synchronisatie is niet gelukt: $syncResultaat',
-        fout: !syncOk,
-      );
-    }
-
-    return syncOk;
-  }
-
-  Future<void> _eindeOpmeting() async {
-    final heeftOpmetingen =
-        _raamOpmetingen.isNotEmpty ||
-        (await AppStorage.laadOpmetingenVoorSync()).isNotEmpty;
-
-    if (!mounted) {
-      return;
-    }
-
-    if (!heeftOpmetingen) {
-      await Navigator.of(context).maybePop();
-      return;
-    }
-
-    final keuze = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Bestand opslaan?'),
-          content: const Text(
-            'Wilt u het bestand opslaan en synchroniseren voordat u terugkeert naar Home?',
-          ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _tekstGrijs),
-              onPressed: () {
-                Navigator.pop(dialogContext, 'annuleren');
-              },
-              child: const Text('Annuleren'),
-            ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
-              onPressed: () {
-                Navigator.pop(dialogContext, 'niet_opslaan');
-              },
-              child: const Text('Niet opslaan'),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _groen,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, 'opslaan');
-              },
-              child: const Text('Opslaan'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (keuze == null || keuze == 'annuleren') {
-      return;
-    }
-
-    if (keuze == 'opslaan') {
-      await _opslaanBestand(toonMelding: false);
-
-      if (!mounted) {
-        return;
-      }
-    }
-
-    await Navigator.of(context).maybePop();
-  }
-
-  Future<void> _openRaamopmeting({String formulierType = 'pvcRaam'}) async {
-    if (_formulierOpenenBezig) {
-      return;
-    }
-
-    _formulierOpenenBezig = true;
-
-    try {
-      var klantNaam = _klantNaam.trim();
-
-      if (klantNaam.isEmpty) {
-        final keuze = await _vraagKlantNaam();
-
-        if (keuze == null || keuze.klantNaam.trim().isEmpty || !mounted) {
-          return;
-        }
-
-        klantNaam = keuze.klantNaam.trim();
-        final titelhoofd = await _maakTitelhoofdVoorNieuweKlant(keuze);
-
-        if (!mounted) {
-          return;
-        }
-
-        await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _klantNaam = klantNaam;
-          _projectTitelhoofd = titelhoofd;
-          _raamOpmetingen.clear();
-          _winstmargeDoelArtikelIds.clear();
-          _kortingDoelArtikelIds.clear();
-        });
-      }
-
-      await _wachtTotPopupEnDialogGeslotenZijn();
-
-      if (!mounted) {
-        return;
-      }
-
-      final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
-            MaterialPageRoute(
-              builder: (routeContext) {
-                return OpmetingRaamPagina(
-                  klantNaam: klantNaam,
-                  formulierType: formulierType,
-                );
-              },
-            ),
-          );
-
-      if (resultaat == null || !mounted) {
-        return;
-      }
-
-      await _laadOpmetingenVanOpslag(klantNaam: klantNaam);
-    } finally {
-      _formulierOpenenBezig = false;
-    }
   }
 
   Future<void> _openVasteInzethor({
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
-  }) async {
-    if (_formulierOpenenBezig) {
-      return;
-    }
-
-    _formulierOpenenBezig = true;
-
-    try {
-      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
-          ? bestaandeOpmeting!.klantNaam.trim()
-          : _klantNaam.trim();
-
-      if (klantNaam.isEmpty || !mounted) {
-        return;
-      }
-
-      final standaardPrijsprofiel = bestaandeOpmeting == null
-          ? await _laadVasteInzethorPrijsprofiel()
-          : null;
-
-      if (!mounted) {
-        return;
-      }
-
-      await _wachtTotPopupEnDialogGeslotenZijn();
-
-      if (!mounted) {
-        return;
-      }
-
-      final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
-            MaterialPageRoute(
-              builder: (routeContext) {
-                return OpmetingVasteInzethorFiche(
-                  klantNaam: klantNaam,
-                  bestaandeOpmeting: bestaandeOpmeting,
-                  ralKleurToebehoren: _projectTitelhoofd.ralKleurToebehoren,
-                  standaardPrijsPerStukExclBtw:
-                      standaardPrijsprofiel?.standaardPrijsPerStukExclBtw ?? 0,
-                  standaardWinstmargePercentage:
-                      standaardPrijsprofiel?.standaardWinstmargePercentage ?? 0,
-                  standaardKortingPercentage:
-                      standaardPrijsprofiel?.standaardKortingPercentage ?? 0,
-                );
-              },
-            ),
-          );
-
-      if (resultaat == null || !mounted) {
-        return;
-      }
-
-      await _laadOpmetingenVanOpslag(klantNaam: klantNaam);
-    } finally {
-      _formulierOpenenBezig = false;
-    }
+  }) {
+    return _formulierNavigatieController.openVasteInzethor(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
   }
 
   Future<void> _openVliegendeur({
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
-  }) async {
-    if (_formulierOpenenBezig) {
-      return;
-    }
-
-    _formulierOpenenBezig = true;
-
-    try {
-      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
-          ? bestaandeOpmeting!.klantNaam.trim()
-          : _klantNaam.trim();
-
-      if (klantNaam.isEmpty || !mounted) {
-        return;
-      }
-
-      await _wachtTotPopupEnDialogGeslotenZijn();
-
-      if (!mounted) {
-        return;
-      }
-
-      final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
-            MaterialPageRoute(
-              builder: (routeContext) {
-                return OpmetingVliegendeurFiche(
-                  klantNaam: klantNaam,
-                  bestaandeOpmeting: bestaandeOpmeting,
-                );
-              },
-            ),
-          );
-
-      if (resultaat == null || !mounted) {
-        return;
-      }
-
-      await _laadOpmetingenVanOpslag(klantNaam: klantNaam);
-    } finally {
-      _formulierOpenenBezig = false;
-    }
-  }
-
-  Future<void> _wijzigArtikelPrijs(
-    OpmetingOverzichtRaamItem item,
-    double prijsPerStukExclBtw,
-  ) async {
-    final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(item);
-    if (adapter == null) {
-      return;
-    }
-
-    final resultaat = OfferteArtikelPrijsMutatieService.wijzigPrijsPerStuk(
-      artikelen: _raamOpmetingen,
-      artikel: item,
-      prijsPerStukExclBtw: prijsPerStukExclBtw,
-      adapter: adapter,
-    );
-    if (!resultaat.isGewijzigd) {
-      return;
-    }
-
-    if (resultaat.lijstGewijzigd && mounted) {
-      setState(() {
-        _raamOpmetingen
-          ..clear()
-          ..addAll(resultaat.artikelen);
-      });
-    }
-
-    for (final bijgewerkt in resultaat.gewijzigdeArtikelen) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-
-    if (adapter.id == OfferteArtikelPrijsMutatieService.vasteInzethor.id) {
-      final bijgewerkt = resultaat.gewijzigdeArtikelen.first;
-      _prijsHerberekenTimer?.cancel();
-      _prijsHerberekenTimer = Timer(const Duration(milliseconds: 450), () {
-        unawaited(
-          _herberekenPrijsMomentopnamesNaPrijswijziging(
-            klantNaam: bijgewerkt.klantNaam,
-          ),
-        );
-      });
-      return;
-    }
-
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-  }
-
-  Future<void> _wijzigArtikelKorting(
-    OpmetingOverzichtRaamItem item,
-    double kortingPercentage,
-  ) {
-    return _wijzigArtikelPrijsCorrectie(
-      item: item,
-      kortingPercentage: kortingPercentage,
-      doelArtikelIds: _prijsCorrectieDoelIdsVoorArtikel(
-        artikel: item,
-        isKorting: true,
-      ),
-    );
-  }
-
-  Future<void> _wijzigArtikelWinstmarge(
-    OpmetingOverzichtRaamItem item,
-    double winstmargePercentage,
-  ) {
-    return _wijzigArtikelPrijsCorrectie(
-      item: item,
-      winstmargePercentage: winstmargePercentage,
-      doelArtikelIds: _prijsCorrectieDoelIdsVoorArtikel(
-        artikel: item,
-        isKorting: false,
-      ),
-    );
-  }
-
-  Future<void> _wijzigArtikelPrijsCorrectie({
-    required OpmetingOverzichtRaamItem item,
-    double? kortingPercentage,
-    double? winstmargePercentage,
-    required Set<String> doelArtikelIds,
-  }) async {
-    final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(item);
-    if (adapter == null ||
-        doelArtikelIds.isEmpty ||
-        (kortingPercentage != null && item.isOfferteOptie)) {
-      return;
-    }
-
-    final resultaat = OfferteArtikelPrijsMutatieService.wijzigPrijsCorrecties(
-      artikelen: _raamOpmetingen,
-      artikel: item,
-      adapter: adapter,
-      kortingPercentage: kortingPercentage,
-      winstmargePercentage: winstmargePercentage,
-      doelArtikelIds: doelArtikelIds,
-    );
-    if (!resultaat.isGewijzigd) {
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _raamOpmetingen
-          ..clear()
-          ..addAll(resultaat.artikelen);
-      });
-    }
-
-    for (final bijgewerkt in resultaat.gewijzigdeArtikelen) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-  }
-
-  Set<String> _prijsCorrectieDoelSet({required bool isKorting}) {
-    return isKorting ? _kortingDoelArtikelIds : _winstmargeDoelArtikelIds;
-  }
-
-  Set<String> _beschikbarePrijsCorrectieDoelIds({required bool isKorting}) {
-    return _raamOpmetingen
-        .where(
-          (huidig) =>
-              !huidig.isVerwijderd &&
-              OfferteArtikelPrijsMutatieService.adapterVoor(huidig) != null &&
-              (!isKorting || !huidig.isOfferteOptie),
-        )
-        .map((huidig) => huidig.id)
-        .toSet();
-  }
-
-  Set<String> _geldigePrijsCorrectieDoelIds({
-    required OpmetingOverzichtRaamItem artikel,
-    required bool isKorting,
-    Set<String>? voorgesteldeDoelIds,
   }) {
-    final beschikbareIds = _beschikbarePrijsCorrectieDoelIds(
-      isKorting: isKorting,
+    return _formulierNavigatieController.openVliegendeur(
+      bestaandeOpmeting: bestaandeOpmeting,
     );
-    if (beschikbareIds.isEmpty) {
-      return <String>{};
-    }
-
-    final geldigeSelectie = (voorgesteldeDoelIds ?? const <String>{})
-        .intersection(beschikbareIds);
-    if (geldigeSelectie.isNotEmpty) {
-      return geldigeSelectie;
-    }
-
-    if (beschikbareIds.contains(artikel.id)) {
-      return <String>{artikel.id};
-    }
-
-    return <String>{beschikbareIds.first};
-  }
-
-  Set<String> _prijsCorrectieDoelIdsVoorArtikel({
-    required OpmetingOverzichtRaamItem artikel,
-    required bool isKorting,
-  }) {
-    return _geldigePrijsCorrectieDoelIds(
-      artikel: artikel,
-      isKorting: isKorting,
-      voorgesteldeDoelIds: _prijsCorrectieDoelSet(isKorting: isKorting),
-    );
-  }
-
-  String _prijsCorrectieDoelSamenvatting({
-    required OpmetingOverzichtRaamItem artikel,
-    required bool isKorting,
-  }) {
-    final geselecteerdeIds = _prijsCorrectieDoelIdsVoorArtikel(
-      artikel: artikel,
-      isKorting: isKorting,
-    );
-    final beschikbareIds = _beschikbarePrijsCorrectieDoelIds(
-      isKorting: isKorting,
-    );
-
-    if (geselecteerdeIds.length == 1 && geselecteerdeIds.contains(artikel.id)) {
-      return 'Huidig artikel';
-    }
-
-    if (beschikbareIds.isNotEmpty &&
-        geselecteerdeIds.length == beschikbareIds.length &&
-        geselecteerdeIds.containsAll(beschikbareIds)) {
-      return 'Alle ${beschikbareIds.length} artikelen';
-    }
-
-    final geselecteerdeArtikelen = _raamOpmetingen
-        .where((huidig) => geselecteerdeIds.contains(huidig.id))
-        .toList(growable: false);
-    if (geselecteerdeArtikelen.isNotEmpty) {
-      final eersteKoppeling =
-          OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-            geselecteerdeArtikelen.first,
-          );
-      if (eersteKoppeling != null &&
-          geselecteerdeArtikelen.every(
-            (huidig) =>
-                OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-                  huidig,
-                )?.adapterId ==
-                eersteKoppeling.adapterId,
-          )) {
-        final groepIds = _raamOpmetingen
-            .where((huidig) {
-              final koppeling =
-                  OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-                    huidig,
-                  );
-              return !huidig.isVerwijderd &&
-                  koppeling?.adapterId == eersteKoppeling.adapterId &&
-                  (!isKorting || !huidig.isOfferteOptie);
-            })
-            .map((huidig) => huidig.id)
-            .toSet();
-        if (groepIds.isNotEmpty &&
-            geselecteerdeIds.length == groepIds.length &&
-            geselecteerdeIds.containsAll(groepIds)) {
-          return 'Hele groep: ${eersteKoppeling.formulierNaam}';
-        }
-      }
-    }
-
-    final aantal = geselecteerdeIds.length;
-    return aantal == 1
-        ? '1 geselecteerd artikel'
-        : '$aantal geselecteerde artikelen';
-  }
-
-  double _berekenPrijsCorrectieBedragVoorArtikel({
-    required OpmetingOverzichtRaamItem artikel,
-    required bool isKorting,
-    required double percentage,
-  }) {
-    final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(artikel);
-    if (adapter == null || (isKorting && artikel.isOfferteOptie)) {
-      return 0.0;
-    }
-
-    final tijdelijkArtikel = adapter.schrijfPrijsCorrecties(
-      artikel: artikel,
-      kortingPercentage: isKorting ? percentage : null,
-      winstmargePercentage: isKorting ? null : percentage,
-    );
-    final resultaat = OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-      tijdelijkArtikel,
-      kortingToestaan: !tijdelijkArtikel.isOfferteOptie,
-    );
-    if (resultaat == null) {
-      return 0.0;
-    }
-
-    return isKorting
-        ? resultaat.kortingBedragExclBtw
-        : resultaat.winstmargeBedragExclBtw;
-  }
-
-  String _artikelKeuzeOmschrijving(OpmetingOverzichtRaamItem artikel) {
-    final aantal = OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(
-      artikel,
-    );
-    final breedte = OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
-      artikel,
-    );
-    final hoogte = OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
-      artikel,
-    );
-    final maat = '$breedte × $hoogte mm';
-    if (aantal > 1) {
-      return '$aantal stuks · $maat';
-    }
-    return maat;
-  }
-
-  Future<void> _openPrijsCorrectieToepassenOpDialog({
-    required OpmetingOverzichtRaamItem item,
-    required bool isKorting,
-    required double percentage,
-  }) async {
-    final startAdapter = OfferteArtikelPrijsMutatieService.adapterVoor(item);
-    if (startAdapter == null) {
-      return;
-    }
-
-    final positieLabelPerId = _offerteController.positiesService
-        .maakBronPositieLabels(_raamOpmetingen);
-    final geordendeItems = _offerteController.positiesService
-        .groepeerBronPositiesVoorOverzicht(_raamOpmetingen);
-
-    final keuzes = geordendeItems
-        .where((huidig) => !huidig.isVerwijderd)
-        .map((huidig) {
-          final doelAdapter = OfferteArtikelPrijsMutatieService.adapterVoor(
-            huidig,
-          );
-          final koppeling =
-              OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(huidig);
-          final beschikbaar =
-              doelAdapter != null && (!isKorting || !huidig.isOfferteOptie);
-          final nietBeschikbaarReden = doelAdapter == null
-              ? 'Dit artikeltype ondersteunt nog geen gezamenlijke prijsaanpassing.'
-              : isKorting && huidig.isOfferteOptie
-              ? 'Optiepositie — korting is niet toegestaan.'
-              : '';
-
-          return OfferteArtikelToepassenOpKeuze(
-            artikelId: huidig.id,
-            positieLabel: positieLabelPerId[huidig.id] ?? 'Positie',
-            artikelLabel: _artikelKeuzeOmschrijving(huidig),
-            groepId: koppeling?.adapterId ?? huidig.formulierTypeGenormaliseerd,
-            groepLabel: koppeling?.formulierNaam ?? huidig.formulierTypeLabel,
-            berekenCorrectieBedragExclBtw: (gekozenPercentage) {
-              if (!beschikbaar) {
-                return 0.0;
-              }
-              return _berekenPrijsCorrectieBedragVoorArtikel(
-                artikel: huidig,
-                isKorting: isKorting,
-                percentage: gekozenPercentage,
-              );
-            },
-            isHuidigArtikel: huidig.id == item.id,
-            beschikbaar: beschikbaar,
-            nietBeschikbaarReden: nietBeschikbaarReden,
-          );
-        })
-        .toList(growable: false);
-
-    final dialoogResultaat = await toonOfferteArtikelToepassenOpDialog(
-      context: context,
-      titel: isKorting ? 'Korting' : 'Winstmarge',
-      isKorting: isKorting,
-      percentage: percentage,
-      keuzes: keuzes,
-      initieelGeselecteerdeArtikelIds: _prijsCorrectieDoelIdsVoorArtikel(
-        artikel: item,
-        isKorting: isKorting,
-      ),
-    );
-    if (!mounted ||
-        dialoogResultaat == null ||
-        dialoogResultaat.artikelIds.isEmpty ||
-        dialoogResultaat.percentage <= 0.0) {
-      return;
-    }
-
-    final definitiefPercentage = dialoogResultaat.percentage;
-    final geldigeDoelIds = _geldigePrijsCorrectieDoelIds(
-      artikel: item,
-      isKorting: isKorting,
-      voorgesteldeDoelIds: dialoogResultaat.artikelIds,
-    );
-    if (geldigeDoelIds.isEmpty) {
-      return;
-    }
-
-    setState(() {
-      final doelSet = _prijsCorrectieDoelSet(isKorting: isKorting);
-      doelSet
-        ..clear()
-        ..addAll(geldigeDoelIds);
-    });
-
-    await _wijzigArtikelPrijsCorrectie(
-      item: item,
-      kortingPercentage: isKorting ? definitiefPercentage : null,
-      winstmargePercentage: isKorting ? null : definitiefPercentage,
-      doelArtikelIds: geldigeDoelIds,
-    );
-  }
-
-  String _normaliseerPrijsFormulierType(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
   }
 
   Future<void> _openVrijePrijsPerArtikelVenster(
     OpmetingOverzichtRaamItem item, {
     required String positieLabel,
-  }) async {
-    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+  }) {
+    return _projectPrijsregelController.openVrijePrijsPerArtikelVenster(
       item,
-    );
-    if (koppeling == null || !mounted) return;
-
-    final formulierType = koppeling.formulierType;
-    final profiel = await _laadPrijsprofielVoorFormulierType(formulierType);
-    if (!mounted) return;
-
-    final bewaardeRegels =
-        OffertePrijsregelBeheerService.bewaardePrijsregelsVoorCategorie(
-          profiel: profiel,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: formulierType,
-        );
-    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
-      item,
-    );
-    if (prijsData == null) return;
-
-    final tijdelijkeRegels =
-        OfferteAlgemeenArtikelPrijsService.tijdelijkeVrijeArtikelPrijsregels(
-          prijsData,
-          formulierType: formulierType,
-        );
-    final huidigeRegels =
-        OffertePrijsregelBeheerService.combineerBewaardeEnTijdelijkePrijsregels(
-          bewaardePrijsregels: bewaardeRegels,
-          tijdelijkePrijsregels: tijdelijkeRegels,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: formulierType,
-        );
-
-    final resultaat = await toonOffertePrijsregelsZwevendVenster(
-      context: context,
-      titel: 'Vrije prijs per artikel',
-      subtitel:
-          '$positieLabel · ${_formulierNaamVoorPrijsType(formulierType)} · bewaarde en eenmalige prijsregels',
-      formulierType: formulierType,
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      beginPrijsregels: huidigeRegels,
-      toonToepassenOpDezePositie: true,
-      toonToepassenOpAlleGelijkePosities: true,
-    );
-
-    if (resultaat == null || !mounted) return;
-
-    switch (resultaat.actie) {
-      case OffertePrijsregelsVensterActie.toepassenOpDezePositie:
-        await _pasTijdelijkeVrijePrijsregelsToe(
-          bronItem: item,
-          prijsregels: resultaat.prijsregels,
-          bewaardePrijsregels: bewaardeRegels,
-          toepassenOpAlleGelijkePosities: false,
-        );
-        break;
-      case OffertePrijsregelsVensterActie.toepassenOpAlleGelijkePosities:
-        await _pasTijdelijkeVrijePrijsregelsToe(
-          bronItem: item,
-          prijsregels: resultaat.prijsregels,
-          bewaardePrijsregels: bewaardeRegels,
-          toepassenOpAlleGelijkePosities: true,
-        );
-        break;
-      case OffertePrijsregelsVensterActie.bewarenInInstellingen:
-        await _bewaarVrijePrijsregelsInInstellingen(
-          bronItem: item,
-          prijsregels: resultaat.prijsregels,
-        );
-        break;
-      case OffertePrijsregelsVensterActie.toepassenOpOfferte:
-        break;
-    }
-  }
-
-  Future<void> _pasTijdelijkeVrijePrijsregelsToe({
-    required OpmetingOverzichtRaamItem bronItem,
-    required List<OffertePrijsregelModel> prijsregels,
-    required List<OffertePrijsregelModel> bewaardePrijsregels,
-    required bool toepassenOpAlleGelijkePosities,
-    bool toonMelding = true,
-  }) async {
-    final bronKoppeling =
-        OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(bronItem);
-    if (bronKoppeling == null) return;
-
-    final formulierType = bronKoppeling.formulierType;
-    final regels =
-        OffertePrijsregelBeheerService.maakTijdelijkePrijsregelVerschillen(
-          prijsregels: prijsregels,
-          bewaardePrijsregels: bewaardePrijsregels,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: formulierType,
-        );
-
-    bool isGeldigDoel(OpmetingOverzichtRaamItem positie) {
-      if (positie.isVerwijderd) return false;
-      return OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-            positie,
-          )?.adapterId ==
-          bronKoppeling.adapterId;
-    }
-
-    final doelIds = toepassenOpAlleGelijkePosities
-        ? _raamOpmetingen
-              .where(isGeldigDoel)
-              .map((positie) => positie.id)
-              .toSet()
-        : <String>{bronItem.id};
-
-    final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
-    final gewijzigdeItems = <OpmetingOverzichtRaamItem>[];
-
-    for (var index = 0; index < nieuweLijst.length; index++) {
-      final huidig = nieuweLijst[index];
-      if (!doelIds.contains(huidig.id) || !isGeldigDoel(huidig)) continue;
-
-      final huidigePrijsData =
-          OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(huidig);
-      if (huidigePrijsData == null) continue;
-
-      final bijgewerktePrijsData =
-          OfferteAlgemeenArtikelPrijsService.metTijdelijkeVrijeArtikelPrijsregels(
-            prijsData: huidigePrijsData,
-            prijsregels: regels,
-          );
-      final bijgewerkt = OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
-        artikel: huidig,
-        prijsData: bijgewerktePrijsData,
-      ).metNieuweWijzigingsDatum();
-
-      nieuweLijst[index] = bijgewerkt;
-      gewijzigdeItems.add(bijgewerkt);
-    }
-
-    if (gewijzigdeItems.isEmpty) return;
-
-    if (mounted) {
-      setState(() {
-        _raamOpmetingen
-          ..clear()
-          ..addAll(nieuweLijst);
-      });
-    }
-
-    for (final bijgewerkt in gewijzigdeItems) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(
-      klantNaam: bronItem.klantNaam,
-    );
-
-    if (toonMelding && mounted) {
-      _toonMelding(
-        toepassenOpAlleGelijkePosities
-            ? 'Vrije prijsregels toegepast op alle ${_formulierNaamVoorPrijsType(formulierType).toLowerCase()}-posities.'
-            : 'Vrije prijsregels toegepast op deze positie.',
-      );
-    }
-  }
-
-  Future<void> _bewaarVrijePrijsregelsInInstellingen({
-    required OpmetingOverzichtRaamItem bronItem,
-    required List<OffertePrijsregelModel> prijsregels,
-  }) async {
-    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-      bronItem,
-    );
-    if (koppeling == null) return;
-
-    final formulierType = koppeling.formulierType;
-    var profiel = await _laadPrijsprofielVoorFormulierType(formulierType);
-    profiel = OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
-      profiel: profiel,
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      formulierType: formulierType,
-      prijsregels: prijsregels,
-    );
-    await AppStorage.bewaarOffertePrijsProfiel(profiel);
-
-    final momentopname = _prijsinstellingenMomentopnameVoor(profiel);
-    final nieuwTitelhoofd = _projectTitelhoofd
-        .metPrijsinstellingenMomentopname(momentopname)
-        .metWijzigingsDatum();
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(nieuwTitelhoofd);
-    if (mounted) {
-      setState(() {
-        _projectTitelhoofd = nieuwTitelhoofd;
-      });
-    }
-
-    final bewaardeRegels =
-        OffertePrijsregelBeheerService.bewaardePrijsregelsVoorCategorie(
-          profiel: profiel,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: formulierType,
-        );
-    await _pasTijdelijkeVrijePrijsregelsToe(
-      bronItem: bronItem,
-      prijsregels: bewaardeRegels,
-      bewaardePrijsregels: bewaardeRegels,
-      toepassenOpAlleGelijkePosities: true,
-      toonMelding: false,
-    );
-
-    if (mounted) {
-      _toonMelding(
-        'Vrije prijsregels bewaard in Instellingen → Offerteprijzen → ${_formulierNaamVoorPrijsType(formulierType)}.',
-      );
-    }
-  }
-
-  List<OfferteArtikelPrijsKoppeling> _beschikbarePrijsregelBronGroepen() {
-    final resultaat = <OfferteArtikelPrijsKoppeling>[];
-
-    for (final groep in OfferteArtikelPrijsKoppelingService.alleKoppelingen) {
-      final aanwezig = _raamOpmetingen.any((artikel) {
-        if (artikel.isVerwijderd) return false;
-        return OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-              artikel,
-            )?.adapterId ==
-            groep.adapterId;
-      });
-      if (aanwezig) {
-        resultaat.add(groep);
-      }
-    }
-
-    return List<OfferteArtikelPrijsKoppeling>.unmodifiable(resultaat);
-  }
-
-  String _prijsregelArtikelLabel(OpmetingOverzichtRaamItem artikel) {
-    final basis = _artikelKeuzeOmschrijving(artikel);
-    return artikel.isOfferteOptie ? 'Optie · $basis' : basis;
-  }
-
-  Future<void> _openPrijsVoorAlleArtikelenVenster() async {
-    if (!mounted) return;
-
-    final bronGroepen = _beschikbarePrijsregelBronGroepen();
-    if (bronGroepen.isEmpty) return;
-
-    final beginRegels = <OffertePrijsregelModel>[];
-    for (final bronGroep in bronGroepen) {
-      final formulierType = bronGroep.formulierType;
-      final profiel = await _laadPrijsprofielVoorFormulierType(formulierType);
-      if (!mounted) return;
-
-      final bewaardeRegels =
-          OffertePrijsregelBeheerService.bewaardePrijsregelsVoorCategorie(
-            profiel: profiel,
-            categorie: OffertePrijsCategorie.alleArtikelen,
-            formulierType: formulierType,
-          );
-      final gecombineerdeRegels =
-          OffertePrijsregelBeheerService.combineerBewaardeEnTijdelijkePrijsregels(
-            bewaardePrijsregels: bewaardeRegels,
-            tijdelijkePrijsregels:
-                _projectTitelhoofd.tijdelijkeProjectPrijsregels,
-            categorie: OffertePrijsCategorie.alleArtikelen,
-            formulierType: formulierType,
-          );
-      beginRegels.addAll(gecombineerdeRegels);
-    }
-
-    var huidigeRegels = beginRegels;
-    final formulierTypeLabels = <String, String>{
-      for (final bronGroep in bronGroepen)
-        bronGroep.formulierType: bronGroep.formulierNaam,
-    };
-
-    while (mounted) {
-      final resultaat = await toonOffertePrijsregelsZwevendVenster(
-        context: context,
-        titel: 'Prijsregel toepassen op…',
-        subtitel:
-            'Kies één prijsregel en koppel die daarna één keer aan de gewenste posities',
-        formulierType: bronGroepen.first.formulierType,
-        categorie: OffertePrijsCategorie.alleArtikelen,
-        beginPrijsregels: huidigeRegels,
-        toonToepassenOpOfferte: true,
-        behoudFormulierTypePerRegel: true,
-        formulierTypeLabels: formulierTypeLabels,
-        toonFormulierTypeBijRegel: true,
-      );
-
-      if (resultaat == null || !mounted) return;
-      huidigeRegels = resultaat.prijsregels;
-
-      switch (resultaat.actie) {
-        case OffertePrijsregelsVensterActie.toepassenOpOfferte:
-          final gekozenPrijsregel = resultaat.gekozenPrijsregel;
-          if (gekozenPrijsregel == null) {
-            _toonMelding('Kies eerst één actieve prijsregel.', fout: true);
-            continue;
-          }
-
-          final selectie = await _openPrijsregelArtikelSelectie(
-            prijsregel: gekozenPrijsregel,
-          );
-          if (selectie == null || !mounted) return;
-
-          await _pasPrijsregelToeOpGeselecteerdePosities(
-            prijsregel: gekozenPrijsregel,
-            artikelIds: selectie.artikelIds,
-          );
-          if (!mounted || !selectie.kiesNogEenPrijsregel) {
-            return;
-          }
-          break;
-        case OffertePrijsregelsVensterActie.bewarenInInstellingen:
-          await _bewaarProjectPrijsregelsVoorAlleFormulierTypes(
-            resultaat.prijsregels,
-            bronGroepen: bronGroepen,
-          );
-          return;
-        case OffertePrijsregelsVensterActie.toepassenOpDezePositie:
-        case OffertePrijsregelsVensterActie.toepassenOpAlleGelijkePosities:
-          return;
-      }
-    }
-  }
-
-  Future<OffertePrijsregelToepassenOpResultaat?>
-  _openPrijsregelArtikelSelectie({
-    required OffertePrijsregelModel prijsregel,
-  }) async {
-    final positieLabelPerId = _offerteController.positiesService
-        .maakBronPositieLabels(_raamOpmetingen);
-    final geordendeItems = _offerteController.positiesService
-        .groepeerBronPositiesVoorOverzicht(_raamOpmetingen);
-
-    final keuzes = geordendeItems
-        .where((artikel) => !artikel.isVerwijderd)
-        .map((artikel) {
-          final koppeling =
-              OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(artikel);
-          final prijsData =
-              OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(artikel);
-          final beschikbaar = koppeling != null && prijsData != null;
-          final bedrag = beschikbaar
-              ? OfferteAlgemeenArtikelPrijsService.berekenPrijsregelTotaalExclBtw(
-                  prijsregel: prijsregel,
-                  aantal: OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(
-                    artikel,
-                  ),
-                  breedteMm:
-                      OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
-                        artikel,
-                      ),
-                  hoogteMm:
-                      OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
-                        artikel,
-                      ),
-                )
-              : 0.0;
-
-          return OffertePrijsregelToepassenOpKeuze(
-            artikelId: artikel.id,
-            positieLabel: positieLabelPerId[artikel.id] ?? 'Positie',
-            artikelLabel: _prijsregelArtikelLabel(artikel),
-            groepId:
-                koppeling?.adapterId ?? artikel.formulierTypeGenormaliseerd,
-            groepLabel: koppeling?.formulierNaam ?? artikel.formulierTypeLabel,
-            bedragExclBtw: bedrag,
-            beschikbaar: beschikbaar,
-            nietBeschikbaarReden:
-                'Dit artikeltype ondersteunt de gezamenlijke prijsopslag nog niet.',
-          );
-        })
-        .toList(growable: false);
-
-    return toonOffertePrijsregelToepassenOpDialog(
-      context: context,
-      prijsregelOmschrijving:
-          '${prijsregel.omschrijving} · € ${prijsregel.prijsExclBtw.toStringAsFixed(2).replaceAll('.', ',')} excl. btw',
-      keuzes: keuzes,
+      positieLabel: positieLabel,
     );
   }
 
-  Future<void> _pasPrijsregelToeOpGeselecteerdePosities({
-    required OffertePrijsregelModel prijsregel,
-    required Set<String> artikelIds,
-  }) async {
-    if (artikelIds.isEmpty) return;
-
-    final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
-    final gewijzigdeItems = <OpmetingOverzichtRaamItem>[];
-
-    for (var index = 0; index < nieuweLijst.length; index++) {
-      final huidig = nieuweLijst[index];
-      if (huidig.isVerwijderd || !artikelIds.contains(huidig.id)) continue;
-
-      final doelKoppeling =
-          OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(huidig);
-      final huidigePrijsData =
-          OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(huidig);
-      if (doelKoppeling == null || huidigePrijsData == null) continue;
-
-      final bijgewerktePrijsData =
-          OfferteAlgemeenArtikelPrijsService.voegGekozenProjectPrijsregelToe(
-            prijsData: huidigePrijsData,
-            prijsregel: prijsregel,
-            doelFormulierType: doelKoppeling.formulierType,
-          );
-      final bijgewerkt = OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
-        artikel: huidig,
-        prijsData: bijgewerktePrijsData,
-      ).metNieuweWijzigingsDatum();
-
-      nieuweLijst[index] = bijgewerkt;
-      gewijzigdeItems.add(bijgewerkt);
-    }
-
-    if (gewijzigdeItems.isEmpty) {
-      if (mounted) {
-        _toonMelding(
-          'De prijsregel kon niet op de gekozen posities worden toegepast.',
-          fout: true,
-        );
-      }
-      return;
-    }
-
-    if (mounted) {
-      setState(() {
-        _raamOpmetingen
-          ..clear()
-          ..addAll(nieuweLijst);
-      });
-    }
-
-    for (final bijgewerkt in gewijzigdeItems) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(
-      klantNaam: gewijzigdeItems.first.klantNaam,
-    );
-
-    if (mounted) {
-      final aantal = gewijzigdeItems.length;
-      _toonMelding(
-        'Prijsregel “${prijsregel.omschrijving}” toegepast op '
-        '${aantal == 1 ? '1 positie' : '$aantal posities'}.',
-      );
-    }
-  }
-
-  Future<void> _bewaarProjectPrijsregelsVoorAlleFormulierTypes(
-    List<OffertePrijsregelModel> prijsregels, {
-    required List<OfferteArtikelPrijsKoppeling> bronGroepen,
-  }) async {
-    final betrokkenFormulierTypes = bronGroepen
-        .map((groep) => _normaliseerPrijsFormulierType(groep.formulierType))
-        .toSet();
-    final overigeTijdelijkeRegels = _projectTitelhoofd
-        .tijdelijkeProjectPrijsregels
-        .where((regel) {
-          return regel.categorie != OffertePrijsCategorie.alleArtikelen ||
-              !betrokkenFormulierTypes.contains(
-                _normaliseerPrijsFormulierType(regel.formulierType),
-              );
-        })
-        .toList(growable: false);
-
-    var nieuwTitelhoofd = _projectTitelhoofd.copyWith(
-      tijdelijkeProjectPrijsregels: overigeTijdelijkeRegels,
-    );
-
-    for (final bronGroep in bronGroepen) {
-      final formulierType = bronGroep.formulierType;
-      final formulierSleutel = _normaliseerPrijsFormulierType(formulierType);
-      final regelsVoorFormulierType = prijsregels
-          .where((regel) {
-            return regel.categorie == OffertePrijsCategorie.alleArtikelen &&
-                _normaliseerPrijsFormulierType(regel.formulierType) ==
-                    formulierSleutel;
-          })
-          .toList(growable: false);
-
-      var profiel = await _laadPrijsprofielVoorFormulierType(formulierType);
-      profiel = OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
-        profiel: profiel,
-        categorie: OffertePrijsCategorie.alleArtikelen,
-        formulierType: formulierType,
-        prijsregels: regelsVoorFormulierType,
-      );
-      await AppStorage.bewaarOffertePrijsProfiel(profiel);
-      nieuwTitelhoofd = nieuwTitelhoofd.metPrijsinstellingenMomentopname(
-        _prijsinstellingenMomentopnameVoor(profiel),
-      );
-    }
-
-    nieuwTitelhoofd = nieuwTitelhoofd.metWijzigingsDatum();
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(nieuwTitelhoofd);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    if (!mounted) return;
-    setState(() {
-      _projectTitelhoofd = nieuwTitelhoofd;
-    });
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(klantNaam: _klantNaam);
-    if (mounted) {
-      _toonMelding(
-        'Prijsregels bewaard in Instellingen → Offerteprijzen bij de juiste artikelgroepen.',
-      );
-    }
+  Future<void> _openPrijsVoorAlleArtikelenVenster() {
+    return _projectPrijsregelController.openPrijsVoorAlleArtikelenVenster();
   }
 
   Future<void> _herberekenPrijsMomentopnamesNaPrijswijziging({
@@ -2597,13 +306,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    final resultaat = await _werkTechnischePrijsMomentopnamesBij(
-      alleOpmetingen: alleOpmetingen,
-      klantNaam: klantNaam,
-      berekenPrijzen: true,
-      tijdelijkeProjectPrijsregels:
-          _projectTitelhoofd.tijdelijkeProjectPrijsregels,
-    );
+    final resultaat = await _prijsinstellingenController
+        .werkTechnischePrijsMomentopnamesBij(
+          alleOpmetingen: alleOpmetingen,
+          klantNaam: klantNaam,
+          berekenPrijzen: true,
+          tijdelijkeProjectPrijsregels:
+              _projectTitelhoofd.tijdelijkeProjectPrijsregels,
+        );
 
     if (!resultaat.gewijzigd) {
       return;
@@ -2633,728 +343,27 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     });
   }
 
-  Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) async {
-    if (item.formulierTypeGenormaliseerd == 'vasteInzethor') {
-      await _openVasteInzethor(bestaandeOpmeting: item);
-      return;
-    }
-
-    if (item.formulierTypeGenormaliseerd == 'vliegendeur') {
-      await _openVliegendeur(bestaandeOpmeting: item);
-      return;
-    }
-
-    final resultaat = await Navigator.push<OpmetingOverzichtRaamItem>(
-      context,
-      MaterialPageRoute(
-        builder: (context) {
-          return OpmetingRaamPagina(
-            klantNaam: item.klantNaam,
-            bestaandeOpmeting: item,
-            formulierType: item.formulierTypeGenormaliseerd,
-          );
-        },
-      ),
-    );
-
-    if (resultaat == null || !mounted) {
-      return;
-    }
-
-    await _laadOpmetingenVanOpslag(
-      klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
-    );
+  Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) {
+    return _formulierNavigatieController.bewerkOpmeting(item);
   }
 
-  Future<void> _verwijderRaamopmeting(OpmetingOverzichtRaamItem item) async {
-    final bevestigen = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Opmeting verwijderen?'),
-          content: Text('De opmeting “${item.titel}” wordt verwijderd.'),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
-              onPressed: () {
-                Navigator.pop(dialogContext, false);
-              },
-              child: const Text('Annuleren'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-              ),
-              onPressed: () {
-                Navigator.pop(dialogContext, true);
-              },
-              child: const Text('Verwijderen'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (bevestigen != true) {
-      return;
-    }
-
-    await AppStorage.verwijderOpmeting(item.id);
-
-    if (!mounted) {
-      return;
-    }
-
-    await _laadOpmetingenVanOpslag(
-      klantNaam: _klantNaam.trim().isEmpty ? null : _klantNaam,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    _toonMelding('Opmeting verwijderd en synchronisatie gestart.');
+  Future<void> _verwijderRaamopmeting(OpmetingOverzichtRaamItem item) {
+    return _positieBeheerController.verwijderPositie(item);
   }
 
-  Future<void> _kopieerRaamopmeting(OpmetingOverzichtRaamItem item) async {
-    final plaats = await showDialog<_PositieKopiePlaats>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text('Positie kopiëren'),
-          content: Text(
-            'Waar moet de kopie van “${item.titel}” geplaatst worden?',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Annuleren'),
-            ),
-            OutlinedButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, _PositieKopiePlaats.boven),
-              child: const Text('Boven deze groep'),
-            ),
-            OutlinedButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, _PositieKopiePlaats.onder),
-              child: const Text('Onder deze groep'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _groen),
-              onPressed: () =>
-                  Navigator.pop(dialogContext, _PositieKopiePlaats.laatste),
-              child: const Text('Naar laatste positie'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (plaats == null) return;
-
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    final bronIndex = alleOpmetingen.indexWhere(
-      (huidig) => huidig.id == item.id,
-    );
-    if (bronIndex < 0) return;
-
-    final nieuweId = DateTime.now().microsecondsSinceEpoch.toString();
-    final bestaandModel = item.vasteInzethorData;
-    final kopieModel = item.isOfferteOptie && bestaandModel != null
-        ? bestaandModel.copyWithPrijsData(
-            OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
-              prijsData: bestaandModel.prijsData,
-              artikelKortingPercentage: 0.0,
-            ),
-          )
-        : bestaandModel;
-    final kopieBronId =
-        item.isOfferteOptie && item.offerteOptieHoofdpositieId.trim().isNotEmpty
-        ? item.offerteOptieHoofdpositieId.trim()
-        : item.id;
-    final kopie = item.copyWith(
-      id: nieuweId,
-      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
-      isVerwijderd: false,
-      gekopieerdVanPositieId: kopieBronId,
-      vasteInzethorData: kopieModel,
-    );
-
-    var invoegIndex = bronIndex + 1;
-    if (plaats == _PositieKopiePlaats.boven) {
-      invoegIndex = bronIndex;
-    } else if (plaats == _PositieKopiePlaats.laatste) {
-      final klantSleutel = item.klantNaam.trim().toLowerCase();
-      var laatsteIndex = bronIndex;
-      for (var index = 0; index < alleOpmetingen.length; index++) {
-        final huidig = alleOpmetingen[index];
-        if (!huidig.isVerwijderd &&
-            huidig.klantNaam.trim().toLowerCase() == klantSleutel) {
-          laatsteIndex = index;
-        }
-      }
-      invoegIndex = laatsteIndex + 1;
-    }
-
-    alleOpmetingen.insert(
-      invoegIndex.clamp(0, alleOpmetingen.length).toInt(),
-      kopie,
-    );
-    await AppStorage.bewaarOpmetingen(alleOpmetingen);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    if (!mounted) return;
-    await _laadOpmetingenVanOpslag(klantNaam: _klantNaam);
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(
-      klantNaam: item.klantNaam,
-    );
-    if (mounted) _toonMelding('Positie gekopieerd.');
+  Future<void> _kopieerRaamopmeting(OpmetingOverzichtRaamItem item) {
+    return _positieBeheerController.kopieerPositie(item);
   }
 
-  String _bepaalOptieHoofdpositieId(OpmetingOverzichtRaamItem item) {
-    return _offerteController.bepaalOptieHoofdpositieId(
-      posities: _raamOpmetingen,
-      positieId: item.id,
-    );
-  }
-
-  Future<void> _wisselRaamopmetingOptie(OpmetingOverzichtRaamItem item) async {
-    final actie = await showDialog<_OfferteOptieActie>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            item.isOfferteOptie
-                ? 'Optieweergave aanpassen'
-                : 'Positie in optie plaatsen',
-          ),
-          content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(
-                    Icons.view_agenda_outlined,
-                    color: _groen,
-                  ),
-                  title: const Text(
-                    'Positie op haar plaats in de offerte behouden',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: const Text(
-                    'De positie blijft in de normale volgorde staan, maar wordt duidelijk als optie aangeduid en niet meegerekend in het eindtotaal.',
-                  ),
-                  onTap: () {
-                    Navigator.pop(
-                      dialogContext,
-                      _OfferteOptieActie.positieBehouden,
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.note_add_outlined, color: _groen),
-                  title: const Text(
-                    'Op een aparte pagina vermelden',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: const Text(
-                    'De optie krijgt een afzonderlijke pagina achter de volledige hoofdofferte en de eindberekening, met een eigen totaal excl. btw, btw en totaal incl. btw.',
-                  ),
-                  onTap: () {
-                    Navigator.pop(
-                      dialogContext,
-                      _OfferteOptieActie.apartePagina,
-                    );
-                  },
-                ),
-                if (item.isOfferteOptie) ...<Widget>[
-                  const Divider(height: 1),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
-                      Icons.check_circle_outline_rounded,
-                      color: _groen,
-                    ),
-                    title: const Text(
-                      'Terug in de hoofdofferte plaatsen',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: const Text(
-                      'De positie wordt opnieuw een gewone actieve positie en telt opnieuw mee in de totalen.',
-                    ),
-                    onTap: () {
-                      Navigator.pop(
-                        dialogContext,
-                        _OfferteOptieActie.hoofdofferte,
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Annuleren'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (actie == null || !mounted) {
-      return;
-    }
-
-    final wordtOptie = actie != _OfferteOptieActie.hoofdofferte;
-    final plaatsing = switch (actie) {
-      _OfferteOptieActie.positieBehouden =>
-        OfferteOptiePlaatsing.positieBehouden,
-      _OfferteOptieActie.apartePagina => OfferteOptiePlaatsing.apartePagina,
-      _OfferteOptieActie.hoofdofferte => item.offerteOptiePlaatsing,
-    };
-
-    final model = item.vasteInzethorData;
-    final hoofdpositieId = wordtOptie ? _bepaalOptieHoofdpositieId(item) : '';
-    final bijgewerkt = item
-        .copyWith(
-          isOfferteOptie: wordtOptie,
-          offerteOptiePlaatsing: plaatsing,
-          offerteOptieHoofdpositieId: hoofdpositieId,
-          vasteInzethorData: wordtOptie && model != null
-              ? model.copyWithPrijsData(
-                  OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
-                    prijsData: model.prijsData,
-                    artikelKortingPercentage: 0.0,
-                    toegepasteVerdeeldePrijsregels:
-                        const <OfferteToegepastePrijsregelModel>[],
-                    verdeeldePrijsSignatuur: '',
-                  ),
-                )
-              : model,
-        )
-        .metNieuweWijzigingsDatum();
-
-    await AppStorage.werkOpmetingBij(bijgewerkt);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    if (!mounted) return;
-    await _laadOpmetingenVanOpslag(klantNaam: _klantNaam);
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(
-      klantNaam: item.klantNaam,
-    );
-    if (!mounted) return;
-
-    final melding = switch (actie) {
-      _OfferteOptieActie.positieBehouden =>
-        'Positie blijft op haar plaats in de offerte en wordt als optie aangeduid. Korting werd verwijderd.',
-      _OfferteOptieActie.apartePagina =>
-        'Positie wordt op een aparte optiepagina vermeld. Korting werd verwijderd.',
-      _OfferteOptieActie.hoofdofferte =>
-        'Positie opnieuw in de hoofdofferte geplaatst.',
-    };
-    _toonMelding(melding);
+  Future<void> _wisselRaamopmetingOptie(OpmetingOverzichtRaamItem item) {
+    return _positieBeheerController.wisselOptieplaatsing(item);
   }
 
   Future<void> _verplaatsRaamopmeting(
     OpmetingOverzichtRaamItem item,
     int richting,
-  ) async {
-    final huidigeIndex = _raamOpmetingen.indexWhere(
-      (opmeting) => opmeting.id == item.id,
-    );
-    final nieuweIndex = huidigeIndex + richting;
-
-    if (huidigeIndex < 0 ||
-        nieuweIndex < 0 ||
-        nieuweIndex >= _raamOpmetingen.length) {
-      return;
-    }
-
-    final verplaatst = await AppStorage.verplaatsOpmetingBinnenKlant(
-      klantNaam: _klantNaam,
-      opmetingId: item.id,
-      richting: richting,
-    );
-
-    if (!verplaatst || !mounted) {
-      return;
-    }
-
-    setState(() {
-      final opmeting = _raamOpmetingen.removeAt(huidigeIndex);
-      _raamOpmetingen.insert(nieuweIndex, opmeting);
-    });
-  }
-
-  void _verwerkTitelhoofdWijziging(OpmetingProjectTitelhoofd titelhoofd) {
-    final bestaandeKlantNaam = _klantNaam.trim();
-    final nieuweKlantNaam = titelhoofd.klantNaam.trim();
-    final berekeningWerdAangezet =
-        !_projectTitelhoofd.berekenPrijzen && titelhoofd.berekenPrijzen;
-    final ralKleurToebehorenGewijzigd =
-        _projectTitelhoofd.ralKleurToebehoren.trim() !=
-        titelhoofd.ralKleurToebehoren.trim();
-
-    final naamVoorBestand = nieuweKlantNaam.isNotEmpty
-        ? nieuweKlantNaam
-        : bestaandeKlantNaam;
-
-    final titelhoofdVoorState = titelhoofd.copyWith(
-      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
-    );
-
-    setState(() {
-      _projectTitelhoofd = titelhoofdVoorState;
-
-      if (naamVoorBestand.isNotEmpty && naamVoorBestand != _klantNaam) {
-        _klantNaam = naamVoorBestand;
-
-        for (var index = 0; index < _raamOpmetingen.length; index++) {
-          _raamOpmetingen[index] = _raamOpmetingen[index]
-              .copyWith(klantNaam: naamVoorBestand)
-              .metNieuweWijzigingsDatum();
-        }
-      }
-
-      if (ralKleurToebehorenGewijzigd) {
-        final projectkleurResultaat =
-            _synchroniseerProjectkleurInVasteInzethorPosities(
-              _raamOpmetingen,
-              klantNaam: naamVoorBestand,
-              projectkleur: titelhoofdVoorState.ralKleurToebehoren,
-            );
-        _raamOpmetingen
-          ..clear()
-          ..addAll(projectkleurResultaat.opmetingen);
-      }
-    });
-
-    _titelhoofdBewaarTimer?.cancel();
-    _titelhoofdBewaarTimer = Timer(const Duration(milliseconds: 700), () {
-      _bewaarTitelhoofdOpAchtergrond(titelhoofdVoorState);
-    });
-
-    if (ralKleurToebehorenGewijzigd) {
-      unawaited(_bewaarRalKleurToebehorenInPosities());
-    }
-
-    if (berekeningWerdAangezet && naamVoorBestand.isNotEmpty) {
-      unawaited(_activeerPrijsberekening(titelhoofdVoorState));
-    }
-  }
-
-  ({List<OpmetingOverzichtRaamItem> opmetingen, bool gewijzigd})
-  _synchroniseerProjectkleurInVasteInzethorPosities(
-    Iterable<OpmetingOverzichtRaamItem> opmetingen, {
-    required String klantNaam,
-    required String projectkleur,
-  }) {
-    final klantSleutel = klantNaam.trim().toLowerCase();
-    final netteProjectkleur = projectkleur.trim();
-    final resultaat = <OpmetingOverzichtRaamItem>[];
-    var gewijzigd = false;
-
-    for (final item in opmetingen) {
-      final hoortBijActieveKlant =
-          klantSleutel.isNotEmpty &&
-          !item.isVerwijderd &&
-          item.klantNaam.trim().toLowerCase() == klantSleutel;
-      final model = item.vasteInzethorData;
-
-      if (!hoortBijActieveKlant || model == null || !model.isProjectkleur) {
-        resultaat.add(item);
-        continue;
-      }
-
-      final bijgewerktModel =
-          model.ralKleurToebehorenWaarde.trim() == netteProjectkleur
-          ? model
-          : model.copyWith(ralKleurToebehorenWaarde: netteProjectkleur);
-      final bijgewerkteTechnischeRegels =
-          _werkProjectkleurBijInTechnischeRegels(
-            item.technischeRegels,
-            projectkleur: netteProjectkleur,
-          );
-      final technischeRegelsGewijzigd = !_zijnTechnischeRegelsGelijk(
-        item.technischeRegels,
-        bijgewerkteTechnischeRegels,
-      );
-
-      if (identical(bijgewerktModel, model) && !technischeRegelsGewijzigd) {
-        resultaat.add(item);
-        continue;
-      }
-
-      gewijzigd = true;
-      resultaat.add(
-        item
-            .copyWith(
-              vasteInzethorData: bijgewerktModel,
-              technischeRegels: bijgewerkteTechnischeRegels,
-            )
-            .metNieuweWijzigingsDatum(),
-      );
-    }
-
-    return (
-      opmetingen: List<OpmetingOverzichtRaamItem>.unmodifiable(resultaat),
-      gewijzigd: gewijzigd,
-    );
-  }
-
-  List<OpmetingOverzichtTechnischeRegel> _werkProjectkleurBijInTechnischeRegels(
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels, {
-    required String projectkleur,
-  }) {
-    final waarde = projectkleur.trim().isEmpty
-        ? 'Nog niet ingevuld'
-        : projectkleur.trim();
-    final resultaat = <OpmetingOverzichtTechnischeRegel>[];
-    var kleurRegelToegevoegd = false;
-
-    for (final regel in technischeRegels) {
-      final titelSleutel = _normaliseerTechnischeRegelTitelVoorProjectkleur(
-        regel.titel,
-      );
-      final isProjectkleurRegel = const <String>{
-        'kleur',
-        'projectkleur',
-        'ralkleurtoebehoren',
-      }.contains(titelSleutel);
-
-      if (!isProjectkleurRegel) {
-        resultaat.add(regel);
-        continue;
-      }
-
-      if (!kleurRegelToegevoegd) {
-        resultaat.add(
-          OpmetingOverzichtTechnischeRegel(
-            titel: OpmetingVasteInzethorModel.kleurProjectLabel,
-            waarde: waarde,
-          ),
-        );
-        kleurRegelToegevoegd = true;
-      }
-    }
-
-    if (!kleurRegelToegevoegd) {
-      resultaat.add(
-        OpmetingOverzichtTechnischeRegel(
-          titel: OpmetingVasteInzethorModel.kleurProjectLabel,
-          waarde: waarde,
-        ),
-      );
-    }
-
-    return List<OpmetingOverzichtTechnischeRegel>.unmodifiable(resultaat);
-  }
-
-  bool _zijnTechnischeRegelsGelijk(
-    List<OpmetingOverzichtTechnischeRegel> eerste,
-    List<OpmetingOverzichtTechnischeRegel> tweede,
   ) {
-    if (eerste.length != tweede.length) {
-      return false;
-    }
-
-    for (var index = 0; index < eerste.length; index++) {
-      if (eerste[index].titel != tweede[index].titel ||
-          eerste[index].waarde != tweede[index].waarde) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  String _normaliseerTechnischeRegelTitelVoorProjectkleur(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
-  }
-
-  Future<void> _bewaarRalKleurToebehorenInPosities() async {
-    final bijgewerktPerId = <String, OpmetingOverzichtRaamItem>{
-      for (final item in _raamOpmetingen)
-        if (item.vasteInzethorData?.isRalKleurToebehoren == true) item.id: item,
-    };
-
-    if (bijgewerktPerId.isEmpty) {
-      return;
-    }
-
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    var gewijzigd = false;
-
-    final resultaat = alleOpmetingen
-        .map((item) {
-          final bijgewerkt = bijgewerktPerId[item.id];
-          if (bijgewerkt == null) {
-            return item;
-          }
-
-          final oudeWaarde =
-              item.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ?? '';
-          final nieuweWaarde =
-              bijgewerkt.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ??
-              '';
-          final technischeRegelsZijnGelijk = _zijnTechnischeRegelsGelijk(
-            item.technischeRegels,
-            bijgewerkt.technischeRegels,
-          );
-
-          if (oudeWaarde == nieuweWaarde && technischeRegelsZijnGelijk) {
-            return item;
-          }
-
-          gewijzigd = true;
-          return bijgewerkt;
-        })
-        .toList(growable: false);
-
-    if (!gewijzigd) {
-      return;
-    }
-
-    await AppStorage.bewaarOpmetingenVoorSync(resultaat);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-  }
-
-  Future<void> _activeerPrijsberekening(
-    OpmetingProjectTitelhoofd titelhoofd,
-  ) async {
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-
-    if (!mounted) {
-      return;
-    }
-
-    await _laadOpmetingenVanOpslag(klantNaam: titelhoofd.klantNaam);
-  }
-
-  Future<void> _bewaarTitelhoofdOpAchtergrond(
-    OpmetingProjectTitelhoofd titelhoofd,
-  ) async {
-    final klantNaam = titelhoofd.klantNaam.trim();
-
-    if (klantNaam.isEmpty) {
-      return;
-    }
-
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-
-    if (_raamOpmetingen.isNotEmpty) {
-      final ids = _raamOpmetingen.map((item) => item.id).toSet();
-      final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-      var gewijzigd = false;
-
-      final bijgewerkteOpmetingen = alleOpmetingen.map((item) {
-        if (!ids.contains(item.id) || item.klantNaam == klantNaam) {
-          return item;
-        }
-
-        gewijzigd = true;
-        return item.copyWith(klantNaam: klantNaam).metNieuweWijzigingsDatum();
-      }).toList();
-
-      if (gewijzigd) {
-        await AppStorage.bewaarOpmetingenVoorSync(bijgewerkteOpmetingen);
-        await OneDriveSyncService.registreerLokaleWijziging();
-        OneDriveSyncService().uploadBackupOpAchtergrond();
-      }
-    }
-  }
-
-  Future<List<OpmetingAgendaKlantInfo>>
-  _laadBlauweAgendaKlantenMetFicheAanvulling() async {
-    final agendaKlanten = await AppStorage.laadAgendaKlantenVoorOpmeting();
-
-    if (agendaKlanten.isEmpty) {
-      return <OpmetingAgendaKlantInfo>[];
-    }
-
-    final klantenFiches = await AppStorage.laadKlantenVoorOpmeting();
-    final fichesPerNaam = <String, OpmetingAgendaKlantInfo>{
-      for (final klant in klantenFiches)
-        _normaliseerKlantNaam(klant.klantNaam): klant,
-    };
-
-    final resultaat = agendaKlanten.map((agendaKlant) {
-      final fiche = fichesPerNaam[_normaliseerKlantNaam(agendaKlant.klantNaam)];
-
-      return fiche == null ? agendaKlant : agendaKlant.combineerMet(fiche);
-    }).toList();
-
-    resultaat.sort((eerste, tweede) {
-      return eerste.klantNaam.toLowerCase().compareTo(
-        tweede.klantNaam.toLowerCase(),
-      );
-    });
-
-    return resultaat;
-  }
-
-  Future<void> _laadKlantUitBlauweAgenda() async {
-    final klanten = await _laadBlauweAgendaKlantenMetFicheAanvulling();
-
-    if (!mounted) {
-      return;
-    }
-
-    if (klanten.isEmpty) {
-      _toonMelding('Geen klanten gevonden in de blauwe agenda.', fout: true);
-      return;
-    }
-
-    final keuze = await toonOpmetingAgendaKlantKeuzeDialog(
-      context: context,
-      klanten: klanten,
-    );
-
-    if (keuze == null || !mounted) {
-      return;
-    }
-
-    final bestaand = await AppStorage.laadOpmetingProjectTitelhoofd(
-      keuze.klantNaam,
-    );
-
-    final titelhoofd = keuze
-        .naarTitelhoofd(bestaand: bestaand, overschrijfKlantnummer: true)
-        .copyWith(klantNaam: keuze.klantNaam)
-        .metWijzigingsDatum();
-
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _klantNaam = keuze.klantNaam;
-      _projectTitelhoofd = titelhoofd;
-    });
-
-    await _laadOpmetingenVanOpslag(klantNaam: keuze.klantNaam);
-
-    if (mounted) {
-      _toonMelding('Klantgegevens geladen uit de blauwe agenda.');
-    }
+    return _positieBeheerController.verplaatsPositie(item, richting);
   }
 
   List<OpmetingOverzichtRaamItem> _selecteerOndersteundeOffertePosities(
@@ -3515,7 +524,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Future<void> _openPrijsOverzicht() async {
-    await _controleerOpenOfferteOpPrijsinstellingen();
+    await _prijsinstellingenController
+        .controleerOpenOfferteOpPrijsinstellingen();
 
     if (!mounted) return;
 
@@ -3533,7 +543,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final basisTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty
         ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
         : _projectTitelhoofd;
-    final titelhoofd = await _vulAanUitKlantenfiche(
+    final titelhoofd = await _projectTitelhoofdController.vulAanUitKlantenfiche(
       klantNaam: basisTitelhoofd.klantNaam,
       basis: basisTitelhoofd,
     );
@@ -3563,7 +573,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Future<void> _openOffertePreview() async {
-    await _controleerOpenOfferteOpPrijsinstellingen();
+    await _prijsinstellingenController
+        .controleerOpenOfferteOpPrijsinstellingen();
 
     if (!mounted) {
       return;
@@ -3593,7 +604,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final basisTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty
         ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
         : _projectTitelhoofd;
-    final titelhoofd = await _vulAanUitKlantenfiche(
+    final titelhoofd = await _projectTitelhoofdController.vulAanUitKlantenfiche(
       klantNaam: basisTitelhoofd.klantNaam,
       basis: basisTitelhoofd,
     );
@@ -3663,322 +674,44 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Widget _bouwBovenbalk() {
-    return Container(
-      height: 62,
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: _rand)),
-      ),
-      child: Row(
-        children: [
-          PopupMenuButton<String>(
-            tooltip: 'Bestand',
-            onSelected: (waarde) {
-              if (waarde == 'nieuw') {
-                _nieuwBestand();
-              } else if (waarde == 'open') {
-                _openBestand();
-              } else if (waarde == 'opslaan') {
-                _opslaanBestand();
-              } else if (waarde == 'wissen') {
-                _wisBestand();
-              } else if (waarde == 'einde') {
-                _eindeOpmeting();
-              }
-            },
-            itemBuilder: (context) {
-              return const [
-                PopupMenuItem(value: 'nieuw', child: Text('Nieuw bestand')),
-                PopupMenuItem(value: 'open', child: Text('Open bestand')),
-                PopupMenuItem(value: 'opslaan', child: Text('Opslaan bestand')),
-                PopupMenuItem(
-                  value: 'wissen',
-                  child: Text(
-                    'Bestand wissen',
-                    style: TextStyle(color: Color(0xFFDC2626)),
-                  ),
-                ),
-                PopupMenuDivider(),
-                PopupMenuItem(value: 'einde', child: Text('Einde')),
-              ];
-            },
-            child: Container(
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              decoration: BoxDecoration(
-                color: _lichtGroen,
-                borderRadius: BorderRadius.circular(11),
-                border: Border.all(color: const Color(0xFFCDEBD6)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.folder_open_rounded, color: _groen, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Bestand',
-                    style: TextStyle(
-                      color: _groen,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.keyboard_arrow_down, color: _groen, size: 20),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _titelBovenbalk(),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: _tekstDonker,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (_heeftOpenBestand &&
-              _selecteerOndersteundeOffertePosities(
-                _raamOpmetingen,
-              ).isNotEmpty) ...[
-            if (_projectTitelhoofd.berekenPrijzen) ...<Widget>[
-              Tooltip(
-                message: 'Offerte herberekenen met huidige prijsinstellingen',
-                child: IconButton.filledTonal(
-                  onPressed: _prijsHerberekeningBezig
-                      ? null
-                      : _herberekenOfferteHandmatig,
-                  icon: _prijsHerberekeningBezig
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: _groen,
-                          ),
-                        )
-                      : const Icon(Icons.refresh_rounded),
-                  style: IconButton.styleFrom(
-                    foregroundColor: _groen,
-                    backgroundColor: _lichtGroen,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-            ],
-            OutlinedButton.icon(
-              onPressed: _openPrijsOverzicht,
-              icon: const Icon(Icons.assessment_outlined, size: 18),
-              label: const Text('Overzicht'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _groen,
-                backgroundColor: _lichtGroen,
-                side: const BorderSide(color: Color(0xFFCDEBD6)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton.icon(
-              onPressed: _openOffertePreview,
-              icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-              label: const Text('Offerte'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF15A24),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(11),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-          ],
-          if (_heeftOpenBestand)
-            PopupMenuButton<String>(
-              tooltip: 'Formulier toevoegen',
-              onSelected: (waarde) {
-                if (waarde == 'pvc_raam') {
-                  _openRaamopmeting(formulierType: 'pvcRaam');
-                } else if (waarde == 'alu_raam') {
-                  _openRaamopmeting(formulierType: 'aluRaam');
-                } else if (waarde == 'pvc_schuifraam') {
-                  _openRaamopmeting(formulierType: 'pvcSchuifraam');
-                } else if (waarde == 'alu_schuifraam') {
-                  _openRaamopmeting(formulierType: 'aluSchuifraam');
-                } else if (waarde == 'pvc_deur') {
-                  _openRaamopmeting(formulierType: 'pvcDeur');
-                } else if (waarde == 'alu_deur') {
-                  _openRaamopmeting(formulierType: 'aluDeur');
-                } else if (waarde == 'vaste_inzethor') {
-                  _openVasteInzethor();
-                } else if (waarde == 'vliegendeur') {
-                  _openVliegendeur();
-                }
-              },
-              itemBuilder: (context) {
-                return const [
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    child: Text(
-                      'Ramen',
-                      style: TextStyle(
-                        color: _groen,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'pvc_raam',
-                    child: Row(
-                      children: [
-                        Icon(Icons.window_outlined, color: _groen, size: 20),
-                        SizedBox(width: 10),
-                        Text('PVC Raam'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'alu_raam',
-                    child: Row(
-                      children: [
-                        Icon(Icons.window_outlined, color: _groen, size: 20),
-                        SizedBox(width: 10),
-                        Text('ALU Raam'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'pvc_schuifraam',
-                    child: Row(
-                      children: [
-                        Icon(Icons.view_week_outlined, color: _groen, size: 20),
-                        SizedBox(width: 10),
-                        Text('PVC Schuifraam'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'alu_schuifraam',
-                    child: Row(
-                      children: [
-                        Icon(Icons.view_week_rounded, color: _groen, size: 20),
-                        SizedBox(width: 10),
-                        Text('ALU Schuifraam'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Deuren',
-                        style: TextStyle(
-                          color: _groen,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'pvc_deur',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.door_front_door_outlined,
-                          color: _groen,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Text('PVC Deur'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'alu_deur',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.door_front_door_rounded,
-                          color: _groen,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Text('ALU Deur'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 8),
-                      child: Text(
-                        'Toebehoren',
-                        style: TextStyle(
-                          color: _groen,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'vaste_inzethor',
-                    child: Row(
-                      children: [
-                        Icon(Icons.grid_view_rounded, color: _groen, size: 20),
-                        SizedBox(width: 10),
-                        Text('Vaste inzethor'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem<String>(
-                    value: 'vliegendeur',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.door_front_door_outlined,
-                          color: _groen,
-                          size: 20,
-                        ),
-                        SizedBox(width: 10),
-                        Text('Vliegendeur'),
-                      ],
-                    ),
-                  ),
-                ];
-              },
-              child: Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: _groen,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.add_rounded, color: Colors.white),
-              ),
-            )
-          else
-            const SizedBox(width: 42, height: 42),
-        ],
-      ),
+    return OpmetingOverzichtBovenbalk(
+      titel: _titelBovenbalk(),
+      heeftOpenBestand: _heeftOpenBestand,
+      heeftOndersteundeOffertePosities: _selecteerOndersteundeOffertePosities(
+        _raamOpmetingen,
+      ).isNotEmpty,
+      berekenPrijzen: _projectTitelhoofd.berekenPrijzen,
+      prijsHerberekeningBezig:
+          _prijsinstellingenController.isHerberekeningBezig,
+      onNieuwBestand: _projectBestandController.nieuwBestand,
+      onOpenBestand: _projectBestandController.openBestand,
+      onOpslaanBestand: () async {
+        await _projectBestandController.opslaanBestand();
+      },
+      onWisBestand: _projectBestandController.wisBestand,
+      onEindeOpmeting: _projectBestandController.eindeOpmeting,
+      onHerberekenOfferte:
+          _prijsinstellingenController.herberekenOfferteHandmatig,
+      onOpenPrijsOverzicht: _openPrijsOverzicht,
+      onOpenOffertePreview: _openOffertePreview,
+      onFormulierGekozen: _openGeregistreerdFormulier,
     );
+  }
+
+  Future<void> _openGeregistreerdFormulier(
+    OfferteArtikelRegistratie registratie,
+  ) async {
+    switch (registratie.openType) {
+      case OfferteArtikelOpenType.raamopmeting:
+        await _openRaamopmeting(formulierType: registratie.formulierType);
+        break;
+      case OfferteArtikelOpenType.vasteInzethor:
+        await _openVasteInzethor();
+        break;
+      case OfferteArtikelOpenType.vliegendeur:
+        await _openVliegendeur();
+        break;
+    }
   }
 
   String _titelBovenbalk() {
@@ -3994,491 +727,49 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Widget _bouwOverzichtslijst() {
-    final zichtbareItems = <_OpmetingOverzichtItemMetPositie>[];
-    final titelhoofdVoorPrijs =
-        _projectTitelhoofd.klantNaam.trim().isEmpty &&
-            _klantNaam.trim().isNotEmpty
-        ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
-        : _projectTitelhoofd;
-    final projectPrijsResultaat =
-        OfferteProjectPrijsService.berekenAlleOndersteundeUitTitelhoofd(
-          titelhoofd: titelhoofdVoorPrijs,
-          alleOpmetingen: _raamOpmetingen,
+    return OpmetingOverzichtLijst(
+      klantNaam: _klantNaam,
+      projectTitelhoofd: _projectTitelhoofd,
+      opmetingen: _raamOpmetingen,
+      verborgenFormulierTypes: _verborgenFormulierTypes,
+      projectKleurMenus: _projectKleurMenus,
+      offerteController: _offerteController,
+      heeftPrijsregelBronGroepen:
+          _projectPrijsregelController.heeftBeschikbarePrijsregelBronGroepen,
+      onTitelhoofdGewijzigd: _projectTitelhoofdController.verwerkWijziging,
+      onKlantLaden: _projectTitelhoofdController.laadKlantUitBlauweAgenda,
+      onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
+      onArtikelOpenen: _bewerkRaamopmeting,
+      onArtikelVerwijderen: _verwijderRaamopmeting,
+      onArtikelKopieren: _kopieerRaamopmeting,
+      onArtikelOptieWijzigen: _wisselRaamopmetingOptie,
+      onPrijsMenuOpenen: (item, positieLabel) {
+        return _openVrijePrijsPerArtikelVenster(
+          item,
+          positieLabel: positieLabel,
         );
-    final prijsregelBronGroepen = _beschikbarePrijsregelBronGroepen();
-    final positieLabelPerId = _offerteController.positiesService
-        .maakBronPositieLabels(_raamOpmetingen);
-    final geordendeItems = _offerteController.positiesService
-        .groepeerBronPositiesVoorOverzicht(_raamOpmetingen);
-
-    for (final item in geordendeItems) {
-      if (_verborgenFormulierTypes.contains(item.formulierTypeGenormaliseerd)) {
-        continue;
-      }
-
-      final lijstIndex = _raamOpmetingen.indexWhere(
-        (huidig) => huidig.id == item.id,
-      );
-      zichtbareItems.add(
-        _OpmetingOverzichtItemMetPositie(
-          item: item,
-          lijstIndex: lijstIndex < 0 ? 0 : lijstIndex,
-          positieLabel: positieLabelPerId[item.id] ?? 'Positie',
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-      children: [
-        OpmetingProjectTitelhoofdKaart(
-          titelhoofd:
-              _projectTitelhoofd.klantNaam.trim().isEmpty &&
-                  _klantNaam.trim().isNotEmpty
-              ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
-              : _projectTitelhoofd,
-          opmetingen: _raamOpmetingen,
-          verborgenFormulierTypes: _verborgenFormulierTypes,
-          kleurMenus: _projectKleurMenus,
-          onTitelhoofdGewijzigd: _verwerkTitelhoofdWijziging,
-          onKlantLaden: _laadKlantUitBlauweAgenda,
-          onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
-        ),
-        const SizedBox(height: 14),
-        if (zichtbareItems.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _rand),
-            ),
-            child: Text(
-              _raamOpmetingen.isEmpty
-                  ? 'Nog geen posities in deze fiche. Klik rechtsboven op + om een eerste opmeting toe te voegen.'
-                  : 'Alle posities zijn tijdelijk verborgen. Klik bovenaan opnieuw op het oogje om ze terug te tonen.',
-              style: const TextStyle(
-                color: _tekstGrijs,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          )
-        else
-          ...zichtbareItems.map((zichtbaarItem) {
-            final item = zichtbaarItem.item;
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: overzicht_artikel_kaart.OpmetingOverzichtArtikelKaart(
-                item: item,
-                positieLabel: zichtbaarItem.positieLabel,
-                berekenPrijzen: _projectTitelhoofd.berekenPrijzen,
-                winstmargeToepassenOpSamenvatting:
-                    _prijsCorrectieDoelSamenvatting(
-                      artikel: item,
-                      isKorting: false,
-                    ),
-                kortingToepassenOpSamenvatting: _prijsCorrectieDoelSamenvatting(
-                  artikel: item,
-                  isKorting: true,
-                ),
-                onOpenen: () {
-                  _bewerkRaamopmeting(item);
-                },
-                onVerwijderen: () {
-                  _verwijderRaamopmeting(item);
-                },
-                onKopieren: () {
-                  _kopieerRaamopmeting(item);
-                },
-                onOptieWijzigen: () {
-                  _wisselRaamopmetingOptie(item);
-                },
-                onPrijsMenuOpenen: () {
-                  _openVrijePrijsPerArtikelVenster(
-                    item,
-                    positieLabel: zichtbaarItem.positieLabel,
-                  );
-                },
-                onPrijsGewijzigd: (prijs) {
-                  _wijzigArtikelPrijs(item, prijs);
-                },
-                onWinstmargeGewijzigd: (percentage, _) {
-                  _wijzigArtikelWinstmarge(item, percentage);
-                },
-                onKortingGewijzigd: (percentage, _) {
-                  _wijzigArtikelKorting(item, percentage);
-                },
-                onWinstmargeToepassenOpOpenen: (percentage) {
-                  unawaited(
-                    _openPrijsCorrectieToepassenOpDialog(
-                      item: item,
-                      isKorting: false,
-                      percentage: percentage,
-                    ),
-                  );
-                },
-                onKortingToepassenOpOpenen: (percentage) {
-                  unawaited(
-                    _openPrijsCorrectieToepassenOpDialog(
-                      item: item,
-                      isKorting: true,
-                      percentage: percentage,
-                    ),
-                  );
-                },
-                onOmhoog: zichtbaarItem.lijstIndex > 0
-                    ? () {
-                        _verplaatsRaamopmeting(item, -1);
-                      }
-                    : null,
-                onOmlaag: zichtbaarItem.lijstIndex < _raamOpmetingen.length - 1
-                    ? () {
-                        _verplaatsRaamopmeting(item, 1);
-                      }
-                    : null,
-              ),
-            );
-          }),
-        if (_projectTitelhoofd.berekenPrijzen &&
-            prijsregelBronGroepen.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                style: FilledButton.styleFrom(
-                  foregroundColor: _groen,
-                  backgroundColor: _lichtGroen,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: _rand),
-                  ),
-                ),
-                onPressed: () {
-                  unawaited(_openPrijsVoorAlleArtikelenVenster());
-                },
-                icon: const Icon(Icons.rule_folder_outlined, size: 19),
-                label: const Text(
-                  'Prijsregel toepassen op…',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ),
-          ),
-        if (_projectTitelhoofd.berekenPrijzen &&
-            projectPrijsResultaat.regelsVoorOverzicht.isNotEmpty)
-          OfferteProjectPrijsOverzichtKaart(
-            resultaat: projectPrijsResultaat,
-            onBewerken: () {
-              unawaited(_openPrijsVoorAlleArtikelenVenster());
-            },
-          ),
-      ],
+      },
+      onPrijsGewijzigd: (item, prijs) {
+        return _artikelPrijscorrectieController.wijzigArtikelPrijs(item, prijs);
+      },
+      onWinstmargeGewijzigd: (item, percentage) {
+        return _artikelPrijscorrectieController.wijzigArtikelWinstmarge(
+          item,
+          percentage,
+        );
+      },
+      onKortingGewijzigd: (item, percentage) {
+        return _artikelPrijscorrectieController.wijzigArtikelKorting(
+          item,
+          percentage,
+        );
+      },
+      prijsCorrectieDoelSamenvatting:
+          _artikelPrijscorrectieController.prijsCorrectieDoelSamenvatting,
+      onPrijsCorrectieToepassenOpOpenen:
+          _artikelPrijscorrectieController.openPrijsCorrectieToepassenOpDialog,
+      onArtikelVerplaatsen: _verplaatsRaamopmeting,
+      onPrijsregelOpenen: _openPrijsVoorAlleArtikelenVenster,
     );
   }
 }
-
-class _TechnischePrijsMomentopnameResultaat {
-  const _TechnischePrijsMomentopnameResultaat({
-    required this.opmetingen,
-    required this.gewijzigd,
-  });
-
-  final List<OpmetingOverzichtRaamItem> opmetingen;
-  final bool gewijzigd;
-}
-
-enum _PositieKopiePlaats { boven, onder, laatste }
-
-class _OpmetingOverzichtItemMetPositie {
-  const _OpmetingOverzichtItemMetPositie({
-    required this.item,
-    required this.lijstIndex,
-    required this.positieLabel,
-  });
-
-  final OpmetingOverzichtRaamItem item;
-  final int lijstIndex;
-  final String positieLabel;
-}
-
-class _NieuweOpmetingKlantResultaat {
-  const _NieuweOpmetingKlantResultaat({
-    required this.klantNaam,
-    this.klantFiche,
-  });
-
-  final String klantNaam;
-  final OpmetingAgendaKlantInfo? klantFiche;
-}
-
-class _KlantNaamDialog extends StatefulWidget {
-  const _KlantNaamDialog({required this.beginNaam, required this.klanten});
-
-  final String beginNaam;
-  final List<OpmetingAgendaKlantInfo> klanten;
-
-  @override
-  State<_KlantNaamDialog> createState() {
-    return _KlantNaamDialogState();
-  }
-}
-
-class _KlantNaamDialogState extends State<_KlantNaamDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-
-  late final TextEditingController _controller;
-  OpmetingAgendaKlantInfo? _geselecteerdeKlant;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.beginNaam);
-
-    final beginSleutel = widget.beginNaam.trim().toLowerCase();
-
-    for (final klant in widget.klanten) {
-      if (klant.klantNaam.trim().toLowerCase() == beginSleutel) {
-        _geselecteerdeKlant = klant;
-        break;
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _aanmaken() {
-    final naam = _controller.text.trim();
-
-    if (naam.isEmpty) {
-      return;
-    }
-
-    final geselecteerde = _geselecteerdeKlant;
-    final klantFiche =
-        geselecteerde != null &&
-            geselecteerde.klantNaam.trim().toLowerCase() == naam.toLowerCase()
-        ? geselecteerde
-        : null;
-
-    Navigator.of(context).pop(
-      _NieuweOpmetingKlantResultaat(klantNaam: naam, klantFiche: klantFiche),
-    );
-  }
-
-  String _klantWaarde(OpmetingAgendaKlantInfo klant) {
-    return klant.klantNaam.trim().toLowerCase();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final basisTheme = Theme.of(context);
-    final geselecteerde = _geselecteerdeKlant;
-    final adres = geselecteerde == null
-        ? ''
-        : <String>[
-            geselecteerde.adresRegel,
-            geselecteerde.plaats,
-          ].where((deel) => deel.trim().isNotEmpty).join(', ');
-
-    return Theme(
-      data: basisTheme.copyWith(
-        colorScheme: basisTheme.colorScheme.copyWith(
-          primary: _groen,
-          secondary: _groen,
-          surface: Colors.white,
-        ),
-        textSelectionTheme: const TextSelectionThemeData(
-          cursorColor: _groen,
-          selectionHandleColor: _groen,
-        ),
-        inputDecorationTheme: basisTheme.inputDecorationTheme.copyWith(
-          floatingLabelStyle: const TextStyle(
-            color: _groen,
-            fontWeight: FontWeight.w700,
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: _groen, width: 2),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(foregroundColor: _groen),
-        ),
-      ),
-      child: AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        titlePadding: EdgeInsets.zero,
-        title: Container(
-          padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
-          decoration: const BoxDecoration(
-            color: _lichtGroen,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.note_add_outlined, color: _groen),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Nieuw opmeetbestand',
-                  style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-        ),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              DropdownButtonFormField<String>(
-                value: geselecteerde == null
-                    ? null
-                    : _klantWaarde(geselecteerde),
-                isExpanded: true,
-                menuMaxHeight: 420,
-                hint: Text(
-                  widget.klanten.isEmpty
-                      ? 'Geen klantenfiches gevonden'
-                      : 'Selecteer een klant',
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Klant uit klantenfiche',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
-                ),
-                items: widget.klanten
-                    .map<DropdownMenuItem<String>>((
-                      OpmetingAgendaKlantInfo klant,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: _klantWaarde(klant),
-                        child: Text(
-                          klant.klantNaam,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      );
-                    })
-                    .toList(growable: false),
-                onChanged: widget.klanten.isEmpty
-                    ? null
-                    : (waarde) {
-                        if (waarde == null) {
-                          return;
-                        }
-
-                        final klant = widget.klanten.firstWhere(
-                          (item) => _klantWaarde(item) == waarde,
-                        );
-
-                        setState(() {
-                          _geselecteerdeKlant = klant;
-                          _controller.text = klant.klantNaam;
-                          _controller.selection = TextSelection.collapsed(
-                            offset: _controller.text.length,
-                          );
-                        });
-                      },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                autofocus: widget.klanten.isEmpty,
-                cursorColor: _groen,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Naam klant',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (waarde) {
-                  final geselecteerdeKlant = _geselecteerdeKlant;
-
-                  if (geselecteerdeKlant != null &&
-                      geselecteerdeKlant.klantNaam.trim().toLowerCase() !=
-                          waarde.trim().toLowerCase()) {
-                    setState(() {
-                      _geselecteerdeKlant = null;
-                    });
-                  }
-                },
-                onSubmitted: (_) {
-                  _aanmaken();
-                },
-              ),
-              if (geselecteerde != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFAFAFA),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _rand),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        geselecteerde.klantNaam,
-                        style: const TextStyle(
-                          color: _groen,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      if (adres.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(adres),
-                      ],
-                      if (geselecteerde.gsm.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(geselecteerde.gsm.trim()),
-                      ],
-                      if (geselecteerde.email.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(geselecteerde.email.trim()),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Annuleren'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: _groen,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: _aanmaken,
-            child: const Text('Aanmaken'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-enum _OfferteOptieActie { positieBehouden, apartePagina, hoofdofferte }

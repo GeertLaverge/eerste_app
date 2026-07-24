@@ -1,11 +1,15 @@
 // THIMACO-CONTROLE: VLIEGENDEUR-AFZONDERLIJKE-PDF-WIDGET-20260723
 import 'dart:math' as math;
 
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
+import 'prijzen/offerte_artikel_prijs_koppeling_service.dart';
+import 'prijzen/offerte_berekening_resultaat.dart';
+import 'prijzen/offerte_prijsregel_weergave_service.dart';
 
 class OffertePdfVliegendeurWidget {
   const OffertePdfVliegendeurWidget._();
@@ -22,18 +26,39 @@ class OffertePdfVliegendeurWidget {
     );
   }
 
-  static double berekenTotalePositieHoogte(OpmetingOverzichtRaamItem positie) {
-    return berekenKolomHoogte(positie);
+  static const double _basisPrijsRegelHoogte = 34;
+  static const double _basisOptiePrijsRegelHoogte = 78;
+  static const double _afzonderlijkePrijsregelHoogte = 18;
+
+  static double berekenTotalePositieHoogte(
+    OpmetingOverzichtRaamItem positie, {
+    bool kortingToestaan = true,
+    bool isOptie = false,
+  }) {
+    return OffertePdfArtikelLayoutHelper.berekenTotalePositieHoogte(
+      kolomHoogte: berekenKolomHoogte(positie),
+      prijsHoogte: _berekenPrijsSectieHoogte(
+        positie,
+        kortingToestaan: kortingToestaan && !isOptie,
+        isOptie: isOptie,
+      ),
+    );
   }
 
-  static pw.Widget bouwPositie({required OpmetingOverzichtRaamItem positie}) {
+  static pw.Widget bouwPositie({
+    required OpmetingOverzichtRaamItem positie,
+    bool kortingToestaan = true,
+    bool isOptie = false,
+    double btwPercentage = 0.0,
+    String btwRegelLabel = 'BTW',
+  }) {
     final model = positie.vliegendeurData;
     if (model == null) return pw.SizedBox();
 
     final hoogte = berekenKolomHoogte(positie);
     final regels = _technischeRegelsVoorOfferte(positie, model);
 
-    return OffertePdfArtikelLayoutHelper.bouwArtikelLayoutZonderPrijs(
+    return OffertePdfArtikelLayoutHelper.bouwArtikelLayout(
       kolomHoogte: hoogte,
       tekenvlak: OffertePdfArtikelLayoutHelper.bouwTekenvlak(
         hoogte: hoogte,
@@ -54,7 +79,270 @@ class OffertePdfVliegendeurWidget {
         legeTekst: 'Geen technische keuzes ingevuld.',
         toonPrijsZone: false,
       ),
+      prijsBlok: _bouwPrijsBlok(
+        positie,
+        kortingToestaan: kortingToestaan && !isOptie,
+        isOptie: isOptie,
+        btwPercentage: btwPercentage,
+        btwRegelLabel: btwRegelLabel,
+      ),
     );
+  }
+
+  static OfferteBerekeningResultaat? _prijsResultaatVoor(
+    OpmetingOverzichtRaamItem positie, {
+    required bool kortingToestaan,
+  }) {
+    return OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+      positie,
+      kortingToestaan: kortingToestaan,
+    );
+  }
+
+  static double _berekenPrijsSectieHoogte(
+    OpmetingOverzichtRaamItem positie, {
+    required bool kortingToestaan,
+    required bool isOptie,
+  }) {
+    final resultaat = _prijsResultaatVoor(
+      positie,
+      kortingToestaan: kortingToestaan && !isOptie,
+    );
+    final aantalRegels = resultaat == null
+        ? 0
+        : resultaat.afzonderlijkePrijsregelsVoorOfferte.length +
+              resultaat.omschrijvingZonderPrijsRegelsVoorOfferte.length;
+
+    return (isOptie ? _basisOptiePrijsRegelHoogte : _basisPrijsRegelHoogte) +
+        (aantalRegels * _afzonderlijkePrijsregelHoogte);
+  }
+
+  static pw.Widget _bouwPrijsBlok(
+    OpmetingOverzichtRaamItem positie, {
+    required bool kortingToestaan,
+    required bool isOptie,
+    required double btwPercentage,
+    required String btwRegelLabel,
+  }) {
+    final kortingToestaanEffectief = kortingToestaan && !isOptie;
+    final resultaat = _prijsResultaatVoor(
+      positie,
+      kortingToestaan: kortingToestaanEffectief,
+    );
+    final omschrijvingZonderPrijsRegels =
+        resultaat?.omschrijvingZonderPrijsRegelsVoorOfferte ?? const [];
+    final afzonderlijkeRegels =
+        resultaat?.afzonderlijkePrijsregelsVoorOfferte ?? const [];
+    final heeftBijkomendeRegels =
+        omschrijvingZonderPrijsRegels.isNotEmpty ||
+        afzonderlijkeRegels.isNotEmpty;
+    final totaalVoorKorting = resultaat == null
+        ? 0.0
+        : resultaat.offerteTotaalExclBtw +
+              (kortingToestaanEffectief ? resultaat.kortingBedragExclBtw : 0.0);
+    final optieTotaalExclBtw = resultaat?.offerteTotaalExclBtw ?? 0.0;
+    final optieBtw = _rondBedragAf(optieTotaalExclBtw * btwPercentage);
+    final optieTotaalInclBtw = _rondBedragAf(optieTotaalExclBtw + optieBtw);
+    final heeftPrijsInvoer =
+        resultaat != null &&
+        (resultaat.basisTotaalExclBtw > 0.0 ||
+            resultaat.prijsregelsVoorOfferte.isNotEmpty);
+
+    pw.Widget bedragRegel({
+      required String omschrijving,
+      required double bedrag,
+      bool benadrukt = false,
+      bool laatste = false,
+    }) {
+      return pw.Container(
+        padding: pw.EdgeInsets.symmetric(vertical: benadrukt ? 5 : 4),
+        decoration: pw.BoxDecoration(
+          color: benadrukt
+              ? const PdfColor.fromInt(0xFFFFF7ED)
+              : PdfColors.white,
+          border: laatste
+              ? null
+              : const pw.Border(
+                  bottom: pw.BorderSide(
+                    color: OffertePdfArtikelLayoutHelper.rand,
+                    width: 0.5,
+                  ),
+                ),
+        ),
+        child: pw.Row(
+          children: <pw.Widget>[
+            pw.Expanded(
+              child: pw.Text(
+                omschrijving,
+                maxLines: 2,
+                style: pw.TextStyle(
+                  color: benadrukt
+                      ? OffertePdfArtikelLayoutHelper.tekstDonker
+                      : OffertePdfArtikelLayoutHelper.tekstGrijs,
+                  fontSize: benadrukt ? 8.4 : 7.2,
+                  fontWeight: benadrukt
+                      ? pw.FontWeight.bold
+                      : pw.FontWeight.normal,
+                ),
+              ),
+            ),
+            pw.SizedBox(width: 8),
+            pw.Text(
+              '€ ${_bedragMetPunt(bedrag)}',
+              style: pw.TextStyle(
+                color: benadrukt
+                    ? OffertePdfArtikelLayoutHelper.oranje
+                    : OffertePdfArtikelLayoutHelper.tekstDonker,
+                fontSize: benadrukt ? 10.8 : 7.6,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return pw.Container(
+      height: _berekenPrijsSectieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(7),
+        border: pw.Border.all(
+          color: OffertePdfArtikelLayoutHelper.rand,
+          width: 0.8,
+        ),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: <pw.Widget>[
+          for (final prijsregel in omschrijvingZonderPrijsRegels)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Text(
+                OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+                  prijsregel,
+                ),
+                maxLines: 1,
+                style: const pw.TextStyle(
+                  color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                  fontSize: 7.2,
+                ),
+              ),
+            ),
+          for (final prijsregel in afzonderlijkeRegels)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 4),
+              child: pw.Row(
+                children: <pw.Widget>[
+                  pw.Expanded(
+                    child: pw.Text(
+                      OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+                        prijsregel,
+                      ),
+                      maxLines: 1,
+                      style: const pw.TextStyle(
+                        color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                        fontSize: 7.2,
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(width: 8),
+                  pw.Text(
+                    '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}',
+                    style: pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                      fontSize: 7.4,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (heeftBijkomendeRegels) ...<pw.Widget>[
+            pw.Container(
+              height: 0.5,
+              color: OffertePdfArtikelLayoutHelper.rand,
+            ),
+            pw.SizedBox(height: 4),
+          ],
+          if (isOptie) ...<pw.Widget>[
+            bedragRegel(
+              omschrijving: 'Totaal optie excl. btw',
+              bedrag: optieTotaalExclBtw,
+            ),
+            bedragRegel(omschrijving: btwRegelLabel, bedrag: optieBtw),
+            bedragRegel(
+              omschrijving: 'Totaal optie incl. btw',
+              bedrag: optieTotaalInclBtw,
+              benadrukt: true,
+              laatste: true,
+            ),
+          ] else
+            pw.Row(
+              children: <pw.Widget>[
+                pw.Expanded(
+                  child: pw.Text(
+                    'Totaal positie',
+                    style: pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                      fontSize: 8.4,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 8),
+                if (totaalVoorKorting <= 0.0 && !heeftPrijsInvoer)
+                  pw.Text(
+                    'Prijs nog in te vullen',
+                    textAlign: pw.TextAlign.right,
+                    style: const pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                      fontSize: 7.4,
+                    ),
+                  )
+                else
+                  pw.RichText(
+                    textAlign: pw.TextAlign.right,
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: '€ ${_bedragMetPunt(totaalVoorKorting)}',
+                          style: pw.TextStyle(
+                            color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                            fontSize: 12.2,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        const pw.TextSpan(
+                          text: ' excl. btw',
+                          style: pw.TextStyle(
+                            color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                            fontSize: 6.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  static double _rondBedragAf(double waarde) {
+    if (!waarde.isFinite || waarde <= 0.0) return 0.0;
+    return (waarde * 100.0).roundToDouble() / 100.0;
+  }
+
+  static String _bedragMetPunt(double waarde) {
+    return waarde.toStringAsFixed(2);
   }
 
   static List<OffertePdfTechnischeRegel> _technischeRegelsVoorOfferte(
@@ -64,24 +352,13 @@ class OffertePdfVliegendeurWidget {
     final bronRegels = positie.zichtbareTechnischeRegels.isNotEmpty
         ? positie.zichtbareTechnischeRegels
         : _maakRegelsUitModel(model);
-
     final resultaat = <OffertePdfTechnischeRegel>[];
 
     for (final regel in bronRegels) {
       final titel = regel.titel.trim();
       final waarde = regel.waarde.trim();
-
-      if (titel.isEmpty && waarde.isEmpty) {
-        continue;
-      }
-
-      if (_isAfmetingsRegel(titel)) {
-        continue;
-      }
-
-      if (_isVerborgenOpOfferte(titel: titel, waarde: waarde, model: model)) {
-        continue;
-      }
+      if (titel.isEmpty && waarde.isEmpty) continue;
+      if (_isAfmetingsRegel(titel)) continue;
 
       resultaat.add(OffertePdfTechnischeRegel(titel: titel, waarde: waarde));
     }
@@ -105,32 +382,6 @@ class OffertePdfVliegendeurWidget {
       'buitenmaat hoogte',
       'binnenmaat/doorkijkmaat',
     }.contains(sleutel);
-  }
-
-  static String _normaliseerTechnischeTekst(String tekst) {
-    return tekst.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
-  }
-
-  static bool _isVerborgenOpOfferte({
-    required String titel,
-    required String waarde,
-    required OpmetingVliegendeurModel model,
-  }) {
-    final sleutel = _normaliseerTechnischeTekst(titel);
-
-    if (sleutel == 'kaderuitvoering' || sleutel == 'afdekkappen') {
-      return true;
-    }
-
-    if (sleutel == 'dierenluik') {
-      return !model.heeftDierenluik ||
-          _normaliseerTechnischeTekst(waarde) ==
-              _normaliseerTechnischeTekst(
-                OpmetingVliegendeurModel.dierenluikGeen,
-              );
-    }
-
-    return false;
   }
 
   static List<OpmetingOverzichtTechnischeRegel> _maakRegelsUitModel(
