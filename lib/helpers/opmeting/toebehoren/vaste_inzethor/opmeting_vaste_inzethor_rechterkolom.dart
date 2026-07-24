@@ -16,9 +16,8 @@ class OpmetingVasteInzethorRechterkolom extends StatefulWidget {
   final ValueChanged<OpmetingVasteInzethorModel> onGewijzigd;
 
   @override
-  State<OpmetingVasteInzethorRechterkolom> createState() {
-    return _OpmetingVasteInzethorRechterkolomState();
-  }
+  State<OpmetingVasteInzethorRechterkolom> createState() =>
+      _OpmetingVasteInzethorRechterkolomState();
 }
 
 class _OpmetingVasteInzethorRechterkolomState
@@ -33,6 +32,7 @@ class _OpmetingVasteInzethorRechterkolomState
   late final TextEditingController _aantalController;
   late final TextEditingController _breedteController;
   late final TextEditingController _hoogteController;
+  late final TextEditingController _hoogteOndersteKaderController;
   late final TextEditingController _poederlakController;
   late final TextEditingController _flensOpMaatController;
   late final TextEditingController _aantalTraversenController;
@@ -50,19 +50,45 @@ class _OpmetingVasteInzethorRechterkolomState
       text: model.breedteMm.toString(),
     );
     _hoogteController = TextEditingController(text: model.hoogteMm.toString());
+    _hoogteOndersteKaderController = TextEditingController(
+      text: model.hoogteOndersteKaderMm.toString(),
+    );
     _poederlakController = TextEditingController(text: model.poederlakKleur);
     _flensOpMaatController = TextEditingController(
       text: model.flensDiepteOpMaatMm.toString(),
     );
     _aantalTraversenController = TextEditingController(
-      text: model.aantalTraversenOpMaat.toString(),
+      text: model.aantalTraversenOpMaatGeldig.toString(),
     );
+    final posities = model.gesynchroniseerdeTraversePositiesOpMaatMm;
     _traverseControllers = List<TextEditingController>.generate(3, (index) {
-      final waarde = index < model.traversePositiesOpMaatMm.length
-          ? model.traversePositiesOpMaatMm[index]
-          : 0;
-      return TextEditingController(text: waarde == 0 ? '' : waarde.toString());
+      final waarde = index < posities.length ? posities[index] : 0;
+      return TextEditingController(text: waarde <= 0 ? '' : '$waarde');
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant OpmetingVasteInzethorRechterkolom oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final model = widget.model;
+    _synchroniseerController(_stukReferentieController, model.stukReferentie);
+    _synchroniseerController(_aantalController, '${model.aantal}');
+    _synchroniseerController(_breedteController, '${model.breedteMm}');
+    _synchroniseerController(_hoogteController, '${model.hoogteMm}');
+    _synchroniseerController(
+      _hoogteOndersteKaderController,
+      '${model.hoogteOndersteKaderMm}',
+    );
+    _synchroniseerController(_poederlakController, model.poederlakKleur);
+    _synchroniseerController(
+      _flensOpMaatController,
+      '${model.flensDiepteOpMaatMm}',
+    );
+    _synchroniseerController(
+      _aantalTraversenController,
+      '${model.aantalTraversenOpMaatGeldig}',
+    );
+    _synchroniseerTraverseControllers(model);
   }
 
   @override
@@ -71,6 +97,7 @@ class _OpmetingVasteInzethorRechterkolomState
     _aantalController.dispose();
     _breedteController.dispose();
     _hoogteController.dispose();
+    _hoogteOndersteKaderController.dispose();
     _poederlakController.dispose();
     _flensOpMaatController.dispose();
     _aantalTraversenController.dispose();
@@ -80,27 +107,52 @@ class _OpmetingVasteInzethorRechterkolomState
     super.dispose();
   }
 
-  void _wijzig(OpmetingVasteInzethorModel model) {
-    widget.onGewijzigd(model);
+  void _synchroniseerController(
+    TextEditingController controller,
+    String waarde,
+  ) {
+    if (controller.text == waarde) return;
+    controller.value = TextEditingValue(
+      text: waarde,
+      selection: TextSelection.collapsed(offset: waarde.length),
+    );
   }
 
-  void _wijzigGetal(String tekst, void Function(int waarde) onGeldig) {
-    final waarde = int.tryParse(tekst.trim());
-    if (waarde != null) {
-      onGeldig(waarde);
+  void _synchroniseerTraverseControllers(OpmetingVasteInzethorModel model) {
+    final posities = model.gesynchroniseerdeTraversePositiesOpMaatMm;
+    for (var index = 0; index < _traverseControllers.length; index++) {
+      final waarde = index < posities.length ? posities[index] : 0;
+      _synchroniseerController(
+        _traverseControllers[index],
+        waarde <= 0 ? '' : '$waarde',
+      );
     }
   }
 
-  List<String> get _soortBevestigingKeuzes {
-    return <String>[
-      '4',
-      '5',
-      '5 extra',
-      '6',
-      '7',
-      '7 extra',
-      ...List<String>.generate(13, (index) => '${index + 8}'),
-    ];
+  void _wijzig(OpmetingVasteInzethorModel model) {
+    widget.onGewijzigd(
+      model.activeerTechnischeUitbreiding().genormaliseerdVoorProduct(),
+    );
+  }
+
+  void _wijzigMetGesynchroniseerdeTraversen(OpmetingVasteInzethorModel model) {
+    final genormaliseerd = model
+        .activeerTechnischeUitbreiding()
+        .genormaliseerdVoorProduct();
+    _synchroniseerTraverseControllers(genormaliseerd);
+    widget.onGewijzigd(genormaliseerd);
+  }
+
+  void _wijzigGetal({
+    required String tekst,
+    required int minimum,
+    int? maximum,
+    required ValueChanged<int> onGeldig,
+  }) {
+    final waarde = int.tryParse(tekst.trim());
+    if (waarde == null || waarde < minimum) return;
+    if (maximum != null && waarde > maximum) return;
+    onGeldig(waarde);
   }
 
   @override
@@ -132,7 +184,7 @@ class _OpmetingVasteInzethorRechterkolomState
             ),
             child: const Row(
               children: <Widget>[
-                Icon(Icons.tune_rounded, size: 19, color: _groen),
+                Icon(Icons.grid_view_rounded, size: 19, color: _groen),
                 SizedBox(width: 8),
                 Text(
                   'Vaste inzethor',
@@ -147,216 +199,82 @@ class _OpmetingVasteInzethorRechterkolomState
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
               children: <Widget>[
-                _CompactTekstVeld(
-                  titel: 'Stuk referentie',
-                  controller: _stukReferentieController,
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(stukReferentie: waarde));
-                  },
+                _SectieKaart(
+                  titel: 'Basisgegevens',
+                  children: <Widget>[
+                    _CompactTekstVeld(
+                      titel: 'Stuk referentie',
+                      controller: _stukReferentieController,
+                      hulptekst:
+                          'Optioneel, geef een unieke referentie voor dit artikel mee.',
+                      onChanged: (waarde) =>
+                          _wijzig(model.copyWith(stukReferentie: waarde)),
+                    ),
+                    _CompactGetalVeld(
+                      titel: 'Aantal',
+                      controller: _aantalController,
+                      minimum: 1,
+                      onChanged: (tekst) => _wijzigGetal(
+                        tekst: tekst,
+                        minimum: 1,
+                        onGeldig: (waarde) =>
+                            _wijzig(model.copyWith(aantal: waarde)),
+                      ),
+                    ),
+                  ],
                 ),
-                _CompactGetalVeld(
-                  titel: 'Aantal',
-                  controller: _aantalController,
-                  minimum: 1,
-                  onChanged: (tekst) {
-                    _wijzigGetal(tekst, (waarde) {
-                      if (waarde >= 1) {
-                        _wijzig(model.copyWith(aantal: waarde));
-                      }
-                    });
-                  },
-                ),
-                _CompactDropdown(
+                _KeuzeSectie(
                   titel: 'Soort',
                   waarde: model.soort,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.soortVliegenraamClassic,
-                    OpmetingVasteInzethorModel.soortInzetvliegenraam,
-                  ],
+                  keuzes: OpmetingVasteInzethorModel.soortOpties,
+                  labelVoorWaarde: OpmetingVasteInzethorModel.soortLabel,
                   onChanged: (waarde) {
-                    _wijzig(model.copyWith(soort: waarde));
-                  },
-                ),
-                if (model.isInzetvliegenraam) ...<Widget>[
-                  _CompactDropdown(
-                    titel: 'Speling',
-                    waarde: model.speling,
-                    keuzes: const <String>[
-                      OpmetingVasteInzethorModel.spelingVr033Inzet,
-                      OpmetingVasteInzethorModel.spelingVr033Ultra,
-                    ],
-                    onChanged: (waarde) {
-                      _wijzig(model.copyWith(speling: waarde));
-                    },
-                  ),
-                  if (model.isVr033Ultra) ...<Widget>[
-                    _CompactDropdown(
-                      titel: 'Flens diepte',
-                      waarde: model.flensDiepte,
-                      keuzes: const <String>[
-                        OpmetingVasteInzethorModel.flensDiepte20,
-                        OpmetingVasteInzethorModel.flensDiepte30,
-                        OpmetingVasteInzethorModel.flensDiepte40,
-                        OpmetingVasteInzethorModel.flensDiepte50,
-                        OpmetingVasteInzethorModel.flensDiepte60,
-                        OpmetingVasteInzethorModel.flensDiepteOpMaat,
-                      ],
-                      onChanged: (waarde) {
-                        _wijzig(model.copyWith(flensDiepte: waarde));
-                      },
-                    ),
-                    if (model.isFlensOpMaat) ...<Widget>[
-                      _CompactGetalVeld(
-                        titel: 'Flens diepte op maat (12 - 80)',
-                        controller: _flensOpMaatController,
-                        minimum: 12,
-                        maximum: 80,
-                        onChanged: (tekst) {
-                          _wijzigGetal(tekst, (waarde) {
-                            if (waarde >= 12 && waarde <= 80) {
-                              _wijzig(
-                                model.copyWith(flensDiepteOpMaatMm: waarde),
-                              );
-                            }
-                          });
-                        },
-                      ),
-                      _CompactDropdown(
-                        titel: 'Maat rand flens',
-                        waarde: model.maatRandFlens,
-                        keuzes: const <String>[
-                          OpmetingVasteInzethorModel.maatRandFlens8,
-                          OpmetingVasteInzethorModel.maatRandFlens11,
-                        ],
-                        onChanged: (waarde) {
-                          _wijzig(model.copyWith(maatRandFlens: waarde));
-                        },
-                      ),
-                    ],
-                  ],
-                ],
-                _CompactDropdown(
-                  titel: 'Profiel',
-                  waarde: model.profiel,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.profielVr050,
-                    OpmetingVasteInzethorModel.profielVr060,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(profiel: waarde));
-                  },
-                ),
-                _CompactDropdown(
-                  titel: 'Binnenmaten - Buitenmaten',
-                  waarde: model.maatType,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.maatTypeBinnen,
-                    OpmetingVasteInzethorModel.maatTypeBuiten,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(maatType: waarde));
-                  },
-                ),
-                _CompactGetalVeld(
-                  titel: model.breedteTitel,
-                  controller: _breedteController,
-                  minimum: model.breedteMinimumMm,
-                  maximum: model.breedteMaximumMm,
-                  onChanged: (tekst) {
-                    _wijzigGetal(tekst, (waarde) {
-                      if (waarde >= model.breedteMinimumMm &&
-                          waarde <= model.breedteMaximumMm) {
-                        _wijzig(model.copyWith(breedteMm: waarde));
-                      }
-                    });
-                  },
-                ),
-                _CompactGetalVeld(
-                  titel: model.hoogteTitel,
-                  controller: _hoogteController,
-                  minimum: model.hoogteMinimumMm,
-                  maximum: model.hoogteMaximumMm,
-                  onChanged: (tekst) {
-                    _wijzigGetal(tekst, (waarde) {
-                      if (waarde >= model.hoogteMinimumMm &&
-                          waarde <= model.hoogteMaximumMm) {
-                        _wijzig(model.copyWith(hoogteMm: waarde));
-                      }
-                    });
-                  },
-                ),
-                _MaatSamenvatting(model: model),
-                _CompactDropdown(
-                  titel: 'Aantal traversen',
-                  waarde: model.traverseType,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.traverseStandaard,
-                    OpmetingVasteInzethorModel.traverseOpMaat,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(traverseType: waarde));
-                  },
-                ),
-                if (!model.isTraverseOpMaat)
-                  _StandaardTraverseSamenvatting(model: model)
-                else ...<Widget>[
-                  _CompactGetalVeld(
-                    titel: 'Aantal traversen (1 - 3)',
-                    controller: _aantalTraversenController,
-                    minimum: 1,
-                    maximum: 3,
-                    onChanged: (tekst) {
-                      _wijzigGetal(tekst, (waarde) {
-                        if (waarde >= 1 && waarde <= 3) {
-                          _wijzig(
-                            model.copyWith(aantalTraversenOpMaat: waarde),
-                          );
-                        }
-                      });
-                    },
-                  ),
-                  ...List<Widget>.generate(
-                    model.aantalTraversenOpMaat.clamp(1, 3),
-                    (index) {
-                      return _CompactGetalVeld(
-                        titel: 'Hoogte traverse ${index + 1} (mm)',
-                        controller: _traverseControllers[index],
-                        minimum: 1,
-                        maximum: model.hoogteMm - 1,
-                        onChanged: (tekst) {
-                          _wijzigGetal(tekst, (waarde) {
-                            final posities = List<int>.from(
-                              model.traversePositiesOpMaatMm,
-                            );
-                            while (posities.length < 3) {
-                              posities.add(0);
-                            }
-                            posities[index] = waarde;
-                            _wijzig(
-                              model.copyWith(
-                                traversePositiesOpMaatMm: posities,
-                              ),
-                            );
-                          });
-                        },
+                    var gewijzigd = model.copyWith(soort: waarde);
+                    if (waarde ==
+                        OpmetingVasteInzethorModel.soortVliegenraamDubbel) {
+                      gewijzigd = gewijzigd.copyWith(
+                        profiel: OpmetingVasteInzethorModel.profielVr050,
+                        maatType: OpmetingVasteInzethorModel.maatTypeBinnen,
                       );
-                    },
+                    } else if (waarde ==
+                        OpmetingVasteInzethorModel.soortInzetvliegenraam) {
+                      gewijzigd = gewijzigd.copyWith(
+                        speling: OpmetingVasteInzethorModel.profielVr033Inzet,
+                        spelingKeuze:
+                            OpmetingVasteInzethorModel.spelingStandaard,
+                        maatType: OpmetingVasteInzethorModel.maatTypeBinnen,
+                      );
+                    } else if (waarde ==
+                        OpmetingVasteInzethorModel.soortVliegenraamRv) {
+                      gewijzigd = gewijzigd.copyWith(
+                        maatType: OpmetingVasteInzethorModel.maatTypeBinnen,
+                        profiel: OpmetingVasteInzethorModel.profielVr061,
+                        bevestiging:
+                            OpmetingVasteInzethorModel.bevestigingClipsenZakje,
+                        soortClipsen:
+                            OpmetingVasteInzethorModel.clipsenStandaard,
+                      );
+                    }
+                    _wijzigMetGesynchroniseerdeTraversen(gewijzigd);
+                  },
+                ),
+                ..._bouwProductSpecifiekeSecties(model),
+                _bouwTraverseKeuze(model),
+                if (model.isTraverseOpMaat) _bouwTraversenOpMaat(model),
+                if (!model.isTraverseOpMaat)
+                  _SectieKaart(
+                    titel: 'Traversen',
+                    children: <Widget>[
+                      _StandaardTraverseSamenvatting(model: model),
+                    ],
                   ),
-                ],
-                _CompactDropdown(
-                  titel: 'Kleuren',
+                _KeuzeSectie(
+                  titel: 'Populaire kleuren',
                   waarde: model.populaireKleur,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.kleurAntraciet,
-                    OpmetingVasteInzethorModel.kleurBruin,
-                    OpmetingVasteInzethorModel.kleurZwart,
-                    OpmetingVasteInzethorModel.kleurWit,
-                    OpmetingVasteInzethorModel.kleurAnodiseNatuur,
-                    OpmetingVasteInzethorModel.kleurPoederlak,
-                    OpmetingVasteInzethorModel.kleurRalToebehoren,
-                  ],
+                  keuzes: OpmetingVasteInzethorModel.kleurOpties,
+                  labelVoorWaarde: OpmetingVasteInzethorModel.kleurLabel,
                   onChanged: (waarde) {
                     _wijzig(
                       model.copyWith(
@@ -370,118 +288,373 @@ class _OpmetingVasteInzethorRechterkolomState
                     );
                   },
                 ),
-                if (model.isRalKleurToebehoren)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _lichtGroen,
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: _rand),
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        const Icon(
-                          Icons.palette_outlined,
-                          size: 16,
-                          color: _groen,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            model.ralKleurToebehorenWaarde.trim().isEmpty
-                                ? 'Nog geen RAL-kleur toebehoren ingevuld in het project.'
-                                : model.ralKleurToebehorenWaarde.trim(),
-                            style: const TextStyle(
-                              color: _tekst,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                if (model.isProjectkleur)
+                  _ProjectkleurSamenvatting(
+                    projectkleur: model.ralKleurToebehorenWaarde,
                   ),
                 if (model.isPoederlak)
-                  _CompactTekstVeld(
-                    titel: 'Kleur poederlak',
-                    controller: _poederlakController,
-                    onChanged: (waarde) {
-                      _wijzig(model.copyWith(poederlakKleur: waarde));
-                    },
+                  _SectieKaart(
+                    titel: 'Kleurcode',
+                    children: <Widget>[
+                      _CompactTekstVeld(
+                        titel: 'Kleur poederlak',
+                        controller: _poederlakController,
+                        onChanged: (waarde) =>
+                            _wijzig(model.copyWith(poederlakKleur: waarde)),
+                      ),
+                    ],
                   ),
-                _CompactDropdown(
+                _KeuzeSectie(
                   titel: 'Gaas',
                   waarde: model.gaasVoorOverzicht,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.gaasStandaard,
-                    OpmetingVasteInzethorModel.gaasPetscreen,
-                    OpmetingVasteInzethorModel.gaasInox,
-                    OpmetingVasteInzethorModel.gaasGeen,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(gaas: waarde));
-                  },
+                  keuzes: OpmetingVasteInzethorModel.gaasOpties,
+                  labelVoorWaarde: OpmetingVasteInzethorModel.gaasLabel,
+                  onChanged: (waarde) => _wijzig(model.copyWith(gaas: waarde)),
                 ),
-                _CompactDropdown(
+                _KeuzeSectie(
                   titel: 'Kleur pees',
                   waarde: model.kleurPees,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.peesZwart,
-                    OpmetingVasteInzethorModel.peesGrijs,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(kleurPees: waarde));
-                  },
+                  keuzes: OpmetingVasteInzethorModel.kleurPeesOpties,
+                  onChanged: (waarde) =>
+                      _wijzig(model.copyWith(kleurPees: waarde)),
                 ),
-                _CompactDropdown(
+                _KeuzeSectie(
                   titel: 'Borstels',
                   waarde: model.borstels,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.borstelsGeen,
-                    OpmetingVasteInzethorModel.borstelsVp1200,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(borstels: waarde));
-                  },
+                  keuzes: OpmetingVasteInzethorModel.borstelOpties,
+                  onChanged: (waarde) =>
+                      _wijzig(model.copyWith(borstels: waarde)),
                 ),
-                _CompactDropdown(
+                _KeuzeSectie(
                   titel: 'Bevestiging',
                   waarde: model.bevestiging,
-                  keuzes: const <String>[
-                    OpmetingVasteInzethorModel.bevestigingClipsenZakje,
-                    OpmetingVasteInzethorModel.bevestigingClipsenGemonteerd,
-                    OpmetingVasteInzethorModel.bevestigingGeenClipsen,
-                  ],
-                  onChanged: (waarde) {
-                    _wijzig(model.copyWith(bevestiging: waarde));
-                  },
+                  keuzes: model.bevestigingOptiesVoorProduct,
+                  onChanged: (waarde) =>
+                      _wijzig(model.copyWith(bevestiging: waarde)),
                 ),
-                if (model.heeftClipsen) ...<Widget>[
-                  _CompactDropdown(
+                if (model.heeftClipsen)
+                  _KeuzeSectie(
                     titel: 'Soort clipsen',
                     waarde: model.soortClipsen,
-                    keuzes: const <String>[
-                      OpmetingVasteInzethorModel.clipsenStandaard,
-                      OpmetingVasteInzethorModel.clipsenMaritiem,
-                    ],
-                    onChanged: (waarde) {
-                      _wijzig(model.copyWith(soortClipsen: waarde));
-                    },
+                    keuzes: model.soortClipsenOptiesVoorProduct,
+                    onChanged: (waarde) =>
+                        _wijzig(model.copyWith(soortClipsen: waarde)),
                   ),
-                  _CompactDropdown(
+                if (model.heeftClipsen)
+                  _KeuzeSectie(
                     titel: 'Soort bevestiging',
                     waarde: model.soortBevestiging,
-                    keuzes: _soortBevestigingKeuzes,
-                    onChanged: (waarde) {
-                      _wijzig(model.copyWith(soortBevestiging: waarde));
-                    },
+                    keuzes: model.soortBevestigingOptiesVoorProduct,
+                    labelVoorWaarde:
+                        OpmetingVasteInzethorModel.soortBevestigingLabel,
+                    onChanged: (waarde) =>
+                        _wijzig(model.copyWith(soortBevestiging: waarde)),
                   ),
-                ],
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _bouwProductSpecifiekeSecties(OpmetingVasteInzethorModel model) {
+    final secties = <Widget>[];
+
+    if (model.isInzetvliegenraam) {
+      secties.add(
+        _KeuzeSectie(
+          titel: 'Profiel',
+          waarde: model.speling,
+          keuzes: OpmetingVasteInzethorModel.inzetProfielOpties,
+          labelVoorWaarde: (waarde) =>
+              waarde == OpmetingVasteInzethorModel.profielVr033Ultra
+              ? 'VR033 Ultra'
+              : 'VR033 (inzet)',
+          onChanged: (waarde) {
+            _wijzig(
+              model.copyWith(
+                speling: waarde,
+                spelingKeuze:
+                    waarde == OpmetingVasteInzethorModel.profielVr033Ultra
+                    ? OpmetingVasteInzethorModel.spelingGeen
+                    : model.spelingKeuze,
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      secties.add(
+        _KeuzeSectie(
+          titel: 'Profiel',
+          waarde: model.profiel,
+          keuzes: model.profielOptiesVoorSoort,
+          labelVoorWaarde: OpmetingVasteInzethorModel.profielLabel,
+          onChanged: (waarde) {
+            _wijzig(
+              model.copyWith(
+                profiel: waarde,
+                maatType: waarde == OpmetingVasteInzethorModel.profielVr054
+                    ? OpmetingVasteInzethorModel.maatTypeBinnen
+                    : model.maatType,
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (model.magBuitenmaatKiezen) {
+      secties.add(
+        _KeuzeSectie(
+          titel: 'Binnenmaten / buitenmaten',
+          waarde: model.maatType,
+          keuzes: model.maatTypeOptiesVoorProduct,
+          onChanged: (waarde) => _wijzig(model.copyWith(maatType: waarde)),
+        ),
+      );
+    } else {
+      secties.add(const _AlleenBinnenmaatSamenvatting());
+    }
+
+    secties.add(_bouwAfmetingen(model));
+
+    // In Feneko volgen de profielafhankelijke inzetkeuzes pas na de maten.
+    // Daardoor gaat "Geen speling" rechtstreeks door naar het traversenmenu.
+    if (model.isInzetvliegenraam) {
+      if (model.isVr033Ultra) {
+        secties.add(
+          _KeuzeSectie(
+            titel: 'Flensdiepte',
+            waarde: model.flensDiepte,
+            keuzes: OpmetingVasteInzethorModel.flensDiepteOpties,
+            onChanged: (waarde) => _wijzig(model.copyWith(flensDiepte: waarde)),
+          ),
+        );
+        if (model.isFlensOpMaat) {
+          secties.add(
+            _SectieKaart(
+              titel: 'Flens op maat',
+              children: <Widget>[
+                _CompactGetalVeld(
+                  titel: 'Flensdiepte op maat',
+                  controller: _flensOpMaatController,
+                  minimum: 12,
+                  maximum: 80,
+                  eenheid: 'mm',
+                  onChanged: (tekst) => _wijzigGetal(
+                    tekst: tekst,
+                    minimum: 12,
+                    maximum: 80,
+                    onGeldig: (waarde) =>
+                        _wijzig(model.copyWith(flensDiepteOpMaatMm: waarde)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        secties.add(
+          _KeuzeSectie(
+            titel: 'Speling',
+            waarde: model.spelingKeuze,
+            keuzes: OpmetingVasteInzethorModel.spelingKeuzeOpties,
+            onChanged: (waarde) =>
+                _wijzig(model.copyWith(spelingKeuze: waarde)),
+          ),
+        );
+        if (model.heeftStandaardSpeling) {
+          secties.add(const _VasteSpelingSamenvatting());
+        }
+      }
+    }
+
+    return secties;
+  }
+
+  Widget _bouwAfmetingen(OpmetingVasteInzethorModel model) {
+    return _SectieKaart(
+      titel: 'Afmetingen',
+      children: <Widget>[
+        _CompactGetalVeld(
+          titel: model.breedteTitel,
+          controller: _breedteController,
+          minimum: model.breedteMinimumMm,
+          maximum: model.breedteMaximumMm,
+          eenheid: 'mm',
+          onChanged: (tekst) => _wijzigGetal(
+            tekst: tekst,
+            minimum: model.breedteMinimumMm,
+            maximum: model.breedteMaximumMm,
+            onGeldig: (waarde) => _wijzig(model.copyWith(breedteMm: waarde)),
+          ),
+        ),
+        _CompactGetalVeld(
+          titel: model.hoogteTitel,
+          controller: _hoogteController,
+          minimum: model.hoogteMinimumMm,
+          maximum: model.hoogteMaximumMm,
+          eenheid: 'mm',
+          onChanged: (tekst) => _wijzigGetal(
+            tekst: tekst,
+            minimum: model.hoogteMinimumMm,
+            maximum: model.hoogteMaximumMm,
+            onGeldig: (waarde) => _wijzigMetGesynchroniseerdeTraversen(
+              model.copyWithGesynchroniseerdeTraversen(hoogteMm: waarde),
+            ),
+          ),
+        ),
+        if (model.isVliegenraamDubbel)
+          _CompactGetalVeld(
+            titel: model.hoogteOndersteKaderTitel,
+            controller: _hoogteOndersteKaderController,
+            minimum: model.hoogteOndersteKaderMinimumMm,
+            maximum: model.hoogteOndersteKaderMaximumMm,
+            eenheid: 'mm',
+            onChanged: (tekst) => _wijzigGetal(
+              tekst: tekst,
+              minimum: model.hoogteOndersteKaderMinimumMm,
+              maximum: model.hoogteOndersteKaderMaximumMm,
+              onGeldig: (waarde) =>
+                  _wijzig(model.copyWith(hoogteOndersteKaderMm: waarde)),
+            ),
+          ),
+        _MaatSamenvatting(model: model),
+      ],
+    );
+  }
+
+  Widget _bouwTraverseKeuze(OpmetingVasteInzethorModel model) {
+    return _KeuzeSectie(
+      titel: 'Standaard traversen',
+      waarde: model.traverseType,
+      keuzes: OpmetingVasteInzethorModel.traverseTypeOpties,
+      onChanged: (waarde) {
+        final gewijzigd = model
+            .copyWith(traverseType: waarde)
+            .copyWithGesynchroniseerdeTraversen();
+        _wijzigMetGesynchroniseerdeTraversen(gewijzigd);
+      },
+    );
+  }
+
+  Widget _bouwTraversenOpMaat(OpmetingVasteInzethorModel model) {
+    return _SectieKaart(
+      titel: 'Traversen op maat',
+      children: <Widget>[
+        _CompactGetalVeld(
+          titel: 'Aantal traversen',
+          controller: _aantalTraversenController,
+          minimum: 1,
+          maximum: model.maximumAantalTraversenOpMaat,
+          onChanged: (tekst) => _wijzigGetal(
+            tekst: tekst,
+            minimum: 1,
+            maximum: model.maximumAantalTraversenOpMaat,
+            onGeldig: (waarde) => _wijzigMetGesynchroniseerdeTraversen(
+              model.copyWithGesynchroniseerdeTraversen(
+                aantalTraversenOpMaat: waarde,
+              ),
+            ),
+          ),
+        ),
+        ...List<Widget>.generate(model.aantalTraversenOpMaatGeldig, (index) {
+          final minimum = model.traverseMinimumVoorIndex(index);
+          final maximum = model.traverseMaximumVoorIndex(index);
+          return _CompactGetalVeld(
+            titel: 'Hoogte traverse ${index + 1}',
+            controller: _traverseControllers[index],
+            minimum: minimum,
+            maximum: maximum,
+            eenheid: 'mm',
+            onChanged: (tekst) => _wijzigGetal(
+              tekst: tekst,
+              minimum: minimum,
+              maximum: maximum,
+              onGeldig: (waarde) {
+                final posities = List<int>.from(
+                  model.gesynchroniseerdeTraversePositiesOpMaatMm,
+                );
+                while (posities.length <= index) {
+                  posities.add(waarde);
+                }
+                posities[index] = waarde;
+                _wijzigMetGesynchroniseerdeTraversen(
+                  model.copyWithGesynchroniseerdeTraversen(
+                    traversePositiesOpMaatMm: posities,
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+      ],
+    );
+  }
+}
+
+class _AlleenBinnenmaatSamenvatting extends StatelessWidget {
+  const _AlleenBinnenmaatSamenvatting();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SectieKaart(
+      titel: 'Maatsoort',
+      children: <Widget>[
+        _CompactInfoRegel(
+          icoon: Icons.straighten_rounded,
+          tekst: 'Alleen binnenmaat / doorkijkmaat',
+        ),
+      ],
+    );
+  }
+}
+
+class _VasteSpelingSamenvatting extends StatelessWidget {
+  const _VasteSpelingSamenvatting();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _SectieKaart(
+      titel: 'Vaste standaardspeling',
+      children: <Widget>[
+        _CompactInfoRegel(
+          icoon: Icons.compress_rounded,
+          tekst: 'Breedte 4 mm · hoogte 5 mm',
+        ),
+      ],
+    );
+  }
+}
+
+class _CompactInfoRegel extends StatelessWidget {
+  const _CompactInfoRegel({required this.icoon, required this.tekst});
+
+  final IconData icoon;
+  final String tekst;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: <Widget>[
+          Icon(
+            icoon,
+            size: 17,
+            color: _OpmetingVasteInzethorRechterkolomState._groen,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              tekst,
+              style: const TextStyle(
+                color: _OpmetingVasteInzethorRechterkolomState._tekst,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -490,77 +663,93 @@ class _OpmetingVasteInzethorRechterkolomState
   }
 }
 
-class _CompactDropdown extends StatelessWidget {
-  const _CompactDropdown({
+class _SectieKaart extends StatelessWidget {
+  const _SectieKaart({required this.titel, required this.children});
+
+  final String titel;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(
+          color: _OpmetingVasteInzethorRechterkolomState._rand,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            titel,
+            style: const TextStyle(
+              color: _OpmetingVasteInzethorRechterkolomState._groen,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 7),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _KeuzeSectie extends StatelessWidget {
+  const _KeuzeSectie({
     required this.titel,
     required this.waarde,
     required this.keuzes,
     required this.onChanged,
+    this.labelVoorWaarde,
   });
 
   final String titel;
   final String waarde;
   final List<String> keuzes;
   final ValueChanged<String> onChanged;
-
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF111827);
+  final String Function(String waarde)? labelVoorWaarde;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: DropdownButtonFormField<String>(
-        value: keuzes.contains(waarde) ? waarde : keuzes.first,
-        isExpanded: true,
-        menuMaxHeight: 360,
-        icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _groen),
-        style: const TextStyle(
-          color: _tekst,
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-        ),
-        decoration: InputDecoration(
-          labelText: titel,
-          labelStyle: const TextStyle(
-            color: _groen,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-          ),
-          floatingLabelStyle: const TextStyle(
-            color: _groen,
-            fontWeight: FontWeight.w900,
-          ),
-          isDense: true,
-          contentPadding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _rand),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _groen, width: 1.5),
-          ),
-        ),
-        items: keuzes
-            .map((keuze) {
-              return DropdownMenuItem<String>(
-                value: keuze,
-                child: Text(
-                  keuze,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+    final labelBouwer = labelVoorWaarde ?? (waarde) => waarde;
+    final zichtbareKeuzes = <String>[
+      if (waarde.trim().isNotEmpty && !keuzes.contains(waarde)) waarde,
+      ...keuzes,
+    ];
+
+    return _SectieKaart(
+      titel: titel,
+      children: zichtbareKeuzes
+          .map((keuze) {
+            return RadioListTile<String>(
+              value: keuze,
+              groupValue: waarde,
+              onChanged: (nieuw) {
+                if (nieuw != null) {
+                  onChanged(nieuw);
+                }
+              },
+              activeColor: _OpmetingVasteInzethorRechterkolomState._groen,
+              dense: true,
+              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                labelBouwer(keuze),
+                style: const TextStyle(
+                  color: _OpmetingVasteInzethorRechterkolomState._tekst,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
                 ),
-              );
-            })
-            .toList(growable: false),
-        onChanged: (waarde) {
-          if (waarde != null) {
-            onChanged(waarde);
-          }
-        },
-      ),
+              ),
+            );
+          })
+          .toList(growable: false),
     );
   }
 }
@@ -570,18 +759,49 @@ class _CompactTekstVeld extends StatelessWidget {
     required this.titel,
     required this.controller,
     required this.onChanged,
+    this.hulptekst,
   });
 
   final String titel;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final String? hulptekst;
 
   @override
   Widget build(BuildContext context) {
-    return _CompactVeldBasis(
-      titel: titel,
-      controller: controller,
-      onChanged: onChanged,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            titel,
+            style: const TextStyle(
+              color: _OpmetingVasteInzethorRechterkolomState._tekst,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextField(
+            controller: controller,
+            onChanged: onChanged,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+            decoration: _veldDecoratie(),
+          ),
+          if (hulptekst != null) ...<Widget>[
+            const SizedBox(height: 3),
+            Text(
+              hulptekst!,
+              style: const TextStyle(
+                color: _OpmetingVasteInzethorRechterkolomState._tekstGrijs,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -590,109 +810,56 @@ class _CompactGetalVeld extends StatelessWidget {
   const _CompactGetalVeld({
     required this.titel,
     required this.controller,
+    required this.minimum,
     required this.onChanged,
-    this.minimum,
     this.maximum,
+    this.eenheid,
   });
 
   final String titel;
   final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-  final int? minimum;
+  final int minimum;
   final int? maximum;
-
-  @override
-  Widget build(BuildContext context) {
-    return _CompactVeldBasis(
-      titel: titel,
-      controller: controller,
-      keyboardType: TextInputType.number,
-      inputFormatters: <TextInputFormatter>[
-        FilteringTextInputFormatter.digitsOnly,
-      ],
-      validator: (tekst) {
-        final waarde = int.tryParse((tekst ?? '').trim());
-        if (waarde == null) {
-          return 'Geef een geldig getal in';
-        }
-        if (minimum != null && waarde < minimum!) {
-          return 'Minimum $minimum';
-        }
-        if (maximum != null && waarde > maximum!) {
-          return 'Maximum $maximum';
-        }
-        return null;
-      },
-      onChanged: onChanged,
-    );
-  }
-}
-
-class _CompactVeldBasis extends StatelessWidget {
-  const _CompactVeldBasis({
-    required this.titel,
-    required this.controller,
-    required this.onChanged,
-    this.keyboardType,
-    this.inputFormatters,
-    this.validator,
-  });
-
-  final String titel;
-  final TextEditingController controller;
   final ValueChanged<String> onChanged;
-  final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
-  final String? Function(String?)? validator;
+  final String? eenheid;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  String get hulptekst {
+    if (maximum != null) {
+      return 'Toegelaten: $minimum - $maximum';
+    }
+    return 'Minimum: $minimum';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        validator: validator,
-        onChanged: onChanged,
-        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
-        decoration: InputDecoration(
-          labelText: titel,
-          labelStyle: const TextStyle(
-            color: _groen,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            titel,
+            style: const TextStyle(
+              color: _OpmetingVasteInzethorRechterkolomState._tekst,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          floatingLabelStyle: const TextStyle(
-            color: _groen,
-            fontWeight: FontWeight.w900,
+          const SizedBox(height: 4),
+          TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            inputFormatters: <TextInputFormatter>[
+              FilteringTextInputFormatter.digitsOnly,
+            ],
+            onChanged: onChanged,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+            decoration: _veldDecoratie(
+              suffixText: eenheid,
+              helperText: hulptekst,
+            ),
           ),
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 10,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _rand),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _groen, width: 1.5),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: Color(0xFFDC2626)),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
-          ),
-        ),
+        ],
       ),
     );
   }
@@ -703,9 +870,6 @@ class _MaatSamenvatting extends StatelessWidget {
 
   final OpmetingVasteInzethorModel model;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -713,13 +877,17 @@ class _MaatSamenvatting extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: _lichtGroen,
+        color: const Color(0xFFE7F6EC),
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: const Color(0xFFCDEBD6)),
       ),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.straighten_rounded, color: _groen, size: 18),
+          const Icon(
+            Icons.straighten_rounded,
+            color: Color(0xFF0B7A3B),
+            size: 18,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -728,7 +896,7 @@ class _MaatSamenvatting extends StatelessWidget {
                 Text(
                   model.maatSamenvattingTitel,
                   style: const TextStyle(
-                    color: _groen,
+                    color: Color(0xFF0B7A3B),
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
                   ),
@@ -751,6 +919,52 @@ class _MaatSamenvatting extends StatelessWidget {
   }
 }
 
+class _ProjectkleurSamenvatting extends StatelessWidget {
+  const _ProjectkleurSamenvatting({required this.projectkleur});
+
+  final String projectkleur;
+
+  @override
+  Widget build(BuildContext context) {
+    final waarde = projectkleur.trim();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAF8),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: const Color(0xFFCDEBD6)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Text(
+            'Projectkleur',
+            style: TextStyle(
+              color: Color(0xFF0B7A3B),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            waarde.isEmpty
+                ? 'Nog geen projectkleur ingevuld in het project.'
+                : waarde,
+            style: const TextStyle(
+              color: Color(0xFF111827),
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StandaardTraverseSamenvatting extends StatelessWidget {
   const _StandaardTraverseSamenvatting({required this.model});
 
@@ -760,74 +974,92 @@ class _StandaardTraverseSamenvatting extends StatelessWidget {
   Widget build(BuildContext context) {
     final posities = model.standaardTraversePositiesMm;
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Expanded(
-                child: Text(
-                  'Aantal traversen',
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return Column(
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            const Expanded(
+              child: Text(
+                'Aantal traversen',
+                style: TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              Text(
-                '${model.standaardAantalTraversen}',
-                style: const TextStyle(
-                  color: Color(0xFF0B7A3B),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
+            ),
+            Text(
+              '${model.standaardAantalTraversen}',
+              style: const TextStyle(
+                color: Color(0xFF0B7A3B),
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
               ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ...List<Widget>.generate(posities.length, (index) {
-            final waarde = posities[index];
-            final tekst = waarde == waarde.roundToDouble()
-                ? '${waarde.round()} mm'
-                : '${waarde.toStringAsFixed(1)} mm';
-            return Padding(
-              padding: EdgeInsets.only(top: index == 0 ? 0 : 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      'Traverse ${index + 1}',
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    tekst,
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...List<Widget>.generate(posities.length, (index) {
+          final waarde = posities[index];
+          final tekst = waarde == waarde.roundToDouble()
+              ? '${waarde.round()} mm'
+              : '${waarde.toStringAsFixed(1)} mm';
+
+          return Padding(
+            padding: EdgeInsets.only(
+              top: index == 0 ? 0 : 4,
+              bottom: index == posities.length - 1 ? 8 : 0,
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    'Traverse ${index + 1}',
                     style: const TextStyle(
-                      color: Color(0xFF111827),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF6B7280),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
+                ),
+                Text(
+                  tekst,
+                  style: const TextStyle(
+                    color: Color(0xFF111827),
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
+}
+
+InputDecoration _veldDecoratie({String? suffixText, String? helperText}) {
+  return InputDecoration(
+    isDense: true,
+    filled: true,
+    fillColor: Colors.white,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+    suffixText: suffixText,
+    helperText: helperText,
+    helperStyle: const TextStyle(fontSize: 9, height: 1),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(
+        color: _OpmetingVasteInzethorRechterkolomState._rand,
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(
+        color: _OpmetingVasteInzethorRechterkolomState._groen,
+        width: 1.4,
+      ),
+    ),
+  );
 }

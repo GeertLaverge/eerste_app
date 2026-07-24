@@ -9,6 +9,7 @@ import '../raam/opmeting_raam_model.dart';
 import '../raam/opmeting_raam_vulling_helper.dart';
 import '../schuifraam/opmeting_schuifraam_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -362,6 +363,7 @@ class OpmetingOverzichtRaamItem {
     this.notities = '',
     this.offertePrijsData = const OfferteArtikelPrijsDataModel(),
     this.vasteInzethorData,
+    this.vliegendeurData,
   });
 
   final String id;
@@ -405,6 +407,7 @@ class OpmetingOverzichtRaamItem {
   final String notities;
   final OfferteArtikelPrijsDataModel offertePrijsData;
   final OpmetingVasteInzethorModel? vasteInzethorData;
+  final OpmetingVliegendeurModel? vliegendeurData;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -450,6 +453,12 @@ class OpmetingOverzichtRaamItem {
       case 'Vaste Inzethor':
         return 'vasteInzethor';
 
+      case 'vliegendeur':
+      case 'vliegen_deur':
+      case 'Vliegendeur':
+      case 'Vliegen deur':
+        return 'vliegendeur';
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -481,6 +490,9 @@ class OpmetingOverzichtRaamItem {
 
       case 'vasteInzethor':
         return 'Vaste inzethor';
+
+      case 'vliegendeur':
+        return 'Vliegendeur';
 
       case 'pvcRaam':
         return 'PVC Raam';
@@ -515,6 +527,7 @@ class OpmetingOverzichtRaamItem {
     String? notities,
     OfferteArtikelPrijsDataModel? offertePrijsData,
     OpmetingVasteInzethorModel? vasteInzethorData,
+    OpmetingVliegendeurModel? vliegendeurData,
   }) {
     return OpmetingOverzichtRaamItem(
       id: id ?? this.id,
@@ -546,6 +559,7 @@ class OpmetingOverzichtRaamItem {
       notities: notities ?? this.notities,
       offertePrijsData: offertePrijsData ?? this.offertePrijsData,
       vasteInzethorData: vasteInzethorData ?? this.vasteInzethorData,
+      vliegendeurData: vliegendeurData ?? this.vliegendeurData,
     );
   }
 
@@ -596,6 +610,7 @@ class OpmetingOverzichtRaamItem {
       'offertePrijsData': offertePrijsData.toJson(),
       if (vasteInzethorData != null)
         'vasteInzethorData': vasteInzethorData!.toJson(),
+      if (vliegendeurData != null) 'vliegendeurData': vliegendeurData!.toJson(),
     };
   }
 
@@ -672,6 +687,11 @@ class OpmetingOverzichtRaamItem {
       vasteInzethorData: json['vasteInzethorData'] is Map
           ? OpmetingVasteInzethorModel.fromJson(
               Map<String, dynamic>.from(json['vasteInzethorData'] as Map),
+            )
+          : null,
+      vliegendeurData: json['vliegendeurData'] is Map
+          ? OpmetingVliegendeurModel.fromJson(
+              Map<String, dynamic>.from(json['vliegendeurData'] as Map),
             )
           : null,
     );

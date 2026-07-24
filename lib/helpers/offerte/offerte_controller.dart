@@ -44,13 +44,16 @@ class OfferteController {
   }
 
   /// Selecteert uitsluitend posities waarvan de artikelspecifieke PDF-layout
-  /// al volledig gekoppeld is. Hierdoor kan een nieuwe adapter veilig worden
-  /// voorbereid zonder de bestaande klantofferte te wijzigen.
+  /// volledig gekoppeld is. Een Vliegendeur heeft een eigen PDF-widget en mag
+  /// daarom mee zonder prijsadapter of koppeling met de prijsinstellingen.
   List<OpmetingOverzichtRaamItem> selecteerPdfPosities(
     Iterable<OpmetingOverzichtRaamItem> posities,
   ) {
     return List<OpmetingOverzichtRaamItem>.unmodifiable(
       posities.where((positie) {
+        if (positie.isVerwijderd) return false;
+        if (positie.vliegendeurData != null) return true;
+
         final adapter = adapterVoor(positie);
         return adapter != null && adapter.isPdfActief;
       }),

@@ -7,6 +7,7 @@ import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
 import 'offerte_pdf_pvc_raam_widget.dart';
+import 'offerte_pdf_vliegendeur_widget.dart';
 import 'offerte_pdf_model.dart';
 
 class OffertePdfService {
@@ -665,6 +666,8 @@ class OffertePdfService {
               btwPercentage: data.btwPercentage,
               btwRegelLabel: data.btwRegelLabel,
             )
+          else if (artikel.positie.vliegendeurData != null)
+            OffertePdfVliegendeurWidget.bouwPositie(positie: artikel.positie)
           else
             OffertePdfPvcRaamWidget.bouwPositie(
               positie: artikel.positie,
@@ -749,7 +752,25 @@ class OffertePdfService {
         _paginaVoetReserve;
     final eindBerekeningReserve = _berekenEindBerekeningReserve(data);
 
-    final artikels = data.offertePositiesVoorWeergave
+    // De Vliegendeur heeft geen prijsadapter. Voeg haar daarom nogmaals
+    // vanuit de onafhankelijke Vliegendeur-selectie toe en ontdubbel op ID.
+    // Zo kan een toekomstige prijsfilter dit artikel nooit uit de PDF halen.
+    String positieSleutel(OpmetingOverzichtRaamItem positie) {
+      final id = positie.id.trim();
+      return id.isNotEmpty ? 'id:$id' : 'object:${identityHashCode(positie)}';
+    }
+
+    final toegestaneSleutels = <String>{
+      ...data.offertePositiesVoorWeergave.map(positieSleutel),
+      ...data.vliegendeurPositiesVoorWeergave.map(positieSleutel),
+    };
+    final zichtbarePosities = data.posities
+        .where(
+          (positie) => toegestaneSleutels.contains(positieSleutel(positie)),
+        )
+        .toList(growable: false);
+
+    final artikels = zichtbarePosities
         .map(
           (positie) => _GenummerdeOffertePositie(
             positie: positie,
@@ -867,17 +888,24 @@ class OffertePdfService {
         ? 0.0
         : 32.0 + (positieOpties.length * 22.0) + 8.0;
 
-    final inhoudHoogte = positie.vasteInzethorData != null
-        ? OffertePdfInzethorWidget.berekenTotalePositieHoogte(
-            positie,
-            kortingToestaan: kortingToestaanEffectief,
-            isOptie: isOptie,
-          )
-        : OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(
-            positie,
-            kortingToestaan: kortingToestaanEffectief,
-            isOptie: isOptie,
-          );
+    final double inhoudHoogte;
+    if (positie.vasteInzethorData != null) {
+      inhoudHoogte = OffertePdfInzethorWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
+    } else if (positie.vliegendeurData != null) {
+      inhoudHoogte = OffertePdfVliegendeurWidget.berekenTotalePositieHoogte(
+        positie,
+      );
+    } else {
+      inhoudHoogte = OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
+    }
 
     return _artikelKopHoogteVoor(positie) + inhoudHoogte + optieRegelsHoogte;
   }

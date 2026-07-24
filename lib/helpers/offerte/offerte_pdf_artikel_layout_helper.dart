@@ -39,6 +39,13 @@ class OffertePdfArtikelLayoutHelper {
   static const double kopHoogte = 30;
   static const double tekenInhoudBreedte = kolomBreedte - 28;
 
+  // De hoogteberekening en de effectieve PDF-rij gebruiken dezelfde vaste
+  // waarden. Daardoor worden lange technische lijsten niet meer na enkele
+  // regels afgekapt door een verschil tussen geschatte en echte rijhoogte.
+  static const double technischeRegelHoogte = 14;
+  static const double compacteTechnischeRegelHoogte = 11.5;
+  static const double technischeKolomVerticalePadding = 15;
+
   static List<OffertePdfTechnischeRegel> combineerTechnischeRegels(
     List<OffertePdfTechnischeRegel> regels,
   ) {
@@ -84,7 +91,15 @@ class OffertePdfArtikelLayoutHelper {
     String bovenMelding = '',
   }) {
     final samengevoegdeRegels = combineerTechnischeRegels(regels);
-    var benodigdeHoogte = 16.0;
+    final compact = _gebruikCompacteTechnischeOpmaak(
+      regels: samengevoegdeRegels,
+      notities: notities,
+      bovenMelding: bovenMelding,
+    );
+    final regelHoogte = compact
+        ? compacteTechnischeRegelHoogte
+        : technischeRegelHoogte;
+    var benodigdeHoogte = technischeKolomVerticalePadding;
 
     if (bovenMelding.trim().isNotEmpty) {
       benodigdeHoogte += 17;
@@ -95,9 +110,7 @@ class OffertePdfArtikelLayoutHelper {
     if (samengevoegdeRegels.isEmpty) {
       benodigdeHoogte += 20;
     } else {
-      for (final _ in samengevoegdeRegels) {
-        benodigdeHoogte += 12.7;
-      }
+      benodigdeHoogte += samengevoegdeRegels.length * regelHoogte;
     }
 
     if (notities.trim().isNotEmpty) {
@@ -109,6 +122,16 @@ class OffertePdfArtikelLayoutHelper {
     return benodigdeHoogte
         .clamp(minimumKolomHoogte, maximumKolomHoogte)
         .toDouble();
+  }
+
+  static bool _gebruikCompacteTechnischeOpmaak({
+    required List<OffertePdfTechnischeRegel> regels,
+    required String notities,
+    required String bovenMelding,
+  }) {
+    return regels.length >= 24 ||
+        notities.trim().length > 220 ||
+        bovenMelding.trim().length > 100;
   }
 
   static double berekenTotalePositieHoogte({
@@ -127,22 +150,46 @@ class OffertePdfArtikelLayoutHelper {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: <pw.Widget>[
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: <pw.Widget>[
-            pw.Expanded(
-              flex: tekenvlakFlex,
-              child: pw.SizedBox(height: kolomHoogte, child: tekenvlak),
-            ),
-            pw.SizedBox(width: kolomTussenruimte),
-            pw.Expanded(
-              flex: technischeKolomFlex,
-              child: pw.SizedBox(height: kolomHoogte, child: technischeKolom),
-            ),
-          ],
+        _bouwKolommen(
+          kolomHoogte: kolomHoogte,
+          tekenvlak: tekenvlak,
+          technischeKolom: technischeKolom,
         ),
         pw.SizedBox(height: ruimteVoorPrijsBlok),
         prijsBlok,
+      ],
+    );
+  }
+
+  static pw.Widget bouwArtikelLayoutZonderPrijs({
+    required double kolomHoogte,
+    required pw.Widget tekenvlak,
+    required pw.Widget technischeKolom,
+  }) {
+    return _bouwKolommen(
+      kolomHoogte: kolomHoogte,
+      tekenvlak: tekenvlak,
+      technischeKolom: technischeKolom,
+    );
+  }
+
+  static pw.Widget _bouwKolommen({
+    required double kolomHoogte,
+    required pw.Widget tekenvlak,
+    required pw.Widget technischeKolom,
+  }) {
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: <pw.Widget>[
+        pw.Expanded(
+          flex: tekenvlakFlex,
+          child: pw.SizedBox(height: kolomHoogte, child: tekenvlak),
+        ),
+        pw.SizedBox(width: kolomTussenruimte),
+        pw.Expanded(
+          flex: technischeKolomFlex,
+          child: pw.SizedBox(height: kolomHoogte, child: technischeKolom),
+        ),
       ],
     );
   }
@@ -211,12 +258,14 @@ class OffertePdfArtikelLayoutHelper {
     String notities = '',
     String bovenMelding = '',
     String legeTekst = 'Geen bijkomende technische gegevens.',
+    bool toonPrijsZone = true,
   }) {
     final samengevoegdeRegels = combineerTechnischeRegels(regels);
-    final compact =
-        samengevoegdeRegels.length >= 16 ||
-        notities.trim().length > 220 ||
-        bovenMelding.trim().length > 100;
+    final compact = _gebruikCompacteTechnischeOpmaak(
+      regels: samengevoegdeRegels,
+      notities: notities,
+      bovenMelding: bovenMelding,
+    );
 
     return pw.Container(
       height: hoogte,
@@ -253,6 +302,7 @@ class OffertePdfArtikelLayoutHelper {
                 regel: samengevoegdeRegels[index],
                 laatste: index == samengevoegdeRegels.length - 1,
                 compact: compact,
+                toonPrijsZone: toonPrijsZone,
               ),
           if (notities.trim().isNotEmpty) ...<pw.Widget>[
             pw.SizedBox(height: compact ? 5 : 7),
@@ -285,9 +335,14 @@ class OffertePdfArtikelLayoutHelper {
     required OffertePdfTechnischeRegel regel,
     required bool laatste,
     required bool compact,
+    required bool toonPrijsZone,
   }) {
+    final regelHoogte = compact
+        ? compacteTechnischeRegelHoogte
+        : technischeRegelHoogte;
+
     return pw.Container(
-      padding: pw.EdgeInsets.symmetric(vertical: compact ? 2.3 : 3.3),
+      height: regelHoogte,
       decoration: pw.BoxDecoration(
         border: laatste
             ? null
@@ -297,49 +352,54 @@ class OffertePdfArtikelLayoutHelper {
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: <pw.Widget>[
           pw.Expanded(
-            child: pw.FittedBox(
-              fit: pw.BoxFit.scaleDown,
+            child: pw.Align(
               alignment: pw.Alignment.centerLeft,
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  children: [
-                    pw.TextSpan(
-                      text: regel.titel,
-                      style: pw.TextStyle(
-                        color: tekstGrijs,
-                        fontSize: compact ? 6.6 : 7.2,
-                      ),
-                    ),
-                    if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
-                      pw.TextSpan(text: ': '),
-                    if (regel.waarde.isNotEmpty)
+              child: pw.FittedBox(
+                fit: pw.BoxFit.scaleDown,
+                alignment: pw.Alignment.centerLeft,
+                child: pw.RichText(
+                  text: pw.TextSpan(
+                    children: [
                       pw.TextSpan(
-                        text: regel.waarde,
+                        text: regel.titel,
                         style: pw.TextStyle(
-                          color: tekstDonker,
-                          fontSize: compact ? 6.7 : 7.3,
-                          fontWeight: pw.FontWeight.bold,
+                          color: tekstGrijs,
+                          fontSize: compact ? 6.6 : 7.2,
                         ),
                       ),
-                  ],
+                      if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
+                        pw.TextSpan(text: ': '),
+                      if (regel.waarde.isNotEmpty)
+                        pw.TextSpan(
+                          text: regel.waarde,
+                          style: pw.TextStyle(
+                            color: tekstDonker,
+                            fontSize: compact ? 6.7 : 7.3,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          pw.SizedBox(width: 8),
-          pw.SizedBox(
-            width: prijsZoneBreedte,
-            child: pw.Text(
-              regel.prijsTekst,
-              maxLines: 1,
-              textAlign: pw.TextAlign.right,
-              style: pw.TextStyle(
-                color: tekstDonker,
-                fontSize: compact ? 6.8 : 7.4,
-                fontWeight: pw.FontWeight.bold,
+          if (toonPrijsZone) ...<pw.Widget>[
+            pw.SizedBox(width: 8),
+            pw.SizedBox(
+              width: prijsZoneBreedte,
+              child: pw.Text(
+                regel.prijsTekst,
+                maxLines: 1,
+                textAlign: pw.TextAlign.right,
+                style: pw.TextStyle(
+                  color: tekstDonker,
+                  fontSize: compact ? 6.8 : 7.4,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

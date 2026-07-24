@@ -6,92 +6,45 @@ import '../../fotos/opmeting_foto_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
 import '../../raam/opmeting_raam_notities.dart';
-import 'opmeting_vaste_inzethor_model.dart';
-import 'opmeting_vaste_inzethor_rechterkolom.dart';
-import 'opmeting_vaste_inzethor_tekenvlak.dart';
+import 'opmeting_vliegendeur_model.dart';
+import 'opmeting_vliegendeur_rechterkolom.dart';
+import 'opmeting_vliegendeur_tekenvlak.dart';
 
-class OpmetingVasteInzethorFiche extends StatefulWidget {
-  const OpmetingVasteInzethorFiche({
+class OpmetingVliegendeurFiche extends StatefulWidget {
+  const OpmetingVliegendeurFiche({
     super.key,
     this.klantNaam,
     this.bestaandeOpmeting,
-    this.ralKleurToebehoren = '',
-    this.standaardPrijsPerStukExclBtw = 0,
-    this.standaardWinstmargePercentage = 0,
-    this.standaardKortingPercentage = 0,
+    this.projectRalKleur = '',
   });
 
   final String? klantNaam;
   final OpmetingOverzichtRaamItem? bestaandeOpmeting;
-  final String ralKleurToebehoren;
-  final double standaardPrijsPerStukExclBtw;
-  final double standaardWinstmargePercentage;
-  final double standaardKortingPercentage;
+  final String projectRalKleur;
 
   @override
-  State<OpmetingVasteInzethorFiche> createState() {
-    return _OpmetingVasteInzethorFicheState();
+  State<OpmetingVliegendeurFiche> createState() {
+    return _OpmetingVliegendeurFicheState();
   }
 }
 
-class _OpmetingVasteInzethorFicheState
-    extends State<OpmetingVasteInzethorFiche> {
+class _OpmetingVliegendeurFicheState extends State<OpmetingVliegendeurFiche> {
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
 
   final TextEditingController _notitiesController = TextEditingController();
 
-  late OpmetingVasteInzethorModel _model;
+  late OpmetingVliegendeurModel _model;
   bool _bewarenBezig = false;
 
   @override
   void initState() {
     super.initState();
-
     _model =
-        widget.bestaandeOpmeting?.vasteInzethorData ??
-        OpmetingVasteInzethorModel(
-          prijsData: OfferteArtikelPrijsDataModel(
-            prijsPerStukExclBtw: widget.standaardPrijsPerStukExclBtw,
-            artikelWinstmargePercentage: widget.standaardWinstmargePercentage,
-            artikelKortingPercentage: widget.standaardKortingPercentage,
-          ),
-        );
-
-    _model = _synchroniseerProjectkleur(_model);
-
+        widget.bestaandeOpmeting?.vliegendeurData ??
+        const OpmetingVliegendeurModel();
     _notitiesController.text = _model.notities;
     _notitiesController.addListener(_verwerkNotities);
-  }
-
-  @override
-  void didUpdateWidget(covariant OpmetingVasteInzethorFiche oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.ralKleurToebehoren.trim() ==
-        widget.ralKleurToebehoren.trim()) {
-      return;
-    }
-
-    _model = _synchroniseerProjectkleur(_model);
-  }
-
-  String get _actueleProjectkleur => widget.ralKleurToebehoren.trim();
-
-  OpmetingVasteInzethorModel _synchroniseerProjectkleur(
-    OpmetingVasteInzethorModel model,
-  ) {
-    if (!model.isProjectkleur) {
-      return model;
-    }
-
-    final actueleProjectkleur = _actueleProjectkleur;
-
-    if (model.ralKleurToebehorenWaarde.trim() == actueleProjectkleur) {
-      return model;
-    }
-
-    return model.copyWith(ralKleurToebehorenWaarde: actueleProjectkleur);
   }
 
   @override
@@ -103,11 +56,7 @@ class _OpmetingVasteInzethorFicheState
 
   void _verwerkNotities() {
     final tekst = _notitiesController.text;
-
-    if (tekst == _model.notities) {
-      return;
-    }
-
+    if (tekst == _model.notities) return;
     setState(() {
       _model = _model.copyWith(notities: tekst);
     });
@@ -119,11 +68,9 @@ class _OpmetingVasteInzethorFicheState
     });
   }
 
-  void _verwerkRechterkolom(OpmetingVasteInzethorModel model) {
-    final modelMetActueleProjectkleur = _synchroniseerProjectkleur(model);
-
+  void _verwerkRechterkolom(OpmetingVliegendeurModel model) {
     setState(() {
-      _model = modelMetActueleProjectkleur.copyWith(
+      _model = model.copyWith(
         notities: _notitiesController.text,
         fotos: _model.fotos,
       );
@@ -131,17 +78,12 @@ class _OpmetingVasteInzethorFicheState
   }
 
   Future<void> _sluitFiche() async {
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
   Future<void> _voegToeAanOverzicht() async {
-    if (_bewarenBezig) {
-      return;
-    }
+    if (_bewarenBezig) return;
 
     setState(() {
       _bewarenBezig = true;
@@ -149,25 +91,18 @@ class _OpmetingVasteInzethorFicheState
 
     try {
       final opmeting = _maakOverzichtItem();
-
       final bewaardeOpmeting = widget.bestaandeOpmeting == null
           ? await AppStorage.voegOpmetingToe(opmeting)
           : await AppStorage.werkOpmetingBij(opmeting);
 
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       Navigator.of(context).pop(bewaardeOpmeting);
     } catch (fout) {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFFDC2626),
-          content: Text('Vaste inzethor opslaan is niet gelukt: $fout'),
+          content: Text('Vliegendeur opslaan is niet gelukt: $fout'),
         ),
       );
     } finally {
@@ -182,51 +117,61 @@ class _OpmetingVasteInzethorFicheState
   OpmetingOverzichtRaamItem _maakOverzichtItem() {
     final klantNaam =
         (widget.klantNaam ?? widget.bestaandeOpmeting?.klantNaam ?? '').trim();
-    final actueelModel = _synchroniseerProjectkleur(_model)
-        .copyWithGesynchroniseerdeTraversen()
-        .genormaliseerdVoorProduct()
-        .copyWith(
-          notities: _notitiesController.text.trim(),
-          fotos: List<OpmetingFoto>.unmodifiable(_model.fotos),
-        );
-
-    final buitenBreedteMm = actueelModel.buitenBreedteMm.round();
-    final buitenHoogteMm = actueelModel.buitenHoogteMm.round();
-    final binnenBreedteMm = actueelModel.binnenBreedteMm.round();
-    final binnenHoogteMm = actueelModel.binnenHoogteMm.round();
+    final modelVoorOpslag = _model.copyWith(
+      notities: _notitiesController.text.trim(),
+      fotos: List<OpmetingFoto>.unmodifiable(_model.fotos),
+    );
 
     return OpmetingOverzichtRaamItem(
       id: widget.bestaandeOpmeting?.id ?? '',
-      titel: actueelModel.stukReferentie.trim().isEmpty
-          ? 'Vaste inzethor'
-          : actueelModel.stukReferentie.trim(),
+      titel: modelVoorOpslag.stukReferentie.trim().isEmpty
+          ? 'Vliegendeur'
+          : modelVoorOpslag.stukReferentie.trim(),
       klantNaam: klantNaam,
-      formulierType: 'vasteInzethor',
+      formulierType: 'vliegendeur',
       gewijzigdOp: widget.bestaandeOpmeting?.gewijzigdOp ?? '',
       isVerwijderd: widget.bestaandeOpmeting?.isVerwijderd ?? false,
       isOfferteOptie: widget.bestaandeOpmeting?.isOfferteOptie ?? false,
       offerteOptiePlaatsing:
           widget.bestaandeOpmeting?.offerteOptiePlaatsing ??
           OfferteOptiePlaatsing.apartePagina,
-      dagmaatBreedteMm: binnenBreedteMm,
-      dagmaatHoogteMm: binnenHoogteMm,
-      raammaatBreedteMm: buitenBreedteMm,
-      raammaatHoogteMm: buitenHoogteMm,
+      offerteOptieHoofdpositieId:
+          widget.bestaandeOpmeting?.offerteOptieHoofdpositieId ?? '',
+      gekopieerdVanPositieId:
+          widget.bestaandeOpmeting?.gekopieerdVanPositieId ?? '',
+      dagmaatBreedteMm: modelVoorOpslag.breedteMm,
+      dagmaatHoogteMm: modelVoorOpslag.hoogteMm,
+      raammaatBreedteMm: modelVoorOpslag.breedteMm,
+      raammaatHoogteMm: modelVoorOpslag.hoogteMm,
       kaderSamenstelling: OpmetingKaderSamenstelling.basis(
-        breedteMm: buitenBreedteMm,
-        hoogteMm: buitenHoogteMm,
+        breedteMm: modelVoorOpslag.breedteMm,
+        hoogteMm: modelVoorOpslag.hoogteMm,
       ),
       tekeningData: OpmetingOverzichtTekeningData.leeg(),
-      technischeRegels: _maakTechnischeRegels(actueelModel),
+      technischeRegels: _maakTechnischeRegels(modelVoorOpslag),
       technischeContainers: const <OpmetingOverzichtTechnischeContainer>[],
-      fotos: actueelModel.fotos,
-      notities: actueelModel.notities,
-      vasteInzethorData: actueelModel,
+      fotos: modelVoorOpslag.fotos,
+      notities: modelVoorOpslag.notities,
+      offertePrijsData:
+          widget.bestaandeOpmeting?.offertePrijsData ??
+          const OfferteArtikelPrijsDataModel(),
+      vliegendeurData: modelVoorOpslag,
     );
   }
 
+  String _kleurVoorTechnischeRegel(OpmetingVliegendeurModel model) {
+    if (!model.isProjectKleur) {
+      return model.kleurVoorOverzicht;
+    }
+
+    final projectkleur = widget.projectRalKleur.trim();
+    return projectkleur.isEmpty
+        ? OpmetingVliegendeurModel.kleurNogTeBepalen
+        : projectkleur;
+  }
+
   List<OpmetingOverzichtTechnischeRegel> _maakTechnischeRegels(
-    OpmetingVasteInzethorModel model,
+    OpmetingVliegendeurModel model,
   ) {
     final regels = <OpmetingOverzichtTechnischeRegel>[];
 
@@ -239,78 +184,37 @@ class _OpmetingVasteInzethorFicheState
 
     voegToe('Stuk referentie', model.stukReferentie);
     voegToe('Aantal', '${model.aantal}');
-    voegToe('Soort', model.soortVoorWeergave);
+    voegToe('Breedte buitenmaat', '${model.breedteMm} mm');
+    voegToe('Hoogte buitenmaat', '${model.hoogteMm} mm');
+    voegToe('Soort', model.soort);
+    voegToe('Traverse', model.traverseType);
+    voegToe('Aantal traversen', '${model.aantalTraversen}');
 
-    if (model.isInzetvliegenraam) {
-      voegToe('Profiel', model.inzetProfielVoorWeergave);
-      if (model.isVr033Inzet) {
-        voegToe('Speling', model.spelingVoorOverzicht);
-        if (model.heeftStandaardSpeling) {
-          voegToe(
-            'Vaste speling',
-            'Breedte ${OpmetingVasteInzethorModel.standaardSpelingBreedteMm} mm · '
-                'hoogte ${OpmetingVasteInzethorModel.standaardSpelingHoogteMm} mm',
-          );
-        }
-        voegToe('Flens', '5 mm buiten het kader');
-      } else {
-        voegToe('Flensdiepte', model.flensDiepteVoorOverzicht);
-      }
-    } else {
-      voegToe('Profiel', model.profielVoorWeergave);
+    final doorgangHoogtes = model.actieveDoorgangHoogtesMm;
+    for (var index = 0; index < doorgangHoogtes.length; index++) {
+      voegToe('Doorganghoogte ${index + 1}', '${doorgangHoogtes[index]} mm');
     }
 
-    voegToe('Maatsoort', model.maatSamenvattingTitel);
-    voegToe('Breedte', '${model.breedteMm} mm');
-    voegToe(
-      model.isVliegenraamDubbel ? 'H · Hoogte hoofdraam' : 'Hoogte',
-      '${model.hoogteMm} mm',
-    );
-    if (model.isVliegenraamDubbel) {
-      voegToe(
-        'L5 · Hoogte onderste kader',
-        '${model.hoogteOndersteKaderMm} mm',
-      );
+    voegToe('Kleursoort', model.kleursoort);
+    voegToe('Kleur', _kleurVoorTechnischeRegel(model));
+    voegToe('Kleur PVC', model.kleurPvc);
+    voegToe('Kaderuitvoering', model.kaderuitvoering);
+    voegToe('Scharnierkant', model.scharnierkant);
+    voegToe('Dierenluik', model.dierenluik);
+    voegToe('Schopplaat', model.schopplaat);
+
+    if (model.isSchopplaatOpMaat) {
+      voegToe('Hoogte schopplaat', '${model.schopplaatHoogteOpMaatMm} mm');
     }
 
-    voegToe('Traversen', model.traverseType);
-    final traversePosities = model.actieveTraversePositiesMm;
-    voegToe('Aantal traversen', '${traversePosities.length}');
-    for (var index = 0; index < traversePosities.length; index++) {
-      voegToe(
-        'Traverse ${index + 1}',
-        '${_formatteerMm(traversePosities[index])} mm',
-      );
-    }
-
-    if (model.isProjectkleur) {
-      final projectkleur = model.ralKleurToebehorenWaarde.trim();
-      voegToe(
-        OpmetingVasteInzethorModel.kleurProjectLabel,
-        projectkleur.isEmpty ? 'Nog niet ingevuld' : projectkleur,
-      );
-    } else {
-      voegToe('Kleur', model.kleurVoorOverzicht);
-    }
-
-    voegToe('Gaas', model.gaasVoorWeergave);
+    voegToe('Gaas', model.gaas);
+    voegToe('Gaas onder T1', model.gaasOnderT1);
+    voegToe('Sluiting', model.sluiting);
+    voegToe('Pomp', model.pomp);
+    voegToe('Afdekkappen', model.afdekkappen);
     voegToe('Kleur pees', model.kleurPees);
-    voegToe('Borstels', model.borstels);
-    voegToe('Bevestiging', model.bevestiging);
-    if (model.heeftClipsen) {
-      voegToe('Soort clipsen', model.soortClipsen);
-      voegToe('Soort bevestiging', model.soortBevestigingVoorWeergave);
-    }
-
+    voegToe('Kleur borstel', model.kleurBorstel);
     return regels;
-  }
-
-  String _formatteerMm(double waarde) {
-    if (waarde == waarde.roundToDouble()) {
-      return waarde.round().toString();
-    }
-
-    return waarde.toStringAsFixed(1);
   }
 
   @override
@@ -321,9 +225,7 @@ class _OpmetingVasteInzethorFicheState
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop) {
-          await _sluitFiche();
-        }
+        if (!didPop) await _sluitFiche();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F8FA),
@@ -338,8 +240,8 @@ class _OpmetingVasteInzethorFicheState
           ),
           title: Text(
             klantNaam.isEmpty
-                ? 'Opmeting Vaste inzethor'
-                : 'Opmeting Vaste inzethor · $klantNaam',
+                ? 'Opmeting Vliegendeur'
+                : 'Opmeting Vliegendeur · $klantNaam',
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
           actions: <Widget>[
@@ -403,7 +305,7 @@ class _OpmetingVasteInzethorFicheState
                   child: Column(
                     children: <Widget>[
                       Expanded(
-                        child: OpmetingVasteInzethorTekenvlak(model: _model),
+                        child: OpmetingVliegendeurTekenvlak(model: _model),
                       ),
                       const SizedBox(height: 10),
                       OpmetingRaamNotities(
@@ -418,9 +320,9 @@ class _OpmetingVasteInzethorFicheState
               const SizedBox(width: 12),
               Expanded(
                 flex: 40,
-                child: OpmetingVasteInzethorRechterkolom(
+                child: OpmetingVliegendeurRechterkolom(
                   model: _model,
-                  ralKleurToebehoren: widget.ralKleurToebehoren,
+                  projectRalKleur: widget.projectRalKleur,
                   onGewijzigd: _verwerkRechterkolom,
                 ),
               ),

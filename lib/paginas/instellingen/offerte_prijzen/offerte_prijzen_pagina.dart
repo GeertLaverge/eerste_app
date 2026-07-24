@@ -21,6 +21,12 @@ class OffertePrijzenPagina extends StatelessWidget {
           actief: true,
         ),
         _OffertePrijsFicheKeuze(
+          formulierType: 'vliegendeur',
+          naam: 'Vliegendeur',
+          icoon: Icons.door_front_door_outlined,
+          actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
           formulierType: 'pvcRaam',
           naam: 'PVC raam',
           icoon: Icons.window_outlined,
@@ -92,9 +98,10 @@ class OffertePrijzenPagina extends StatelessWidget {
                 ),
                 child: const Text(
                   'Beheer hier de offerteprijzen per soort opmeetfiche. '
-                  'Vaste inzethor, PVC en ALU raam, PVC en ALU schuifraam en '
-                  'PVC en ALU deur zijn actief. Iedere fiche heeft een eigen '
-                  'prijsprofiel en gebruikt haar actuele technische keuzes. '
+                  'Vaste inzethor, Vliegendeur, PVC en ALU raam, PVC en ALU '
+                  'schuifraam en PVC en ALU deur zijn actief. Iedere fiche '
+                  'heeft een eigen prijsprofiel. Technische-keuzeprijzen zijn '
+                  'niet van toepassing op Vaste inzethor en Vliegendeur. '
                   'U kunt prijsregels toevoegen, wijzigen, ordenen en tijdelijk '
                   'uitschakelen. Zonwering wordt later gekoppeld.',
                   style: TextStyle(

@@ -23,73 +23,113 @@ class OfferteVerdeelkostBijwerkingResultaat {
 class OfferteVerdeelkostService {
   const OfferteVerdeelkostService._();
 
+  /// Behouden voor bestaande aanroepen die slechts één prijsprofiel verwerken.
+  ///
+  /// Nieuwe projectbrede berekeningen gebruiken bij voorkeur
+  /// [werkGedeeldeMomentopnamesBij], zodat verdeelkosten met hetzelfde ID over
+  /// meerdere artikelgroepen samen kunnen worden verdeeld.
   static OfferteVerdeelkostBijwerkingResultaat werkMomentopnamesBij({
     required List<OpmetingOverzichtRaamItem> alleOpmetingen,
     required String klantNaam,
     required OffertePrijsprofielModel profiel,
     bool forceer = false,
   }) {
-    final klantSleutel = klantNaam.trim().toLowerCase();
-    final formulierType = _canoniekFormulierType(profiel.formulierType);
+    return werkGedeeldeMomentopnamesBij(
+      alleOpmetingen: alleOpmetingen,
+      klantNaam: klantNaam,
+      profielen: <String, OffertePrijsprofielModel>{
+        profiel.formulierType: profiel,
+      },
+      forceer: forceer,
+    );
+  }
 
-    if (klantSleutel.isEmpty || formulierType.isEmpty) {
+  /// Verwerkt alle interne verdeelkosten projectbreed.
+  ///
+  /// Prijsregels met hetzelfde [OffertePrijsregelModel.id] vormen één gedeelde
+  /// verdeelgroep. Het bedrag wordt één keer genomen en verdeeld over alle
+  /// hoofdartikelen waarvan het formuliertype aan die groep gekoppeld is.
+  static OfferteVerdeelkostBijwerkingResultaat werkGedeeldeMomentopnamesBij({
+    required List<OpmetingOverzichtRaamItem> alleOpmetingen,
+    required String klantNaam,
+    required Map<String, OffertePrijsprofielModel> profielen,
+    bool forceer = false,
+  }) {
+    final klantSleutel = klantNaam.trim().toLowerCase();
+
+    if (klantSleutel.isEmpty || profielen.isEmpty) {
       return OfferteVerdeelkostBijwerkingResultaat(
         opmetingen: alleOpmetingen,
         gewijzigd: false,
       );
     }
 
+    final profielenPerType = _normaliseerProfielen(profielen);
+
+    if (profielenPerType.isEmpty) {
+      return OfferteVerdeelkostBijwerkingResultaat(
+        opmetingen: alleOpmetingen,
+        gewijzigd: false,
+      );
+    }
+
+    final ondersteundeFormulierTypes = profielenPerType.keys.toSet();
+
     final doelIndexen = <int>[];
     final optieIndexen = <int>[];
 
     for (var index = 0; index < alleOpmetingen.length; index++) {
       final opmeting = alleOpmetingen[index];
-      if (_isDoelOpmeting(opmeting, klantSleutel, formulierType)) {
+
+      if (_isDoelOpmeting(
+        opmeting: opmeting,
+        klantSleutel: klantSleutel,
+        ondersteundeFormulierTypes: ondersteundeFormulierTypes,
+      )) {
         doelIndexen.add(index);
-      } else if (_isOptieOpmeting(opmeting, klantSleutel, formulierType)) {
+        continue;
+      }
+
+      if (_isOptieOpmeting(
+        opmeting: opmeting,
+        klantSleutel: klantSleutel,
+        ondersteundeFormulierTypes: ondersteundeFormulierTypes,
+      )) {
         optieIndexen.add(index);
       }
     }
 
-    final moetOptiesOpschonen = optieIndexen.any((index) {
-      return _heeftVerdeelkosten(alleOpmetingen[index], formulierType);
-    });
+    final verdeelgroepen = _bouwVerdeelgroepen(profielenPerType);
 
-    if (doelIndexen.isEmpty) {
-      if (!moetOptiesOpschonen) {
-        return OfferteVerdeelkostBijwerkingResultaat(
-          opmetingen: alleOpmetingen,
-          gewijzigd: false,
-        );
-      }
+    final projectSignatuur = verdeelgroepen.isEmpty
+        ? ''
+        : _maakProjectSignatuur(
+            alleOpmetingen: alleOpmetingen,
+            doelIndexen: doelIndexen,
+            verdeelgroepen: verdeelgroepen,
+          );
 
-      return OfferteVerdeelkostBijwerkingResultaat(
-        opmetingen: _maakOptiesZonderVerdeelkosten(
-          alleOpmetingen: alleOpmetingen,
-          optieIndexen: optieIndexen,
-          formulierType: formulierType,
-        ),
-        gewijzigd: true,
-      );
-    }
-
-    final projectSignatuur = _maakProjectSignatuur(
-      alleOpmetingen: alleOpmetingen,
-      doelIndexen: doelIndexen,
-      profiel: profiel,
-      formulierType: formulierType,
+    final optiesMetVerdeelkosten = optieIndexen.any(
+      (index) => _heeftVerdeelkosten(alleOpmetingen[index]),
     );
 
+    final hoofdartikelenMoetenBijwerken = doelIndexen.any((index) {
+      final opmeting = alleOpmetingen[index];
+      final huidigeSignatuur = _verdeeldePrijsSignatuur(opmeting);
+
+      if (huidigeSignatuur != projectSignatuur) {
+        return true;
+      }
+
+      if (projectSignatuur.isEmpty && _heeftVerdeelkosten(opmeting)) {
+        return true;
+      }
+
+      return false;
+    });
+
     final moetBijwerken =
-        forceer ||
-        moetOptiesOpschonen ||
-        doelIndexen.any((index) {
-          return _verdeeldePrijsSignatuur(
-                alleOpmetingen[index],
-                formulierType,
-              ) !=
-              projectSignatuur;
-        });
+        forceer || optiesMetVerdeelkosten || hoofdartikelenMoetenBijwerken;
 
     if (!moetBijwerken) {
       return OfferteVerdeelkostBijwerkingResultaat(
@@ -98,17 +138,6 @@ class OfferteVerdeelkostService {
       );
     }
 
-    final totaalAantalArtikelen = doelIndexen.fold<int>(0, (som, index) {
-      return som + _aantalVoorOpmeting(alleOpmetingen[index], formulierType);
-    });
-
-    final aankoopTotaalVoorVerdeling = _rondBedragAf(
-      doelIndexen.fold<double>(0.0, (som, index) {
-        return som +
-            _aankoopTotaalVoorLimiet(alleOpmetingen[index], formulierType);
-      }),
-    );
-
     final verdeeldeRegelsPerIndex =
         <int, List<OfferteToegepastePrijsregelModel>>{
           for (final index in doelIndexen)
@@ -116,12 +145,44 @@ class OfferteVerdeelkostService {
         };
 
     final berekendOp = DateTime.now().toUtc().toIso8601String();
-    final verdeelRegels = profiel
-        .regelsVoorCategorie(OffertePrijsCategorie.alleArtikelen)
-        .where((regel) => _isGeldigeVerdeelRegel(regel, profiel))
-        .toList(growable: false);
 
-    for (final prijsregel in verdeelRegels) {
+    for (final verdeelgroep in verdeelgroepen) {
+      final prijsregel = verdeelgroep.prijsregel;
+
+      if (!prijsregel.actief ||
+          !prijsregel.isGeldig ||
+          !prijsregel.isVerdeeldeProjectkost) {
+        continue;
+      }
+
+      final groepDoelIndexen = doelIndexen
+          .where((index) {
+            final formulierType = _formulierTypeVoorOpmeting(
+              alleOpmetingen[index],
+            );
+
+            return verdeelgroep.formulierTypes.contains(formulierType);
+          })
+          .toList(growable: false);
+
+      if (groepDoelIndexen.isEmpty) {
+        continue;
+      }
+
+      final totaalAantalArtikelen = groepDoelIndexen.fold<int>(0, (som, index) {
+        return som + _aantalVoorOpmeting(alleOpmetingen[index]);
+      });
+
+      if (totaalAantalArtikelen <= 0) {
+        continue;
+      }
+
+      final aankoopTotaalVoorVerdeling = _rondBedragAf(
+        groepDoelIndexen.fold<double>(0.0, (som, index) {
+          return som + _aankoopTotaalVoorLimiet(alleOpmetingen[index]);
+        }),
+      );
+
       if (_limietIsBereikt(
         prijsregel: prijsregel,
         aankoopTotaalVoorVerdeling: aankoopTotaalVoorVerdeling,
@@ -132,8 +193,7 @@ class OfferteVerdeelkostService {
       _verdeelPrijsregel(
         prijsregel: prijsregel,
         alleOpmetingen: alleOpmetingen,
-        doelIndexen: doelIndexen,
-        formulierType: formulierType,
+        doelIndexen: groepDoelIndexen,
         totaalAantalArtikelen: totaalAantalArtikelen,
         aankoopTotaalVoorVerdeling: aankoopTotaalVoorVerdeling,
         berekendOp: berekendOp,
@@ -146,24 +206,38 @@ class OfferteVerdeelkostService {
     );
 
     for (final index in doelIndexen) {
+      final prijsregels =
+          verdeeldeRegelsPerIndex[index] ??
+          const <OfferteToegepastePrijsregelModel>[];
+
+      final gesorteerdePrijsregels =
+          List<OfferteToegepastePrijsregelModel>.from(prijsregels)
+            ..sort((eerste, tweede) {
+              final omschrijvingVergelijking = eerste.omschrijving
+                  .toLowerCase()
+                  .compareTo(tweede.omschrijving.toLowerCase());
+
+              if (omschrijvingVergelijking != 0) {
+                return omschrijvingVergelijking;
+              }
+
+              return eerste.bronPrijsregelId.compareTo(tweede.bronPrijsregelId);
+            });
+
       bijgewerkteOpmetingen[index] = _werkVerdeelkostenBij(
         opmeting: bijgewerkteOpmetingen[index],
-        formulierType: formulierType,
-        prijsregels:
-            verdeeldeRegelsPerIndex[index] ??
-            const <OfferteToegepastePrijsregelModel>[],
+        prijsregels: gesorteerdePrijsregels,
         signatuur: projectSignatuur,
       );
     }
 
     for (final index in optieIndexen) {
-      if (!_heeftVerdeelkosten(bijgewerkteOpmetingen[index], formulierType)) {
+      if (!_heeftVerdeelkosten(bijgewerkteOpmetingen[index])) {
         continue;
       }
 
       bijgewerkteOpmetingen[index] = _werkVerdeelkostenBij(
         opmeting: bijgewerkteOpmetingen[index],
-        formulierType: formulierType,
         prijsregels: const <OfferteToegepastePrijsregelModel>[],
         signatuur: '',
       );
@@ -175,100 +249,166 @@ class OfferteVerdeelkostService {
     );
   }
 
-  static bool _isDoelOpmeting(
-    OpmetingOverzichtRaamItem opmeting,
-    String klantSleutel,
-    String formulierType,
+  static Map<String, OffertePrijsprofielModel> _normaliseerProfielen(
+    Map<String, OffertePrijsprofielModel> profielen,
   ) {
-    return !opmeting.isVerwijderd &&
-        opmeting.teltMeeInHoofdofferte &&
-        opmeting.klantNaam.trim().toLowerCase() == klantSleutel &&
-        _isZelfdeFormulierType(
-          opmeting.formulierTypeGenormaliseerd,
-          formulierType,
-        ) &&
-        _heeftGeldigPrijsmodel(opmeting, formulierType);
-  }
+    final resultaat = <String, OffertePrijsprofielModel>{};
 
-  static bool _isOptieOpmeting(
-    OpmetingOverzichtRaamItem opmeting,
-    String klantSleutel,
-    String formulierType,
-  ) {
-    return !opmeting.isVerwijderd &&
-        opmeting.isOfferteOptie &&
-        opmeting.klantNaam.trim().toLowerCase() == klantSleutel &&
-        _isZelfdeFormulierType(
-          opmeting.formulierTypeGenormaliseerd,
-          formulierType,
-        ) &&
-        _heeftGeldigPrijsmodel(opmeting, formulierType);
-  }
+    for (final profiel in profielen.values) {
+      final formulierType = _canoniekFormulierType(profiel.formulierType);
 
-  static bool _heeftGeldigPrijsmodel(
-    OpmetingOverzichtRaamItem opmeting,
-    String formulierType,
-  ) {
-    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
-      opmeting,
-    );
-    return koppeling != null &&
-        _isZelfdeFormulierType(koppeling.formulierType, formulierType);
-  }
-
-  static bool _heeftVerdeelkosten(
-    OpmetingOverzichtRaamItem opmeting,
-    String formulierType,
-  ) {
-    if (!_heeftGeldigPrijsmodel(opmeting, formulierType)) return false;
-    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
-      opmeting,
-    );
-    return prijsData != null &&
-        (prijsData.toegepasteVerdeeldePrijsregels.isNotEmpty ||
-            prijsData.verdeeldePrijsSignatuur.isNotEmpty);
-  }
-
-  static List<OpmetingOverzichtRaamItem> _maakOptiesZonderVerdeelkosten({
-    required List<OpmetingOverzichtRaamItem> alleOpmetingen,
-    required List<int> optieIndexen,
-    required String formulierType,
-  }) {
-    final resultaat = List<OpmetingOverzichtRaamItem>.from(alleOpmetingen);
-
-    for (final index in optieIndexen) {
-      if (!_heeftVerdeelkosten(resultaat[index], formulierType)) {
+      if (formulierType.isEmpty) {
         continue;
       }
 
-      resultaat[index] = _werkVerdeelkostenBij(
-        opmeting: resultaat[index],
-        formulierType: formulierType,
-        prijsregels: const <OfferteToegepastePrijsregelModel>[],
-        signatuur: '',
-      );
+      resultaat[formulierType] = profiel;
     }
 
     return resultaat;
   }
 
-  static OpmetingOverzichtRaamItem _werkVerdeelkostenBij({
-    required OpmetingOverzichtRaamItem opmeting,
-    required String formulierType,
-    required List<OfferteToegepastePrijsregelModel> prijsregels,
-    required String signatuur,
-  }) {
-    if (!_heeftGeldigPrijsmodel(opmeting, formulierType)) return opmeting;
+  static List<_GedeeldeVerdeelgroep> _bouwVerdeelgroepen(
+    Map<String, OffertePrijsprofielModel> profielenPerType,
+  ) {
+    final groepenPerId = <String, _GedeeldeVerdeelgroep>{};
 
+    for (final entry in profielenPerType.entries) {
+      final formulierType = entry.key;
+      final profiel = entry.value;
+
+      final verdeelregels = profiel
+          .regelsVoorCategorie(OffertePrijsCategorie.alleArtikelen)
+          .where((prijsregel) {
+            return prijsregel.isGeldig &&
+                prijsregel.isVerdeeldeProjectkost &&
+                _isZelfdeFormulierType(prijsregel.formulierType, formulierType);
+          });
+
+      for (final prijsregel in verdeelregels) {
+        final groepId = prijsregel.id.trim();
+
+        if (groepId.isEmpty) {
+          continue;
+        }
+
+        final bestaandeGroep = groepenPerId[groepId];
+
+        if (bestaandeGroep == null) {
+          groepenPerId[groepId] = _GedeeldeVerdeelgroep(
+            prijsregel: prijsregel,
+            formulierTypes: <String>{formulierType},
+          );
+          continue;
+        }
+
+        bestaandeGroep.formulierTypes.add(formulierType);
+
+        if (_isNieuwer(
+          prijsregel.gewijzigdOp,
+          bestaandeGroep.prijsregel.gewijzigdOp,
+        )) {
+          bestaandeGroep.prijsregel = prijsregel;
+        }
+      }
+    }
+
+    final resultaat = groepenPerId.values.toList(growable: false)
+      ..sort((eerste, tweede) {
+        final omschrijvingVergelijking = eerste.prijsregel.omschrijving
+            .toLowerCase()
+            .compareTo(tweede.prijsregel.omschrijving.toLowerCase());
+
+        if (omschrijvingVergelijking != 0) {
+          return omschrijvingVergelijking;
+        }
+
+        return eerste.prijsregel.id.compareTo(tweede.prijsregel.id);
+      });
+
+    return resultaat;
+  }
+
+  static bool _isDoelOpmeting({
+    required OpmetingOverzichtRaamItem opmeting,
+    required String klantSleutel,
+    required Set<String> ondersteundeFormulierTypes,
+  }) {
+    return !opmeting.isVerwijderd &&
+        opmeting.teltMeeInHoofdofferte &&
+        opmeting.klantNaam.trim().toLowerCase() == klantSleutel &&
+        _heeftGeldigPrijsmodel(
+          opmeting: opmeting,
+          ondersteundeFormulierTypes: ondersteundeFormulierTypes,
+        );
+  }
+
+  static bool _isOptieOpmeting({
+    required OpmetingOverzichtRaamItem opmeting,
+    required String klantSleutel,
+    required Set<String> ondersteundeFormulierTypes,
+  }) {
+    return !opmeting.isVerwijderd &&
+        opmeting.isOfferteOptie &&
+        opmeting.klantNaam.trim().toLowerCase() == klantSleutel &&
+        _heeftGeldigPrijsmodel(
+          opmeting: opmeting,
+          ondersteundeFormulierTypes: ondersteundeFormulierTypes,
+        );
+  }
+
+  static bool _heeftGeldigPrijsmodel({
+    required OpmetingOverzichtRaamItem opmeting,
+    required Set<String> ondersteundeFormulierTypes,
+  }) {
+    final formulierType = _formulierTypeVoorOpmeting(opmeting);
+
+    return formulierType.isNotEmpty &&
+        ondersteundeFormulierTypes.contains(formulierType) &&
+        OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(opmeting) !=
+            null;
+  }
+
+  static String _formulierTypeVoorOpmeting(OpmetingOverzichtRaamItem opmeting) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      opmeting,
+    );
+
+    if (koppeling == null) {
+      return '';
+    }
+
+    return _canoniekFormulierType(koppeling.formulierType);
+  }
+
+  static bool _heeftVerdeelkosten(OpmetingOverzichtRaamItem opmeting) {
     final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
       opmeting,
     );
-    if (prijsData == null) return opmeting;
 
-    final bijgewerktePrijsData = prijsData.copyWith(
-      toegepasteVerdeeldePrijsregels: prijsregels,
-      verdeeldePrijsSignatuur: signatuur,
+    return prijsData != null &&
+        (prijsData.toegepasteVerdeeldePrijsregels.isNotEmpty ||
+            prijsData.verdeeldePrijsSignatuur.isNotEmpty);
+  }
+
+  static OpmetingOverzichtRaamItem _werkVerdeelkostenBij({
+    required OpmetingOverzichtRaamItem opmeting,
+    required List<OfferteToegepastePrijsregelModel> prijsregels,
+    required String signatuur,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      opmeting,
     );
+
+    if (prijsData == null) {
+      return opmeting;
+    }
+
+    final bijgewerktePrijsData =
+        OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+          prijsData: prijsData,
+          toegepasteVerdeeldePrijsregels: prijsregels,
+          verdeeldePrijsSignatuur: signatuur,
+        );
 
     return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
       artikel: opmeting,
@@ -276,48 +416,27 @@ class OfferteVerdeelkostService {
     ).metNieuweWijzigingsDatum();
   }
 
-  static String _verdeeldePrijsSignatuur(
-    OpmetingOverzichtRaamItem opmeting,
-    String formulierType,
-  ) {
-    if (!_heeftGeldigPrijsmodel(opmeting, formulierType)) return '';
+  static String _verdeeldePrijsSignatuur(OpmetingOverzichtRaamItem opmeting) {
     return OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
           opmeting,
         )?.verdeeldePrijsSignatuur ??
         '';
   }
 
-  static int _aantalVoorOpmeting(
-    OpmetingOverzichtRaamItem opmeting,
-    String formulierType,
-  ) {
-    if (!_heeftGeldigPrijsmodel(opmeting, formulierType)) return 1;
+  static int _aantalVoorOpmeting(OpmetingOverzichtRaamItem opmeting) {
     final aantal = OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(
       opmeting,
     );
+
     return aantal < 1 ? 1 : aantal;
   }
 
-  static double _aankoopTotaalVoorLimiet(
-    OpmetingOverzichtRaamItem opmeting,
-    String formulierType,
-  ) {
-    if (!_heeftGeldigPrijsmodel(opmeting, formulierType)) return 0.0;
+  static double _aankoopTotaalVoorLimiet(OpmetingOverzichtRaamItem opmeting) {
     return OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
           opmeting,
           kortingToestaan: false,
         )?.aankoopTotaalVoorLimietExclBtw ??
         0.0;
-  }
-
-  static bool _isGeldigeVerdeelRegel(
-    OffertePrijsregelModel prijsregel,
-    OffertePrijsprofielModel profiel,
-  ) {
-    return prijsregel.actief &&
-        prijsregel.isGeldig &&
-        prijsregel.isVerdeeldeProjectkost &&
-        _isZelfdeFormulierType(prijsregel.formulierType, profiel.formulierType);
   }
 
   static bool _limietIsBereikt({
@@ -330,6 +449,7 @@ class OfferteVerdeelkostService {
     }
 
     final limiet = prijsregel.verdeelLimietBedragExclBtw;
+
     if (limiet <= 0.0) {
       return true;
     }
@@ -341,7 +461,6 @@ class OfferteVerdeelkostService {
     required OffertePrijsregelModel prijsregel,
     required List<OpmetingOverzichtRaamItem> alleOpmetingen,
     required List<int> doelIndexen,
-    required String formulierType,
     required int totaalAantalArtikelen,
     required double aankoopTotaalVoorVerdeling,
     required String berekendOp,
@@ -354,23 +473,25 @@ class OfferteVerdeelkostService {
 
     final totaalCenten = (_rondBedragAf(prijsregel.prijsExclBtw) * 100.0)
         .round();
+
     if (totaalCenten <= 0) {
       return;
     }
 
     final basisCentenPerArtikel = totaalCenten ~/ totaalAantalArtikelen;
+
     var resterendeCenten = totaalCenten % totaalAantalArtikelen;
 
     for (final index in doelIndexen) {
-      final aantalInPositie = _aantalVoorOpmeting(
-        alleOpmetingen[index],
-        formulierType,
-      );
-      final int extraCentenInPositie = math
+      final aantalInPositie = _aantalVoorOpmeting(alleOpmetingen[index]);
+
+      final extraCentenInPositie = math
           .min(resterendeCenten, aantalInPositie)
           .toInt();
+
       final positieCenten =
           (basisCentenPerArtikel * aantalInPositie) + extraCentenInPositie;
+
       resterendeCenten -= extraCentenInPositie;
 
       if (positieCenten <= 0) {
@@ -378,10 +499,11 @@ class OfferteVerdeelkostService {
       }
 
       final positieTotaal = positieCenten.toDouble() / 100.0;
+
       final gemiddeldePrijsPerArtikel =
           positieTotaal / aantalInPositie.toDouble();
 
-      verdeeldeRegelsPerIndex[index]!.add(
+      verdeeldeRegelsPerIndex[index]?.add(
         OfferteToegepastePrijsregelModel(
           bronPrijsregelId: prijsregel.id,
           categorie: prijsregel.categorie,
@@ -405,20 +527,21 @@ class OfferteVerdeelkostService {
   static String _maakProjectSignatuur({
     required List<OpmetingOverzichtRaamItem> alleOpmetingen,
     required List<int> doelIndexen,
-    required OffertePrijsprofielModel profiel,
-    required String formulierType,
+    required List<_GedeeldeVerdeelgroep> verdeelgroepen,
   }) {
-    final gegevens = doelIndexen
+    final artikelen = doelIndexen
         .map((index) {
           final opmeting = alleOpmetingen[index];
+
           final prijsData =
               OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
                 opmeting,
-              )!;
+              );
 
           return <String, Object?>{
             'id': opmeting.id,
-            'aantal': _aantalVoorOpmeting(opmeting, formulierType),
+            'formulierType': _formulierTypeVoorOpmeting(opmeting),
+            'aantal': _aantalVoorOpmeting(opmeting),
             'breedteMm':
                 OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
                   opmeting,
@@ -426,59 +549,70 @@ class OfferteVerdeelkostService {
             'hoogteMm': OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
               opmeting,
             ),
-            'prijsPerStukExclBtw': prijsData.prijsPerStukExclBtw,
-            'technischePrijsSignatuur': prijsData.technischePrijsSignatuur,
-            'technischePrijsregels': prijsData.toegepasteTechnischePrijsregels
-                .map(
-                  (regel) => <String, Object?>{
-                    'id': regel.bronPrijsregelId,
-                    'totaalExclBtw': regel.totaalExclBtw,
-                    'bronGewijzigdOp': regel.bronGewijzigdOp,
-                  },
-                )
-                .toList(growable: false),
-            'vrijeArtikelPrijsSignatuur': prijsData.vrijeArtikelPrijsSignatuur,
-            'vrijeArtikelPrijsSelecties': prijsData.vrijeArtikelPrijsSelecties
-                .map(
-                  (selectie) => <String, Object?>{
-                    'id': selectie.id,
-                    'bronPrijsregelId': selectie.bronPrijsregelId,
-                    'omschrijving': selectie.omschrijving,
-                    'bedragPerStukExclBtw': selectie.bedragPerStukExclBtw,
-                    'eenheid': selectie.eenheid.jsonWaarde,
-                    'uitschrijfmodus': selectie.uitschrijfmodus.jsonWaarde,
-                    'actief': selectie.actief,
-                  },
-                )
-                .toList(growable: false),
+            'prijsPerStukExclBtw': prijsData?.prijsPerStukExclBtw ?? 0.0,
+            'artikelKortingPercentage':
+                prijsData?.artikelKortingPercentage ?? 0.0,
+            'artikelWinstmargePercentage':
+                prijsData?.artikelWinstmargePercentage ?? 0.0,
+            'technischePrijsSignatuur':
+                prijsData?.technischePrijsSignatuur ?? '',
+            'technischePrijsregels':
+                prijsData?.toegepasteTechnischePrijsregels
+                    .map((regel) {
+                      return <String, Object?>{
+                        'id': regel.bronPrijsregelId,
+                        'totaalExclBtw': regel.totaalExclBtw,
+                        'bronGewijzigdOp': regel.bronGewijzigdOp,
+                      };
+                    })
+                    .toList(growable: false) ??
+                const <Object?>[],
+            'vrijeArtikelPrijsSignatuur':
+                prijsData?.vrijeArtikelPrijsSignatuur ?? '',
+            'vrijeArtikelPrijsSelecties':
+                prijsData?.vrijeArtikelPrijsSelecties
+                    .map((selectie) {
+                      return <String, Object?>{
+                        'id': selectie.id,
+                        'bronPrijsregelId': selectie.bronPrijsregelId,
+                        'omschrijving': selectie.omschrijving,
+                        'bedragPerStukExclBtw': selectie.bedragPerStukExclBtw,
+                        'eenheid': selectie.eenheid.jsonWaarde,
+                        'uitschrijfmodus': selectie.uitschrijfmodus.jsonWaarde,
+                        'actief': selectie.actief,
+                      };
+                    })
+                    .toList(growable: false) ??
+                const <Object?>[],
           };
         })
         .toList(growable: false);
 
-    final profielGegevens = profiel
-        .regelsVoorCategorie(OffertePrijsCategorie.alleArtikelen)
-        .where(
-          (regel) => _isZelfdeFormulierType(regel.formulierType, formulierType),
-        )
-        .map(
-          (regel) => <String, Object?>{
-            'id': regel.id,
-            'actief': regel.actief,
-            'omschrijving': regel.omschrijving,
-            'prijsExclBtw': regel.prijsExclBtw,
-            'eenheid': regel.eenheid.jsonWaarde,
-            'uitschrijfmodus': regel.uitschrijfmodus.jsonWaarde,
-            'verdeelLimietmodus': regel.verdeelLimietmodus.jsonWaarde,
-            'verdeelLimietBedragExclBtw': regel.verdeelLimietBedragExclBtw,
-            'volgorde': regel.volgorde,
-          },
-        )
+    final groepen = verdeelgroepen
+        .map((groep) {
+          final prijsregel = groep.prijsregel;
+
+          final formulierTypes = groep.formulierTypes.toList(growable: false)
+            ..sort();
+
+          return <String, Object?>{
+            'id': prijsregel.id,
+            'formulierTypes': formulierTypes,
+            'actief': prijsregel.actief,
+            'omschrijving': prijsregel.omschrijving,
+            'prijsExclBtw': prijsregel.prijsExclBtw,
+            'eenheid': prijsregel.eenheid.jsonWaarde,
+            'uitschrijfmodus': prijsregel.uitschrijfmodus.jsonWaarde,
+            'verdeelLimietmodus': prijsregel.verdeelLimietmodus.jsonWaarde,
+            'verdeelLimietBedragExclBtw': prijsregel.verdeelLimietBedragExclBtw,
+            'gewijzigdOp': prijsregel.gewijzigdOp,
+          };
+        })
         .toList(growable: false);
 
     return jsonEncode(<String, Object?>{
-      'formulierType': formulierType,
-      'artikelen': gegevens,
-      'prijsprofiel': profielGegevens,
+      'artikelen': artikelen,
+      'verdeelgroepen': groepen,
     });
   }
 
@@ -498,6 +632,22 @@ class OfferteVerdeelkostService {
     return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
   }
 
+  static bool _isNieuwer(String eerste, String tweede) {
+    final eersteDatum = DateTime.tryParse(eerste);
+
+    final tweedeDatum = DateTime.tryParse(tweede);
+
+    if (eersteDatum == null) {
+      return false;
+    }
+
+    if (tweedeDatum == null) {
+      return true;
+    }
+
+    return eersteDatum.isAfter(tweedeDatum);
+  }
+
   static double _rondHoeveelheidAf(double waarde) {
     if (!waarde.isFinite || waarde < 0.0) {
       return 0.0;
@@ -513,4 +663,14 @@ class OfferteVerdeelkostService {
 
     return (waarde * 100.0).roundToDouble() / 100.0;
   }
+}
+
+class _GedeeldeVerdeelgroep {
+  _GedeeldeVerdeelgroep({
+    required this.prijsregel,
+    required Set<String> formulierTypes,
+  }) : formulierTypes = Set<String>.from(formulierTypes);
+
+  OffertePrijsregelModel prijsregel;
+  final Set<String> formulierTypes;
 }

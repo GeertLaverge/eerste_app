@@ -7,6 +7,8 @@ import '../../offerte/prijzen/offerte_artikel_korting_kaart.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../offerte/prijzen/offerte_berekening_resultaat.dart';
 import '../fotos/opmeting_foto_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_tekenvlak.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_tekenvlak.dart';
 import 'opmeting_artikel_type_omschrijving_helper.dart';
@@ -67,6 +69,12 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           _technischeRegelsZonderMaten(item.zichtbareTechnischeRegels),
         );
     final vasteInzethor = item.vasteInzethorData;
+    final vliegendeur = item.vliegendeurData;
+    final vliegendeurTechnischeRegels = vliegendeur == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            _vliegendeurRegelsZonderAfmetingen(item.zichtbareTechnischeRegels),
+          );
     final uitvoeringsRegels =
         OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(item);
 
@@ -159,7 +167,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                 ),
               ),
               if (berekenPrijzen &&
-                  OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(
+                  OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
                     item,
                   ))
                 IconButton(
@@ -203,6 +211,8 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           const SizedBox(height: 10),
           if (vasteInzethor != null)
             _bouwVasteInzethorOverzicht(vasteInzethor, technischeRegels)
+          else if (vliegendeur != null)
+            _bouwVliegendeurOverzicht(vliegendeur, vliegendeurTechnischeRegels)
           else if (OfferteArtikelPrijsKoppelingService.isAlgemeenArtikel(item))
             _bouwAlgemeenArtikelOverzicht(technischeRegels)
           else ...[
@@ -300,6 +310,50 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     );
   }
 
+  Widget _bouwVliegendeurOverzicht(
+    OpmetingVliegendeurModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Afmetingen',
+      maatWaarde: model.maatSamenvatting,
+      tekening: OpmetingVliegendeurTekenvlak(model: model, schaalFactor: 0.55),
+    );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen technische keuzes ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
+    );
+  }
+
   Widget _bouwAlgemeenArtikelOverzicht(
     List<OpmetingOverzichtTechnischeRegel> technischeRegels,
   ) {
@@ -372,6 +426,8 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     required OfferteArtikelPrijsDataModel prijsData,
     required OfferteBerekeningResultaat prijsResultaat,
     required int aantal,
+    bool technischeRegelsScrollbaar = true,
+    bool toonTechnischePrijsZone = true,
   }) {
     final prijsSamenvattingHoogte = berekenPrijzen
         ? 92.0 +
@@ -382,7 +438,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                   34.0)
         : 0.0;
 
-    final gemeenschappelijkeHoogte =
+    final standaardGemeenschappelijkeHoogte =
         OpmetingOverzichtArtikelLayoutHelper.berekenGemeenschappelijkeHoogte(
           aantalTechnischeRegels: technischeRegels.length,
           toonPrijzen: berekenPrijzen,
@@ -390,6 +446,19 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           prijsCorrectieVeldHoogte: 222,
           prijsSamenvattingHoogte: prijsSamenvattingHoogte,
         );
+    final nietScrollbareTechnischeHoogte = technischeRegelsScrollbaar
+        ? 0.0
+        : OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+            minimaleHoogte: 0,
+          );
+    final nietScrollbareTotaleHoogte =
+        nietScrollbareTechnischeHoogte +
+        (berekenPrijzen ? prijsSamenvattingHoogte + 58.0 + 222.0 + 27.0 : 0.0);
+    final gemeenschappelijkeHoogte =
+        nietScrollbareTotaleHoogte > standaardGemeenschappelijkeHoogte
+        ? nietScrollbareTotaleHoogte
+        : standaardGemeenschappelijkeHoogte;
 
     final technischeRegelsMetPrijs = berekenPrijzen
         ? OpmetingOverzichtTechnischePrijsKoppelHelper.koppelTechnischePrijzenAanRegels(
@@ -431,8 +500,45 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         technischeRegels: technischeRegels,
         technischeRegelsMetPrijs: technischeRegelsMetPrijs,
         onderWidgets: prijsWidgets,
+        scrollbaar: technischeRegelsScrollbaar,
+        toonPrijsZone: toonTechnischePrijsZone,
       ),
     );
+  }
+
+  List<OpmetingOverzichtTechnischeRegel> _vliegendeurRegelsZonderAfmetingen(
+    List<OpmetingOverzichtTechnischeRegel> regels,
+  ) {
+    return regels
+        .where((regel) {
+          final titel = regel.titel.trim();
+          final waarde = regel.waarde.trim();
+
+          if (titel.isEmpty && waarde.isEmpty) {
+            return false;
+          }
+
+          return !_isVliegendeurAfmetingsRegel(titel);
+        })
+        .toList(growable: false);
+  }
+
+  bool _isVliegendeurAfmetingsRegel(String titel) {
+    final sleutel = titel.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+    return const <String>{
+      'afmetingen',
+      'maat',
+      'maten',
+      'buitenmaat',
+      'breedte',
+      'hoogte',
+      'breedte buitenmaat',
+      'hoogte buitenmaat',
+      'buitenmaat breedte',
+      'buitenmaat hoogte',
+      'binnenmaat/doorkijkmaat',
+    }.contains(sleutel);
   }
 
   List<OpmetingOverzichtTechnischeRegel> _technischeRegelsZonderMaten(

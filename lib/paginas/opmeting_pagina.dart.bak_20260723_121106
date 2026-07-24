@@ -608,15 +608,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             gewijzigd: false,
           );
 
-    final projectkleurResultaat =
-        _synchroniseerProjectkleurInVasteInzethorPosities(
-          momentopnameResultaat.opmetingen,
-          klantNaam: actieveKlantNaam,
-          projectkleur: titelhoofd.ralKleurToebehoren,
-        );
-    final opmetingenNaProjectkleurSynchronisatie =
-        projectkleurResultaat.opmetingen;
-
     if (titelhoofd.berekenPrijzen && huidigeInstellingenToepassen) {
       for (final momentopname in huidigeMomentopnames.values) {
         titelhoofd = titelhoofd.metPrijsinstellingenMomentopname(momentopname);
@@ -625,9 +616,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
     }
 
-    if (momentopnameResultaat.gewijzigd || projectkleurResultaat.gewijzigd) {
+    if (momentopnameResultaat.gewijzigd) {
       await AppStorage.bewaarOpmetingenVoorSync(
-        opmetingenNaProjectkleurSynchronisatie,
+        momentopnameResultaat.opmetingen,
       );
       await OneDriveSyncService.registreerLokaleWijziging();
       OneDriveSyncService().uploadBackupOpAchtergrond();
@@ -636,7 +627,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final klantFilter = actieveKlantNaam.toLowerCase();
     final zichtbareOpmetingen = klantFilter.isEmpty
         ? <OpmetingOverzichtRaamItem>[]
-        : opmetingenNaProjectkleurSynchronisatie.where((opmeting) {
+        : momentopnameResultaat.opmetingen.where((opmeting) {
             return !opmeting.isVerwijderd &&
                 opmeting.klantNaam.trim().toLowerCase() == klantFilter;
           }).toList();
@@ -3032,15 +3023,24 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       }
 
       if (ralKleurToebehorenGewijzigd) {
-        final projectkleurResultaat =
-            _synchroniseerProjectkleurInVasteInzethorPosities(
-              _raamOpmetingen,
-              klantNaam: naamVoorBestand,
-              projectkleur: titelhoofdVoorState.ralKleurToebehoren,
-            );
-        _raamOpmetingen
-          ..clear()
-          ..addAll(projectkleurResultaat.opmetingen);
+        for (var index = 0; index < _raamOpmetingen.length; index++) {
+          final item = _raamOpmetingen[index];
+          final model = item.vasteInzethorData;
+
+          if (model == null || !model.isRalKleurToebehoren) {
+            continue;
+          }
+
+          _raamOpmetingen[index] = item
+              .copyWith(
+                vasteInzethorData: model.copyWith(
+                  ralKleurToebehorenWaarde: titelhoofdVoorState
+                      .ralKleurToebehoren
+                      .trim(),
+                ),
+              )
+              .metNieuweWijzigingsDatum();
+        }
       }
     });
 
@@ -3056,135 +3056,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     if (berekeningWerdAangezet && naamVoorBestand.isNotEmpty) {
       unawaited(_activeerPrijsberekening(titelhoofdVoorState));
     }
-  }
-
-  ({List<OpmetingOverzichtRaamItem> opmetingen, bool gewijzigd})
-  _synchroniseerProjectkleurInVasteInzethorPosities(
-    Iterable<OpmetingOverzichtRaamItem> opmetingen, {
-    required String klantNaam,
-    required String projectkleur,
-  }) {
-    final klantSleutel = klantNaam.trim().toLowerCase();
-    final netteProjectkleur = projectkleur.trim();
-    final resultaat = <OpmetingOverzichtRaamItem>[];
-    var gewijzigd = false;
-
-    for (final item in opmetingen) {
-      final hoortBijActieveKlant =
-          klantSleutel.isNotEmpty &&
-          !item.isVerwijderd &&
-          item.klantNaam.trim().toLowerCase() == klantSleutel;
-      final model = item.vasteInzethorData;
-
-      if (!hoortBijActieveKlant || model == null || !model.isProjectkleur) {
-        resultaat.add(item);
-        continue;
-      }
-
-      final bijgewerktModel =
-          model.ralKleurToebehorenWaarde.trim() == netteProjectkleur
-          ? model
-          : model.copyWith(ralKleurToebehorenWaarde: netteProjectkleur);
-      final bijgewerkteTechnischeRegels =
-          _werkProjectkleurBijInTechnischeRegels(
-            item.technischeRegels,
-            projectkleur: netteProjectkleur,
-          );
-      final technischeRegelsGewijzigd = !_zijnTechnischeRegelsGelijk(
-        item.technischeRegels,
-        bijgewerkteTechnischeRegels,
-      );
-
-      if (identical(bijgewerktModel, model) && !technischeRegelsGewijzigd) {
-        resultaat.add(item);
-        continue;
-      }
-
-      gewijzigd = true;
-      resultaat.add(
-        item
-            .copyWith(
-              vasteInzethorData: bijgewerktModel,
-              technischeRegels: bijgewerkteTechnischeRegels,
-            )
-            .metNieuweWijzigingsDatum(),
-      );
-    }
-
-    return (
-      opmetingen: List<OpmetingOverzichtRaamItem>.unmodifiable(resultaat),
-      gewijzigd: gewijzigd,
-    );
-  }
-
-  List<OpmetingOverzichtTechnischeRegel> _werkProjectkleurBijInTechnischeRegels(
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels, {
-    required String projectkleur,
-  }) {
-    final waarde = projectkleur.trim().isEmpty
-        ? 'Nog niet ingevuld'
-        : projectkleur.trim();
-    final resultaat = <OpmetingOverzichtTechnischeRegel>[];
-    var kleurRegelToegevoegd = false;
-
-    for (final regel in technischeRegels) {
-      final titelSleutel = _normaliseerTechnischeRegelTitelVoorProjectkleur(
-        regel.titel,
-      );
-      final isProjectkleurRegel = const <String>{
-        'kleur',
-        'projectkleur',
-        'ralkleurtoebehoren',
-      }.contains(titelSleutel);
-
-      if (!isProjectkleurRegel) {
-        resultaat.add(regel);
-        continue;
-      }
-
-      if (!kleurRegelToegevoegd) {
-        resultaat.add(
-          OpmetingOverzichtTechnischeRegel(
-            titel: OpmetingVasteInzethorModel.kleurProjectLabel,
-            waarde: waarde,
-          ),
-        );
-        kleurRegelToegevoegd = true;
-      }
-    }
-
-    if (!kleurRegelToegevoegd) {
-      resultaat.add(
-        OpmetingOverzichtTechnischeRegel(
-          titel: OpmetingVasteInzethorModel.kleurProjectLabel,
-          waarde: waarde,
-        ),
-      );
-    }
-
-    return List<OpmetingOverzichtTechnischeRegel>.unmodifiable(resultaat);
-  }
-
-  bool _zijnTechnischeRegelsGelijk(
-    List<OpmetingOverzichtTechnischeRegel> eerste,
-    List<OpmetingOverzichtTechnischeRegel> tweede,
-  ) {
-    if (eerste.length != tweede.length) {
-      return false;
-    }
-
-    for (var index = 0; index < eerste.length; index++) {
-      if (eerste[index].titel != tweede[index].titel ||
-          eerste[index].waarde != tweede[index].waarde) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  String _normaliseerTechnischeRegelTitelVoorProjectkleur(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
   }
 
   Future<void> _bewaarRalKleurToebehorenInPosities() async {
@@ -3212,12 +3083,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           final nieuweWaarde =
               bijgewerkt.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ??
               '';
-          final technischeRegelsZijnGelijk = _zijnTechnischeRegelsGelijk(
-            item.technischeRegels,
-            bijgewerkt.technischeRegels,
-          );
 
-          if (oudeWaarde == nieuweWaarde && technischeRegelsZijnGelijk) {
+          if (oudeWaarde == nieuweWaarde) {
             return item;
           }
 

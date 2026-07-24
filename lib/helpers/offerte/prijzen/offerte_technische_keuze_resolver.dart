@@ -88,6 +88,7 @@ class OfferteTechnischeKeuzeResolver {
     final resultaat = switch (menuId) {
       'soort' => _vergelijkSoort(keuzeId, model),
       'speling' => _vergelijkSpeling(keuzeId, model),
+      'spelingKeuze' => _vergelijkSpelingKeuze(keuzeId, model),
       'flensDiepte' => _vergelijkFlensDiepte(keuzeId, model),
       'maatRandFlens' => _vergelijkMaatRandFlens(keuzeId, model),
       'profiel' => _vergelijkProfiel(keuzeId, model),
@@ -99,6 +100,7 @@ class OfferteTechnischeKeuzeResolver {
       'borstels' => _vergelijkBorstels(keuzeId, model),
       'bevestiging' => _vergelijkBevestiging(keuzeId, model),
       'soortClipsen' => _vergelijkSoortClipsen(keuzeId, model),
+      'soortBevestiging' => _vergelijkSoortBevestiging(keuzeId, model),
       _ => false,
     };
 
@@ -117,8 +119,12 @@ class OfferteTechnischeKeuzeResolver {
     return switch (keuzeId) {
       'vliegenraamClassic' =>
         model.soort == OpmetingVasteInzethorModel.soortVliegenraamClassic,
+      'vliegenraamDubbel' =>
+        model.soort == OpmetingVasteInzethorModel.soortVliegenraamDubbel,
       'inzetvliegenraam' =>
         model.soort == OpmetingVasteInzethorModel.soortInzetvliegenraam,
+      'vliegenraamRv' =>
+        model.soort == OpmetingVasteInzethorModel.soortVliegenraamRv,
       _ => false,
     };
   }
@@ -127,6 +133,7 @@ class OfferteTechnischeKeuzeResolver {
     String keuzeId,
     OpmetingVasteInzethorModel model,
   ) {
+    if (!model.isInzetvliegenraam) return false;
     return switch (keuzeId) {
       'vr033Inzet' =>
         model.speling == OpmetingVasteInzethorModel.spelingVr033Inzet,
@@ -136,10 +143,23 @@ class OfferteTechnischeKeuzeResolver {
     };
   }
 
+  static bool _vergelijkSpelingKeuze(
+    String keuzeId,
+    OpmetingVasteInzethorModel model,
+  ) {
+    if (!model.isInzetvliegenraam) return false;
+    return switch (keuzeId) {
+      'standaard' || 'standaardSpeling' => model.heeftStandaardSpeling,
+      'geen' || 'geenSpeling' => model.heeftGeenSpeling,
+      _ => false,
+    };
+  }
+
   static bool _vergelijkFlensDiepte(
     String keuzeId,
     OpmetingVasteInzethorModel model,
   ) {
+    if (!model.isInzetvliegenraam || !model.isVr033Ultra) return false;
     return switch (keuzeId) {
       '20mm' => model.flensDiepte == OpmetingVasteInzethorModel.flensDiepte20,
       '30mm' => model.flensDiepte == OpmetingVasteInzethorModel.flensDiepte30,
@@ -156,6 +176,7 @@ class OfferteTechnischeKeuzeResolver {
     String keuzeId,
     OpmetingVasteInzethorModel model,
   ) {
+    if (!model.isInzetvliegenraam || !model.isVr033Ultra) return false;
     return switch (keuzeId) {
       '8mm' => model.maatRandFlens == OpmetingVasteInzethorModel.maatRandFlens8,
       '11mm' =>
@@ -168,9 +189,14 @@ class OfferteTechnischeKeuzeResolver {
     String keuzeId,
     OpmetingVasteInzethorModel model,
   ) {
+    if (model.isInzetvliegenraam) return false;
     return switch (keuzeId) {
       'vr050' => model.profiel == OpmetingVasteInzethorModel.profielVr050,
+      'vr054' => model.profiel == OpmetingVasteInzethorModel.profielVr054,
       'vr060' => model.profiel == OpmetingVasteInzethorModel.profielVr060,
+      'vr061' => model.profiel == OpmetingVasteInzethorModel.profielVr061,
+      'vr080' => model.profiel == OpmetingVasteInzethorModel.profielVr080,
+      'vr090' => model.profiel == OpmetingVasteInzethorModel.profielVr090,
       _ => false,
     };
   }
@@ -180,10 +206,8 @@ class OfferteTechnischeKeuzeResolver {
     OpmetingVasteInzethorModel model,
   ) {
     return switch (keuzeId) {
-      'binnenmaat' =>
-        model.maatType == OpmetingVasteInzethorModel.maatTypeBinnen,
-      'buitenmaat' =>
-        model.maatType == OpmetingVasteInzethorModel.maatTypeBuiten,
+      'binnenmaat' => model.isBinnenmaat,
+      'buitenmaat' => !model.isBinnenmaat,
       _ => false,
     };
   }
@@ -215,18 +239,24 @@ class OfferteTechnischeKeuzeResolver {
         model.populaireKleur == OpmetingVasteInzethorModel.kleurAnodiseNatuur,
       'poederlak' =>
         model.populaireKleur == OpmetingVasteInzethorModel.kleurPoederlak,
+      'projectkleur' || 'ralKleurToebehoren' => model.isProjectkleur,
       _ => false,
     };
   }
 
   static bool _vergelijkGaas(String keuzeId, OpmetingVasteInzethorModel model) {
     return switch (keuzeId) {
-      'standaard' =>
-        model.gaasVoorOverzicht == OpmetingVasteInzethorModel.gaasStandaard,
-      'petscreen' =>
-        model.gaasVoorOverzicht == OpmetingVasteInzethorModel.gaasPetscreen,
-      'inox' => model.gaasVoorOverzicht == OpmetingVasteInzethorModel.gaasInox,
-      'geen' => model.gaasVoorOverzicht == OpmetingVasteInzethorModel.gaasGeen,
+      'standaard' => model.isGaasStandaard,
+      'clearview' || 'standaardClearview' => model.isGaasClearview,
+
+      // De historische algemene Petscreen-koppeling blijft alle
+      // Petscreen-uitvoeringen herkennen. Nieuwe specifieke koppelingen
+      // kunnen grijs en zwart afzonderlijk selecteren.
+      'petscreen' => model.isGaasPetscreen,
+      'petscreenGrijs' => model.isGaasPetscreenGrijs,
+      'petscreenZwart' => model.isGaasPetscreenZwart,
+      'inox' => model.isGaasInox,
+      'geen' => !model.heeftGaas,
       _ => false,
     };
   }
@@ -276,10 +306,23 @@ class OfferteTechnischeKeuzeResolver {
     return switch (keuzeId) {
       'standaard' =>
         model.soortClipsen == OpmetingVasteInzethorModel.clipsenStandaard,
-      'maritiem' =>
-        model.soortClipsen == OpmetingVasteInzethorModel.clipsenMaritiem,
+      'staallook' =>
+        model.soortClipsen == OpmetingVasteInzethorModel.clipsenStaallook,
+      'maritiem' || 'standaardMaritiem' =>
+        model.soortClipsen ==
+            OpmetingVasteInzethorModel.clipsenStandaardMaritiem,
+      'staallookMaritiem' =>
+        model.soortClipsen ==
+            OpmetingVasteInzethorModel.clipsenStaallookMaritiem,
       _ => false,
     };
+  }
+
+  static bool _vergelijkSoortBevestiging(
+    String keuzeId,
+    OpmetingVasteInzethorModel model,
+  ) {
+    return _normaliseer(keuzeId) == _normaliseer(model.soortBevestiging);
   }
 
   static String _actueleWaardeVoorMenu(
@@ -289,10 +332,14 @@ class OfferteTechnischeKeuzeResolver {
     return switch (menuId) {
       'soort' => model.soort,
       'speling' => model.speling,
+      'spelingKeuze' => model.spelingVoorOverzicht,
       'flensDiepte' => model.flensDiepte,
       'maatRandFlens' => model.maatRandFlens,
-      'profiel' => model.profiel,
-      'maatType' => model.maatType,
+      'profiel' => model.profielVoorWeergave,
+      'maatType' =>
+        model.isBinnenmaat
+            ? OpmetingVasteInzethorModel.maatTypeBinnen
+            : OpmetingVasteInzethorModel.maatTypeBuiten,
       'traverseType' => model.traverseType,
       'populaireKleur' => model.populaireKleur,
       'gaas' => model.gaasVoorOverzicht,
@@ -300,6 +347,7 @@ class OfferteTechnischeKeuzeResolver {
       'borstels' => model.borstels,
       'bevestiging' => model.bevestiging,
       'soortClipsen' => model.soortClipsen,
+      'soortBevestiging' => model.soortBevestigingVoorWeergave,
       _ => '',
     };
   }

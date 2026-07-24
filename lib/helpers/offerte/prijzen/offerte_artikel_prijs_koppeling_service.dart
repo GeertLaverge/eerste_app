@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-KOPPELING-SERVICE-20260721
+// THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-KOPPELING-SERVICE-20260723
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_artikel_prijs_data_model.dart';
 import 'offerte_algemeen_artikel_prijs_service.dart';
@@ -11,8 +11,13 @@ import 'offerte_toegepaste_prijsregel_model.dart';
 ///
 /// De vaste inzethor blijft bewust een afzonderlijke adapter. Zij gebruikt haar
 /// eigen aantal, maatvoering en prijsdata. De zes raam- en deurtypes gebruiken
-/// de bestaande `offertePrijsData` van het overzichtsitem. Daardoor is geen
-/// wijziging aan prijsmodellen of JSON nodig.
+/// de bestaande `offertePrijsData` van het overzichtsitem.
+///
+/// De Vliegendeur gebruikt eveneens de bestaande `offertePrijsData`. Zij heeft
+/// een eigen prijsprofiel voor vrije artikelprijzen en prijzen voor alle
+/// artikelen, maar ondersteunt bewust geen technische-keuzeprijzen.
+///
+/// Er is geen wijziging aan prijsmodellen of JSON-opslag nodig.
 class OfferteArtikelPrijsKoppeling {
   const OfferteArtikelPrijsKoppeling({
     required this.adapterId,
@@ -28,7 +33,9 @@ class OfferteArtikelPrijsKoppeling {
   final bool isVasteInzethor;
   final bool ondersteuntTechnischeKeuzeprijzen;
 
-  bool get isAlgemeenArtikel => !isVasteInzethor;
+  bool get isHandmatigGeprijsdArtikel => adapterId == 'vliegendeur';
+
+  bool get isAlgemeenArtikel => !isVasteInzethor && !isHandmatigGeprijsdArtikel;
 }
 
 class OfferteArtikelPrijsKoppelingService {
@@ -40,6 +47,15 @@ class OfferteArtikelPrijsKoppelingService {
         formulierType: 'vasteInzethor',
         formulierNaam: 'Vaste inzethor',
         isVasteInzethor: true,
+        ondersteuntTechnischeKeuzeprijzen: false,
+      );
+
+  static const OfferteArtikelPrijsKoppeling vliegendeur =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'vliegendeur',
+        formulierType: 'vliegendeur',
+        formulierNaam: 'Vliegendeur',
+        isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: false,
       );
 
@@ -107,8 +123,29 @@ class OfferteArtikelPrijsKoppelingService {
         aluDeur,
       ];
 
+  /// Alle artikelgroepen die in Instellingen → Offerteprijzen voorkomen.
+  ///
+  /// De Vliegendeur heeft een eigen prijsprofiel, maar de eigenschap
+  /// [OfferteArtikelPrijsKoppeling.ondersteuntTechnischeKeuzeprijzen] blijft
+  /// voor deze koppeling false.
   static const List<OfferteArtikelPrijsKoppeling> alleKoppelingen =
-      <OfferteArtikelPrijsKoppeling>[vasteInzethor, ...algemeneKoppelingen];
+      <OfferteArtikelPrijsKoppeling>[
+        vasteInzethor,
+        vliegendeur,
+        ...algemeneKoppelingen,
+      ];
+
+  /// Artikelen waarvan de basisprijs per stuk handmatig wordt ingevuld.
+  ///
+  /// Deze artikelen kunnen daarnaast vrije artikelprijzen en prijzen voor alle
+  /// artikelen uit hun eigen prijsprofiel ontvangen.
+  static const List<OfferteArtikelPrijsKoppeling>
+  handmatigGeprijsdeKoppelingen = <OfferteArtikelPrijsKoppeling>[vliegendeur];
+
+  /// Volledige lijst voor artikelprijsverwerking, prijsinstellingen, totalen en
+  /// prijsoverzichten.
+  static const List<OfferteArtikelPrijsKoppeling> artikelPrijsKoppelingen =
+      <OfferteArtikelPrijsKoppeling>[...alleKoppelingen];
 
   static const List<String> algemeneFormulierTypes = <String>[
     'pvcRaam',
@@ -119,8 +156,10 @@ class OfferteArtikelPrijsKoppelingService {
     'aluDeur',
   ];
 
+  /// Formuliertypes waarvoor een prijsprofiel uit Instellingen wordt geladen.
   static const List<String> ondersteundeFormulierTypes = <String>[
     'vasteInzethor',
+    'vliegendeur',
     ...algemeneFormulierTypes,
   ];
 
@@ -131,9 +170,21 @@ class OfferteArtikelPrijsKoppelingService {
       return vasteInzethor;
     }
 
+    if (artikel.vliegendeurData != null) {
+      return vliegendeur;
+    }
+
     final koppeling = koppelingVoorFormulierType(
       artikel.formulierTypeGenormaliseerd,
     );
+
+    // Een Vliegendeur wordt alleen als dusdanig behandeld wanneer de positie
+    // werkelijk Vliegendeur-data bevat. Zo wordt een fout formulierlabel niet
+    // onbedoeld als volledig Vliegendeur-artikel verwerkt.
+    if (koppeling?.adapterId == vliegendeur.adapterId) {
+      return null;
+    }
+
     return koppeling?.isAlgemeenArtikel == true ? koppeling : null;
   }
 
@@ -141,11 +192,13 @@ class OfferteArtikelPrijsKoppelingService {
     String formulierType,
   ) {
     final sleutel = _normaliseer(formulierType);
-    for (final koppeling in alleKoppelingen) {
+
+    for (final koppeling in artikelPrijsKoppelingen) {
       if (_normaliseer(koppeling.formulierType) == sleutel) {
         return koppeling;
       }
     }
+
     return null;
   }
 
@@ -156,7 +209,11 @@ class OfferteArtikelPrijsKoppelingService {
 
   static String formulierNaamVoor(String formulierType) {
     final koppeling = koppelingVoorFormulierType(formulierType);
-    if (koppeling != null) return koppeling.formulierNaam;
+
+    if (koppeling != null) {
+      return koppeling.formulierNaam;
+    }
+
     return formulierType.trim().isEmpty ? 'Artikel' : formulierType.trim();
   }
 
@@ -165,7 +222,36 @@ class OfferteArtikelPrijsKoppelingService {
   }
 
   static bool isAlgemeenArtikel(OpmetingOverzichtRaamItem artikel) {
-    return koppelingVoorArtikel(artikel)?.isAlgemeenArtikel == true;
+    final koppeling = koppelingVoorArtikel(artikel);
+
+    if (koppeling == null) {
+      return false;
+    }
+
+    return algemeneKoppelingen.any(
+      (algemeneKoppeling) => algemeneKoppeling.adapterId == koppeling.adapterId,
+    );
+  }
+
+  /// Geeft aan of het artikel een eigen profiel heeft onder
+  /// Instellingen → Offerteprijzen.
+  ///
+  /// Dit is voor de Vliegendeur true. Dat betekent niet dat technische
+  /// keuzeprijzen ondersteund worden; daarvoor moet afzonderlijk
+  /// [ondersteuntTechnischeKeuzeprijzen] worden gecontroleerd.
+  static bool ondersteuntPrijsinstellingenVoorArtikel(
+    OpmetingOverzichtRaamItem artikel,
+  ) {
+    final koppeling = koppelingVoorArtikel(artikel);
+
+    if (koppeling == null) {
+      return false;
+    }
+
+    return alleKoppelingen.any(
+      (instellingenKoppeling) =>
+          instellingenKoppeling.adapterId == koppeling.adapterId,
+    );
   }
 
   static bool ondersteuntTechnischeKeuzeprijzen(
@@ -179,11 +265,15 @@ class OfferteArtikelPrijsKoppelingService {
     OpmetingOverzichtRaamItem artikel,
   ) {
     final koppeling = koppelingVoorArtikel(artikel);
-    if (koppeling == null) return null;
+
+    if (koppeling == null) {
+      return null;
+    }
 
     if (koppeling.isVasteInzethor) {
       return artikel.vasteInzethorData?.prijsData;
     }
+
     return artikel.offertePrijsData;
   }
 
@@ -206,17 +296,21 @@ class OfferteArtikelPrijsKoppelingService {
     if (prijsPerStukExclBtw != null) {
       json['prijsPerStukExclBtw'] = prijsPerStukExclBtw;
     }
+
     if (artikelKortingPercentage != null) {
       json['artikelKortingPercentage'] = artikelKortingPercentage;
     }
+
     if (artikelWinstmargePercentage != null) {
       json['artikelWinstmargePercentage'] = artikelWinstmargePercentage;
     }
+
     if (toegepasteVerdeeldePrijsregels != null) {
       json['toegepasteVerdeeldePrijsregels'] = toegepasteVerdeeldePrijsregels
           .map((regel) => regel.toJson())
           .toList(growable: false);
     }
+
     if (verdeeldePrijsSignatuur != null) {
       json['verdeeldePrijsSignatuur'] = verdeeldePrijsSignatuur;
     }
@@ -229,11 +323,18 @@ class OfferteArtikelPrijsKoppelingService {
     required OfferteArtikelPrijsDataModel prijsData,
   }) {
     final koppeling = koppelingVoorArtikel(artikel);
-    if (koppeling == null) return artikel;
+
+    if (koppeling == null) {
+      return artikel;
+    }
 
     if (koppeling.isVasteInzethor) {
       final model = artikel.vasteInzethorData;
-      if (model == null) return artikel;
+
+      if (model == null) {
+        return artikel;
+      }
+
       return artikel.copyWith(
         vasteInzethorData: model.copyWithPrijsData(prijsData),
       );
@@ -243,15 +344,21 @@ class OfferteArtikelPrijsKoppelingService {
   }
 
   static int aantalVoorArtikel(OpmetingOverzichtRaamItem artikel) {
-    return artikel.vasteInzethorData?.aantal ?? 1;
+    return artikel.vasteInzethorData?.aantal ??
+        artikel.vliegendeurData?.aantal ??
+        1;
   }
 
   static int breedteMmVoorArtikel(OpmetingOverzichtRaamItem artikel) {
-    return artikel.vasteInzethorData?.breedteMm ?? artikel.raammaatBreedteMm;
+    return artikel.vasteInzethorData?.breedteMm ??
+        artikel.vliegendeurData?.breedteMm ??
+        artikel.raammaatBreedteMm;
   }
 
   static int hoogteMmVoorArtikel(OpmetingOverzichtRaamItem artikel) {
-    return artikel.vasteInzethorData?.hoogteMm ?? artikel.raammaatHoogteMm;
+    return artikel.vasteInzethorData?.hoogteMm ??
+        artikel.vliegendeurData?.hoogteMm ??
+        artikel.raammaatHoogteMm;
   }
 
   static OfferteBerekeningResultaat? resultaatVoorArtikel(
@@ -259,9 +366,13 @@ class OfferteArtikelPrijsKoppelingService {
     bool kortingToestaan = true,
   }) {
     final koppeling = koppelingVoorArtikel(artikel);
-    if (koppeling == null) return null;
+
+    if (koppeling == null) {
+      return null;
+    }
 
     final vasteModel = artikel.vasteInzethorData;
+
     if (koppeling.isVasteInzethor && vasteModel != null) {
       return OffertePrijsBerekeningService.resultaatUitMomentopname(
         vasteModel,
@@ -269,10 +380,24 @@ class OfferteArtikelPrijsKoppelingService {
       );
     }
 
+    final vliegendeurModel = artikel.vliegendeurData;
+
+    if (koppeling.adapterId == vliegendeur.adapterId &&
+        vliegendeurModel != null) {
+      return OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
+        prijsData: artikel.offertePrijsData,
+        aantal: vliegendeurModel.aantal,
+        breedteMm: vliegendeurModel.breedteMm,
+        hoogteMm: vliegendeurModel.hoogteMm,
+        kortingToestaan: kortingToestaan,
+      );
+    }
+
     return OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
       prijsData: artikel.offertePrijsData,
-      breedteMm: artikel.raammaatBreedteMm,
-      hoogteMm: artikel.raammaatHoogteMm,
+      aantal: aantalVoorArtikel(artikel),
+      breedteMm: breedteMmVoorArtikel(artikel),
+      hoogteMm: hoogteMmVoorArtikel(artikel),
       kortingToestaan: kortingToestaan,
     );
   }

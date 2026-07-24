@@ -73,8 +73,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   Future<Uint8List> _bouwPdf() async {
     final datum = DateTime.now();
     final titelhoofd = widget.titelhoofd;
+    // De PDF-selectie mag niet samenvallen met de prijsselectie. Een
+    // Vliegendeur heeft bewust geen prijsprofiel, maar moet wel als artikel
+    // worden doorgegeven aan het afzonderlijke PDF-widget.
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
-      widget.posities,
+      widget.posities.where((positie) => !positie.isVerwijderd),
     );
 
     final pvcRaamTekeningen =

@@ -1,13 +1,13 @@
-// THIMACO-CONTROLE: PRIJSREGEL-HOE-UITSCHRIJVEN-20260720
+// THIMACO-CONTROLE: GEDEELDE-VERDEELKOST-KEUZEMENU-20260723
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../helpers/offerte/prijzen/offerte_prijs_categorie.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijs_eenheid.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijs_uitschrijfmodus.dart';
-import '../../../helpers/offerte/prijzen/offerte_prijsregel_weergave_service.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijs_verdeel_limietmodus.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijsregel_weergave_service.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import 'offerte_technische_keuze_dropdown.dart';
 
@@ -30,6 +30,8 @@ Future<OffertePrijsregelModel?> toonOffertePrijsregelDialog({
       const <OfferteTechnischeKeuzeRef>[],
   List<OffertePrijsregelFormulierOptie> formulierTypeOpties =
       const <OffertePrijsregelFormulierOptie>[],
+  List<OffertePrijsregelModel> verdeelgroepOpties =
+      const <OffertePrijsregelModel>[],
   OffertePrijsregelModel? bestaandePrijsregel,
   String bevestigKnopTekst = 'Bewaren',
   IconData bevestigKnopIcoon = Icons.save_outlined,
@@ -44,6 +46,7 @@ Future<OffertePrijsregelModel?> toonOffertePrijsregelDialog({
         volgendeVolgorde: volgendeVolgorde,
         technischeKeuzes: technischeKeuzes,
         formulierTypeOpties: formulierTypeOpties,
+        verdeelgroepOpties: verdeelgroepOpties,
         bestaandePrijsregel: bestaandePrijsregel,
         bevestigKnopTekst: bevestigKnopTekst,
         bevestigKnopIcoon: bevestigKnopIcoon,
@@ -59,6 +62,7 @@ class _OffertePrijsregelDialog extends StatefulWidget {
     required this.volgendeVolgorde,
     required this.technischeKeuzes,
     required this.formulierTypeOpties,
+    required this.verdeelgroepOpties,
     required this.bevestigKnopTekst,
     required this.bevestigKnopIcoon,
     this.bestaandePrijsregel,
@@ -69,6 +73,7 @@ class _OffertePrijsregelDialog extends StatefulWidget {
   final int volgendeVolgorde;
   final List<OfferteTechnischeKeuzeRef> technischeKeuzes;
   final List<OffertePrijsregelFormulierOptie> formulierTypeOpties;
+  final List<OffertePrijsregelModel> verdeelgroepOpties;
   final OffertePrijsregelModel? bestaandePrijsregel;
   final String bevestigKnopTekst;
   final IconData bevestigKnopIcoon;
@@ -86,6 +91,9 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
   static const Color _rood = Color(0xFFDC2626);
   static const Color _oranje = Color(0xFFF15A24);
 
+  static const String _nieuweVerdeelgroepId =
+      '__nieuwe_gedeelde_verdeelgroep__';
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _omschrijvingController;
@@ -96,6 +104,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
   late final FocusNode _limietFocusNode;
 
   late String _formulierType;
+  late String _geselecteerdeVerdeelgroepId;
   late OffertePrijsEenheid _eenheid;
   late OffertePrijsUitschrijfmodus _uitschrijfmodus;
   late OffertePrijsVerdeelLimietmodus _verdeelLimietmodus;
@@ -126,6 +135,10 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
 
   bool get _isVerdeelKost {
     return _isAlleArtikelenPrijs && _uitschrijfmodus.isVerdeeldeInterneKost;
+  }
+
+  bool get _isNieuweVerdeelgroep {
+    return _geselecteerdeVerdeelgroepId == _nieuweVerdeelgroepId;
   }
 
   bool get _heeftVerdeelLimiet {
@@ -161,11 +174,46 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     ];
   }
 
+  List<OffertePrijsregelModel> get _verdeelgroepen {
+    final perId = <String, OffertePrijsregelModel>{};
+
+    void voegToe(OffertePrijsregelModel regel) {
+      if (!regel.isVerdeeldeProjectkost || regel.id.trim().isEmpty) {
+        return;
+      }
+
+      final bestaand = perId[regel.id];
+      if (bestaand == null ||
+          _isNieuwer(regel.gewijzigdOp, bestaand.gewijzigdOp)) {
+        perId[regel.id] = regel;
+      }
+    }
+
+    for (final regel in widget.verdeelgroepOpties) {
+      voegToe(regel);
+    }
+
+    final bestaandePrijsregel = widget.bestaandePrijsregel;
+    if (bestaandePrijsregel != null) {
+      voegToe(bestaandePrijsregel);
+    }
+
+    final resultaat = perId.values.toList(growable: false)
+      ..sort((eerste, tweede) {
+        return eerste.omschrijving.toLowerCase().compareTo(
+          tweede.omschrijving.toLowerCase(),
+        );
+      });
+
+    return resultaat;
+  }
+
   @override
   void initState() {
     super.initState();
 
     final bestaand = widget.bestaandePrijsregel;
+
     _formulierType = _bepaalBeginFormulierType(
       bestaand?.formulierType ?? widget.formulierType,
     );
@@ -175,17 +223,13 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     );
 
     _prijsController = TextEditingController(
-      text: bestaand == null
-          ? ''
-          : bestaand.prijsExclBtw.toStringAsFixed(2).replaceAll('.', ','),
+      text: bestaand == null ? '' : _bedragTekst(bestaand.prijsExclBtw),
     );
 
     _limietController = TextEditingController(
       text: bestaand == null || bestaand.verdeelLimietBedragExclBtw <= 0
           ? ''
-          : bestaand.verdeelLimietBedragExclBtw
-                .toStringAsFixed(2)
-                .replaceAll('.', ','),
+          : _bedragTekst(bestaand.verdeelLimietBedragExclBtw),
     );
 
     _prijsFocusNode = FocusNode()..addListener(_verwerkPrijsFocus);
@@ -211,6 +255,11 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     }
 
     _actief = bestaand?.actief ?? true;
+
+    _geselecteerdeVerdeelgroepId = bestaand?.isVerdeeldeProjectkost == true
+        ? bestaand!.id
+        : _nieuweVerdeelgroepId;
+
     _technischeKeuze = _vindActueleTechnischeKeuze(bestaand?.technischeKeuze);
 
     if (_isTechnischePrijs && _technischeKeuze != null) {
@@ -224,6 +273,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
 
   String _bepaalBeginFormulierType(String voorkeur) {
     final genormaliseerdeVoorkeur = _normaliseerFormulierType(voorkeur);
+
     for (final optie in _formulierTypeOpties) {
       if (_normaliseerFormulierType(optie.formulierType) ==
           genormaliseerdeVoorkeur) {
@@ -236,10 +286,6 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     }
 
     return voorkeur.trim();
-  }
-
-  static String _normaliseerFormulierType(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
   }
 
   OfferteTechnischeKeuzeRef? _vindActueleTechnischeKeuze(
@@ -306,12 +352,11 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     }
 
     final bedrag = _leesBedrag(controller.text);
-
     if (bedrag == null) {
       return;
     }
 
-    controller.text = bedrag.toStringAsFixed(2).replaceAll('.', ',');
+    controller.text = _bedragTekst(bedrag);
   }
 
   @override
@@ -375,231 +420,18 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
                 _bouwUitleg(),
                 const SizedBox(height: 14),
                 if (_toonFormulierTypeKeuze) ...<Widget>[
-                  DropdownButtonFormField<String>(
-                    key: ValueKey<String>(_formulierType),
-                    initialValue: _formulierType,
-                    isExpanded: true,
-                    decoration: _invoerDecoratie(label: 'Artikelgroep'),
-                    items: _formulierTypeOpties
-                        .map((optie) {
-                          return DropdownMenuItem<String>(
-                            value: optie.formulierType,
-                            child: Text(
-                              optie.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          );
-                        })
-                        .toList(growable: false),
-                    onChanged: (waarde) {
-                      if (waarde == null) return;
-                      setState(() {
-                        _formulierType = waarde;
-                      });
-                    },
-                  ),
+                  _bouwFormulierTypeKeuze(),
                   const SizedBox(height: 12),
                 ],
-                TextFormField(
-                  controller: _omschrijvingController,
-                  autofocus: !_isTechnischePrijs,
-                  readOnly: _isTechnischePrijs,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: _invoerDecoratie(
-                    label: _isTechnischePrijs
-                        ? 'Hoe uitschrijven — uit technische keuze'
-                        : 'Omschrijving',
-                    hint: _isTechnischePrijs
-                        ? 'Wordt automatisch overgenomen van de technische keuze'
-                        : 'Bijvoorbeeld: Petscreen toeslag',
-                  ),
-                  validator: (waarde) {
-                    if (waarde == null || waarde.trim().isEmpty) {
-                      return _isTechnischePrijs
-                          ? 'Vul in hoe deze prijsregel moet worden uitgeschreven.'
-                          : 'Vul een omschrijving in.';
-                    }
-
-                    return null;
-                  },
-                ),
+                _bouwOmschrijvingVeld(),
                 if (_isTechnischePrijs) ...<Widget>[
                   const SizedBox(height: 12),
-                  OfferteTechnischeKeuzeDropdown(
-                    keuzes: widget.technischeKeuzes,
-                    waarde: _technischeKeuze,
-                    toonFout: _technischeKeuzeFout,
-                    onChanged: (keuze) {
-                      setState(() {
-                        _technischeKeuze = keuze;
-                        _technischeKeuzeFout = false;
-
-                        final tekst = keuze?.hoeUitschrijven.trim() ?? '';
-                        if (tekst.isNotEmpty) {
-                          _omschrijvingController.value = TextEditingValue(
-                            text: tekst,
-                            selection: TextSelection.collapsed(
-                              offset: tekst.length,
-                            ),
-                          );
-                        }
-                      });
-                    },
-                  ),
+                  _bouwTechnischeKeuze(),
                 ],
                 const SizedBox(height: 12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final breed = constraints.maxWidth >= 470;
-
-                    final prijsVeld = TextFormField(
-                      controller: _prijsController,
-                      focusNode: _prijsFocusNode,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: const <TextInputFormatter>[
-                        _BedragInputFormatter(),
-                      ],
-                      decoration: _invoerDecoratie(
-                        label: _isVerdeelKost
-                            ? 'Totaalbedrag te verdelen — excl. btw'
-                            : _isAlleArtikelenPrijs
-                            ? 'Projectprijs / eenheidsprijs excl. btw'
-                            : 'Prijs excl. btw',
-                        hint: '0,00',
-                        prefixText: '€ ',
-                      ),
-                      validator: (waarde) {
-                        if (_leesBedrag(waarde ?? '') == null) {
-                          return 'Vul een geldig bedrag in.';
-                        }
-
-                        return null;
-                      },
-                    );
-
-                    if (_isVerdeelKost) {
-                      return prijsVeld;
-                    }
-
-                    final eenheidVeld =
-                        DropdownButtonFormField<OffertePrijsEenheid>(
-                          key: ValueKey<OffertePrijsEenheid>(_eenheid),
-                          initialValue: _eenheid,
-                          isExpanded: true,
-                          decoration: _invoerDecoratie(
-                            label: 'Berekeningswijze',
-                          ),
-                          items: OffertePrijsEenheid.values
-                              .map((eenheid) {
-                                return DropdownMenuItem<OffertePrijsEenheid>(
-                                  value: eenheid,
-                                  child: Text(
-                                    eenheid.benaming,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                );
-                              })
-                              .toList(growable: false),
-                          onChanged: (waarde) {
-                            if (waarde == null) {
-                              return;
-                            }
-
-                            setState(() {
-                              _eenheid = waarde;
-                            });
-                          },
-                        );
-
-                    if (breed) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Expanded(child: prijsVeld),
-                          const SizedBox(width: 12),
-                          Expanded(flex: 2, child: eenheidVeld),
-                        ],
-                      );
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        prijsVeld,
-                        const SizedBox(height: 12),
-                        eenheidVeld,
-                        if (_isVrijeArtikelPrijs) ...<Widget>[
-                          const SizedBox(height: 7),
-                          const Text(
-                            'Deze actieve regel wordt automatisch toegepast. De gekozen berekeningswijze gebruikt rechtstreeks de maten en het aantal van het artikel.',
-                            style: TextStyle(
-                              color: _tekstGrijs,
-                              fontSize: 10.8,
-                              height: 1.3,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
+                _bouwPrijsEnEenheid(),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<OffertePrijsUitschrijfmodus>(
-                  key: ValueKey<OffertePrijsUitschrijfmodus>(_uitschrijfmodus),
-                  initialValue: _uitschrijfmodus,
-                  isExpanded: true,
-                  decoration: _invoerDecoratie(label: 'Hoe uitschrijven'),
-                  items: _beschikbareUitschrijfmodi
-                      .map((modus) {
-                        return DropdownMenuItem<OffertePrijsUitschrijfmodus>(
-                          value: modus,
-                          child: Row(
-                            children: <Widget>[
-                              Icon(
-                                _icoonVoorUitschrijfmodus(modus),
-                                size: 19,
-                                color: _kleurVoorUitschrijfmodus(modus),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  OffertePrijsregelWeergaveService.benamingVoorUitschrijfmodus(
-                                    modus,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      })
-                      .toList(growable: false),
-                  onChanged: (waarde) {
-                    if (waarde == null) {
-                      return;
-                    }
-
-                    setState(() {
-                      _uitschrijfmodus = waarde;
-
-                      if (_isVerdeelKost) {
-                        _eenheid = OffertePrijsEenheid.vast;
-                      }
-                    });
-                  },
-                ),
+                _bouwUitschrijfmodus(),
                 const SizedBox(height: 8),
                 _bouwUitschrijfUitleg(),
                 if (_isVerdeelKost) ...<Widget>[
@@ -643,6 +475,369 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
         ),
       ],
     );
+  }
+
+  Widget _bouwFormulierTypeKeuze() {
+    return DropdownButtonFormField<String>(
+      key: ValueKey<String>(_formulierType),
+      initialValue: _formulierType,
+      isExpanded: true,
+      decoration: _invoerDecoratie(label: 'Artikelgroep'),
+      items: _formulierTypeOpties
+          .map((optie) {
+            return DropdownMenuItem<String>(
+              value: optie.formulierType,
+              child: Text(
+                optie.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            );
+          })
+          .toList(growable: false),
+      onChanged: (waarde) {
+        if (waarde == null) {
+          return;
+        }
+
+        setState(() {
+          _formulierType = waarde;
+        });
+      },
+    );
+  }
+
+  Widget _bouwOmschrijvingVeld() {
+    if (_isVerdeelKost) {
+      return _bouwVerdeelgroepOmschrijving();
+    }
+
+    return TextFormField(
+      controller: _omschrijvingController,
+      autofocus: !_isTechnischePrijs,
+      readOnly: _isTechnischePrijs,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: _invoerDecoratie(
+        label: _isTechnischePrijs
+            ? 'Hoe uitschrijven — uit technische keuze'
+            : 'Omschrijving',
+        hint: _isTechnischePrijs
+            ? 'Wordt automatisch overgenomen van de technische keuze'
+            : 'Bijvoorbeeld: Petscreen toeslag',
+      ),
+      validator: _valideerOmschrijving,
+    );
+  }
+
+  Widget _bouwVerdeelgroepOmschrijving() {
+    final opties = _verdeelgroepen;
+    final geldigeIds = opties.map((regel) => regel.id).toSet();
+
+    final actueleWaarde = geldigeIds.contains(_geselecteerdeVerdeelgroepId)
+        ? _geselecteerdeVerdeelgroepId
+        : _nieuweVerdeelgroepId;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        DropdownButtonFormField<String>(
+          key: ValueKey<String>('verdeelgroep_$actueleWaarde'),
+          initialValue: actueleWaarde,
+          isExpanded: true,
+          decoration: _invoerDecoratie(label: 'Omschrijving'),
+          items: <DropdownMenuItem<String>>[
+            const DropdownMenuItem<String>(
+              value: _nieuweVerdeelgroepId,
+              child: Text(
+                'Nieuwe omschrijving toevoegen…',
+                style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+              ),
+            ),
+            ...opties.map((regel) {
+              return DropdownMenuItem<String>(
+                value: regel.id,
+                child: Text(
+                  regel.omschrijving,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              );
+            }),
+          ],
+          onChanged: (waarde) {
+            if (waarde == null) {
+              return;
+            }
+
+            if (waarde == _nieuweVerdeelgroepId) {
+              setState(() {
+                _geselecteerdeVerdeelgroepId = _nieuweVerdeelgroepId;
+                _omschrijvingController.clear();
+
+                final bestaand = widget.bestaandePrijsregel;
+                if (bestaand?.isVerdeeldeProjectkost != true) {
+                  _prijsController.clear();
+                  _limietController.clear();
+                  _verdeelLimietmodus =
+                      OffertePrijsVerdeelLimietmodus.zonderLimiet;
+                  _actief = true;
+                }
+              });
+              return;
+            }
+
+            OffertePrijsregelModel? gekozen;
+
+            for (final regel in opties) {
+              if (regel.id == waarde) {
+                gekozen = regel;
+                break;
+              }
+            }
+
+            if (gekozen == null) {
+              return;
+            }
+
+            _neemVerdeelgroepOver(gekozen);
+          },
+        ),
+        const SizedBox(height: 10),
+        if (actueleWaarde == _nieuweVerdeelgroepId)
+          TextFormField(
+            controller: _omschrijvingController,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: _invoerDecoratie(
+              label: 'Nieuwe omschrijving',
+              hint: 'Bijvoorbeeld: Transportkost Feneko',
+            ),
+            validator: _valideerOmschrijving,
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Icon(Icons.link_rounded, color: _groen, size: 18),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Deze omschrijving is een gedeelde verdeelkost. '
+                    'Wijzigingen aan bedrag, aankooplimiet of actiefstatus '
+                    'worden toegepast op alle gekoppelde artikelgroepen.',
+                    style: TextStyle(
+                      color: Color(0xFF166534),
+                      fontSize: 11.2,
+                      height: 1.35,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _bouwTechnischeKeuze() {
+    return OfferteTechnischeKeuzeDropdown(
+      keuzes: widget.technischeKeuzes,
+      waarde: _technischeKeuze,
+      toonFout: _technischeKeuzeFout,
+      onChanged: (keuze) {
+        setState(() {
+          _technischeKeuze = keuze;
+          _technischeKeuzeFout = false;
+
+          final tekst = keuze?.hoeUitschrijven.trim() ?? '';
+          if (tekst.isNotEmpty) {
+            _omschrijvingController.value = TextEditingValue(
+              text: tekst,
+              selection: TextSelection.collapsed(offset: tekst.length),
+            );
+          }
+        });
+      },
+    );
+  }
+
+  Widget _bouwPrijsEnEenheid() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final breed = constraints.maxWidth >= 470;
+
+        final prijsVeld = TextFormField(
+          controller: _prijsController,
+          focusNode: _prijsFocusNode,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: const <TextInputFormatter>[_BedragInputFormatter()],
+          decoration: _invoerDecoratie(
+            label: _isVerdeelKost
+                ? 'Totaalbedrag te verdelen — excl. btw'
+                : _isAlleArtikelenPrijs
+                ? 'Projectprijs / eenheidsprijs excl. btw'
+                : 'Prijs excl. btw',
+            hint: '0,00',
+            prefixText: '€ ',
+          ),
+          validator: (waarde) {
+            if (_leesBedrag(waarde ?? '') == null) {
+              return 'Vul een geldig bedrag in.';
+            }
+
+            return null;
+          },
+        );
+
+        if (_isVerdeelKost) {
+          return prijsVeld;
+        }
+
+        final eenheidVeld = DropdownButtonFormField<OffertePrijsEenheid>(
+          key: ValueKey<OffertePrijsEenheid>(_eenheid),
+          initialValue: _eenheid,
+          isExpanded: true,
+          decoration: _invoerDecoratie(label: 'Berekeningswijze'),
+          items: OffertePrijsEenheid.values
+              .map((eenheid) {
+                return DropdownMenuItem<OffertePrijsEenheid>(
+                  value: eenheid,
+                  child: Text(
+                    eenheid.benaming,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              })
+              .toList(growable: false),
+          onChanged: (waarde) {
+            if (waarde == null) {
+              return;
+            }
+
+            setState(() {
+              _eenheid = waarde;
+            });
+          },
+        );
+
+        if (breed) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: prijsVeld),
+              const SizedBox(width: 12),
+              Expanded(flex: 2, child: eenheidVeld),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            prijsVeld,
+            const SizedBox(height: 12),
+            eenheidVeld,
+            if (_isVrijeArtikelPrijs) ...<Widget>[
+              const SizedBox(height: 7),
+              const Text(
+                'Deze actieve regel wordt automatisch toegepast. '
+                'De gekozen berekeningswijze gebruikt rechtstreeks '
+                'de maten en het aantal van het artikel.',
+                style: TextStyle(
+                  color: _tekstGrijs,
+                  fontSize: 10.8,
+                  height: 1.3,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _bouwUitschrijfmodus() {
+    return DropdownButtonFormField<OffertePrijsUitschrijfmodus>(
+      key: ValueKey<OffertePrijsUitschrijfmodus>(_uitschrijfmodus),
+      initialValue: _uitschrijfmodus,
+      isExpanded: true,
+      decoration: _invoerDecoratie(label: 'Hoe uitschrijven'),
+      items: _beschikbareUitschrijfmodi
+          .map((modus) {
+            return DropdownMenuItem<OffertePrijsUitschrijfmodus>(
+              value: modus,
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    _icoonVoorUitschrijfmodus(modus),
+                    size: 19,
+                    color: _kleurVoorUitschrijfmodus(modus),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      OffertePrijsregelWeergaveService.benamingVoorUitschrijfmodus(
+                        modus,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          })
+          .toList(growable: false),
+      onChanged: (waarde) {
+        if (waarde == null) {
+          return;
+        }
+
+        setState(() {
+          final wasVerdeelkost = _isVerdeelKost;
+          _uitschrijfmodus = waarde;
+
+          if (_isVerdeelKost) {
+            _eenheid = OffertePrijsEenheid.vast;
+
+            if (!wasVerdeelkost) {
+              final bestaand = widget.bestaandePrijsregel;
+              _geselecteerdeVerdeelgroepId =
+                  bestaand?.isVerdeeldeProjectkost == true
+                  ? bestaand!.id
+                  : _nieuweVerdeelgroepId;
+            }
+          }
+        });
+      },
+    );
+  }
+
+  void _neemVerdeelgroepOver(OffertePrijsregelModel verdeelgroep) {
+    setState(() {
+      _geselecteerdeVerdeelgroepId = verdeelgroep.id;
+      _omschrijvingController.text = verdeelgroep.omschrijving;
+      _prijsController.text = _bedragTekst(verdeelgroep.prijsExclBtw);
+      _verdeelLimietmodus = verdeelgroep.verdeelLimietmodus;
+      _limietController.text = verdeelgroep.verdeelLimietBedragExclBtw <= 0
+          ? ''
+          : _bedragTekst(verdeelgroep.verdeelLimietBedragExclBtw);
+      _actief = verdeelgroep.actief;
+      _eenheid = OffertePrijsEenheid.vast;
+    });
   }
 
   IconData _icoonVoorUitschrijfmodus(OffertePrijsUitschrijfmodus modus) {
@@ -780,7 +975,10 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
           ),
           const SizedBox(height: 5),
           const Text(
-            'Het totaalbedrag wordt gelijk over alle artikelen verdeeld. De kost wordt meegerekend, maar de omschrijving en prijs worden niet afzonderlijk op de klantofferte getoond.',
+            'Het totaalbedrag wordt gelijk verdeeld over alle '
+            'artikelgroepen die dezelfde omschrijving hebben gekozen. '
+            'De kost wordt meegerekend, maar niet afzonderlijk op de '
+            'klantofferte getoond.',
             style: TextStyle(
               color: _tekstGrijs,
               fontSize: 11.5,
@@ -838,7 +1036,6 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
                 }
 
                 final bedrag = _leesBedrag(waarde ?? '');
-
                 if (bedrag == null || bedrag <= 0) {
                   return 'Vul een aankooplimiet groter dan € 0,00 in.';
                 }
@@ -848,7 +1045,9 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
             ),
             const SizedBox(height: 6),
             const Text(
-              'De kost wordt toegepast zolang het gezamenlijke aankoopbedrag lager is dan deze limiet. Vanaf de limiet vervalt de kost.',
+              'De kost wordt toegepast zolang het gezamenlijke '
+              'aankoopbedrag van alle gekoppelde artikelgroepen '
+              'lager is dan deze limiet.',
               style: TextStyle(
                 color: _tekstGrijs,
                 fontSize: 10.8,
@@ -865,11 +1064,15 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
   Widget _bouwUitleg() {
     final tekst = switch (widget.categorie) {
       OffertePrijsCategorie.technischeKeuzePerArtikel =>
-        'Deze prijsregel wordt automatisch toegepast wanneer de gekoppelde technische keuze in het artikel voorkomt.',
+        'Deze prijsregel wordt automatisch toegepast wanneer '
+            'de gekoppelde technische keuze in het artikel voorkomt.',
       OffertePrijsCategorie.vrijPerArtikel =>
-        'Iedere actieve regel wordt automatisch per artikel toegepast. De berekening gebruikt de artikelmaten en het aantal.',
+        'Iedere actieve regel wordt automatisch per artikel toegepast. '
+            'De berekening gebruikt de artikelmaten en het aantal.',
       OffertePrijsCategorie.alleArtikelen =>
-        'Een gewone regel wordt één keer over alle artikelen van het project berekend. Een verdeelkost wordt intern over alle artikelen verdeeld.',
+        'Een gewone regel wordt één keer over de artikelen van deze '
+            'artikelgroep berekend. Een gedeelde verdeelkost kan over '
+            'meerdere gekoppelde artikelgroepen worden verdeeld.',
     };
 
     return Container(
@@ -927,6 +1130,16 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     );
   }
 
+  String? _valideerOmschrijving(String? waarde) {
+    if (waarde == null || waarde.trim().isEmpty) {
+      return _isTechnischePrijs
+          ? 'Vul in hoe deze prijsregel moet worden uitgeschreven.'
+          : 'Vul een omschrijving in.';
+    }
+
+    return null;
+  }
+
   void _bewaar() {
     final formulierGeldig = _formKey.currentState?.validate() ?? false;
 
@@ -947,8 +1160,10 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     final bestaand = widget.bestaandePrijsregel;
     final nu = DateTime.now().toUtc().toIso8601String();
 
+    final id = _bepaalPrijsregelId(bestaand: bestaand, nu: nu);
+
     final prijsregel = OffertePrijsregelModel(
-      id: bestaand?.id ?? 'prijs_${DateTime.now().microsecondsSinceEpoch}',
+      id: id,
       categorie: widget.categorie,
       formulierType: _formulierType,
       omschrijving: _isTechnischePrijs
@@ -972,6 +1187,23 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     Navigator.pop(context, prijsregel);
   }
 
+  String _bepaalPrijsregelId({
+    required OffertePrijsregelModel? bestaand,
+    required String nu,
+  }) {
+    if (_isVerdeelKost && !_isNieuweVerdeelgroep) {
+      return _geselecteerdeVerdeelgroepId;
+    }
+
+    if (_isVerdeelKost &&
+        _isNieuweVerdeelgroep &&
+        bestaand?.isVerdeeldeProjectkost == true) {
+      return 'prijs_${DateTime.now().microsecondsSinceEpoch}';
+    }
+
+    return bestaand?.id ?? 'prijs_${DateTime.now().microsecondsSinceEpoch}';
+  }
+
   static OffertePrijsUitschrijfmodus _standaardUitschrijfmodus(
     OffertePrijsCategorie categorie,
   ) {
@@ -982,6 +1214,29 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     return OffertePrijsUitschrijfmodus.overzichtEnOfferteMetPrijs;
   }
 
+  static String _normaliseerFormulierType(String waarde) {
+    return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
+  }
+
+  static bool _isNieuwer(String eerste, String tweede) {
+    final eersteDatum = DateTime.tryParse(eerste);
+    final tweedeDatum = DateTime.tryParse(tweede);
+
+    if (eersteDatum == null) {
+      return false;
+    }
+
+    if (tweedeDatum == null) {
+      return true;
+    }
+
+    return eersteDatum.isAfter(tweedeDatum);
+  }
+
+  static String _bedragTekst(double bedrag) {
+    return bedrag.toStringAsFixed(2).replaceAll('.', ',');
+  }
+
   static double? _leesBedrag(String tekst) {
     final schoon = tekst.trim().replaceAll(' ', '').replaceAll(',', '.');
 
@@ -990,7 +1245,6 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     }
 
     final bedrag = double.tryParse(schoon);
-
     if (bedrag == null || !bedrag.isFinite || bedrag < 0) {
       return null;
     }

@@ -62,6 +62,8 @@ class OfferteArtikelPrijsMutatieService {
       _AlgemeenArtikelPrijsMutatieAdapter('aluDeur');
   static const OfferteArtikelPrijsMutatieAdapter vasteInzethor =
       _VasteInzethorPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter vliegendeur =
+      _VliegendeurPrijsMutatieAdapter();
 
   static const List<OfferteArtikelPrijsMutatieAdapter> _adapters =
       <OfferteArtikelPrijsMutatieAdapter>[
@@ -72,6 +74,7 @@ class OfferteArtikelPrijsMutatieService {
         pvcDeur,
         aluDeur,
         vasteInzethor,
+        vliegendeur,
       ];
 
   static OfferteArtikelPrijsMutatieAdapter? adapterVoor(
@@ -215,8 +218,66 @@ class _AlgemeenArtikelPrijsMutatieAdapter
     final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
       artikel,
     );
-    return koppeling?.isAlgemeenArtikel == true &&
+    return OfferteArtikelPrijsKoppelingService.isAlgemeenArtikel(artikel) &&
         koppeling?.adapterId == formulierType;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _VliegendeurPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _VliegendeurPrijsMutatieAdapter();
+
+  @override
+  String get id => 'vliegendeur';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return koppeling?.adapterId == id;
   }
 
   @override

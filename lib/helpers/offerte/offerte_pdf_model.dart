@@ -108,8 +108,15 @@ class OfferteDocumentData {
     return pvcRaamTekeningen[id];
   }
 
+  bool isVliegendeurPositie(OpmetingOverzichtRaamItem positie) {
+    return positie.vliegendeurData != null ||
+        positie.formulierTypeGenormaliseerd == 'vliegendeur';
+  }
+
   bool isOndersteundeOffertePositie(OpmetingOverzichtRaamItem positie) {
-    return !positie.isVerwijderd &&
+    if (positie.isVerwijderd) return false;
+
+    return isVliegendeurPositie(positie) ||
         OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
   }
 
@@ -166,6 +173,31 @@ class OfferteDocumentData {
       offerteOptiePosities.where(
         (positie) => positie.vasteInzethorData != null,
       ),
+    );
+  }
+
+  /// Afzonderlijke selectie voor Vliegendeur-posities. Deze posities zijn
+  /// zichtbaar in de offerte, maar blijven bewust buiten de prijsinstellingen.
+  List<OpmetingOverzichtRaamItem> get vliegendeurPosities {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      hoofdoffertePosities.where(isVliegendeurPositie),
+    );
+  }
+
+  List<OpmetingOverzichtRaamItem> get vliegendeurPositiesVoorWeergave {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      posities.where((positie) {
+        if (positie.isVerwijderd || !isVliegendeurPositie(positie)) {
+          return false;
+        }
+        return positie.teltMeeInHoofdofferte || positie.isOfferteOptieOpPositie;
+      }),
+    );
+  }
+
+  List<OpmetingOverzichtRaamItem> get vliegendeurOptiePosities {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      offerteOptiePosities.where(isVliegendeurPositie),
     );
   }
 

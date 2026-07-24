@@ -36,6 +36,13 @@ class OpmetingOverzichtArtikelLayoutHelper {
   static const double minimumHoogte = 500;
   static const double maximumHoogte = 1450;
 
+  // Eén technische regel krijgt overal exact dezelfde hoogte. De
+  // niet-scrollbare artikelkaart kan daardoor haar hoogte betrouwbaar
+  // berekenen, zonder schattingen die bij veel regels een RenderFlex-overflow
+  // veroorzaken.
+  static const double technischeRegelHoogte = 31;
+  static const double technischeContainerRandReserve = 2;
+
   static List<OpmetingOverzichtTechnischeRegel> combineerTechnischeRegels(
     List<OpmetingOverzichtTechnischeRegel> technischeRegels,
   ) {
@@ -134,6 +141,19 @@ class OpmetingOverzichtArtikelLayoutHelper {
     return totaleHoogte.clamp(minimumHoogte, maximumHoogte).toDouble();
   }
 
+  static double berekenNietScrollbareTechnischeHoogte({
+    required List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+    double minimaleHoogte = minimumHoogte,
+  }) {
+    final aantalRegels = combineerTechnischeRegels(technischeRegels).length;
+    final benodigdeHoogte = aantalRegels <= 0
+        ? minimaleHoogte
+        : (aantalRegels * technischeRegelHoogte) +
+              technischeContainerRandReserve;
+
+    return benodigdeHoogte < minimaleHoogte ? minimaleHoogte : benodigdeHoogte;
+  }
+
   static Widget bouwLayout({
     required double hoogte,
     required Widget tekenvlak,
@@ -209,6 +229,8 @@ class OpmetingOverzichtArtikelLayoutHelper {
     List<OpmetingOverzichtTechnischeRegelPrijs>? technischeRegelsMetPrijs,
     List<Widget> onderWidgets = const <Widget>[],
     String legeTekst = 'Geen technische kenmerken ingevuld.',
+    bool scrollbaar = true,
+    bool toonPrijsZone = true,
   }) {
     final regelWeergaven = combineerTechnischeRegelsMetPrijs(
       technischeRegelsMetPrijs ??
@@ -225,7 +247,11 @@ class OpmetingOverzichtArtikelLayoutHelper {
         Expanded(
           child: regelWeergaven.isEmpty
               ? bouwLegeTechnischeContainer(tekst: legeTekst)
-              : bouwTechnischeRegelsMetPrijsContainer(regelWeergaven),
+              : bouwTechnischeRegelsMetPrijsContainer(
+                  regelWeergaven,
+                  scrollbaar: scrollbaar,
+                  toonPrijsZone: toonPrijsZone,
+                ),
         ),
         for (final widget in onderWidgets) ...<Widget>[
           const SizedBox(height: 9),
@@ -270,75 +296,71 @@ class OpmetingOverzichtArtikelLayoutHelper {
   }
 
   static Widget bouwTechnischeRegelsMetPrijsContainer(
-    List<OpmetingOverzichtTechnischeRegelPrijs> technischeRegels,
-  ) {
+    List<OpmetingOverzichtTechnischeRegelPrijs> technischeRegels, {
+    bool scrollbaar = true,
+    bool toonPrijsZone = true,
+  }) {
     final samengevoegdeRegels = combineerTechnischeRegelsMetPrijs(
       technischeRegels,
     );
 
-    return Container(
-      decoration: BoxDecoration(
-        color: technischAchtergrond,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: rand),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: List<Widget>.generate(samengevoegdeRegels.length, (index) {
-            final weergave = samengevoegdeRegels[index];
-            final regel = weergave.regel;
+    final inhoud = Column(
+      children: List<Widget>.generate(samengevoegdeRegels.length, (index) {
+        final weergave = samengevoegdeRegels[index];
+        final regel = weergave.regel;
 
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-              decoration: BoxDecoration(
-                border: index == samengevoegdeRegels.length - 1
-                    ? null
-                    : const Border(bottom: BorderSide(color: rand, width: 0.8)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  Expanded(
-                    child: Align(
+        return SizedBox(
+          height: technischeRegelHoogte,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 11),
+            decoration: BoxDecoration(
+              border: index == samengevoegdeRegels.length - 1
+                  ? null
+                  : const Border(bottom: BorderSide(color: rand, width: 0.8)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text.rich(
-                          TextSpan(
-                            children: <InlineSpan>[
+                      child: Text.rich(
+                        TextSpan(
+                          children: <InlineSpan>[
+                            TextSpan(
+                              text: regel.titel,
+                              style: const TextStyle(
+                                color: tekstGrijs,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
+                              ),
+                            ),
+                            if (regel.titel.isNotEmpty &&
+                                regel.waarde.isNotEmpty)
+                              const TextSpan(text: ': '),
+                            if (regel.waarde.isNotEmpty)
                               TextSpan(
-                                text: regel.titel,
+                                text: regel.waarde,
                                 style: const TextStyle(
-                                  color: tekstGrijs,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25,
+                                  color: tekstDonker,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.15,
                                 ),
                               ),
-                              if (regel.titel.isNotEmpty &&
-                                  regel.waarde.isNotEmpty)
-                                const TextSpan(text: ': '),
-                              if (regel.waarde.isNotEmpty)
-                                TextSpan(
-                                  text: regel.waarde,
-                                  style: const TextStyle(
-                                    color: tekstDonker,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.25,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          maxLines: 1,
-                          softWrap: false,
+                          ],
                         ),
+                        maxLines: 1,
+                        softWrap: false,
                       ),
                     ),
                   ),
+                ),
+                if (toonPrijsZone) ...<Widget>[
                   const SizedBox(width: 10),
                   SizedBox(
                     width: prijsZoneBreedte,
@@ -353,16 +375,28 @@ class OpmetingOverzichtArtikelLayoutHelper {
                         color: tekstDonker,
                         fontSize: 11.5,
                         fontWeight: FontWeight.w900,
-                        height: 1.25,
+                        height: 1.15,
                       ),
                     ),
                   ),
                 ],
-              ),
-            );
-          }),
-        ),
+              ],
+            ),
+          ),
+        );
+      }),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: technischAchtergrond,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: rand),
       ),
+      clipBehavior: Clip.antiAlias,
+      child: scrollbaar
+          ? SingleChildScrollView(padding: EdgeInsets.zero, child: inhoud)
+          : inhoud,
     );
   }
 
