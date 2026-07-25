@@ -13,7 +13,6 @@ import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
-import 'offerte/prijzen/offerte_algemene_prijsregels_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
@@ -55,9 +54,6 @@ class AppStorage {
 
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
-
-  static const String _offerteAlgemenePrijsregelsKey =
-      'thimaco_offerte_algemene_prijsregels';
 
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
@@ -665,77 +661,6 @@ class AppStorage {
     });
 
     await bewaarOffertePrijsProfielen(profielen);
-  }
-
-  // ------------------------------------------------------------
-  // OFFERTEPRIJZEN - ALGEMENE PRIJSREGELS
-  // ------------------------------------------------------------
-
-  static OfferteAlgemenePrijsregelsModel _decodeOfferteAlgemenePrijsregels(
-    String? jsonString,
-  ) {
-    if (jsonString == null || jsonString.isEmpty) {
-      return OfferteAlgemenePrijsregelsModel.leeg();
-    }
-
-    try {
-      final decoded = jsonDecode(jsonString);
-
-      if (decoded is! Map) {
-        return OfferteAlgemenePrijsregelsModel.leeg();
-      }
-
-      return OfferteAlgemenePrijsregelsModel.fromJson(
-        Map<String, dynamic>.from(decoded),
-      );
-    } catch (_) {
-      return OfferteAlgemenePrijsregelsModel.leeg();
-    }
-  }
-
-  static String encodeOfferteAlgemenePrijsregelsVoorSync(
-    OfferteAlgemenePrijsregelsModel opslag,
-  ) {
-    return jsonEncode(opslag.toJson());
-  }
-
-  static Future<OfferteAlgemenePrijsregelsModel>
-  laadOfferteAlgemenePrijsregelsVoorSync() async {
-    final prefs = await openBox();
-
-    return _decodeOfferteAlgemenePrijsregels(
-      prefs.getString(_offerteAlgemenePrijsregelsKey),
-    );
-  }
-
-  static Future<OfferteAlgemenePrijsregelsModel>
-  laadOfferteAlgemenePrijsregels() async {
-    return laadOfferteAlgemenePrijsregelsVoorSync();
-  }
-
-  static Future<void> bewaarOfferteAlgemenePrijsregels(
-    OfferteAlgemenePrijsregelsModel opslag,
-  ) async {
-    final prefs = await openBox();
-    final bijgewerkt = opslag.metWijzigingsDatum();
-
-    await prefs.setString(
-      _offerteAlgemenePrijsregelsKey,
-      encodeOfferteAlgemenePrijsregelsVoorSync(bijgewerkt),
-    );
-
-    await _syncBackup();
-  }
-
-  static Future<void> bewaarOfferteAlgemenePrijsregelsVoorSync(
-    OfferteAlgemenePrijsregelsModel opslag,
-  ) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _offerteAlgemenePrijsregelsKey,
-      encodeOfferteAlgemenePrijsregelsVoorSync(opslag),
-    );
   }
 
   // ------------------------------------------------------------
