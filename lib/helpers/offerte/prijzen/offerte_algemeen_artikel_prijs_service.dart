@@ -183,6 +183,7 @@ class OfferteAlgemeenArtikelPrijsService {
         .where(
           (selectie) =>
               _isTijdelijkeVrijePrijsSelectie(selectie) &&
+              !_isGekozenProjectPrijsSelectie(selectie) &&
               !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .map((selectie) {
@@ -248,6 +249,72 @@ class OfferteAlgemeenArtikelPrijsService {
     );
   }
 
+  /// Maakt het vaste opslag-ID voor één projectbrede prijsregel op één
+  /// doelartikeltype. Daardoor kan dezelfde bronregel veilig op verschillende
+  /// artikeltypes worden toegepast zonder met andere vrije regels samen te
+  /// vallen.
+  static String gekozenProjectPrijsregelId({
+    required String oorspronkelijkPrijsregelId,
+    required String doelFormulierType,
+  }) {
+    final bronId = oorspronkelijkPrijsregelId.trim();
+    if (bronId.isEmpty) return '';
+
+    final formulierSleutel = _normaliseerFormulierType(doelFormulierType);
+    final veiligeFormulierSleutel = formulierSleutel.isEmpty
+        ? 'algemeen'
+        : formulierSleutel;
+
+    return '$_toegepasteProjectPrijsPrefix'
+        '${veiligeFormulierSleutel}_$bronId';
+  }
+
+  /// Controleert of de gekozen projectbrede prijsregel reeds op deze positie
+  /// staat. Zowel het huidige afgeleide ID als het oudere oorspronkelijke
+  /// bron-ID worden herkend.
+  static bool heeftGekozenProjectPrijsregel({
+    required OfferteArtikelPrijsDataModel prijsData,
+    required String oorspronkelijkPrijsregelId,
+    required String doelFormulierType,
+  }) {
+    final bronIds = _gekozenProjectPrijsregelBronIds(
+      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
+      doelFormulierType: doelFormulierType,
+    );
+    if (bronIds.isEmpty) return false;
+
+    return prijsData.vrijeArtikelPrijsSelecties.any((selectie) {
+      return selectie.actief &&
+          selectie.isGeldig &&
+          bronIds.contains(selectie.bronPrijsregelId);
+    });
+  }
+
+  /// Verwijdert uitsluitend de gekozen projectbrede prijsregel van één
+  /// positie. Alle automatische en andere tijdelijke prijsregels blijven
+  /// volledig behouden.
+  static OfferteArtikelPrijsDataModel verwijderGekozenProjectPrijsregel({
+    required OfferteArtikelPrijsDataModel prijsData,
+    required String oorspronkelijkPrijsregelId,
+    required String doelFormulierType,
+  }) {
+    final bronIds = _gekozenProjectPrijsregelBronIds(
+      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
+      doelFormulierType: doelFormulierType,
+    );
+    if (bronIds.isEmpty) return prijsData;
+
+    final overigeSelecties = prijsData.vrijeArtikelPrijsSelecties
+        .where((selectie) => !bronIds.contains(selectie.bronPrijsregelId))
+        .toList(growable: false);
+    if (overigeSelecties.length ==
+        prijsData.vrijeArtikelPrijsSelecties.length) {
+      return prijsData;
+    }
+
+    return prijsData.copyWith(vrijeArtikelPrijsSelecties: overigeSelecties);
+  }
+
   /// Voegt uitsluitend de ene prijsregel toe die in het projectbrede
   /// prijsregelvenster gekozen werd.
   ///
@@ -262,13 +329,10 @@ class OfferteAlgemeenArtikelPrijsService {
     required String doelFormulierType,
   }) {
     final oorspronkelijkPrijsregelId = prijsregel.id.trim();
-    final formulierSleutel = _normaliseerFormulierType(doelFormulierType);
-    final veiligeFormulierSleutel = formulierSleutel.isEmpty
-        ? 'algemeen'
-        : formulierSleutel;
-    final toegepastePrijsregelId =
-        '$_toegepasteProjectPrijsPrefix'
-        '${veiligeFormulierSleutel}_$oorspronkelijkPrijsregelId';
+    final toegepastePrijsregelId = gekozenProjectPrijsregelId(
+      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
+      doelFormulierType: doelFormulierType,
+    );
 
     final regel = prijsregel.copyWith(
       id: toegepastePrijsregelId,
@@ -277,15 +341,16 @@ class OfferteAlgemeenArtikelPrijsService {
       actief: true,
     );
     if (oorspronkelijkPrijsregelId.isEmpty ||
+        toegepastePrijsregelId.isEmpty ||
         !regel.isGeldig ||
         regel.prijsExclBtw <= 0.0) {
       return prijsData;
     }
 
-    final teVervangenBronIds = <String>{
-      oorspronkelijkPrijsregelId,
-      toegepastePrijsregelId,
-    };
+    final teVervangenBronIds = _gekozenProjectPrijsregelBronIds(
+      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
+      doelFormulierType: doelFormulierType,
+    );
     final overigeSelecties = prijsData.vrijeArtikelPrijsSelecties
         .where(
           (selectie) => !teVervangenBronIds.contains(selectie.bronPrijsregelId),
@@ -360,6 +425,13 @@ class OfferteAlgemeenArtikelPrijsService {
               selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .toList(growable: false);
+    final gekozenProjectPrijsSelecties = prijsData.vrijeArtikelPrijsSelecties
+        .where(
+          (selectie) =>
+              _isGekozenProjectPrijsSelectie(selectie) &&
+              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
+        )
+        .toList(growable: false);
     final bestaandeAutomatischeSelecties = prijsData.vrijeArtikelPrijsSelecties
         .where(
           (selectie) =>
@@ -397,6 +469,7 @@ class OfferteAlgemeenArtikelPrijsService {
       vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
         ...bestaandeAutomatischeSelecties,
         ...verdeelkostMarkeringen,
+        ...gekozenProjectPrijsSelecties,
         ...tijdelijkeSelecties,
       ],
     );
@@ -608,6 +681,12 @@ class OfferteAlgemeenArtikelPrijsService {
     return selectie.id.startsWith(_tijdelijkeVrijePrijsPrefix);
   }
 
+  static bool _isGekozenProjectPrijsSelectie(
+    OfferteVrijePrijsSelectieModel selectie,
+  ) {
+    return selectie.bronPrijsregelId.startsWith(_toegepasteProjectPrijsPrefix);
+  }
+
   static int _leesTijdelijkeVolgorde(String id) {
     if (!id.startsWith(_tijdelijkeVrijePrijsPrefix)) return 0;
     final rest = id.substring(_tijdelijkeVrijePrijsPrefix.length);
@@ -615,6 +694,21 @@ class OfferteAlgemeenArtikelPrijsService {
     if (scheiding <= 0) return 0;
     final index = int.tryParse(rest.substring(0, scheiding)) ?? 0;
     return index * 10;
+  }
+
+  static Set<String> _gekozenProjectPrijsregelBronIds({
+    required String oorspronkelijkPrijsregelId,
+    required String doelFormulierType,
+  }) {
+    final bronId = oorspronkelijkPrijsregelId.trim();
+    if (bronId.isEmpty) return <String>{};
+
+    final toegepastId = gekozenProjectPrijsregelId(
+      oorspronkelijkPrijsregelId: bronId,
+      doelFormulierType: doelFormulierType,
+    );
+
+    return <String>{bronId, if (toegepastId.isNotEmpty) toegepastId};
   }
 
   static bool _isZelfdeFormulierType(String eerste, String tweede) {

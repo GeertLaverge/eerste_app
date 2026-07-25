@@ -8,6 +8,7 @@ import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
 import 'prijzen/offerte_prijs_berekening_service.dart';
+import 'prijzen/offerte_toegepaste_prijsregel_model.dart';
 
 class OffertePdfInzethorWidget {
   const OffertePdfInzethorWidget._();
@@ -65,8 +66,12 @@ class OffertePdfInzethorWidget {
       kortingToestaan: kortingToestaan,
     );
     final aantalRegels =
-        resultaat.afzonderlijkePrijsregelsVoorOfferte.length +
-        resultaat.omschrijvingZonderPrijsRegelsVoorOfferte.length;
+        resultaat.afzonderlijkePrijsregelsVoorOfferte
+            .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
+            .length +
+        resultaat.omschrijvingZonderPrijsRegelsVoorOfferte
+            .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
+            .length;
     return (isOptie ? basisOptiePrijsRegelHoogte : basisPrijsRegelHoogte) +
         (aantalRegels * afzonderlijkePrijsregelHoogte);
   }
@@ -126,10 +131,14 @@ class OffertePdfInzethorWidget {
           model,
           kortingToestaan: kortingToestaan,
         );
-    final omschrijvingZonderPrijsRegels =
-        prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte;
-    final afzonderlijkeRegels =
-        prijsResultaat.afzonderlijkePrijsregelsVoorOfferte;
+    final omschrijvingZonderPrijsRegels = prijsResultaat
+        .omschrijvingZonderPrijsRegelsVoorOfferte
+        .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
+        .toList(growable: false);
+    final afzonderlijkeRegels = prijsResultaat
+        .afzonderlijkePrijsregelsVoorOfferte
+        .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
+        .toList(growable: false);
     final totaalVoorKorting =
         prijsResultaat.offerteTotaalExclBtw +
         (kortingToestaan ? prijsResultaat.kortingBedragExclBtw : 0.0);
@@ -906,6 +915,12 @@ class OffertePdfInzethorWidget {
   <path d="M $x $buitenOnder l -4 -7 M $x $buitenOnder l 4 -7"
     stroke="#4B5563" stroke-width="0.9" fill="none"/>
 ''';
+  }
+
+  static bool _isAlgemeneArtikelPrijsregel(
+    OfferteToegepastePrijsregelModel regel,
+  ) {
+    return regel.bronPrijsregelId.trim().startsWith('toegepast_project_');
   }
 }
 

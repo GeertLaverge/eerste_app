@@ -498,6 +498,7 @@ class OffertePdfPvcRaamWidget {
         resultaat.afzonderlijkePrijsregelsVoorOfferte
             .where(
               (prijsregel) =>
+                  !_isAlgemeneArtikelPrijsregel(prijsregel) &&
                   !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
                     prijsregel,
                   ),
@@ -506,6 +507,7 @@ class OffertePdfPvcRaamWidget {
         resultaat.omschrijvingZonderPrijsRegelsVoorOfferte
             .where(
               (prijsregel) =>
+                  !_isAlgemeneArtikelPrijsregel(prijsregel) &&
                   !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
                     prijsregel,
                   ),
@@ -534,6 +536,7 @@ class OffertePdfPvcRaamWidget {
         .omschrijvingZonderPrijsRegelsVoorOfferte
         .where(
           (prijsregel) =>
+              !_isAlgemeneArtikelPrijsregel(prijsregel) &&
               !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
                 prijsregel,
               ),
@@ -542,6 +545,7 @@ class OffertePdfPvcRaamWidget {
     final afzonderlijkeRegels = resultaat.afzonderlijkePrijsregelsVoorOfferte
         .where(
           (prijsregel) =>
+              !_isAlgemeneArtikelPrijsregel(prijsregel) &&
               !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
                 prijsregel,
               ),
@@ -741,5 +745,11 @@ class OffertePdfPvcRaamWidget {
 
   static String _bedragMetPunt(double waarde) {
     return waarde.toStringAsFixed(2);
+  }
+
+  static bool _isAlgemeneArtikelPrijsregel(
+    OfferteToegepastePrijsregelModel regel,
+  ) {
+    return regel.bronPrijsregelId.trim().startsWith('toegepast_project_');
   }
 }

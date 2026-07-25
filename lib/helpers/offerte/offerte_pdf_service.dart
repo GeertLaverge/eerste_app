@@ -268,7 +268,7 @@ class OffertePdfService {
 
   static pw.Widget _bouwKlantblok(OfferteDocumentData data) {
     final datum = _formatteerDatum(data.offerteDatum);
-    final klantNaam = data.klant.weergaveNaam.trim();
+    final klantNaam = data.klant.naam.trim();
 
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(18, 17, 18, 16),
@@ -301,8 +301,7 @@ class OffertePdfService {
           _klantRegel('Postcode en gemeente', data.klant.postcodeEnGemeente),
           _klantRegel('Telefoon', data.klant.telefoon),
           _klantRegel('E-mail', data.klant.email),
-          if (data.klant.projectAdres.trim().isNotEmpty)
-            _klantRegel('Projectadres', data.klant.projectAdres),
+          _klantRegel('Projectadres', data.klant.projectAdres),
           pw.SizedBox(height: 4),
           pw.Container(height: 0.8, color: rand),
           pw.SizedBox(height: 10),
@@ -943,7 +942,8 @@ class OffertePdfService {
   static double _berekenEindBerekeningReserve(OfferteDocumentData data) {
     final aantalProjectRegels =
         data.afzonderlijkeProjectPrijsregelsVoorOfferte.length +
-        data.projectOmschrijvingZonderPrijsRegelsVoorOfferte.length;
+        data.projectOmschrijvingZonderPrijsRegelsVoorOfferte.length +
+        data.algemeneArtikelPrijsregelsInbegrepenInOfferte.length;
     final aantalProjectOpties = data.lossePrijsOpties.length;
     var reserve = _basisEindBerekeningReserve;
     if (data.kortingTotaalExclBtw > 0.0) reserve += 48.0;
@@ -957,10 +957,11 @@ class OffertePdfService {
   }
 
   static pw.Widget _bouwProjectPrijsregels(OfferteDocumentData data) {
-    final regels = [
+    final projectRegels = [
       ...data.projectOmschrijvingZonderPrijsRegelsVoorOfferte,
       ...data.afzonderlijkeProjectPrijsregelsVoorOfferte,
     ];
+    final algemeneRegels = data.algemeneArtikelPrijsregelsInbegrepenInOfferte;
 
     return pw.Container(
       decoration: pw.BoxDecoration(
@@ -978,7 +979,7 @@ class OffertePdfService {
               borderRadius: pw.BorderRadius.circular(7),
             ),
             child: pw.Text(
-              'Bijkomende werken/materiaal',
+              'Extra werk/materiaal inbegrepen in offerte',
               style: pw.TextStyle(
                 color: tekstDonker,
                 fontSize: 9.5,
@@ -986,25 +987,35 @@ class OffertePdfService {
               ),
             ),
           ),
-          for (var index = 0; index < regels.length; index++) ...<pw.Widget>[
-            if (index > 0) pw.Container(height: 0.7, color: rand),
+          for (var index = 0; index < algemeneRegels.length; index++)
+            _bouwSamengevoegdeAlgemenePrijsregel(
+              algemeneRegels[index],
+              toonScheiding: index > 0,
+            ),
+          for (
+            var index = 0;
+            index < projectRegels.length;
+            index++
+          ) ...<pw.Widget>[
+            if (algemeneRegels.isNotEmpty || index > 0)
+              pw.Container(height: 0.7, color: rand),
             pw.Padding(
               padding: const pw.EdgeInsets.fromLTRB(12, 7, 12, 7),
               child: pw.Row(
                 children: <pw.Widget>[
                   pw.Expanded(
                     child: pw.Text(
-                      regels[index].omschrijving,
+                      projectRegels[index].omschrijving,
                       style: const pw.TextStyle(
                         color: tekstGrijs,
                         fontSize: 8.5,
                       ),
                     ),
                   ),
-                  if (regels[index].toonAfzonderlijkePrijsOpOfferte) ...[
+                  if (projectRegels[index].toonAfzonderlijkePrijsOpOfferte) ...[
                     pw.SizedBox(width: 18),
                     pw.Text(
-                      _formatteerEuro(regels[index].totaalExclBtw),
+                      _formatteerEuro(projectRegels[index].totaalExclBtw),
                       textAlign: pw.TextAlign.right,
                       style: pw.TextStyle(
                         color: tekstDonker,
@@ -1019,6 +1030,42 @@ class OffertePdfService {
           ],
         ],
       ),
+    );
+  }
+
+  static pw.Widget _bouwSamengevoegdeAlgemenePrijsregel(
+    OfferteSamengevoegdeArtikelPrijsregel regel, {
+    required bool toonScheiding,
+  }) {
+    return pw.Column(
+      children: <pw.Widget>[
+        if (toonScheiding) pw.Container(height: 0.7, color: rand),
+        pw.Padding(
+          padding: const pw.EdgeInsets.fromLTRB(12, 7, 12, 7),
+          child: pw.Row(
+            children: <pw.Widget>[
+              pw.Expanded(
+                child: pw.Text(
+                  regel.omschrijving,
+                  style: const pw.TextStyle(color: tekstGrijs, fontSize: 8.5),
+                ),
+              ),
+              if (regel.toonAfzonderlijkePrijs) ...<pw.Widget>[
+                pw.SizedBox(width: 18),
+                pw.Text(
+                  _formatteerEuro(regel.totaalExclBtw),
+                  textAlign: pw.TextAlign.right,
+                  style: pw.TextStyle(
+                    color: tekstDonker,
+                    fontSize: 9.5,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

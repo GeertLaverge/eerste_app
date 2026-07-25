@@ -41,7 +41,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     required this.verborgenNietRekenenPositieIds,
     required this.projectKleurMenus,
     required this.offerteController,
-    required this.heeftPrijsregelBronGroepen,
     required this.onTitelhoofdGewijzigd,
     required this.onKlantLaden,
     required this.onToggleFormulierType,
@@ -58,7 +57,8 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     required this.prijsCorrectieDoelSamenvatting,
     required this.onPrijsCorrectieToepassenOpOpenen,
     required this.onArtikelVerplaatsen,
-    required this.onPrijsregelOpenen,
+    required this.onAlgemenePrijsregelOpenen,
+    required this.onBestaandeProjectPrijsregelsBewerken,
   });
 
   final String klantNaam;
@@ -68,7 +68,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   final Set<String> verborgenNietRekenenPositieIds;
   final List<OpmetingProjectKleurSubmenu> projectKleurMenus;
   final OfferteController offerteController;
-  final bool heeftPrijsregelBronGroepen;
   final ValueChanged<OpmetingProjectTitelhoofd> onTitelhoofdGewijzigd;
   final Future<void> Function() onKlantLaden;
   final ValueChanged<String> onToggleFormulierType;
@@ -87,7 +86,8 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   final OpmetingOverzichtPrijsCorrectieDialoog
   onPrijsCorrectieToepassenOpOpenen;
   final OpmetingOverzichtArtikelVerplaatsActie onArtikelVerplaatsen;
-  final Future<void> Function() onPrijsregelOpenen;
+  final Future<void> Function() onAlgemenePrijsregelOpenen;
+  final Future<void> Function() onBestaandeProjectPrijsregelsBewerken;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
@@ -255,7 +255,7 @@ class OpmetingOverzichtLijst extends StatelessWidget {
               ),
             );
           }),
-        if (projectTitelhoofd.berekenPrijzen && heeftPrijsregelBronGroepen)
+        if (projectTitelhoofd.berekenPrijzen)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Align(
@@ -274,7 +274,7 @@ class OpmetingOverzichtLijst extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  unawaited(onPrijsregelOpenen());
+                  unawaited(onAlgemenePrijsregelOpenen());
                 },
                 icon: const Icon(Icons.rule_folder_outlined, size: 19),
                 label: const Text(
@@ -289,7 +289,7 @@ class OpmetingOverzichtLijst extends StatelessWidget {
           OfferteProjectPrijsOverzichtKaart(
             resultaat: projectPrijsResultaat,
             onBewerken: () {
-              unawaited(onPrijsregelOpenen());
+              unawaited(onBestaandeProjectPrijsregelsBewerken());
             },
           ),
       ],

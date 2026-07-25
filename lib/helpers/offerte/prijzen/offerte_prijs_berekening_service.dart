@@ -13,6 +13,7 @@ class OffertePrijsBerekeningService {
   const OffertePrijsBerekeningService._();
 
   static const String _tijdelijkeVrijePrijsPrefix = 'tijdelijk_vrij_';
+  static const String _toegepasteProjectPrijsPrefix = 'toegepast_project_';
 
   static bool moetTechnischeMomentopnameBijwerken(
     OpmetingVasteInzethorModel model,
@@ -105,6 +106,7 @@ class OffertePrijsBerekeningService {
         .where(
           (selectie) =>
               _isTijdelijkeVrijePrijsSelectie(selectie) &&
+              !_isGekozenProjectPrijsSelectie(selectie) &&
               !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .map((selectie) {
@@ -149,6 +151,13 @@ class OffertePrijsBerekeningService {
               selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .toList(growable: false);
+    final gekozenProjectPrijsSelecties = model.vrijeArtikelPrijsSelecties
+        .where(
+          (selectie) =>
+              _isGekozenProjectPrijsSelectie(selectie) &&
+              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
+        )
+        .toList(growable: false);
     final bestaandeAutomatischeSelecties = model.vrijeArtikelPrijsSelecties
         .where(
           (selectie) =>
@@ -187,6 +196,7 @@ class OffertePrijsBerekeningService {
         vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
           ...bestaandeAutomatischeSelecties,
           ...verdeelkostMarkeringen,
+          ...gekozenProjectPrijsSelecties,
           ...tijdelijkeSelecties,
         ],
       ),
@@ -302,6 +312,12 @@ class OffertePrijsBerekeningService {
     OfferteVrijePrijsSelectieModel selectie,
   ) {
     return selectie.id.startsWith(_tijdelijkeVrijePrijsPrefix);
+  }
+
+  static bool _isGekozenProjectPrijsSelectie(
+    OfferteVrijePrijsSelectieModel selectie,
+  ) {
+    return selectie.bronPrijsregelId.startsWith(_toegepasteProjectPrijsPrefix);
   }
 
   static int _leesTijdelijkeVolgorde(String id) {

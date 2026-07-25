@@ -97,13 +97,15 @@ class OffertePrijzenPagina extends StatelessWidget {
                   border: Border.all(color: _rand),
                 ),
                 child: const Text(
-                  'Beheer hier de offerteprijzen per soort opmeetfiche. '
-                  'Vaste inzethor, Vliegendeur, PVC en ALU raam, PVC en ALU '
-                  'schuifraam en PVC en ALU deur zijn actief. Iedere fiche '
-                  'heeft een eigen prijsprofiel. Technische-keuzeprijzen zijn '
-                  'niet van toepassing op Vaste inzethor en Vliegendeur. '
-                  'U kunt prijsregels toevoegen, wijzigen, ordenen en tijdelijk '
-                  'uitschakelen. Zonwering wordt later gekoppeld.',
+                  'Beheer hieronder de artikelspecifieke offerteprijzen '
+                  'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
+                  'PVC en ALU raam, PVC en ALU schuifraam en PVC en ALU '
+                  'deur zijn actief. Iedere fiche heeft een eigen '
+                  'prijsprofiel. Technische-keuzeprijzen zijn niet van '
+                  'toepassing op Vaste inzethor en Vliegendeur. U kunt '
+                  'artikelspecifieke prijsregels toevoegen, wijzigen, '
+                  'ordenen en tijdelijk uitschakelen. Zonwering wordt '
+                  'later gekoppeld.',
                   style: TextStyle(
                     color: _tekstGrijs,
                     fontSize: 13,
@@ -112,7 +114,13 @@ class OffertePrijzenPagina extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
+              const _SectieTitel(
+                titel: 'Prijzen per artikel',
+                subtitel:
+                    'Technische keuzeprijzen en vrije prijzen per artikel.',
+              ),
+              const SizedBox(height: 10),
               ..._fiches.map((fiche) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -202,6 +210,43 @@ class OffertePrijzenPagina extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectieTitel extends StatelessWidget {
+  const _SectieTitel({required this.titel, required this.subtitel});
+
+  final String titel;
+  final String subtitel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            titel,
+            style: const TextStyle(
+              color: OffertePrijzenPagina._tekstDonker,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitel,
+            style: const TextStyle(
+              color: OffertePrijzenPagina._tekstGrijs,
+              fontSize: 11.8,
+              height: 1.3,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

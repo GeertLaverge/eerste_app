@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: TECHNISCHE-UITSCHRIJFTEKST-EN-PRIJS-KOPPELING-20260720
+// THIMACO-CONTROLE: BESTAANDE-PROJECTPRIJSREGEL-ROUTE-20260725
 import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
@@ -39,6 +39,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   String _klantNaam = '';
   bool _laden = false;
+
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
 
@@ -52,13 +53,20 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Set<String> _verborgenNietRekenenPositieIds = <String>{};
 
   final OfferteController _offerteController = OfferteController.standaard();
+
   late final OffertePrijsinstellingenController _prijsinstellingenController;
+
   late final OfferteArtikelPrijscorrectieController
   _artikelPrijscorrectieController;
+
   late final OfferteProjectPrijsregelController _projectPrijsregelController;
+
   late final OffertePositieBeheerController _positieBeheerController;
+
   late final OpmetingProjectTitelhoofdController _projectTitelhoofdController;
+
   late final OpmetingProjectBestandController _projectBestandController;
+
   late final OpmetingFormulierNavigatieController _formulierNavigatieController;
 
   bool get _heeftOpenBestand {
@@ -68,6 +76,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   @override
   void initState() {
     super.initState();
+
     _prijsinstellingenController = OffertePrijsinstellingenController(
       context: context,
       isMounted: () => mounted,
@@ -85,17 +94,24 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         _toonMelding(tekst, fout: fout);
       },
       onHerberekeningStatusGewijzigd: () {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {});
       },
     );
+
     _artikelPrijscorrectieController = OfferteArtikelPrijscorrectieController(
       context: context,
       offerteController: _offerteController,
       isMounted: () => mounted,
       leesArtikelen: () => _raamOpmetingen,
       vervangArtikelen: (artikelen) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _raamOpmetingen
             ..clear()
@@ -108,10 +124,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         );
       },
       onDoelSelectieGewijzigd: () {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {});
       },
     );
+
     _projectPrijsregelController = OfferteProjectPrijsregelController(
       context: context,
       offerteController: _offerteController,
@@ -129,7 +149,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         );
       },
       vervangArtikelen: (artikelen) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _raamOpmetingen
             ..clear()
@@ -137,7 +160,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         });
       },
       vervangTitelhoofd: (titelhoofd) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _projectTitelhoofd = titelhoofd;
         });
@@ -146,6 +172,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         _toonMelding(tekst, fout: fout);
       },
     );
+
     _positieBeheerController = OffertePositieBeheerController(
       context: context,
       offerteController: _offerteController,
@@ -163,7 +190,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         );
       },
       verplaatsArtikelLokaal: (huidigeIndex, nieuweIndex) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           final opmeting = _raamOpmetingen.removeAt(huidigeIndex);
           _raamOpmetingen.insert(nieuweIndex, opmeting);
@@ -173,6 +203,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         _toonMelding(tekst);
       },
     );
+
     _projectTitelhoofdController = OpmetingProjectTitelhoofdController(
       context: context,
       isMounted: () => mounted,
@@ -180,7 +211,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       leesTitelhoofd: () => _projectTitelhoofd,
       leesOpmetingen: () => _raamOpmetingen,
       vervangProjectState: (titelhoofd, klantNaam, opmetingen) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _klantNaam = klantNaam;
           _projectTitelhoofd = titelhoofd;
@@ -198,6 +232,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         _toonMelding(tekst, fout: fout);
       },
     );
+
     _projectBestandController = OpmetingProjectBestandController(
       context: context,
       isMounted: () => mounted,
@@ -210,7 +245,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       artikelPrijscorrectieController: _artikelPrijscorrectieController,
       vervangProjectState:
           (klantNaam, titelhoofd, opmetingen, verborgenFormulierTypes, laden) {
-            if (!mounted) return;
+            if (!mounted) {
+              return;
+            }
+
             setState(() {
               _klantNaam = klantNaam;
               _projectTitelhoofd = titelhoofd;
@@ -223,13 +261,19 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             });
           },
       vervangProjectKleuren: (kleuren) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _projectKleurMenus = kleuren;
         });
       },
       zetLaden: (laden) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
+
         setState(() {
           _laden = laden;
         });
@@ -238,6 +282,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         _toonMelding(tekst, fout: fout);
       },
     );
+
     _formulierNavigatieController = OpmetingFormulierNavigatieController(
       context: context,
       isMounted: () => mounted,
@@ -252,6 +297,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         );
       },
     );
+
     _projectBestandController.laadProjectKleuren();
     _prijsinstellingenController.startAutomatischeControle();
   }
@@ -308,6 +354,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+
     final resultaat = await _prijsinstellingenController
         .werkTechnischePrijsMomentopnamesBij(
           alleOpmetingen: alleOpmetingen,
@@ -331,6 +378,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     final klantSleutel = klantNaam.trim().toLowerCase();
+
     final zichtbareOpmetingen = resultaat.opmetingen
         .where((opmeting) {
           return !opmeting.isVerwijderd &&
@@ -345,15 +393,16 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     });
   }
 
-  Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) {
+  Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) async {
     if (item.isNietRekenen) {
       _toonMelding(
-        'Deze groep staat op “niet rekenen”. Zet de groep eerst opnieuw actief om ze aan te passen.',
+        'Deze groep staat op “niet rekenen”. Zet de groep eerst opnieuw actief '
+        'om ze aan te passen.',
       );
-      return Future<void>.value();
+      return;
     }
 
-    return _formulierNavigatieController.bewerkOpmeting(item);
+    await _formulierNavigatieController.bewerkOpmeting(item);
   }
 
   Future<void> _verwijderRaamopmeting(OpmetingOverzichtRaamItem item) {
@@ -377,7 +426,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    // Bij activeren of herstellen moet de positie opnieuw zichtbaar zijn.
     setState(() {
       _verborgenNietRekenenPositieIds = Set<String>.from(
         _verborgenNietRekenenPositieIds,
@@ -392,6 +440,33 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     return _positieBeheerController.verplaatsPositie(item, richting);
   }
 
+  Future<void> _wijzigArtikelPrijs(
+    OpmetingOverzichtRaamItem item,
+    double prijs,
+  ) {
+    return _artikelPrijscorrectieController.wijzigArtikelPrijs(item, prijs);
+  }
+
+  Future<void> _wijzigArtikelWinstmarge(
+    OpmetingOverzichtRaamItem item,
+    double percentage,
+  ) {
+    return _artikelPrijscorrectieController.wijzigArtikelWinstmarge(
+      item,
+      percentage,
+    );
+  }
+
+  Future<void> _wijzigArtikelKorting(
+    OpmetingOverzichtRaamItem item,
+    double percentage,
+  ) {
+    return _artikelPrijscorrectieController.wijzigArtikelKorting(
+      item,
+      percentage,
+    );
+  }
+
   List<OpmetingOverzichtRaamItem> _selecteerOndersteundeOffertePosities(
     Iterable<OpmetingOverzichtRaamItem> posities,
   ) {
@@ -400,6 +475,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         if (positie.isVerwijderd || positie.isNietRekenen) {
           return false;
         }
+
         return positie.vliegendeurData != null ||
             OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
       }),
@@ -444,6 +520,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     }
 
     final validatie = _offerteController.valideerPrijsgegevens(offertePosities);
+
     if (validatie.isGeldig) {
       return true;
     }
@@ -452,7 +529,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       required String titel,
       required List<OfferteValidatieMelding> meldingen,
     }) {
-      if (meldingen.isEmpty) return const SizedBox.shrink();
+      if (meldingen.isEmpty) {
+        return const SizedBox.shrink();
+      }
 
       return Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -514,7 +593,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 const Text(
-                  'Controleer onderstaande posities voordat je de offerte opent.',
+                  'Controleer onderstaande posities voordat je de offerte '
+                  'opent.',
                 ),
                 const SizedBox(height: 12),
                 ConstrainedBox(
@@ -550,12 +630,16 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           ),
           actions: <Widget>[
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
               child: const Text('Terug naar overzicht'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _groen),
-              onPressed: () => Navigator.pop(dialogContext, true),
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
               child: const Text('Toch offerte openen'),
             ),
           ],
@@ -570,11 +654,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     await _prijsinstellingenController
         .controleerOpenOfferteOpPrijsinstellingen();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     final overzichtPosities = _selecteerOndersteundeOffertePosities(
       _raamOpmetingen,
     );
+
     if (overzichtPosities.isEmpty) {
       _toonMelding(
         'Er zijn geen ondersteunde artikelfiches voor het prijsoverzicht.',
@@ -586,18 +673,23 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final basisTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty
         ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
         : _projectTitelhoofd;
+
     final titelhoofd = await _projectTitelhoofdController.vulAanUitKlantenfiche(
       klantNaam: basisTitelhoofd.klantNaam,
       basis: basisTitelhoofd,
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     await AppStorage.bewaarOpmetingProjectTitelhoofd(
       titelhoofd.metWijzigingsDatum(),
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
       _projectTitelhoofd = titelhoofd;
@@ -623,8 +715,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    // Gebruik exact dezelfde centrale typekoppeling als het overzicht,
-    // offertemodel, de PDF-berekening en het eindtotaal.
     final offertePosities = _selecteerOndersteundeOffertePosities(
       _raamOpmetingen,
     );
@@ -640,6 +730,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final magOfferteOpenen = await _bevestigOfferteMetOntbrekendePrijsgegevens(
       offertePosities,
     );
+
     if (!magOfferteOpenen || !mounted) {
       return;
     }
@@ -647,6 +738,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     final basisTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty
         ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
         : _projectTitelhoofd;
+
     final titelhoofd = await _projectTitelhoofdController.vulAanUitKlantenfiche(
       klantNaam: basisTitelhoofd.klantNaam,
       basis: basisTitelhoofd,
@@ -699,7 +791,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       backgroundColor: _achtergrond,
       body: SafeArea(
         child: Column(
-          children: [
+          children: <Widget>[
             _bouwBovenbalk(),
             Expanded(
               child: _laden
@@ -728,9 +820,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           _prijsinstellingenController.isHerberekeningBezig,
       onNieuwBestand: _projectBestandController.nieuwBestand,
       onOpenBestand: _projectBestandController.openBestand,
-      onOpslaanBestand: () async {
-        await _projectBestandController.opslaanBestand();
-      },
+      onOpslaanBestand: _projectBestandController.opslaanBestand,
       onWisBestand: _projectBestandController.wisBestand,
       onEindeOpmeting: _projectBestandController.eindeOpmeting,
       onHerberekenOfferte:
@@ -748,9 +838,11 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       case OfferteArtikelOpenType.raamopmeting:
         await _openRaamopmeting(formulierType: registratie.formulierType);
         break;
+
       case OfferteArtikelOpenType.vasteInzethor:
         await _openVasteInzethor();
         break;
+
       case OfferteArtikelOpenType.vliegendeur:
         await _openVliegendeur();
         break;
@@ -778,8 +870,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       verborgenNietRekenenPositieIds: _verborgenNietRekenenPositieIds,
       projectKleurMenus: _projectKleurMenus,
       offerteController: _offerteController,
-      heeftPrijsregelBronGroepen:
-          _projectPrijsregelController.heeftBeschikbarePrijsregelBronGroepen,
       onTitelhoofdGewijzigd: _projectTitelhoofdController.verwerkWijziging,
       onKlantLaden: _projectTitelhoofdController.laadKlantUitBlauweAgenda,
       onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
@@ -795,27 +885,19 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           positieLabel: positieLabel,
         );
       },
-      onPrijsGewijzigd: (item, prijs) {
-        return _artikelPrijscorrectieController.wijzigArtikelPrijs(item, prijs);
-      },
-      onWinstmargeGewijzigd: (item, percentage) {
-        return _artikelPrijscorrectieController.wijzigArtikelWinstmarge(
-          item,
-          percentage,
-        );
-      },
-      onKortingGewijzigd: (item, percentage) {
-        return _artikelPrijscorrectieController.wijzigArtikelKorting(
-          item,
-          percentage,
-        );
-      },
+      onPrijsGewijzigd: _wijzigArtikelPrijs,
+      onWinstmargeGewijzigd: _wijzigArtikelWinstmarge,
+      onKortingGewijzigd: _wijzigArtikelKorting,
       prijsCorrectieDoelSamenvatting:
           _artikelPrijscorrectieController.prijsCorrectieDoelSamenvatting,
       onPrijsCorrectieToepassenOpOpenen:
           _artikelPrijscorrectieController.openPrijsCorrectieToepassenOpDialog,
       onArtikelVerplaatsen: _verplaatsRaamopmeting,
-      onPrijsregelOpenen: _openPrijsVoorAlleArtikelenVenster,
+
+      // Beide projectbrede prijsregelknoppen gebruiken opnieuw
+      // uitsluitend de bestaande, werkende prijsregelcontroller.
+      onAlgemenePrijsregelOpenen: _openPrijsVoorAlleArtikelenVenster,
+      onBestaandeProjectPrijsregelsBewerken: _openPrijsVoorAlleArtikelenVenster,
     );
   }
 }

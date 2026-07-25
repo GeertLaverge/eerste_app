@@ -10,7 +10,6 @@ import 'prijzen/offerte_toegepaste_prijsregel_model.dart';
 class OfferteKlantgegevens {
   const OfferteKlantgegevens({
     required this.naam,
-    this.aanspreking = '',
     required this.adres,
     required this.postcodeEnGemeente,
     required this.telefoon,
@@ -20,17 +19,12 @@ class OfferteKlantgegevens {
   });
 
   final String naam;
-  final String aanspreking;
   final String contactpersoon;
   final String adres;
   final String postcodeEnGemeente;
   final String telefoon;
   final String email;
   final String projectAdres;
-
-  String get weergaveNaam {
-    return opmetingKlantWeergaveNaam(aanspreking: aanspreking, klantNaam: naam);
-  }
 
   factory OfferteKlantgegevens.vanTitelhoofd(
     OpmetingProjectTitelhoofd titelhoofd,
@@ -48,14 +42,16 @@ class OfferteKlantgegevens {
         : titelhoofd.telefoon.trim();
 
     return OfferteKlantgegevens(
-      naam: opmetingKlantNaamZonderAanspreking(titelhoofd.klantNaam),
-      aanspreking: normaliseerOpmetingAanspreking(titelhoofd.aanspreking),
+      naam: titelhoofd.klantNaam.trim(),
       contactpersoon: titelhoofd.contactpersoon.trim(),
       adres: volledigAdres,
       postcodeEnGemeente: titelhoofd.plaats.trim(),
       telefoon: telefoon,
       email: titelhoofd.email.trim(),
-      projectAdres: titelhoofd.volledigProjectAdres.trim(),
+      projectAdres: <String>[
+        volledigAdres,
+        titelhoofd.plaats.trim(),
+      ].where((deel) => deel.isNotEmpty).join(', '),
     );
   }
 }
@@ -68,6 +64,27 @@ class OffertePrijsOptieRegel {
 
   final String omschrijving;
   final double bedragExclBtw;
+}
+
+class OfferteSamengevoegdeArtikelPrijsregel {
+  const OfferteSamengevoegdeArtikelPrijsregel({
+    required this.sleutel,
+    required this.omschrijving,
+    required this.totaalExclBtw,
+    required this.toonAfzonderlijkePrijs,
+    required this.toonOmschrijvingZonderPrijs,
+    required this.toonAlsOptie,
+  });
+
+  final String sleutel;
+  final String omschrijving;
+  final double totaalExclBtw;
+  final bool toonAfzonderlijkePrijs;
+  final bool toonOmschrijvingZonderPrijs;
+  final bool toonAlsOptie;
+
+  bool get isZichtbaar =>
+      toonAfzonderlijkePrijs || toonOmschrijvingZonderPrijs || toonAlsOptie;
 }
 
 class OfferteDocumentData {
@@ -315,19 +332,82 @@ class OfferteDocumentData {
     }
 
     return List<OffertePrijsOptieRegel>.unmodifiable(
-      resultaat.optiePrijsregelsVoorOfferte.map(
-        (regel) => OffertePrijsOptieRegel(
-          omschrijving:
-              OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(regel),
-          bedragExclBtw: regel.totaalExclBtw,
-        ),
-      ),
+      resultaat.optiePrijsregelsVoorOfferte
+          .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
+          .map(
+            (regel) => OffertePrijsOptieRegel(
+              omschrijving:
+                  OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+                    regel,
+                  ),
+              bedragExclBtw: regel.totaalExclBtw,
+            ),
+          ),
     );
   }
 
   bool heeftPositiePrijsOpties(OpmetingOverzichtRaamItem positie) {
     return positiePrijsOptiesVoor(positie).isNotEmpty;
   }
+
+  List<OfferteSamengevoegdeArtikelPrijsregel>
+  get samengevoegdeAlgemeneArtikelPrijsregels {
+    final verzameld = <String, _AlgemeneArtikelPrijsregelAccumulator>{};
+
+    for (final positie in hoofdoffertePosities) {
+      final resultaat = prijsResultaatVoorPositie(positie);
+      if (resultaat == null) continue;
+
+      for (final regel in resultaat.allePrijsregels) {
+        if (!_isAlgemeneArtikelPrijsregel(regel) || !regel.isGeldig) continue;
+
+        final sleutel = _algemeneArtikelPrijsregelSleutel(positie, regel);
+        final bestaand = verzameld[sleutel];
+        if (bestaand == null) {
+          verzameld[sleutel] = _AlgemeneArtikelPrijsregelAccumulator(
+            sleutel: sleutel,
+            omschrijving:
+                OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(regel),
+            totaalExclBtw: regel.totaalExclBtw,
+            toonAfzonderlijkePrijs: regel.toonAfzonderlijkePrijsOpOfferte,
+            toonOmschrijvingZonderPrijs:
+                regel.toonOmschrijvingZonderPrijsOpOfferte,
+            toonAlsOptie: regel.toonAlsOptieOpOfferte,
+          );
+        } else {
+          bestaand.totaalExclBtw += regel.totaalExclBtw;
+        }
+      }
+    }
+
+    return List<OfferteSamengevoegdeArtikelPrijsregel>.unmodifiable(
+      verzameld.values
+          .map((item) => item.bouw())
+          .where((regel) => regel.isZichtbaar),
+    );
+  }
+
+  List<OfferteSamengevoegdeArtikelPrijsregel>
+  get algemeneArtikelPrijsregelsInbegrepenInOfferte {
+    return List<OfferteSamengevoegdeArtikelPrijsregel>.unmodifiable(
+      samengevoegdeAlgemeneArtikelPrijsregels.where(
+        (regel) =>
+            !regel.toonAlsOptie &&
+            (regel.toonAfzonderlijkePrijs || regel.toonOmschrijvingZonderPrijs),
+      ),
+    );
+  }
+
+  List<OfferteSamengevoegdeArtikelPrijsregel> get algemeneArtikelPrijsopties {
+    return List<OfferteSamengevoegdeArtikelPrijsregel>.unmodifiable(
+      samengevoegdeAlgemeneArtikelPrijsregels.where(
+        (regel) => regel.toonAlsOptie,
+      ),
+    );
+  }
+
+  bool get heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte =>
+      algemeneArtikelPrijsregelsInbegrepenInOfferte.isNotEmpty;
 
   List<OfferteToegepastePrijsregelModel> get projectPrijsregelsVoorOfferte {
     return List<OfferteToegepastePrijsregelModel>.unmodifiable(
@@ -367,7 +447,8 @@ class OfferteDocumentData {
 
   bool get heeftZichtbareProjectPrijsregels {
     return afzonderlijkeProjectPrijsregelsVoorOfferte.isNotEmpty ||
-        projectOmschrijvingZonderPrijsRegelsVoorOfferte.isNotEmpty;
+        projectOmschrijvingZonderPrijsRegelsVoorOfferte.isNotEmpty ||
+        heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte;
   }
 
   double get projectPrijsregelsTotaalExclBtw {
@@ -421,15 +502,21 @@ class OfferteDocumentData {
       _rondBedragAf(totaalExclusiefBtw + btwBedrag);
 
   List<OffertePrijsOptieRegel> get lossePrijsOpties {
-    return List<OffertePrijsOptieRegel>.unmodifiable(
-      projectOptiePrijsregels.map(
+    return List<OffertePrijsOptieRegel>.unmodifiable(<OffertePrijsOptieRegel>[
+      ...projectOptiePrijsregels.map(
         (regel) => OffertePrijsOptieRegel(
           omschrijving:
               OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(regel),
           bedragExclBtw: regel.totaalExclBtw,
         ),
       ),
-    );
+      ...algemeneArtikelPrijsopties.map(
+        (regel) => OffertePrijsOptieRegel(
+          omschrijving: regel.omschrijving,
+          bedragExclBtw: regel.totaalExclBtw,
+        ),
+      ),
+    ]);
   }
 
   bool get heeftLossePrijsOpties => lossePrijsOpties.isNotEmpty;
@@ -475,4 +562,60 @@ class OfferteDocumentData {
     if (!waarde.isFinite || waarde <= 0.0) return 0.0;
     return (waarde * 100.0).roundToDouble() / 100.0;
   }
+}
+
+class _AlgemeneArtikelPrijsregelAccumulator {
+  _AlgemeneArtikelPrijsregelAccumulator({
+    required this.sleutel,
+    required this.omschrijving,
+    required this.totaalExclBtw,
+    required this.toonAfzonderlijkePrijs,
+    required this.toonOmschrijvingZonderPrijs,
+    required this.toonAlsOptie,
+  });
+
+  final String sleutel;
+  final String omschrijving;
+  double totaalExclBtw;
+  final bool toonAfzonderlijkePrijs;
+  final bool toonOmschrijvingZonderPrijs;
+  final bool toonAlsOptie;
+
+  OfferteSamengevoegdeArtikelPrijsregel bouw() {
+    return OfferteSamengevoegdeArtikelPrijsregel(
+      sleutel: sleutel,
+      omschrijving: omschrijving,
+      totaalExclBtw: _rondPdfBedragAf(totaalExclBtw),
+      toonAfzonderlijkePrijs: toonAfzonderlijkePrijs,
+      toonOmschrijvingZonderPrijs: toonOmschrijvingZonderPrijs,
+      toonAlsOptie: toonAlsOptie,
+    );
+  }
+}
+
+bool _isAlgemeneArtikelPrijsregel(OfferteToegepastePrijsregelModel regel) {
+  return regel.bronPrijsregelId.trim().startsWith('toegepast_project_');
+}
+
+String _algemeneArtikelPrijsregelSleutel(
+  OpmetingOverzichtRaamItem positie,
+  OfferteToegepastePrijsregelModel regel,
+) {
+  final bronId = regel.bronPrijsregelId.trim();
+  final formulierSleutel = positie.formulierTypeGenormaliseerd
+      .trim()
+      .toLowerCase()
+      .replaceAll('_', '')
+      .replaceAll(' ', '');
+  final prefix = 'toegepast_project_${formulierSleutel}_';
+  if (formulierSleutel.isNotEmpty && bronId.startsWith(prefix)) {
+    final oorspronkelijkId = bronId.substring(prefix.length).trim();
+    if (oorspronkelijkId.isNotEmpty) return oorspronkelijkId;
+  }
+  return bronId;
+}
+
+double _rondPdfBedragAf(double waarde) {
+  if (!waarde.isFinite) return 0.0;
+  return (waarde * 100).roundToDouble() / 100;
 }

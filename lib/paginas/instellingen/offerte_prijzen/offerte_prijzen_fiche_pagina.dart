@@ -652,19 +652,17 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
-            child: const Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(Icons.info_outline_rounded, color: _groen, size: 20),
-                SizedBox(width: 10),
+                const Icon(Icons.info_outline_rounded, color: _groen, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Voeg hier prijsregels toe, wijzig de volgorde '
-                    'en zet regels tijdelijk actief of inactief. '
-                    'Bij een interne verdeelkost kunt u een bestaande '
-                    'omschrijving uit een andere artikelgroep kiezen. '
-                    'Bedrag, aankooplimiet en actiefstatus blijven dan '
-                    'automatisch gelijk bij alle gekoppelde groepen.',
+                    'Beheer hier uitsluitend de prijsregels die bij '
+                    '${widget.formulierNaam} horen. Voeg regels toe, '
+                    'wijzig de volgorde en zet ze tijdelijk actief of '
+                    'inactief.',
                     style: TextStyle(
                       color: _tekstGrijs,
                       fontSize: 12.5,
@@ -697,17 +695,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
             uitleg:
                 'Vrije bijkomende kosten die later bij één '
                 'afzonderlijk artikel kunnen worden ingevuld.',
-          ),
-          const SizedBox(height: 14),
-          _bouwTabel(
-            profiel,
-            categorie: OffertePrijsCategorie.alleArtikelen,
-            uitleg:
-                'Projectbrede prijsregels. Kies bij een interne '
-                'verdeelkost een bestaande omschrijving om deze '
-                'artikelgroep aan dezelfde verdeelkost te koppelen. '
-                'De gedeelde kost wordt slechts één keer over alle '
-                'gekoppelde artikelen verdeeld.',
           ),
         ],
       ),
