@@ -49,6 +49,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       <OpmetingProjectKleurSubmenu>[];
 
   Set<String> _verborgenFormulierTypes = <String>{};
+  Set<String> _verborgenNietRekenenPositieIds = <String>{};
 
   final OfferteController _offerteController = OfferteController.standaard();
   late final OffertePrijsinstellingenController _prijsinstellingenController;
@@ -217,6 +218,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 ..clear()
                 ..addAll(opmetingen);
               _verborgenFormulierTypes = verborgenFormulierTypes;
+              _verborgenNietRekenenPositieIds = <String>{};
               _laden = laden;
             });
           },
@@ -344,6 +346,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   Future<void> _bewerkRaamopmeting(OpmetingOverzichtRaamItem item) {
+    if (item.isNietRekenen) {
+      _toonMelding(
+        'Deze groep staat op “niet rekenen”. Zet de groep eerst opnieuw actief om ze aan te passen.',
+      );
+      return Future<void>.value();
+    }
+
     return _formulierNavigatieController.bewerkOpmeting(item);
   }
 
@@ -359,6 +368,23 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     return _positieBeheerController.wisselOptieplaatsing(item);
   }
 
+  Future<void> _wisselRaamopmetingNietRekenen(
+    OpmetingOverzichtRaamItem item,
+  ) async {
+    await _positieBeheerController.wisselNietRekenen(item);
+
+    if (!mounted) {
+      return;
+    }
+
+    // Bij activeren of herstellen moet de positie opnieuw zichtbaar zijn.
+    setState(() {
+      _verborgenNietRekenenPositieIds = Set<String>.from(
+        _verborgenNietRekenenPositieIds,
+      )..remove(item.id);
+    });
+  }
+
   Future<void> _verplaatsRaamopmeting(
     OpmetingOverzichtRaamItem item,
     int richting,
@@ -371,8 +397,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   ) {
     return List<OpmetingOverzichtRaamItem>.unmodifiable(
       posities.where((positie) {
-        if (positie.isVerwijderd) return false;
-
+        if (positie.isVerwijderd || positie.isNietRekenen) {
+          return false;
+        }
         return positie.vliegendeurData != null ||
             OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
       }),
@@ -390,6 +417,22 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       }
 
       _verborgenFormulierTypes = nieuweVerborgenTypes;
+    });
+  }
+
+  void _toggleNietRekenenPositieZichtbaarheid(String positieId) {
+    setState(() {
+      final nieuweVerborgenPositieIds = Set<String>.from(
+        _verborgenNietRekenenPositieIds,
+      );
+
+      if (nieuweVerborgenPositieIds.contains(positieId)) {
+        nieuweVerborgenPositieIds.remove(positieId);
+      } else {
+        nieuweVerborgenPositieIds.add(positieId);
+      }
+
+      _verborgenNietRekenenPositieIds = nieuweVerborgenPositieIds;
     });
   }
 
@@ -732,6 +775,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       projectTitelhoofd: _projectTitelhoofd,
       opmetingen: _raamOpmetingen,
       verborgenFormulierTypes: _verborgenFormulierTypes,
+      verborgenNietRekenenPositieIds: _verborgenNietRekenenPositieIds,
       projectKleurMenus: _projectKleurMenus,
       offerteController: _offerteController,
       heeftPrijsregelBronGroepen:
@@ -739,10 +783,12 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       onTitelhoofdGewijzigd: _projectTitelhoofdController.verwerkWijziging,
       onKlantLaden: _projectTitelhoofdController.laadKlantUitBlauweAgenda,
       onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
+      onToggleNietRekenenPositie: _toggleNietRekenenPositieZichtbaarheid,
       onArtikelOpenen: _bewerkRaamopmeting,
       onArtikelVerwijderen: _verwijderRaamopmeting,
       onArtikelKopieren: _kopieerRaamopmeting,
       onArtikelOptieWijzigen: _wisselRaamopmetingOptie,
+      onArtikelNietRekenenWijzigen: _wisselRaamopmetingNietRekenen,
       onPrijsMenuOpenen: (item, positieLabel) {
         return _openVrijePrijsPerArtikelVenster(
           item,

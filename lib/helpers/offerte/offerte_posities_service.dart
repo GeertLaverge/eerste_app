@@ -13,6 +13,7 @@ class OffertePositiesService {
           tweede.oorspronkelijkeIndex,
         );
       });
+
     return List<OfferteArtikelModel>.unmodifiable(resultaat);
   }
 
@@ -21,6 +22,7 @@ class OffertePositiesService {
   ) {
     final gesorteerd = sorteerOpOorspronkelijkeVolgorde(artikelen);
     final labels = <String, String>{};
+
     var artikelNummer = 0;
     var optieNummer = 0;
 
@@ -61,19 +63,34 @@ class OffertePositiesService {
     List<OpmetingOverzichtRaamItem> posities,
   ) {
     final actievePosities = posities
-        .where((positie) => !positie.isOfferteOptie)
+        .where((positie) => positie.teltMeeInHoofdofferte)
         .toList(growable: false);
+
     final optiePosities = posities
-        .where((positie) => positie.isOfferteOptie)
+        .where((positie) => positie.isZichtbareOfferteOptie)
         .toList(growable: false);
+
+    final nietTeRekenenPosities = posities
+        .where((positie) {
+          return !positie.isVerwijderd && positie.isNietRekenen;
+        })
+        .toList(growable: false);
+
     final labels = <String, String>{};
 
     for (var index = 0; index < actievePosities.length; index++) {
       labels[actievePosities[index].id] = 'Pos ${index + 1}';
     }
+
     for (var index = 0; index < optiePosities.length; index++) {
       labels[optiePosities[index].id] =
           'Optie ${letterVoorOptieNummer(index + 1)}';
+    }
+
+    // Deze groepen blijven zichtbaar in het interne overzicht,
+    // maar krijgen bewust geen positie- of optienummer.
+    for (final positie in nietTeRekenenPosities) {
+      labels[positie.id] = 'Niet rekenen';
     }
 
     return Map<String, String>.unmodifiable(labels);
@@ -82,35 +99,14 @@ class OffertePositiesService {
   List<OpmetingOverzichtRaamItem> groepeerBronPositiesVoorOverzicht(
     List<OpmetingOverzichtRaamItem> posities,
   ) {
-    final actievePosities = posities
-        .where((positie) => !positie.isOfferteOptie)
-        .toList(growable: false);
-    final optiePosities = posities
-        .where((positie) => positie.isOfferteOptie)
-        .toList(growable: false);
-    final resultaat = <OpmetingOverzichtRaamItem>[];
-    final toegevoegdeIds = <String>{};
-
-    for (final hoofdpositie in actievePosities) {
-      resultaat.add(hoofdpositie);
-      toegevoegdeIds.add(hoofdpositie.id);
-
-      for (final optie in optiePosities) {
-        if (optie.offerteOptieHoofdpositieId.trim() != hoofdpositie.id) {
-          continue;
-        }
-        resultaat.add(optie);
-        toegevoegdeIds.add(optie.id);
-      }
-    }
-
-    for (final positie in posities) {
-      if (toegevoegdeIds.add(positie.id)) {
-        resultaat.add(positie);
-      }
-    }
-
-    return List<OpmetingOverzichtRaamItem>.unmodifiable(resultaat);
+    // Het overzichtsformulier bewaart altijd exact de interne opslagvolgorde.
+    // De koppeling tussen een optie en haar hoofdpositie blijft opgeslagen voor
+    // de offertewerking, maar mag de kaarten in dit interne overzicht niet
+    // verplaatsen. De PDF gebruikt haar eigen selecties en wordt hier niet
+    // beïnvloed.
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      posities.where((positie) => !positie.isVerwijderd),
+    );
   }
 
   String bepaalOptieHoofdpositieId({
@@ -120,25 +116,38 @@ class OffertePositiesService {
     final huidigeIndex = posities.indexWhere(
       (positie) => positie.id == positieId,
     );
-    if (huidigeIndex < 0) return '';
+
+    if (huidigeIndex < 0) {
+      return '';
+    }
 
     final huidig = posities[huidigeIndex];
     final kopieBronId = huidig.gekopieerdVanPositieId.trim();
+
     if (kopieBronId.isNotEmpty) {
       final bronBestaat = posities.any((positie) {
         return positie.id == kopieBronId && positie.teltMeeInHoofdofferte;
       });
-      if (bronBestaat) return kopieBronId;
+
+      if (bronBestaat) {
+        return kopieBronId;
+      }
     }
 
     for (var index = huidigeIndex - 1; index >= 0; index--) {
       final kandidaat = posities[index];
-      if (kandidaat.teltMeeInHoofdofferte) return kandidaat.id;
+
+      if (kandidaat.teltMeeInHoofdofferte) {
+        return kandidaat.id;
+      }
     }
 
     for (var index = huidigeIndex + 1; index < posities.length; index++) {
       final kandidaat = posities[index];
-      if (kandidaat.teltMeeInHoofdofferte) return kandidaat.id;
+
+      if (kandidaat.teltMeeInHoofdofferte) {
+        return kandidaat.id;
+      }
     }
 
     return '';

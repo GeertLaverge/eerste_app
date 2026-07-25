@@ -55,10 +55,7 @@ class OfferteKlantgegevens {
       postcodeEnGemeente: titelhoofd.plaats.trim(),
       telefoon: telefoon,
       email: titelhoofd.email.trim(),
-      projectAdres: <String>[
-        volledigAdres,
-        titelhoofd.plaats.trim(),
-      ].where((deel) => deel.isNotEmpty).join(', '),
+      projectAdres: titelhoofd.volledigProjectAdres.trim(),
     );
   }
 }

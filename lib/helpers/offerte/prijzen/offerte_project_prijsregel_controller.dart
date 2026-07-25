@@ -511,7 +511,7 @@ class OfferteProjectPrijsregelController {
         .groepeerBronPositiesVoorOverzicht(artikelen);
 
     final keuzes = geordendeItems
-        .where((artikel) => !artikel.isVerwijderd)
+        .where((artikel) => !artikel.isVerwijderd && !artikel.isNietRekenen)
         .map((artikel) {
           final koppeling =
               OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(artikel);
@@ -521,7 +521,10 @@ class OfferteProjectPrijsregelController {
               prijsregel.isVerdeeldeProjectkost &&
               !artikel.teltMeeInHoofdofferte;
           final beschikbaar =
-              koppeling != null && prijsData != null && !optieNietBeschikbaar;
+              !artikel.isNietRekenen &&
+              koppeling != null &&
+              prijsData != null &&
+              !optieNietBeschikbaar;
           final aantalArtikelen =
               OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(artikel);
           final bedrag = beschikbaar
@@ -586,8 +589,12 @@ class OfferteProjectPrijsregelController {
 
     for (var index = 0; index < nieuweLijst.length; index++) {
       final huidig = nieuweLijst[index];
-      if (huidig.isVerwijderd || !artikelIds.contains(huidig.id)) continue;
 
+      if (huidig.isVerwijderd ||
+          huidig.isNietRekenen ||
+          !artikelIds.contains(huidig.id)) {
+        continue;
+      }
       final doelKoppeling =
           OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(huidig);
       final huidigePrijsData =

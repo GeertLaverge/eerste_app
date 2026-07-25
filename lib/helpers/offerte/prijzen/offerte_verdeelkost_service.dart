@@ -836,8 +836,7 @@ class OfferteVerdeelkostService {
     String klantSleutel,
     String formulierType,
   ) {
-    return !opmeting.isVerwijderd &&
-        opmeting.isOfferteOptie &&
+    return opmeting.isZichtbareOfferteOptie &&
         opmeting.klantNaam.trim().toLowerCase() == klantSleutel &&
         _isZelfdeFormulierType(
           opmeting.formulierTypeGenormaliseerd,

@@ -15,6 +15,11 @@ class OpmetingProjectTitelhoofd {
     this.gsm = '',
     this.telefoon = '',
     this.email = '',
+    this.projectAdres = '',
+    this.projectHuisnummer = '',
+    this.projectBusNummer = '',
+    this.projectPostcode = '',
+    this.projectGemeente = '',
     this.projectKleurBinnen = '',
     this.projectKleurBuiten = '',
     this.ralKleurToebehoren = '',
@@ -54,6 +59,11 @@ class OpmetingProjectTitelhoofd {
   final String gsm;
   final String telefoon;
   final String email;
+  final String projectAdres;
+  final String projectHuisnummer;
+  final String projectBusNummer;
+  final String projectPostcode;
+  final String projectGemeente;
   final String projectKleurBinnen;
   final String projectKleurBuiten;
   final String ralKleurToebehoren;
@@ -82,6 +92,40 @@ class OpmetingProjectTitelhoofd {
       postcode.trim(),
       gemeente.trim(),
     ].where((deel) => deel.isNotEmpty).join(' ');
+  }
+
+  String get projectPlaats {
+    return <String>[
+      projectPostcode.trim(),
+      projectGemeente.trim(),
+    ].where((deel) => deel.isNotEmpty).join(' ');
+  }
+
+  String get projectAdresRegel {
+    final nummer = <String>[
+      projectHuisnummer.trim(),
+      if (projectBusNummer.trim().isNotEmpty) 'bus ${projectBusNummer.trim()}',
+    ].where((deel) => deel.isNotEmpty).join(' ');
+
+    return <String>[
+      projectAdres.trim(),
+      nummer,
+    ].where((deel) => deel.isNotEmpty).join(' ');
+  }
+
+  String get volledigProjectAdres {
+    return <String>[
+      projectAdresRegel,
+      projectPlaats,
+    ].where((deel) => deel.trim().isNotEmpty).join(', ');
+  }
+
+  bool get heeftProjectAdres {
+    return projectAdres.trim().isNotEmpty ||
+        projectHuisnummer.trim().isNotEmpty ||
+        projectBusNummer.trim().isNotEmpty ||
+        projectPostcode.trim().isNotEmpty ||
+        projectGemeente.trim().isNotEmpty;
   }
 
   String get samengesteldOffertenummer {
@@ -114,6 +158,7 @@ class OpmetingProjectTitelhoofd {
 
   bool get isLeeg {
     return !heeftKlantGegevens &&
+        !heeftProjectAdres &&
         !heeftProjectKleuren &&
         kleurAfwijking.trim().isEmpty &&
         tijdelijkeProjectPrijsregels.isEmpty &&
@@ -132,6 +177,11 @@ class OpmetingProjectTitelhoofd {
     String? gsm,
     String? telefoon,
     String? email,
+    String? projectAdres,
+    String? projectHuisnummer,
+    String? projectBusNummer,
+    String? projectPostcode,
+    String? projectGemeente,
     String? projectKleurBinnen,
     String? projectKleurBuiten,
     String? ralKleurToebehoren,
@@ -162,6 +212,11 @@ class OpmetingProjectTitelhoofd {
       gsm: gsm ?? this.gsm,
       telefoon: telefoon ?? this.telefoon,
       email: email ?? this.email,
+      projectAdres: projectAdres ?? this.projectAdres,
+      projectHuisnummer: projectHuisnummer ?? this.projectHuisnummer,
+      projectBusNummer: projectBusNummer ?? this.projectBusNummer,
+      projectPostcode: projectPostcode ?? this.projectPostcode,
+      projectGemeente: projectGemeente ?? this.projectGemeente,
       projectKleurBinnen: projectKleurBinnen ?? this.projectKleurBinnen,
       projectKleurBuiten: projectKleurBuiten ?? this.projectKleurBuiten,
       ralKleurToebehoren: ralKleurToebehoren ?? this.ralKleurToebehoren,
@@ -226,6 +281,11 @@ class OpmetingProjectTitelhoofd {
       'gsm': gsm,
       'telefoon': telefoon,
       'email': email,
+      'projectAdres': projectAdres,
+      'projectHuisnummer': projectHuisnummer,
+      'projectBusNummer': projectBusNummer,
+      'projectPostcode': projectPostcode,
+      'projectGemeente': projectGemeente,
       'projectKleurBinnen': projectKleurBinnen,
       'projectKleurBuiten': projectKleurBuiten,
       'ralKleurToebehoren': ralKleurToebehoren,
@@ -272,6 +332,11 @@ class OpmetingProjectTitelhoofd {
       gsm: json['gsm']?.toString() ?? '',
       telefoon: json['telefoon']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      projectAdres: json['projectAdres']?.toString() ?? '',
+      projectHuisnummer: json['projectHuisnummer']?.toString() ?? '',
+      projectBusNummer: json['projectBusNummer']?.toString() ?? '',
+      projectPostcode: json['projectPostcode']?.toString() ?? '',
+      projectGemeente: json['projectGemeente']?.toString() ?? '',
       projectKleurBinnen: json['projectKleurBinnen']?.toString() ?? '',
       projectKleurBuiten: json['projectKleurBuiten']?.toString() ?? '',
       ralKleurToebehoren:

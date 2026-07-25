@@ -25,6 +25,18 @@ class OpmetingProjectTypeSamenvatting {
   final bool zichtbaar;
 }
 
+class OpmetingNietRekenenSamenvatting {
+  const OpmetingNietRekenenSamenvatting({
+    required this.positieId,
+    required this.label,
+    required this.zichtbaar,
+  });
+
+  final String positieId;
+  final String label;
+  final bool zichtbaar;
+}
+
 class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
   const OpmetingProjectTitelhoofdKaart({
     super.key,
@@ -35,6 +47,8 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
     required this.onTitelhoofdGewijzigd,
     required this.onKlantLaden,
     required this.onToggleFormulierType,
+    this.verborgenNietRekenenPositieIds = const <String>{},
+    this.onToggleNietRekenenPositie,
   });
 
   final OpmetingProjectTitelhoofd titelhoofd;
@@ -44,6 +58,8 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
   final ValueChanged<OpmetingProjectTitelhoofd> onTitelhoofdGewijzigd;
   final VoidCallback onKlantLaden;
   final ValueChanged<String> onToggleFormulierType;
+  final Set<String> verborgenNietRekenenPositieIds;
+  final ValueChanged<String>? onToggleNietRekenenPositie;
 
   @override
   State<OpmetingProjectTitelhoofdKaart> createState() {
@@ -61,6 +77,9 @@ class _OpmetingProjectTitelhoofdKaartState
   static const Color _tekstGrijs = Color(0xFF6B7280);
   static const Color _oranjeLicht = Color(0xFFFFF7ED);
   static const Color _oranje = Color(0xFFEA580C);
+  static const Color _rood = Color(0xFFDC2626);
+  static const Color _roodLicht = Color(0xFFFEF2F2);
+  static const Color _roodRand = Color(0xFFFCA5A5);
 
   late String _aanspreking;
   late final TextEditingController _klantNaamController;
@@ -73,6 +92,11 @@ class _OpmetingProjectTitelhoofdKaartState
   late final TextEditingController _gsmController;
   late final TextEditingController _telefoonController;
   late final TextEditingController _emailController;
+  late final TextEditingController _projectAdresController;
+  late final TextEditingController _projectHuisnummerController;
+  late final TextEditingController _projectBusNummerController;
+  late final TextEditingController _projectPostcodeController;
+  late final TextEditingController _projectGemeenteController;
   late final TextEditingController _kleurBinnenController;
   late final TextEditingController _kleurBuitenController;
   late final TextEditingController _ralKleurToebehorenController;
@@ -99,6 +123,11 @@ class _OpmetingProjectTitelhoofdKaartState
     _gsmController = TextEditingController();
     _telefoonController = TextEditingController();
     _emailController = TextEditingController();
+    _projectAdresController = TextEditingController();
+    _projectHuisnummerController = TextEditingController();
+    _projectBusNummerController = TextEditingController();
+    _projectPostcodeController = TextEditingController();
+    _projectGemeenteController = TextEditingController();
     _kleurBinnenController = TextEditingController();
     _kleurBuitenController = TextEditingController();
     _ralKleurToebehorenController = TextEditingController();
@@ -141,6 +170,11 @@ class _OpmetingProjectTitelhoofdKaartState
     _gsmController.dispose();
     _telefoonController.dispose();
     _emailController.dispose();
+    _projectAdresController.dispose();
+    _projectHuisnummerController.dispose();
+    _projectBusNummerController.dispose();
+    _projectPostcodeController.dispose();
+    _projectGemeenteController.dispose();
     _kleurBinnenController.dispose();
     _kleurBuitenController.dispose();
     _ralKleurToebehorenController.dispose();
@@ -174,6 +208,17 @@ class _OpmetingProjectTitelhoofdKaartState
     _zetControllerTekst(_gsmController, titelhoofd.gsm);
     _zetControllerTekst(_telefoonController, titelhoofd.telefoon);
     _zetControllerTekst(_emailController, titelhoofd.email);
+    _zetControllerTekst(_projectAdresController, titelhoofd.projectAdres);
+    _zetControllerTekst(
+      _projectHuisnummerController,
+      titelhoofd.projectHuisnummer,
+    );
+    _zetControllerTekst(
+      _projectBusNummerController,
+      titelhoofd.projectBusNummer,
+    );
+    _zetControllerTekst(_projectPostcodeController, titelhoofd.projectPostcode);
+    _zetControllerTekst(_projectGemeenteController, titelhoofd.projectGemeente);
     _zetControllerTekst(_kleurBinnenController, titelhoofd.projectKleurBinnen);
     _zetControllerTekst(_kleurBuitenController, titelhoofd.projectKleurBuiten);
     _zetControllerTekst(
@@ -252,6 +297,11 @@ class _OpmetingProjectTitelhoofdKaartState
         gsm: _gsmController.text,
         telefoon: _telefoonController.text,
         email: _emailController.text,
+        projectAdres: _projectAdresController.text,
+        projectHuisnummer: _projectHuisnummerController.text,
+        projectBusNummer: _projectBusNummerController.text,
+        projectPostcode: _projectPostcodeController.text,
+        projectGemeente: _projectGemeenteController.text,
         projectKleurBinnen: _kleurBinnenController.text,
         projectKleurBuiten: _kleurBuitenController.text,
         ralKleurToebehoren: _ralKleurToebehorenController.text,
@@ -269,6 +319,214 @@ class _OpmetingProjectTitelhoofdKaartState
         berekenPrijzen: berekenPrijzen ?? widget.titelhoofd.berekenPrijzen,
       ),
     );
+  }
+
+  bool get _heeftProjectAdresInvoer {
+    return <String>[
+      _projectAdresController.text,
+      _projectHuisnummerController.text,
+      _projectBusNummerController.text,
+      _projectPostcodeController.text,
+      _projectGemeenteController.text,
+    ].any((waarde) => waarde.trim().isNotEmpty);
+  }
+
+  Future<void> _openProjectAdresDialog() async {
+    final straatController = TextEditingController(
+      text: _projectAdresController.text,
+    );
+    final huisnummerController = TextEditingController(
+      text: _projectHuisnummerController.text,
+    );
+    final busNummerController = TextEditingController(
+      text: _projectBusNummerController.text,
+    );
+    final postcodeController = TextEditingController(
+      text: _projectPostcodeController.text,
+    );
+    final gemeenteController = TextEditingController(
+      text: _projectGemeenteController.text,
+    );
+
+    Widget bouwProjectAdresVeld({
+      required TextEditingController controller,
+      required String label,
+      TextInputType? keyboardType,
+      TextCapitalization textCapitalization = TextCapitalization.words,
+      bool autofocus = false,
+    }) {
+      return TextField(
+        controller: controller,
+        autofocus: autofocus,
+        keyboardType: keyboardType,
+        textCapitalization: textCapitalization,
+        style: const TextStyle(
+          color: _tekstDonker,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFF9FAFB),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 10,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: _rand),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: _groen, width: 1.4),
+          ),
+          floatingLabelStyle: const TextStyle(
+            color: _groen,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      );
+    }
+
+    final opslaan = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+          contentPadding: const EdgeInsets.fromLTRB(18, 6, 18, 6),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+          title: const Row(
+            children: <Widget>[
+              Icon(Icons.home_work_outlined, color: _groen, size: 21),
+              SizedBox(width: 9),
+              Text(
+                'Projectadres',
+                style: TextStyle(
+                  color: _groen,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 430,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                bouwProjectAdresVeld(
+                  controller: straatController,
+                  label: 'Straat',
+                  autofocus: true,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: bouwProjectAdresVeld(
+                        controller: huisnummerController,
+                        label: 'Nr.',
+                        keyboardType: TextInputType.streetAddress,
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: bouwProjectAdresVeld(
+                        controller: busNummerController,
+                        label: 'Bus',
+                        keyboardType: TextInputType.streetAddress,
+                        textCapitalization: TextCapitalization.characters,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 2,
+                      child: bouwProjectAdresVeld(
+                        controller: postcodeController,
+                        label: 'Postcode',
+                        keyboardType: TextInputType.number,
+                        textCapitalization: TextCapitalization.none,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 3,
+                      child: bouwProjectAdresVeld(
+                        controller: gemeenteController,
+                        label: 'Gemeente',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: _tekstGrijs),
+              onPressed: () {
+                straatController.clear();
+                huisnummerController.clear();
+                busNummerController.clear();
+                postcodeController.clear();
+                gemeenteController.clear();
+              },
+              icon: const Icon(Icons.delete_sweep_outlined, size: 17),
+              label: const Text('Leegmaken'),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: _groen),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _groen),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Opslaan'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (opslaan == true && mounted) {
+      _zetControllerTekst(_projectAdresController, straatController.text);
+      _zetControllerTekst(
+        _projectHuisnummerController,
+        huisnummerController.text,
+      );
+      _zetControllerTekst(
+        _projectBusNummerController,
+        busNummerController.text,
+      );
+      _zetControllerTekst(_projectPostcodeController, postcodeController.text);
+      _zetControllerTekst(_projectGemeenteController, gemeenteController.text);
+
+      setState(() {});
+      _meldWijziging();
+    }
+
+    straatController.dispose();
+    huisnummerController.dispose();
+    busNummerController.dispose();
+    postcodeController.dispose();
+    gemeenteController.dispose();
   }
 
   @override
@@ -321,25 +579,59 @@ class _OpmetingProjectTitelhoofdKaartState
     return _basisKaart(
       titel: 'Klantgegevens',
       icoon: Icons.person_outline_rounded,
-      actie: SizedBox(
-        height: 28,
-        child: OutlinedButton.icon(
-          onPressed: widget.onKlantLaden,
-          icon: const Icon(Icons.event_available_outlined, size: 13),
-          label: const Text('Klant laden'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _groen,
-            side: const BorderSide(color: _groen),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: const VisualDensity(horizontal: -3, vertical: -4),
-            padding: const EdgeInsets.symmetric(horizontal: 7),
-            textStyle: const TextStyle(
-              fontSize: 10.25,
-              fontWeight: FontWeight.w900,
+      actie: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Tooltip(
+            message: _heeftProjectAdresInvoer
+                ? 'Projectadres wijzigen'
+                : 'Projectadres invullen',
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: IconButton(
+                onPressed: _openProjectAdresDialog,
+                padding: EdgeInsets.zero,
+                style: IconButton.styleFrom(
+                  foregroundColor: _groen,
+                  backgroundColor: _heeftProjectAdresInvoer
+                      ? _lichtGroen
+                      : Colors.white,
+                  side: const BorderSide(color: _groen),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                icon: const Icon(Icons.home_work_outlined, size: 15),
+              ),
             ),
           ),
-        ),
+          const SizedBox(width: 5),
+          SizedBox(
+            height: 28,
+            child: OutlinedButton.icon(
+              onPressed: widget.onKlantLaden,
+              icon: const Icon(Icons.event_available_outlined, size: 13),
+              label: const Text('Klant laden'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _groen,
+                side: const BorderSide(color: _groen),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: const VisualDensity(
+                  horizontal: -3,
+                  vertical: -4,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 7),
+                textStyle: const TextStyle(
+                  fontSize: 10.25,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       kind: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -852,11 +1144,15 @@ class _OpmetingProjectTitelhoofdKaartState
 
   Widget _bouwInhoudKaart() {
     final samenvattingen = _samenvattingen();
+    final nietRekenenPosities = _nietRekenenSamenvattingen();
+
+    final heeftInhoud =
+        samenvattingen.isNotEmpty || nietRekenenPosities.isNotEmpty;
 
     return _basisKaart(
       titel: 'Inhoud fiche',
       icoon: Icons.format_list_bulleted_rounded,
-      kind: samenvattingen.isEmpty
+      kind: !heeftInhoud
           ? const Center(
               child: Text(
                 'Nog geen posities in deze fiche.',
@@ -869,14 +1165,78 @@ class _OpmetingProjectTitelhoofdKaartState
               ),
             )
           : Scrollbar(
-              child: ListView.separated(
+              child: ListView(
                 padding: EdgeInsets.zero,
-                itemCount: samenvattingen.length,
-                separatorBuilder: (_, __) =>
-                    const Divider(height: 12, color: _rand),
-                itemBuilder: (context, index) {
-                  return _inhoudRegel(samenvattingen[index]);
-                },
+                children: <Widget>[
+                  for (
+                    var index = 0;
+                    index < samenvattingen.length;
+                    index++
+                  ) ...<Widget>[
+                    _inhoudRegel(samenvattingen[index]),
+                    if (index < samenvattingen.length - 1)
+                      const Divider(height: 12, color: _rand),
+                  ],
+                  if (samenvattingen.isNotEmpty &&
+                      nietRekenenPosities.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 5),
+                      child: Divider(height: 1, color: _roodRand),
+                    ),
+                  if (nietRekenenPosities.isNotEmpty) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _roodLicht,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: _roodRand),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(
+                            Icons.block_outlined,
+                            color: _rood,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              nietRekenenPosities.length == 1
+                                  ? 'Niet te rekenen positie'
+                                  : 'Niet te rekenen posities',
+                              style: const TextStyle(
+                                color: _rood,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${nietRekenenPosities.length}',
+                            style: const TextStyle(
+                              color: _rood,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    for (
+                      var index = 0;
+                      index < nietRekenenPosities.length;
+                      index++
+                    ) ...<Widget>[
+                      _nietRekenenRegel(nietRekenenPosities[index]),
+                      if (index < nietRekenenPosities.length - 1)
+                        const Divider(height: 8, color: _roodRand),
+                    ],
+                  ],
+                ],
               ),
             ),
     );
@@ -1337,6 +1697,56 @@ class _OpmetingProjectTitelhoofdKaartState
     );
   }
 
+  Widget _nietRekenenRegel(OpmetingNietRekenenSamenvatting item) {
+    final callback = widget.onToggleNietRekenenPositie;
+    final kleur = item.zichtbaar ? _rood : _tekstGrijs;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: callback == null
+          ? null
+          : () {
+              callback(item.positieId);
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+        decoration: BoxDecoration(
+          color: item.zichtbaar
+              ? const Color(0xFFFFFAFA)
+              : const Color(0xFFF9FAFB),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: item.zichtbaar ? _rood : _tekstGrijs,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  decoration: item.zichtbaar
+                      ? null
+                      : TextDecoration.lineThrough,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              item.zichtbaar
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              color: kleur,
+              size: 19,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Color _kleurSwatchVoorTekst(String tekst) {
     final lower = tekst.toLowerCase();
 
@@ -1366,7 +1776,14 @@ class _OpmetingProjectTitelhoofdKaartState
     final labels = <String, String>{};
 
     for (final item in widget.opmetingen) {
+      // Niet te rekenen groepen komen niet meer in de gewone inhoud
+      // of aantallen van de fiche.
+      if (item.isNietRekenen) {
+        continue;
+      }
+
       final typeKey = item.formulierTypeGenormaliseerd;
+
       aantallen[typeKey] = (aantallen[typeKey] ?? 0) + 1;
       labels[typeKey] = item.formulierTypeLabel;
     }
@@ -1386,6 +1803,27 @@ class _OpmetingProjectTitelhoofdKaartState
         zichtbaar: !widget.verborgenFormulierTypes.contains(key),
       );
     }).toList();
+  }
+
+  List<OpmetingNietRekenenSamenvatting> _nietRekenenSamenvattingen() {
+    return widget.opmetingen
+        .where((item) => item.isNietRekenen)
+        .map((item) {
+          final titel = item.titel.trim();
+          final typeLabel = item.formulierTypeLabel.trim();
+
+          final label =
+              titel.isEmpty || titel.toLowerCase() == typeLabel.toLowerCase()
+              ? typeLabel
+              : '$typeLabel · $titel';
+
+          return OpmetingNietRekenenSamenvatting(
+            positieId: item.id,
+            label: label,
+            zichtbaar: !widget.verborgenNietRekenenPositieIds.contains(item.id),
+          );
+        })
+        .toList(growable: false);
   }
 }
 

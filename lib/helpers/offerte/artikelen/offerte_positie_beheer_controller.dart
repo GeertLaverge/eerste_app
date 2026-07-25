@@ -31,6 +31,16 @@ class OffertePositieBeheerController {
   final Future<void> Function(String klantNaam) herberekenPrijsMomentopnames;
   final void Function(int huidigeIndex, int nieuweIndex) verplaatsArtikelLokaal;
   final void Function(String tekst) toonMelding;
+  bool _blokkeerActieVoorNietRekenen(OpmetingOverzichtRaamItem item) {
+    if (!item.isNietRekenen) {
+      return false;
+    }
+
+    toonMelding(
+      'Deze groep staat op “niet rekenen”. Zet de groep eerst opnieuw actief.',
+    );
+    return true;
+  }
 
   Future<void> verwijderPositie(OpmetingOverzichtRaamItem item) async {
     final bevestigen = await showDialog<bool>(
@@ -85,6 +95,10 @@ class OffertePositieBeheerController {
   }
 
   Future<void> kopieerPositie(OpmetingOverzichtRaamItem item) async {
+    if (_blokkeerActieVoorNietRekenen(item)) {
+      return;
+    }
+
     final plaats = await showDialog<_PositieKopiePlaats>(
       context: context,
       builder: (dialogContext) {
@@ -194,6 +208,10 @@ class OffertePositieBeheerController {
   }
 
   Future<void> wisselOptieplaatsing(OpmetingOverzichtRaamItem item) async {
+    if (_blokkeerActieVoorNietRekenen(item)) {
+      return;
+    }
+
     final actie = await showDialog<_OfferteOptieActie>(
       context: context,
       builder: (dialogContext) {
@@ -302,6 +320,7 @@ class OffertePositieBeheerController {
     final bijgewerkt = item
         .copyWith(
           isOfferteOptie: wordtOptie,
+          isNietRekenen: false,
           offerteOptiePlaatsing: plaatsing,
           offerteOptieHoofdpositieId: hoofdpositieId,
           vasteInzethorData: wordtOptie && model != null
@@ -338,10 +357,119 @@ class OffertePositieBeheerController {
     toonMelding(melding);
   }
 
+  Future<void> wisselNietRekenen(OpmetingOverzichtRaamItem item) async {
+    final wordtNietRekenen = !item.isNietRekenen;
+
+    if (wordtNietRekenen) {
+      final bevestigen = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Row(
+              children: <Widget>[
+                Icon(Icons.block_outlined, color: Color(0xFFDC2626)),
+                SizedBox(width: 10),
+                Expanded(child: Text('Groep niet rekenen?')),
+              ],
+            ),
+            content: const SizedBox(
+              width: 520,
+              child: Text(
+                'Deze groep blijft bewaard en zichtbaar in de fiche, '
+                'maar wordt volledig uit de offerte gehaald.\n\n'
+                'De groep telt niet meer mee in de positienummering, '
+                'aantallen, prijsberekening, projectkosten, korting, '
+                'btw en het eindtotaal.\n\n'
+                'De groep kan later opnieuw geactiveerd worden.',
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: _groen),
+                onPressed: () {
+                  Navigator.pop(dialogContext, false);
+                },
+                child: const Text('Annuleren'),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  Navigator.pop(dialogContext, true);
+                },
+                icon: const Icon(Icons.block_outlined, size: 18),
+                label: const Text('Groep niet rekenen'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (bevestigen != true || !isMounted()) {
+        return;
+      }
+    }
+
+    final bijgewerkt = item
+        .copyWith(
+          isNietRekenen: wordtNietRekenen,
+
+          // Een groep kan niet tegelijk een offerteoptie en
+          // een volledig uitgesloten positie zijn.
+          isOfferteOptie: wordtNietRekenen ? false : item.isOfferteOptie,
+
+          // Bij uitsluiting heeft de koppeling met een hoofdpositie
+          // geen betekenis meer.
+          offerteOptieHoofdpositieId: wordtNietRekenen
+              ? ''
+              : item.offerteOptieHoofdpositieId,
+        )
+        .metNieuweWijzigingsDatum();
+
+    await AppStorage.werkOpmetingBij(bijgewerkt);
+    await OneDriveSyncService.registreerLokaleWijziging();
+    OneDriveSyncService().uploadBackupOpAchtergrond();
+
+    if (!isMounted()) {
+      return;
+    }
+
+    await herlaadOpmetingen(leesKlantNaam());
+
+    if (!isMounted()) {
+      return;
+    }
+
+    // Projectkosten en verdeelde interne kosten moeten onmiddellijk
+    // opnieuw berekend worden zonder deze groep.
+    await herberekenPrijsMomentopnames(item.klantNaam);
+
+    if (!isMounted()) {
+      return;
+    }
+
+    toonMelding(
+      wordtNietRekenen
+          ? 'Groep wordt niet meer meegerekend en verschijnt niet op de offerte.'
+          : 'Groep is opnieuw actief en wordt opnieuw meegerekend.',
+    );
+  }
+
   Future<void> verplaatsPositie(
     OpmetingOverzichtRaamItem item,
     int richting,
   ) async {
+    if (_blokkeerActieVoorNietRekenen(item)) {
+      return;
+    }
+
     final artikelen = leesArtikelen();
     final huidigeIndex = artikelen.indexWhere(
       (opmeting) => opmeting.id == item.id,

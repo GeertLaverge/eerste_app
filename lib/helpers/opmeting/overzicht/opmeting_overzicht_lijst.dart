@@ -38,16 +38,19 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     required this.projectTitelhoofd,
     required this.opmetingen,
     required this.verborgenFormulierTypes,
+    required this.verborgenNietRekenenPositieIds,
     required this.projectKleurMenus,
     required this.offerteController,
     required this.heeftPrijsregelBronGroepen,
     required this.onTitelhoofdGewijzigd,
     required this.onKlantLaden,
     required this.onToggleFormulierType,
+    required this.onToggleNietRekenenPositie,
     required this.onArtikelOpenen,
     required this.onArtikelVerwijderen,
     required this.onArtikelKopieren,
     required this.onArtikelOptieWijzigen,
+    required this.onArtikelNietRekenenWijzigen,
     required this.onPrijsMenuOpenen,
     required this.onPrijsGewijzigd,
     required this.onWinstmargeGewijzigd,
@@ -62,16 +65,19 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   final OpmetingProjectTitelhoofd projectTitelhoofd;
   final List<OpmetingOverzichtRaamItem> opmetingen;
   final Set<String> verborgenFormulierTypes;
+  final Set<String> verborgenNietRekenenPositieIds;
   final List<OpmetingProjectKleurSubmenu> projectKleurMenus;
   final OfferteController offerteController;
   final bool heeftPrijsregelBronGroepen;
   final ValueChanged<OpmetingProjectTitelhoofd> onTitelhoofdGewijzigd;
   final Future<void> Function() onKlantLaden;
   final ValueChanged<String> onToggleFormulierType;
+  final ValueChanged<String> onToggleNietRekenenPositie;
   final OpmetingOverzichtArtikelActie onArtikelOpenen;
   final OpmetingOverzichtArtikelActie onArtikelVerwijderen;
   final OpmetingOverzichtArtikelActie onArtikelKopieren;
   final OpmetingOverzichtArtikelActie onArtikelOptieWijzigen;
+  final OpmetingOverzichtArtikelActie onArtikelNietRekenenWijzigen;
   final OpmetingOverzichtArtikelPrijsMenuActie onPrijsMenuOpenen;
   final OpmetingOverzichtArtikelWaardeActie onPrijsGewijzigd;
   final OpmetingOverzichtArtikelWaardeActie onWinstmargeGewijzigd;
@@ -112,7 +118,13 @@ class OpmetingOverzichtLijst extends StatelessWidget {
         .groepeerBronPositiesVoorOverzicht(opmetingen);
 
     for (final item in geordendeItems) {
-      if (verborgenFormulierTypes.contains(item.formulierTypeGenormaliseerd)) {
+      if (item.isNietRekenen) {
+        if (verborgenNietRekenenPositieIds.contains(item.id)) {
+          continue;
+        }
+      } else if (verborgenFormulierTypes.contains(
+        item.formulierTypeGenormaliseerd,
+      )) {
         continue;
       }
 
@@ -135,12 +147,14 @@ class OpmetingOverzichtLijst extends StatelessWidget {
           titelhoofd: titelhoofdVoorPrijs,
           opmetingen: opmetingen,
           verborgenFormulierTypes: verborgenFormulierTypes,
+          verborgenNietRekenenPositieIds: verborgenNietRekenenPositieIds,
           kleurMenus: projectKleurMenus,
           onTitelhoofdGewijzigd: onTitelhoofdGewijzigd,
           onKlantLaden: () {
             unawaited(onKlantLaden());
           },
           onToggleFormulierType: onToggleFormulierType,
+          onToggleNietRekenenPositie: onToggleNietRekenenPositie,
         ),
         const SizedBox(height: 14),
         if (zichtbareItems.isEmpty)
@@ -192,6 +206,9 @@ class OpmetingOverzichtLijst extends StatelessWidget {
                 },
                 onOptieWijzigen: () {
                   unawaited(onArtikelOptieWijzigen(item));
+                },
+                onNietRekenenWijzigen: () {
+                  unawaited(onArtikelNietRekenenWijzigen(item));
                 },
                 onPrijsMenuOpenen: () {
                   unawaited(

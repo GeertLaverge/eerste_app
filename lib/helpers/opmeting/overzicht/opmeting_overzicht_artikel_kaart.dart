@@ -28,6 +28,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     required this.onVerwijderen,
     required this.onKopieren,
     required this.onOptieWijzigen,
+    this.onNietRekenenWijzigen,
     required this.onPrijsMenuOpenen,
     required this.onPrijsGewijzigd,
     required this.onWinstmargeGewijzigd,
@@ -47,6 +48,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   final VoidCallback onVerwijderen;
   final VoidCallback onKopieren;
   final VoidCallback onOptieWijzigen;
+  final VoidCallback? onNietRekenenWijzigen;
   final VoidCallback onPrijsMenuOpenen;
   final ValueChanged<double> onPrijsGewijzigd;
   final OfferteArtikelPercentageGewijzigd onWinstmargeGewijzigd;
@@ -61,6 +63,9 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _rood = Color(0xFFDC2626);
+  static const Color _roodLicht = Color(0xFFFEF2F2);
+  static const Color _roodRand = Color(0xFFFCA5A5);
 
   @override
   Widget build(BuildContext context) {
@@ -81,10 +86,19 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: item.isOfferteOptie ? const Color(0xFFFFFBF5) : Colors.white,
+        color: item.isNietRekenen
+            ? const Color(0xFFFFFAFA)
+            : item.isOfferteOptie
+            ? const Color(0xFFFFFBF5)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: item.isOfferteOptie ? const Color(0xFFF15A24) : _rand,
+          color: item.isNietRekenen
+              ? _roodRand
+              : item.isOfferteOptie
+              ? const Color(0xFFF15A24)
+              : _rand,
+          width: item.isNietRekenen ? 1.25 : 1,
         ),
         boxShadow: const [
           BoxShadow(
@@ -99,114 +113,95 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+            children: <Widget>[
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _lichtGroen,
+                  color: item.isNietRekenen ? _roodLicht : _lichtGroen,
                   borderRadius: BorderRadius.circular(999),
+                  border: item.isNietRekenen
+                      ? Border.all(color: _roodRand)
+                      : null,
                 ),
                 child: Text(
-                  item.isOfferteOptie
+                  item.isNietRekenen
+                      ? 'NIET REKENEN'
+                      : item.isOfferteOptie
                       ? item.isOfferteOptieOpPositie
                             ? '$positieLabel · IN OFFERTE'
                             : '$positieLabel · APARTE PAGINA'
                       : positieLabel,
-                  style: const TextStyle(
-                    color: _groen,
+                  style: TextStyle(
+                    color: item.isNietRekenen ? _rood : _groen,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      item.formulierTypeLabel,
-                      style: const TextStyle(
-                        color: _tekstDonker,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (uitvoeringsRegels.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: uitvoeringsRegels
-                                .map((regel) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 2),
-                                    child: Text(
-                                      regel,
-                                      style: const TextStyle(
-                                        color: _tekstGrijs,
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.25,
-                                      ),
-                                    ),
-                                  );
-                                })
-                                .toList(growable: false),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: <Widget>[
+                      if (item.isNietRekenen) ...<Widget>[
+                        if (onNietRekenenWijzigen != null)
+                          _ArtikelActieTekstKnop(
+                            tekst: 'Groep terug rekenen',
+                            onPressed: onNietRekenenWijzigen,
+                          ),
+                      ] else ...<Widget>[
+                        if (berekenPrijzen &&
+                            OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
+                              item,
+                            ))
+                          _ArtikelActieTekstKnop(
+                            tekst: 'Prijs toevoegen',
+                            onPressed: onPrijsMenuOpenen,
+                          ),
+                        _ArtikelActieTekstKnop(
+                          tekst: 'Aanpassen',
+                          onPressed: onOpenen,
+                        ),
+                        _ArtikelActieTekstKnop(
+                          tekst: 'Groep kopiëren',
+                          onPressed: onKopieren,
+                        ),
+                        _ArtikelActieTekstKnop(
+                          tekst: item.isOfferteOptie
+                              ? 'optie wijzigen'
+                              : 'Groep in optie plaatsen',
+                          onPressed: onOptieWijzigen,
+                        ),
+                        if (onNietRekenenWijzigen != null)
+                          _ArtikelActieTekstKnop(
+                            tekst: 'Groep niet rekenen',
+                            onPressed: onNietRekenenWijzigen,
+                          ),
+                        IconButton(
+                          tooltip: 'Verwijderen',
+                          onPressed: onVerwijderen,
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Color(0xFFDC2626),
                           ),
                         ),
-                      ),
+                        _PositieVerplaatsKnop(
+                          onOmhoog: onOmhoog,
+                          onOmlaag: onOmlaag,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              runSpacing: 6,
-              children: <Widget>[
-                if (berekenPrijzen &&
-                    OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
-                      item,
-                    ))
-                  _ArtikelActieTekstKnop(
-                    tekst: 'Prijs toevoegen',
-                    onPressed: onPrijsMenuOpenen,
-                    gevuld: true,
-                  ),
-                _ArtikelActieTekstKnop(tekst: 'Aanpassen', onPressed: onOpenen),
-                _ArtikelActieTekstKnop(
-                  tekst: 'Groep kopiëren',
-                  onPressed: onKopieren,
-                ),
-                _ArtikelActieTekstKnop(
-                  tekst: 'Groep in optie plaatsen',
-                  onPressed: onOptieWijzigen,
-                  oranje: item.isOfferteOptie,
-                ),
-                IconButton(
-                  tooltip: 'Verwijderen',
-                  onPressed: onVerwijderen,
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Color(0xFFDC2626),
-                  ),
-                ),
-                _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
-              ],
-            ),
           ),
           const SizedBox(height: 10),
           if (vasteInzethor != null)
@@ -492,6 +487,16 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             ),
           ]
         : const <Widget>[];
+    final geblokkeerdePrijsWidgets = item.isNietRekenen
+        ? prijsWidgets
+              .map((widget) {
+                return IgnorePointer(
+                  ignoring: true,
+                  child: Opacity(opacity: 0.62, child: widget),
+                );
+              })
+              .toList(growable: false)
+        : prijsWidgets;
 
     return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
       hoogte: gemeenschappelijkeHoogte,
@@ -499,7 +504,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
         technischeRegels: technischeRegels,
         technischeRegelsMetPrijs: technischeRegelsMetPrijs,
-        onderWidgets: prijsWidgets,
+        onderWidgets: geblokkeerdePrijsWidgets,
         scrollbaar: technischeRegelsScrollbaar,
         toonPrijsZone: toonTechnischePrijsZone,
       ),
@@ -676,38 +681,22 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
 }
 
 class _ArtikelActieTekstKnop extends StatelessWidget {
-  const _ArtikelActieTekstKnop({
-    required this.tekst,
-    required this.onPressed,
-    this.gevuld = false,
-    this.oranje = false,
-  });
+  const _ArtikelActieTekstKnop({required this.tekst, required this.onPressed});
 
   final String tekst;
-  final VoidCallback onPressed;
-  final bool gevuld;
-  final bool oranje;
+  final VoidCallback? onPressed;
 
   static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _oranje = Color(0xFFF15A24);
 
   @override
   Widget build(BuildContext context) {
-    final voorgrond = oranje ? _oranje : _groen;
-    final achtergrond = gevuld
-        ? _lichtGroen
-        : oranje
-        ? const Color(0xFFFFF7ED)
-        : Colors.white;
-    final randkleur = oranje ? const Color(0xFFFED7AA) : _rand;
-
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
-        foregroundColor: voorgrond,
-        backgroundColor: achtergrond,
-        side: BorderSide(color: randkleur),
+        foregroundColor: _groen,
+        backgroundColor: Colors.white,
+        disabledForegroundColor: _groen.withValues(alpha: 0.45),
+        side: const BorderSide(color: _rand),
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,

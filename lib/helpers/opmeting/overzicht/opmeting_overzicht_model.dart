@@ -350,6 +350,7 @@ class OpmetingOverzichtRaamItem {
     this.gewijzigdOp = '',
     this.isVerwijderd = false,
     this.isOfferteOptie = false,
+    this.isNietRekenen = false,
     this.offerteOptiePlaatsing = OfferteOptiePlaatsing.apartePagina,
     this.offerteOptieHoofdpositieId = '',
     this.gekopieerdVanPositieId = '',
@@ -373,14 +374,23 @@ class OpmetingOverzichtRaamItem {
   final String gewijzigdOp;
   final bool isVerwijderd;
   final bool isOfferteOptie;
+  final bool isNietRekenen;
   final OfferteOptiePlaatsing offerteOptiePlaatsing;
   final String offerteOptieHoofdpositieId;
   final String gekopieerdVanPositieId;
 
-  bool get teltMeeInHoofdofferte => !isVerwijderd && !isOfferteOptie;
-  bool get heeftOptieHoofdpositie =>
-      offerteOptieHoofdpositieId.trim().isNotEmpty;
-  bool get isZichtbareOfferteOptie => !isVerwijderd && isOfferteOptie;
+  bool get teltMeeInHoofdofferte {
+    return !isVerwijderd && !isOfferteOptie && !isNietRekenen;
+  }
+
+  bool get heeftOptieHoofdpositie {
+    return offerteOptieHoofdpositieId.trim().isNotEmpty;
+  }
+
+  bool get isZichtbareOfferteOptie {
+    return !isVerwijderd && isOfferteOptie && !isNietRekenen;
+  }
+
   bool get isOfferteOptieOpPositie {
     return isZichtbareOfferteOptie &&
         offerteOptiePlaatsing == OfferteOptiePlaatsing.positieBehouden;
@@ -510,6 +520,7 @@ class OpmetingOverzichtRaamItem {
     String? gewijzigdOp,
     bool? isVerwijderd,
     bool? isOfferteOptie,
+    bool? isNietRekenen,
     OfferteOptiePlaatsing? offerteOptiePlaatsing,
     String? offerteOptieHoofdpositieId,
     String? gekopieerdVanPositieId,
@@ -537,6 +548,7 @@ class OpmetingOverzichtRaamItem {
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
       isVerwijderd: isVerwijderd ?? this.isVerwijderd,
       isOfferteOptie: isOfferteOptie ?? this.isOfferteOptie,
+      isNietRekenen: isNietRekenen ?? this.isNietRekenen,
       offerteOptiePlaatsing:
           offerteOptiePlaatsing ?? this.offerteOptiePlaatsing,
       offerteOptieHoofdpositieId:
@@ -579,6 +591,7 @@ class OpmetingOverzichtRaamItem {
       'gewijzigdOp': gewijzigdOp,
       'isVerwijderd': isVerwijderd,
       'isOfferteOptie': isOfferteOptie,
+      'isNietRekenen': isNietRekenen,
       'offerteOptiePlaatsing': offerteOptiePlaatsing.jsonWaarde,
       'offerteOptieHoofdpositieId': offerteOptieHoofdpositieId,
       'gekopieerdVanPositieId': gekopieerdVanPositieId,
@@ -641,6 +654,7 @@ class OpmetingOverzichtRaamItem {
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,
       isOfferteOptie: json['isOfferteOptie'] == true || json['isOptie'] == true,
+      isNietRekenen: json['isNietRekenen'] == true,
       offerteOptiePlaatsing: OfferteOptiePlaatsing.fromJson(
         json['offerteOptiePlaatsing'] ?? json['optiePlaatsing'],
       ),

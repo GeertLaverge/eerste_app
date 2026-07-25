@@ -161,8 +161,9 @@ class OfferteArtikelPrijscorrectieController {
                     huidig,
                   );
               return !huidig.isVerwijderd &&
+                  !huidig.isNietRekenen &&
                   koppeling?.adapterId == eersteKoppeling.adapterId &&
-                  (!isKorting || !huidig.isOfferteOptie);
+                  (!isKorting || !huidig.isZichtbareOfferteOptie);
             })
             .map((huidig) => huidig.id)
             .toSet();
@@ -197,7 +198,7 @@ class OfferteArtikelPrijscorrectieController {
         .groepeerBronPositiesVoorOverzicht(artikelen);
 
     final keuzes = geordendeItems
-        .where((huidig) => !huidig.isVerwijderd)
+        .where((huidig) => !huidig.isVerwijderd && !huidig.isNietRekenen)
         .map((huidig) {
           final doelAdapter = OfferteArtikelPrijsMutatieService.adapterVoor(
             huidig,
@@ -205,10 +206,15 @@ class OfferteArtikelPrijscorrectieController {
           final koppeling =
               OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(huidig);
           final beschikbaar =
-              doelAdapter != null && (!isKorting || !huidig.isOfferteOptie);
+              doelAdapter != null &&
+              !huidig.isNietRekenen &&
+              (!isKorting || !huidig.isZichtbareOfferteOptie);
+
           final nietBeschikbaarReden = doelAdapter == null
               ? 'Dit artikeltype ondersteunt nog geen gezamenlijke prijsaanpassing.'
-              : isKorting && huidig.isOfferteOptie
+              : huidig.isNietRekenen
+              ? 'Deze groep staat op niet rekenen.'
+              : isKorting && huidig.isZichtbareOfferteOptie
               ? 'Optiepositie — korting is niet toegestaan.'
               : '';
 
@@ -285,8 +291,9 @@ class OfferteArtikelPrijscorrectieController {
   }) async {
     final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(item);
     if (adapter == null ||
+        item.isNietRekenen ||
         doelArtikelIds.isEmpty ||
-        (kortingPercentage != null && item.isOfferteOptie)) {
+        (kortingPercentage != null && item.isZichtbareOfferteOptie)) {
       return;
     }
 
@@ -323,8 +330,9 @@ class OfferteArtikelPrijscorrectieController {
         .where(
           (huidig) =>
               !huidig.isVerwijderd &&
+              !huidig.isNietRekenen &&
               OfferteArtikelPrijsMutatieService.adapterVoor(huidig) != null &&
-              (!isKorting || !huidig.isOfferteOptie),
+              (!isKorting || !huidig.isZichtbareOfferteOptie),
         )
         .map((huidig) => huidig.id)
         .toSet();
@@ -372,7 +380,9 @@ class OfferteArtikelPrijscorrectieController {
     required double percentage,
   }) {
     final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(artikel);
-    if (adapter == null || (isKorting && artikel.isOfferteOptie)) {
+    if (adapter == null ||
+        artikel.isNietRekenen ||
+        (isKorting && artikel.isZichtbareOfferteOptie)) {
       return 0.0;
     }
 

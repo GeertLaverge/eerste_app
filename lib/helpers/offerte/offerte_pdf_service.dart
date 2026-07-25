@@ -301,7 +301,8 @@ class OffertePdfService {
           _klantRegel('Postcode en gemeente', data.klant.postcodeEnGemeente),
           _klantRegel('Telefoon', data.klant.telefoon),
           _klantRegel('E-mail', data.klant.email),
-          _klantRegel('Projectadres', data.klant.projectAdres),
+          if (data.klant.projectAdres.trim().isNotEmpty)
+            _klantRegel('Projectadres', data.klant.projectAdres),
           pw.SizedBox(height: 4),
           pw.Container(height: 0.8, color: rand),
           pw.SizedBox(height: 10),

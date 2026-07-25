@@ -30,8 +30,11 @@ class OfferteController {
 
   OfferteArtikelAdapter? adapterVoor(OpmetingOverzichtRaamItem positie) {
     for (final adapter in adapters) {
-      if (adapter.ondersteunt(positie)) return adapter;
+      if (adapter.ondersteunt(positie)) {
+        return adapter;
+      }
     }
+
     return null;
   }
 
@@ -39,20 +42,31 @@ class OfferteController {
     Iterable<OpmetingOverzichtRaamItem> posities,
   ) {
     return List<OpmetingOverzichtRaamItem>.unmodifiable(
-      posities.where((positie) => adapterVoor(positie) != null),
+      posities.where((positie) {
+        return !positie.isVerwijderd &&
+            !positie.isNietRekenen &&
+            adapterVoor(positie) != null;
+      }),
     );
   }
 
   /// Selecteert uitsluitend posities waarvan de artikelspecifieke PDF-layout
   /// volledig gekoppeld is. Een Vliegendeur heeft een eigen PDF-widget en mag
   /// daarom mee zonder prijsadapter of koppeling met de prijsinstellingen.
+  ///
+  /// Posities met "niet rekenen" mogen nooit in een offerte of PDF verschijnen.
   List<OpmetingOverzichtRaamItem> selecteerPdfPosities(
     Iterable<OpmetingOverzichtRaamItem> posities,
   ) {
     return List<OpmetingOverzichtRaamItem>.unmodifiable(
       posities.where((positie) {
-        if (positie.isVerwijderd) return false;
-        if (positie.vliegendeurData != null) return true;
+        if (positie.isVerwijderd || positie.isNietRekenen) {
+          return false;
+        }
+
+        if (positie.vliegendeurData != null) {
+          return true;
+        }
 
         final adapter = adapterVoor(positie);
         return adapter != null && adapter.isPdfActief;
@@ -67,12 +81,16 @@ class OfferteController {
     var index = 0;
 
     for (final positie in posities) {
-      final adapter = adapterVoor(positie);
-      if (adapter != null) {
-        resultaat.add(
-          adapter.naarOfferteArtikel(positie, oorspronkelijkeIndex: index),
-        );
+      if (!positie.isVerwijderd && !positie.isNietRekenen) {
+        final adapter = adapterVoor(positie);
+
+        if (adapter != null) {
+          resultaat.add(
+            adapter.naarOfferteArtikel(positie, oorspronkelijkeIndex: index),
+          );
+        }
       }
+
       index++;
     }
 
@@ -86,7 +104,7 @@ class OfferteController {
     var index = 0;
 
     for (final positie in posities) {
-      if (!positie.isVerwijderd) {
+      if (!positie.isVerwijderd && !positie.isNietRekenen) {
         final adapter = adapterVoor(positie);
         final artikel = adapter != null
             ? adapter.naarOfferteArtikel(positie, oorspronkelijkeIndex: index)
@@ -99,6 +117,7 @@ class OfferteController {
           resultaat.add(artikel);
         }
       }
+
       index++;
     }
 
@@ -110,6 +129,7 @@ class OfferteController {
   ) {
     final artikelen = bouwValidatieArtikelen(posities);
     final labels = positiesService.maakPositieLabels(artikelen);
+
     return validatieService.valideerPrijsgegevens(
       artikelen: artikelen,
       positieLabels: labels,
@@ -120,6 +140,10 @@ class OfferteController {
     OpmetingOverzichtRaamItem positie, {
     required int oorspronkelijkeIndex,
   }) {
+    if (positie.isVerwijderd || positie.isNietRekenen) {
+      return null;
+    }
+
     final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
       positie,
     );
@@ -131,7 +155,9 @@ class OfferteController {
       return null;
     }
 
-    final optiePlaatsing = !positie.isOfferteOptie
+    final isOptie = positie.isZichtbareOfferteOptie;
+
+    final optiePlaatsing = !isOptie
         ? OfferteArtikelOptiePlaatsing.geen
         : positie.offerteOptiePlaatsing == OfferteOptiePlaatsing.positieBehouden
         ? OfferteArtikelOptiePlaatsing.positieBehouden
@@ -140,15 +166,18 @@ class OfferteController {
     final artikelNaam = positie.formulierTypeLabel.trim().isEmpty
         ? koppeling.formulierNaam
         : positie.formulierTypeLabel.trim();
+
     final titel = positie.titel.trim().isEmpty
         ? artikelNaam
         : positie.titel.trim();
+
     final breedte = OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
       positie,
     );
     final hoogte = OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
       positie,
     );
+
     final omschrijving = breedte > 0 && hoogte > 0
         ? '$titel · $breedte × $hoogte mm'
         : titel;
@@ -161,12 +190,12 @@ class OfferteController {
       aantal: OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(positie),
       prijsPerStukExclBtw: prijsData.prijsPerStukExclBtw,
       winstmargePercentage: prijsData.artikelWinstmargePercentage,
-      kortingPercentage: positie.isOfferteOptie
-          ? 0
-          : prijsData.artikelKortingPercentage,
-      isOptie: positie.isOfferteOptie,
+      kortingPercentage: isOptie ? 0 : prijsData.artikelKortingPercentage,
+      isOptie: isOptie,
       optiePlaatsing: optiePlaatsing,
-      optieHoofdpositieId: positie.offerteOptieHoofdpositieId.trim(),
+      optieHoofdpositieId: isOptie
+          ? positie.offerteOptieHoofdpositieId.trim()
+          : '',
       oorspronkelijkeIndex: oorspronkelijkeIndex,
     );
   }

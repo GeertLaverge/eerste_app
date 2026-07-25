@@ -7,6 +7,8 @@ import '../../offerte/prijzen/offerte_artikel_korting_kaart.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../offerte/prijzen/offerte_berekening_resultaat.dart';
 import '../fotos/opmeting_foto_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_tekenvlak.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_tekenvlak.dart';
 import 'opmeting_artikel_type_omschrijving_helper.dart';
@@ -26,6 +28,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     required this.onVerwijderen,
     required this.onKopieren,
     required this.onOptieWijzigen,
+    this.onNietRekenenWijzigen,
     required this.onPrijsMenuOpenen,
     required this.onPrijsGewijzigd,
     required this.onWinstmargeGewijzigd,
@@ -45,6 +48,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   final VoidCallback onVerwijderen;
   final VoidCallback onKopieren;
   final VoidCallback onOptieWijzigen;
+  final VoidCallback? onNietRekenenWijzigen;
   final VoidCallback onPrijsMenuOpenen;
   final ValueChanged<double> onPrijsGewijzigd;
   final OfferteArtikelPercentageGewijzigd onWinstmargeGewijzigd;
@@ -59,23 +63,42 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _rood = Color(0xFFDC2626);
+  static const Color _roodLicht = Color(0xFFFEF2F2);
+  static const Color _roodRand = Color(0xFFFCA5A5);
 
   @override
   Widget build(BuildContext context) {
-    final technischeRegels = _technischeRegelsZonderMaten(
-      item.zichtbareTechnischeRegels,
-    );
+    final technischeRegels =
+        OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+          _technischeRegelsZonderMaten(item.zichtbareTechnischeRegels),
+        );
     final vasteInzethor = item.vasteInzethorData;
+    final vliegendeur = item.vliegendeurData;
+    final vliegendeurTechnischeRegels = vliegendeur == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            _vliegendeurRegelsZonderAfmetingen(item.zichtbareTechnischeRegels),
+          );
     final uitvoeringsRegels =
         OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(item);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: item.isOfferteOptie ? const Color(0xFFFFFBF5) : Colors.white,
+        color: item.isNietRekenen
+            ? const Color(0xFFFFFAFA)
+            : item.isOfferteOptie
+            ? const Color(0xFFFFFBF5)
+            : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: item.isOfferteOptie ? const Color(0xFFF15A24) : _rand,
+          color: item.isNietRekenen
+              ? _roodRand
+              : item.isOfferteOptie
+              ? const Color(0xFFF15A24)
+              : _rand,
+          width: item.isNietRekenen ? 1.25 : 1,
         ),
         boxShadow: const [
           BoxShadow(
@@ -88,120 +111,84 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 6,
+            children: <Widget>[
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: _lichtGroen,
+                  color: item.isNietRekenen ? _roodLicht : _lichtGroen,
                   borderRadius: BorderRadius.circular(999),
+                  border: item.isNietRekenen
+                      ? Border.all(color: _roodRand)
+                      : null,
                 ),
                 child: Text(
-                  item.isOfferteOptie
+                  item.isNietRekenen
+                      ? 'NIET REKENEN'
+                      : item.isOfferteOptie
                       ? item.isOfferteOptieOpPositie
                             ? '$positieLabel · IN OFFERTE'
                             : '$positieLabel · APARTE PAGINA'
                       : positieLabel,
-                  style: const TextStyle(
-                    color: _groen,
+                  style: TextStyle(
+                    color: item.isNietRekenen ? _rood : _groen,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      item.formulierTypeLabel,
-                      style: const TextStyle(
-                        color: _tekstDonker,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (uitvoeringsRegels.isNotEmpty) ...<Widget>[
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: uitvoeringsRegels
-                                .map((regel) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 2),
-                                    child: Text(
-                                      regel,
-                                      style: const TextStyle(
-                                        color: _tekstGrijs,
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w700,
-                                        height: 1.25,
-                                      ),
-                                    ),
-                                  );
-                                })
-                                .toList(growable: false),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+              if (item.isNietRekenen) ...<Widget>[
+                if (onNietRekenenWijzigen != null)
+                  _ArtikelActieTekstKnop(
+                    tekst: 'Groep terug rekenen',
+                    onPressed: onNietRekenenWijzigen,
+                  ),
+              ] else ...<Widget>[
+                if (berekenPrijzen &&
+                    OfferteArtikelPrijsKoppelingService.ondersteuntPrijsinstellingenVoorArtikel(
+                      item,
+                    ))
+                  _ArtikelActieTekstKnop(
+                    tekst: 'Prijs toevoegen',
+                    onPressed: onPrijsMenuOpenen,
+                  ),
+                _ArtikelActieTekstKnop(tekst: 'Aanpassen', onPressed: onOpenen),
+                _ArtikelActieTekstKnop(
+                  tekst: 'Groep kopiëren',
+                  onPressed: onKopieren,
                 ),
-              ),
-              if (berekenPrijzen &&
-                  OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(
-                    item,
-                  ))
+                _ArtikelActieTekstKnop(
+                  tekst: 'Groep in optie plaatsen',
+                  onPressed: onOptieWijzigen,
+                ),
+                if (onNietRekenenWijzigen != null)
+                  _ArtikelActieTekstKnop(
+                    tekst: 'Groep niet rekenen',
+                    onPressed: onNietRekenenWijzigen,
+                  ),
                 IconButton(
-                  tooltip: 'Vrije prijs per artikel',
-                  onPressed: onPrijsMenuOpenen,
-                  icon: const Icon(Icons.post_add_outlined, color: _groen),
+                  tooltip: 'Verwijderen',
+                  onPressed: onVerwijderen,
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFDC2626),
+                  ),
                 ),
-              IconButton(
-                tooltip: 'Openen',
-                onPressed: onOpenen,
-                icon: const Icon(Icons.open_in_new_rounded, color: _groen),
-              ),
-              IconButton(
-                tooltip: 'Groep kopiëren',
-                onPressed: onKopieren,
-                icon: const Icon(Icons.copy_all_outlined, color: _groen),
-              ),
-              IconButton(
-                tooltip: item.isOfferteOptie
-                    ? 'Optieweergave aanpassen'
-                    : 'Groep in optie plaatsen',
-                onPressed: onOptieWijzigen,
-                icon: Icon(
-                  item.isOfferteOptie
-                      ? Icons.check_circle_outline_rounded
-                      : Icons.bookmark_add_outlined,
-                  color: item.isOfferteOptie ? const Color(0xFFF15A24) : _groen,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Verwijderen',
-                onPressed: onVerwijderen,
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: Color(0xFFDC2626),
-                ),
-              ),
-              _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
+                _PositieVerplaatsKnop(onOmhoog: onOmhoog, onOmlaag: onOmlaag),
+              ],
             ],
           ),
           const SizedBox(height: 10),
           if (vasteInzethor != null)
             _bouwVasteInzethorOverzicht(vasteInzethor, technischeRegels)
+          else if (vliegendeur != null)
+            _bouwVliegendeurOverzicht(vliegendeur, vliegendeurTechnischeRegels)
           else if (OfferteArtikelPrijsKoppelingService.isAlgemeenArtikel(item))
             _bouwAlgemeenArtikelOverzicht(technischeRegels)
           else ...[
@@ -299,6 +286,50 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     );
   }
 
+  Widget _bouwVliegendeurOverzicht(
+    OpmetingVliegendeurModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Afmetingen',
+      maatWaarde: model.maatSamenvatting,
+      tekening: OpmetingVliegendeurTekenvlak(model: model, schaalFactor: 0.55),
+    );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen technische keuzes ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
+    );
+  }
+
   Widget _bouwAlgemeenArtikelOverzicht(
     List<OpmetingOverzichtTechnischeRegel> technischeRegels,
   ) {
@@ -371,6 +402,8 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     required OfferteArtikelPrijsDataModel prijsData,
     required OfferteBerekeningResultaat prijsResultaat,
     required int aantal,
+    bool technischeRegelsScrollbaar = true,
+    bool toonTechnischePrijsZone = true,
   }) {
     final prijsSamenvattingHoogte = berekenPrijzen
         ? 92.0 +
@@ -381,7 +414,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                   34.0)
         : 0.0;
 
-    final gemeenschappelijkeHoogte =
+    final standaardGemeenschappelijkeHoogte =
         OpmetingOverzichtArtikelLayoutHelper.berekenGemeenschappelijkeHoogte(
           aantalTechnischeRegels: technischeRegels.length,
           toonPrijzen: berekenPrijzen,
@@ -389,6 +422,19 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           prijsCorrectieVeldHoogte: 222,
           prijsSamenvattingHoogte: prijsSamenvattingHoogte,
         );
+    final nietScrollbareTechnischeHoogte = technischeRegelsScrollbaar
+        ? 0.0
+        : OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+            minimaleHoogte: 0,
+          );
+    final nietScrollbareTotaleHoogte =
+        nietScrollbareTechnischeHoogte +
+        (berekenPrijzen ? prijsSamenvattingHoogte + 58.0 + 222.0 + 27.0 : 0.0);
+    final gemeenschappelijkeHoogte =
+        nietScrollbareTotaleHoogte > standaardGemeenschappelijkeHoogte
+        ? nietScrollbareTotaleHoogte
+        : standaardGemeenschappelijkeHoogte;
 
     final technischeRegelsMetPrijs = berekenPrijzen
         ? OpmetingOverzichtTechnischePrijsKoppelHelper.koppelTechnischePrijzenAanRegels(
@@ -422,6 +468,16 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             ),
           ]
         : const <Widget>[];
+    final geblokkeerdePrijsWidgets = item.isNietRekenen
+        ? prijsWidgets
+              .map((widget) {
+                return IgnorePointer(
+                  ignoring: true,
+                  child: Opacity(opacity: 0.62, child: widget),
+                );
+              })
+              .toList(growable: false)
+        : prijsWidgets;
 
     return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
       hoogte: gemeenschappelijkeHoogte,
@@ -429,9 +485,46 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
         technischeRegels: technischeRegels,
         technischeRegelsMetPrijs: technischeRegelsMetPrijs,
-        onderWidgets: prijsWidgets,
+        onderWidgets: geblokkeerdePrijsWidgets,
+        scrollbaar: technischeRegelsScrollbaar,
+        toonPrijsZone: toonTechnischePrijsZone,
       ),
     );
+  }
+
+  List<OpmetingOverzichtTechnischeRegel> _vliegendeurRegelsZonderAfmetingen(
+    List<OpmetingOverzichtTechnischeRegel> regels,
+  ) {
+    return regels
+        .where((regel) {
+          final titel = regel.titel.trim();
+          final waarde = regel.waarde.trim();
+
+          if (titel.isEmpty && waarde.isEmpty) {
+            return false;
+          }
+
+          return !_isVliegendeurAfmetingsRegel(titel);
+        })
+        .toList(growable: false);
+  }
+
+  bool _isVliegendeurAfmetingsRegel(String titel) {
+    final sleutel = titel.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+    return const <String>{
+      'afmetingen',
+      'maat',
+      'maten',
+      'buitenmaat',
+      'breedte',
+      'hoogte',
+      'breedte buitenmaat',
+      'hoogte buitenmaat',
+      'buitenmaat breedte',
+      'buitenmaat hoogte',
+      'binnenmaat/doorkijkmaat',
+    }.contains(sleutel);
   }
 
   List<OpmetingOverzichtTechnischeRegel> _technischeRegelsZonderMaten(
@@ -564,6 +657,36 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           }),
         ),
       ),
+    );
+  }
+}
+
+class _ArtikelActieTekstKnop extends StatelessWidget {
+  const _ArtikelActieTekstKnop({required this.tekst, required this.onPressed});
+
+  final String tekst;
+  final VoidCallback? onPressed;
+
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _rand = Color(0xFFE5E7EB);
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _groen,
+        backgroundColor: Colors.white,
+        disabledForegroundColor: _groen.withValues(alpha: 0.45),
+        side: const BorderSide(color: _rand),
+        minimumSize: const Size(0, 40),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+      onPressed: onPressed,
+      child: Text(tekst),
     );
   }
 }
