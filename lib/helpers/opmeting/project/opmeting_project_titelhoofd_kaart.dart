@@ -1,5 +1,7 @@
+// THIMACO-CONTROLE: OFFERTEVOLGNUMMER-VELDEN-LEEG-BIJ-FOCUS-20260726
 // THIMACO-CONTROLE: KLANTVELDEN-VISUEEL-ALLEMAAL-27PX-20260720
 // THIMACO-CONTROLE: COMPACTE-KLANTGEGEVENS-PROJECTKLEUR-ZONDER-ZWEVENDE-LABELS-20260720
+// THIMACO-CONTROLE: OFFERTENUMMER-CIJFERVAK-EENVOUDIG-OVERSCHRIJVEN-20260726
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -106,6 +108,7 @@ class _OpmetingProjectTitelhoofdKaartState
   late final List<TextEditingController> _offerteJaarControllers;
   late final List<TextEditingController> _klantnummerControllers;
   late final List<TextEditingController> _offerteVolgnummerControllers;
+  late final List<FocusNode> _offerteVolgnummerFocusNodes;
   late String _btwTarief;
 
   @override
@@ -145,6 +148,21 @@ class _OpmetingProjectTitelhoofdKaartState
     _offerteVolgnummerControllers = List<TextEditingController>.generate(
       2,
       (_) => TextEditingController(),
+    );
+    _offerteVolgnummerFocusNodes = List<FocusNode>.generate(
+      _offerteVolgnummerControllers.length,
+      (index) {
+        final focusNode = FocusNode();
+        focusNode.addListener(() {
+          if (!focusNode.hasFocus) return;
+
+          // De twee velden van het volgnummer bevatten standaard reeds 01.
+          // Maak het actieve veld leeg zodra de cursor erin komt, zodat het
+          // nieuwe cijfer niet door de limiet van één teken wordt geweigerd.
+          _offerteVolgnummerControllers[index].clear();
+        });
+        return focusNode;
+      },
     );
     _btwTarief = OpmetingProjectTitelhoofd.standaardBtwTarief;
 
@@ -188,6 +206,10 @@ class _OpmetingProjectTitelhoofdKaartState
       ..._offerteVolgnummerControllers,
     ]) {
       controller.dispose();
+    }
+
+    for (final focusNode in _offerteVolgnummerFocusNodes) {
+      focusNode.dispose();
     }
 
     super.dispose();
@@ -1099,14 +1121,40 @@ class _OpmetingProjectTitelhoofdKaartState
   }
 
   Widget _bouwCijferVak(TextEditingController controller) {
+    final volgnummerIndex = _offerteVolgnummerControllers.indexOf(controller);
+    final focusNode = volgnummerIndex < 0
+        ? null
+        : _offerteVolgnummerFocusNodes[volgnummerIndex];
+
+    final alleControllers = <TextEditingController>[
+      ..._offerteJaarControllers,
+      ..._klantnummerControllers,
+      ..._offerteVolgnummerControllers,
+    ];
+    final controllerIndex = alleControllers.indexOf(controller);
+    final heeftVolgendVak =
+        controllerIndex >= 0 && controllerIndex < alleControllers.length - 1;
+
+    void selecteerBestaandCijfer() {
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: controller.text.length,
+      );
+    }
+
     return SizedBox(
       width: 20,
       height: 29,
       child: TextField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: TextInputType.number,
+        textInputAction: heeftVolgendVak
+            ? TextInputAction.next
+            : TextInputAction.done,
         textAlign: TextAlign.center,
         maxLines: 1,
+        selectAllOnFocus: volgnummerIndex < 0,
         inputFormatters: <TextInputFormatter>[
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(1),
@@ -1135,8 +1183,19 @@ class _OpmetingProjectTitelhoofdKaartState
             borderSide: const BorderSide(color: _groen, width: 1.4),
           ),
         ),
-        onChanged: (_) {
+        onTap: volgnummerIndex < 0 ? selecteerBestaandCijfer : null,
+        onChanged: (waarde) {
+          if (waarde.isNotEmpty && heeftVolgendVak) {
+            FocusScope.of(context).nextFocus();
+          }
           _meldWijziging();
+        },
+        onSubmitted: (_) {
+          if (heeftVolgendVak) {
+            FocusScope.of(context).nextFocus();
+          } else {
+            FocusScope.of(context).unfocus();
+          }
         },
       ),
     );

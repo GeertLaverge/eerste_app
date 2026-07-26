@@ -1,0 +1,194 @@
+Analyzing eerste_app...                                         
+
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_dagtaak_popup.dart:125:28 - use_build_context_synchronously
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:519:17 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:521:17 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:531:17 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:533:17 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:554:17 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\Agenda\agenda_dagtaak_popup.dart:565:17 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\helpers\Agenda\agenda_filter_menu.dart:64:9 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'false' - lib\helpers\Agenda\agenda_jaar_maand_kolom.dart:277:58 - unnecessary_null_comparison
+warning - Dead code - lib\helpers\Agenda\agenda_jaar_maand_kolom.dart:278:51 - dead_code
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_klant_planning_tijd_helper.dart:70:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_klant_planning_tijd_helper.dart:78:7 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\Agenda\agenda_kleur_service.dart:33:24 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:115:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:146:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:169:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:210:16 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:222:18 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_afhandeling.dart:270:24 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_tijd_popup.dart:160:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_sleep_tijd_popup.dart:170:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_toevoeg_popup.dart:235:28 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\Agenda\agenda_toevoeg_popup.dart:351:9 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\helpers\Agenda\agenda_toevoeg_popup.dart:897:19 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\Agenda\agenda_verlof_popup.dart:92:28 - use_build_context_synchronously
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\helpers\Agenda\agenda_verlof_popup.dart:371:19 - deprecated_member_use
+warning - The declaration '_isBlauweAgendaAfspraak' isn't referenced - lib\helpers\app_storage.dart:1130:15 - unused_element
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\klanten\fiche\klantenfiche_uitval_blok.dart:44:33 - deprecated_member_use
+warning - The value of the local variable 'topLeft' isn't used - lib\helpers\klanten\fotos\klantenfiche_foto_editor_controller.dart:531:12 - unused_local_variable
+warning - The value of the local variable 'topRight' isn't used - lib\helpers\klanten\fotos\klantenfiche_foto_editor_controller.dart:532:12 - unused_local_variable
+warning - The value of the local variable 'bottomRight' isn't used - lib\helpers\klanten\fotos\klantenfiche_foto_editor_controller.dart:533:12 - unused_local_variable
+warning - The value of the local variable 'bottomLeft' isn't used - lib\helpers\klanten\fotos\klantenfiche_foto_editor_controller.dart:534:12 - unused_local_variable
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\klanten\klantenfiche_kraan_reserveren_blok.dart:94:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\klanten\klantenfiche_kraan_reserveren_blok.dart:108:28 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\klanten\klantenfiche_kraan_reserveren_blok.dart:234:35 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\klanten\klantenfiche_leveranciers.dart:122:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\klanten\klantenfiche_leveranciers.dart:145:17 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\klanten\klantenfiche_leveranciers.dart:216:38 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\klanten\klantenfiche_leveranciers.dart:219:40 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\helpers\notities\notitie_acties_pagina.dart:150:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\notities\notitie_acties_pagina.dart:217:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\notities\notitie_dag_container.dart:101:43 - deprecated_member_use
+warning - The declaration '_geschatAantalRegels' isn't referenced - lib\helpers\offerte\offerte_pdf_inzethor_widget.dart:328:14 - unused_element
+   info - Unnecessary braces in a string interpolation - lib\helpers\offerte\offerte_pdf_pvc_raam_widget.dart:300:29 - unnecessary_brace_in_string_interps
+   info - The import of 'dart:typed_data' is unnecessary because all of the used elements are also provided by the import of 'package:flutter/services.dart' - lib\helpers\offerte\overzicht\offerte_prijs_overzicht_pdf_service.dart:1:8 - unnecessary_import
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\offerte\prijzen\offerte_prijsinstellingen_controller.dart:495:25 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\offerte\prijzen\offerte_project_prijsregel_controller.dart:126:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\offerte\prijzen\offerte_project_prijsregel_controller.dart:452:9 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\deurpanelen\opmeting_deurpaneel_teken_helper.dart:371:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\deurpanelen\opmeting_deurpaneel_teken_helper.dart:372:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\deurpanelen\opmeting_deurpaneel_teken_helper.dart:412:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\deurpanelen\opmeting_deurpaneel_teken_helper.dart:449:30 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\kader_samenstelling\opmeting_kader_toevoegen_dialoog.dart:354:11 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\kader_samenstelling\opmeting_kader_toevoegen_dialoog.dart:380:11 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\kader_samenstelling\opmeting_kader_toevoegen_dialoog.dart:424:11 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\navigatie\opmeting_formulier_navigatie_controller.dart:54:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\navigatie\opmeting_formulier_navigatie_controller.dart:108:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\navigatie\opmeting_formulier_navigatie_controller.dart:164:44 - use_build_context_synchronously
+   info - Constructors for public widgets should have a named 'key' parameter - lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_kaart.dart:21:9 - use_key_in_widget_constructors
+warning - The value of the local variable 'uitvoeringsRegels' isn't used - lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_kaart.dart:83:11 - unused_local_variable
+warning - The declaration '_bouwTechnischeRijenNaastElkaar' isn't referenced - lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_kaart.dart:620:10 - unused_element
+warning - The value of the field '_tekstDonker' isn't used - lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_kaart.dart:800:22 - unused_field
+warning - The value of the field '_tekstDonker' isn't used - lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_prijs_layout.dart:118:22 - unused_field
+   info - Constructors for public widgets should have a named 'key' parameter - lib\helpers\opmeting\overzicht\opmeting_overzicht_kaart.dart:21:9 - use_key_in_widget_constructors
+warning - The value of the local variable 'uitvoeringsRegels' isn't used - lib\helpers\opmeting\overzicht\opmeting_overzicht_kaart.dart:83:11 - unused_local_variable
+warning - The declaration '_bouwTechnischeRijenNaastElkaar' isn't referenced - lib\helpers\opmeting\overzicht\opmeting_overzicht_kaart.dart:601:10 - unused_element
+warning - The value of the field '_tekstDonker' isn't used - lib\helpers\opmeting\overzicht\opmeting_overzicht_kaart.dart:781:22 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:294:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:538:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:660:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:665:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:712:24 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\project\opmeting_project_bestand_controller.dart:938:17 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\project\opmeting_project_titelhoofd_controller.dart:428:7 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\project\opmeting_project_titelhoofd_kaart.dart:763:9 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\project\opmeting_project_titelhoofd_kaart.dart:932:13 - deprecated_member_use
+   info - Use the '??' operator rather than '?:' when testing for 'null' - lib\helpers\opmeting\project\opmeting_project_titelhoofd_kaart.dart:1325:26 - prefer_if_null_operators
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_basis_maten.dart:72:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_basis_maten.dart:376:42 - deprecated_member_use
+warning - Unused import: 'opmeting_raam_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_formulier_layout.dart:8:8 - unused_import
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_keuzemenu_model.dart:632:71 - unnecessary_non_null_assertion
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_kleinhout_helper.dart:609:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_kleinhout_helper.dart:641:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_kleinhout_menu.dart:82:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_kleinhout_menu.dart:87:33 - deprecated_member_use
+warning - Unused import: 'opmeting_raam_niet_combineerbaar_keuzemenu.dart' - lib\helpers\opmeting\raam\opmeting_raam_menu_beheer_helper.dart:7:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\raam\opmeting_raam_menu_beheer_helper.dart:115:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\raam\opmeting_raam_menu_beheer_helper.dart:174:7 - use_build_context_synchronously
+warning - Unused import: 'opmeting_raam_verplaatsbaar_menu.dart' - lib\helpers\opmeting\raam\opmeting_raam_menu_overlay.dart:10:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_model.dart:653:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvulling_menu.dart:78:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvulling_menu.dart:83:33 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\raam\opmeting_raam_opvulling_menu.dart:456:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\raam\opmeting_raam_opvulling_menu.dart:460:15 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvulling_menu.dart:554:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvulling_model.dart:206:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvullingen_pagina.dart:554:34 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\helpers\opmeting\raam\opmeting_raam_opvullingen_pagina.dart:728:9 - use_build_context_synchronously
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_opvullingen_pagina.dart:752:27 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_opvullingen_pagina.dart:812:56 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor or activeTrackColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\helpers\opmeting\raam\opmeting_raam_opvullingen_pagina.dart:870:27 - deprecated_member_use
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_technisch_menu_dialoog.dart:41:65 - unnecessary_non_null_assertion
+warning - Unused import: 'opmeting_raam_kleinhout_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_technische_keuzes_paneel.dart:5:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_editor.dart:255:15 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_editor.dart:284:15 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_editor.dart:330:15 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_editor.dart:354:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_editor.dart:407:9 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_technische_tekening_painter_helper.dart:37:32 - deprecated_member_use
+warning - Unused import: 'opmeting_raam_vleugel_helper.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak.dart:38:8 - unused_import
+warning - Unused import: 'opmeting_raam_vlak_helper.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak.dart:39:8 - unused_import
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak.dart:1171:19 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak.dart:3258:64 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak.dart:3266:58 - unnecessary_non_null_assertion
+warning - Unused import: 'opmeting_raam_opvulling_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_geschiedenis.dart:3:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_menus.dart:33:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_menus.dart:38:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_menus.dart:260:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_menus.dart:265:33 - deprecated_member_use
+warning - Unused import: 'opmeting_raam_opvulling_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_overzicht_data_helper.dart:6:8 - unused_import
+warning - Unused import: 'opmeting_raam_technische_layout_helper.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_overzicht_data_helper.dart:8:8 - unused_import
+warning - Unused import: 'opmeting_raam_opvulling_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_painter.dart:14:8 - unused_import
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_painter.dart:219:47 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'true' - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_painter.dart:247:56 - unnecessary_null_comparison
+warning - The value of the local variable 'actiefGroepWeergave' isn't used - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_painter.dart:376:13 - unused_local_variable
+warning - The '!' will have no effect because the receiver can't be null - lib\helpers\opmeting\raam\opmeting_raam_tekenvlak_schaal_data_helper.dart:258:57 - unnecessary_non_null_assertion
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_tstijl_helper.dart:848:30 - deprecated_member_use
+warning - Unused import: 'opmeting_raam_opvulling_model.dart' - lib\helpers\opmeting\raam\opmeting_raam_tstijl_verplaats_helper.dart:9:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_verplaatsbaar_menu.dart:45:39 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vleugel_helper.dart:360:30 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vleugel_helper.dart:434:30 - deprecated_member_use
+warning - The value of the field '_lichtGroen' isn't used - lib\helpers\opmeting\raam\opmeting_raam_vleugel_keuze_raster.dart:17:22 - unused_field
+warning - The value of the field '_tekst' isn't used - lib\helpers\opmeting\raam\opmeting_raam_vleugel_keuze_raster.dart:19:22 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vleugel_keuze_raster.dart:31:29 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vleugel_keuze_raster.dart:36:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vleugel_keuze_raster.dart:179:54 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vulling_helper.dart:60:18 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vulling_teken_helper.dart:102:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\raam\opmeting_raam_vulling_teken_helper.dart:128:34 - deprecated_member_use
+warning - Unused import: '../../schuifraam/opmeting_schuifraam_model.dart' - lib\helpers\opmeting\raam\overzicht\opmeting_raam_overzicht_builder.dart:7:8 - unused_import
+warning - The declaration '_naamVoorOverzichtSleutel' isn't referenced - lib\helpers\opmeting\raam\overzicht\opmeting_raam_overzicht_builder.dart:740:10 - unused_element
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\opmeting\schuifraam\opmeting_schuifraam_samenstelling_dialog.dart:703:17 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\toebehoren\vaste_inzethor\opmeting_vaste_inzethor_rechterkolom.dart:732:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\toebehoren\vaste_inzethor\opmeting_vaste_inzethor_rechterkolom.dart:733:15 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\toebehoren\vliegendeur\opmeting_vliegendeur_painter.dart:452:37 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\helpers\opmeting\toebehoren\vliegendeur\opmeting_vliegendeur_painter.dart:559:23 - deprecated_member_use
+   info - 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\toebehoren\vliegendeur\opmeting_vliegendeur_rechterkolom.dart:568:15 - deprecated_member_use
+   info - 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre - lib\helpers\opmeting\toebehoren\vliegendeur\opmeting_vliegendeur_rechterkolom.dart:569:15 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'false' - lib\helpers\sync\onedrive_auth_service.dart:83:19 - unnecessary_null_comparison
+warning - Dead code - lib\helpers\sync\onedrive_auth_service.dart:83:28 - dead_code
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\widgets\klantenfiche\blokken\leveranciers_blok.dart:191:19 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\helpers\widgets\klantenfiche\blokken\leveranciers_blok.dart:216:19 - deprecated_member_use
+warning - Unused import: '../helpers/klanten/fiche/klantenfiche_repository.dart' - lib\paginas\agenda_pagina_nieuw.dart:32:8 - unused_import
+warning - Unused import: '../helpers/Agenda/agenda_tijd_picker.dart' - lib\paginas\agenda_pagina_nieuw.dart:33:8 - unused_import
+warning - Unused import: '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart' - lib\paginas\agenda_pagina_nieuw.dart:34:8 - unused_import
+warning - Unused import: '../paginas/klanten_fiche_pagina.dart' - lib\paginas\agenda_pagina_nieuw.dart:38:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:411:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:474:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:523:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:559:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:597:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\agenda_pagina_nieuw.dart:621:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\paginas\agenda_pagina_nieuw.dart:764:46 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\paginas\agenda_pagina_nieuw.dart:807:44 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\paginas\agenda_pagina_nieuw.dart:856:38 - use_build_context_synchronously
+warning - Unused import: '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart' - lib\paginas\jaar_planning_pagina_nieuw.dart:20:8 - unused_import
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\jaar_planning_pagina_nieuw.dart:180:7 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\jaar_planning_pagina_nieuw.dart:224:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\jaar_planning_pagina_nieuw.dart:255:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\jaar_planning_pagina_nieuw.dart:268:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\jaar_planning_pagina_nieuw.dart:281:9 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\klanten_fiche_pagina.dart:306:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\klanten_fiche_pagina.dart:362:26 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\paginas\klanten_fiche_pagina.dart:386:31 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\paginas\klanten_fiche_pagina.dart:510:42 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\paginas\klanten_fiche_pagina.dart:517:42 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\paginas\klanten_pagina.dart:118:39 - deprecated_member_use
+warning - Unused import: '../helpers/opmeting/raam/opmeting_raam_kleinhout_model.dart' - lib\paginas\opmeting_raam_pagina.dart:16:8 - unused_import
+warning - Unused import: '../helpers/opmeting/raam/opmeting_raam_notities.dart' - lib\paginas\opmeting_raam_pagina.dart:17:8 - unused_import
+warning - Unused import: '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart' - lib\paginas\opmeting_raam_pagina.dart:19:8 - unused_import
+warning - Unused import: '../helpers/opmeting/raam/opmeting_raam_technische_keuzes_paneel.dart' - lib\paginas\opmeting_raam_pagina.dart:21:8 - unused_import
+   info - The private field _keuzemenus could be 'final' - lib\paginas\opmeting_raam_pagina.dart:125:31 - prefer_final_fields
+warning - The value of the field '_actieveDeurpaneelKeuze' isn't used - lib\paginas\opmeting_raam_pagina.dart:142:28 - unused_field
+warning - The declaration '_actiefKaderIdVoorKeuzes' isn't referenced - lib\paginas\opmeting_raam_pagina.dart:567:14 - unused_element
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\paginas\opmeting_raam_pagina.dart:1130:28 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\paginas\opmeting_raam_pagina.dart:1130:54 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\paginas\opmeting_raam_pagina.dart:1131:36 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion - lib\paginas\opmeting_raam_pagina.dart:1131:70 - deprecated_member_use
+warning - The declaration '_werkExtraWaardeBij' isn't referenced - lib\paginas\opmeting_raam_pagina.dart:1373:8 - unused_element
+warning - The declaration '_opslaan' isn't referenced - lib\paginas\opmeting_raam_pagina.dart:1462:16 - unused_element
+
+190 issues found. (ran in 5.7s)

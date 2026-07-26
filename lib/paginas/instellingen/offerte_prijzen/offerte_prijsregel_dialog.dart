@@ -521,7 +521,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
       decoration: _invoerDecoratie(
         label: _isTechnischePrijs
             ? 'Hoe uitschrijven — uit technische keuze'
-            : 'Omschrijving',
+            : 'Naam prijsregel',
         hint: _isTechnischePrijs
             ? 'Wordt automatisch overgenomen van de technische keuze'
             : 'Bijvoorbeeld: Petscreen toeslag',
@@ -545,12 +545,12 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
           key: ValueKey<String>('verdeelgroep_$actueleWaarde'),
           initialValue: actueleWaarde,
           isExpanded: true,
-          decoration: _invoerDecoratie(label: 'Omschrijving'),
+          decoration: _invoerDecoratie(label: 'Naam prijsregel'),
           items: <DropdownMenuItem<String>>[
             const DropdownMenuItem<String>(
               value: _nieuweVerdeelgroepId,
               child: Text(
-                'Nieuwe omschrijving toevoegen…',
+                'Nieuwe prijsregel toevoegen…',
                 style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
               ),
             ),
@@ -611,7 +611,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
             autofocus: true,
             textCapitalization: TextCapitalization.sentences,
             decoration: _invoerDecoratie(
-              label: 'Nieuwe omschrijving',
+              label: 'Nieuwe naam prijsregel',
               hint: 'Bijvoorbeeld: Transportkost Feneko',
             ),
             validator: _valideerOmschrijving,
@@ -631,7 +631,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Deze omschrijving is een gedeelde verdeelkost. '
+                    'Deze prijsregel is een gedeelde verdeelkost. '
                     'Wijzigingen aan bedrag, aankooplimiet of actiefstatus '
                     'worden toegepast op alle gekoppelde artikelgroepen.',
                     style: TextStyle(
@@ -685,7 +685,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
             label: _isVerdeelKost
                 ? 'Totaalbedrag te verdelen — excl. btw'
                 : _isAlleArtikelenPrijs
-                ? 'Projectprijs / eenheidsprijs excl. btw'
+                ? 'Prijs per artikel / stuk — excl. btw'
                 : 'Prijs excl. btw',
             hint: '0,00',
             prefixText: '€ ',
@@ -1070,9 +1070,9 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
         'Iedere actieve regel wordt automatisch per artikel toegepast. '
             'De berekening gebruikt de artikelmaten en het aantal.',
       OffertePrijsCategorie.alleArtikelen =>
-        'Een gewone regel wordt één keer over de artikelen van deze '
-            'artikelgroep berekend. Een gedeelde verdeelkost kan over '
-            'meerdere gekoppelde artikelgroepen worden verdeeld.',
+        'Een gewone regel wordt op ieder artikel of stuk van de gekozen '
+            'artikelgroep toegepast. Een gedeelde verdeelkost wordt '
+            'projectbreed over het totale aantal stuks verdeeld.',
     };
 
     return Container(
@@ -1134,7 +1134,7 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
     if (waarde == null || waarde.trim().isEmpty) {
       return _isTechnischePrijs
           ? 'Vul in hoe deze prijsregel moet worden uitgeschreven.'
-          : 'Vul een omschrijving in.';
+          : 'Vul een naam voor de prijsregel in.';
     }
 
     return null;

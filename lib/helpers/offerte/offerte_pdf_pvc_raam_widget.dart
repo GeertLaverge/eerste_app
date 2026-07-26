@@ -314,7 +314,51 @@ class OffertePdfPvcRaamWidget {
       weergegevenTechnischePrijsSleutels.add(uitschrijfSleutel);
     }
 
+    _voegVrijeArtikelPrijsregelsToe(
+      resultaat: resultaat,
+      prijsregels: prijsResultaat.vrijeArtikelPrijsregels,
+    );
+
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
+  }
+
+  static void _voegVrijeArtikelPrijsregelsToe({
+    required List<OffertePdfTechnischeRegel> resultaat,
+    required Iterable<OfferteToegepastePrijsregelModel> prijsregels,
+  }) {
+    for (final prijsregel in prijsregels) {
+      if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
+        continue;
+      }
+      if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
+        continue;
+      }
+
+      final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
+      final toonAlleenOmschrijving =
+          prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
+      if (!toonPrijs && !toonAlleenOmschrijving) {
+        continue;
+      }
+
+      final omschrijving =
+          OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+            prijsregel,
+          ).trim();
+      if (omschrijving.isEmpty) {
+        continue;
+      }
+
+      resultaat.add(
+        OffertePdfTechnischeRegel(
+          titel: omschrijving,
+          waarde: '',
+          prijsTekst: toonPrijs
+              ? '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}'
+              : '',
+        ),
+      );
+    }
   }
 
   static bool _isRaamkaderTitel(String titel) {
@@ -487,34 +531,7 @@ class OffertePdfPvcRaamWidget {
     required bool kortingToestaan,
     required bool isOptie,
   }) {
-    final resultaat =
-        OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
-          prijsData: positie.offertePrijsData,
-          breedteMm: positie.raammaatBreedteMm,
-          hoogteMm: positie.raammaatHoogteMm,
-          kortingToestaan: kortingToestaan && !isOptie,
-        );
-    final aantalRegels =
-        resultaat.afzonderlijkePrijsregelsVoorOfferte
-            .where(
-              (prijsregel) =>
-                  !_isAlgemeneArtikelPrijsregel(prijsregel) &&
-                  !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
-                    prijsregel,
-                  ),
-            )
-            .length +
-        resultaat.omschrijvingZonderPrijsRegelsVoorOfferte
-            .where(
-              (prijsregel) =>
-                  !_isAlgemeneArtikelPrijsregel(prijsregel) &&
-                  !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
-                    prijsregel,
-                  ),
-            )
-            .length;
-
-    return (isOptie ? 78.0 : 34.0) + (aantalRegels * 18.0);
+    return isOptie ? 78.0 : 34.0;
   }
 
   static pw.Widget _bouwPrijsBlok(
@@ -532,28 +549,6 @@ class OffertePdfPvcRaamWidget {
           hoogteMm: positie.raammaatHoogteMm,
           kortingToestaan: kortingToestaanEffectief,
         );
-    final omschrijvingZonderPrijsRegels = resultaat
-        .omschrijvingZonderPrijsRegelsVoorOfferte
-        .where(
-          (prijsregel) =>
-              !_isAlgemeneArtikelPrijsregel(prijsregel) &&
-              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
-                prijsregel,
-              ),
-        )
-        .toList(growable: false);
-    final afzonderlijkeRegels = resultaat.afzonderlijkePrijsregelsVoorOfferte
-        .where(
-          (prijsregel) =>
-              !_isAlgemeneArtikelPrijsregel(prijsregel) &&
-              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
-                prijsregel,
-              ),
-        )
-        .toList(growable: false);
-    final heeftBijkomendeRegels =
-        omschrijvingZonderPrijsRegels.isNotEmpty ||
-        afzonderlijkeRegels.isNotEmpty;
     final totaalVoorKorting =
         resultaat.offerteTotaalExclBtw +
         (kortingToestaanEffectief ? resultaat.kortingBedragExclBtw : 0.0);
@@ -629,50 +624,6 @@ class OffertePdfPvcRaamWidget {
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: <pw.Widget>[
-          for (final prijsregel in omschrijvingZonderPrijsRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Text(
-                OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
-                  prijsregel,
-                ),
-                maxLines: 1,
-                style: const pw.TextStyle(color: _tekstGrijs, fontSize: 7.2),
-              ),
-            ),
-          for (final prijsregel in afzonderlijkeRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Row(
-                children: <pw.Widget>[
-                  pw.Expanded(
-                    child: pw.Text(
-                      OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
-                        prijsregel,
-                      ),
-                      maxLines: 1,
-                      style: const pw.TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 7.2,
-                      ),
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Text(
-                    '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}',
-                    style: pw.TextStyle(
-                      color: _tekstDonker,
-                      fontSize: 7.4,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (heeftBijkomendeRegels) ...<pw.Widget>[
-            pw.Container(height: 0.5, color: _rand),
-            pw.SizedBox(height: 4),
-          ],
           if (isOptie) ...<pw.Widget>[
             bedragRegel(
               omschrijving: 'Totaal optie excl. btw',
@@ -745,11 +696,5 @@ class OffertePdfPvcRaamWidget {
 
   static String _bedragMetPunt(double waarde) {
     return waarde.toStringAsFixed(2);
-  }
-
-  static bool _isAlgemeneArtikelPrijsregel(
-    OfferteToegepastePrijsregelModel regel,
-  ) {
-    return regel.bronPrijsregelId.trim().startsWith('toegepast_project_');
   }
 }

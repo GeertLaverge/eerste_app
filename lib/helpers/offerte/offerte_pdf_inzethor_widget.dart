@@ -8,6 +8,7 @@ import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
 import 'prijzen/offerte_prijs_berekening_service.dart';
+import 'prijzen/offerte_prijsregel_weergave_service.dart';
 import 'prijzen/offerte_toegepaste_prijsregel_model.dart';
 
 class OffertePdfInzethorWidget {
@@ -20,7 +21,6 @@ class OffertePdfInzethorWidget {
 
   static const double basisPrijsRegelHoogte = 34;
   static const double basisOptiePrijsRegelHoogte = 78;
-  static const double afzonderlijkePrijsregelHoogte = 18;
 
   static double berekenKolomHoogte(OpmetingOverzichtRaamItem positie) {
     final model = positie.vasteInzethorData;
@@ -61,19 +61,7 @@ class OffertePdfInzethorWidget {
     bool kortingToestaan = true,
     bool isOptie = false,
   }) {
-    final resultaat = OffertePrijsBerekeningService.resultaatUitMomentopname(
-      model,
-      kortingToestaan: kortingToestaan,
-    );
-    final aantalRegels =
-        resultaat.afzonderlijkePrijsregelsVoorOfferte
-            .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
-            .length +
-        resultaat.omschrijvingZonderPrijsRegelsVoorOfferte
-            .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
-            .length;
-    return (isOptie ? basisOptiePrijsRegelHoogte : basisPrijsRegelHoogte) +
-        (aantalRegels * afzonderlijkePrijsregelHoogte);
+    return isOptie ? basisOptiePrijsRegelHoogte : basisPrijsRegelHoogte;
   }
 
   static pw.Widget bouwPositie({
@@ -131,14 +119,6 @@ class OffertePdfInzethorWidget {
           model,
           kortingToestaan: kortingToestaan,
         );
-    final omschrijvingZonderPrijsRegels = prijsResultaat
-        .omschrijvingZonderPrijsRegelsVoorOfferte
-        .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
-        .toList(growable: false);
-    final afzonderlijkeRegels = prijsResultaat
-        .afzonderlijkePrijsregelsVoorOfferte
-        .where((regel) => !_isAlgemeneArtikelPrijsregel(regel))
-        .toList(growable: false);
     final totaalVoorKorting =
         prijsResultaat.offerteTotaalExclBtw +
         (kortingToestaan ? prijsResultaat.kortingBedragExclBtw : 0.0);
@@ -150,9 +130,6 @@ class OffertePdfInzethorWidget {
       kortingToestaan: kortingToestaan,
       isOptie: isOptie,
     );
-    final heeftBijkomendeRegels =
-        omschrijvingZonderPrijsRegels.isNotEmpty ||
-        afzonderlijkeRegels.isNotEmpty;
     final heeftPrijsInvoer =
         prijsResultaat.basisTotaalExclBtw > 0.0 ||
         prijsResultaat.prijsregelsVoorOfferte.isNotEmpty;
@@ -214,46 +191,6 @@ class OffertePdfInzethorWidget {
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: <pw.Widget>[
-          for (final prijsregel in omschrijvingZonderPrijsRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Text(
-                prijsregel.omschrijving,
-                maxLines: 1,
-                style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.2),
-              ),
-            ),
-          for (final prijsregel in afzonderlijkeRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Row(
-                children: <pw.Widget>[
-                  pw.Expanded(
-                    child: pw.Text(
-                      prijsregel.omschrijving,
-                      maxLines: 1,
-                      style: const pw.TextStyle(
-                        color: tekstGrijs,
-                        fontSize: 7.2,
-                      ),
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Text(
-                    '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}',
-                    style: pw.TextStyle(
-                      color: tekstDonker,
-                      fontSize: 7.4,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (heeftBijkomendeRegels) ...<pw.Widget>[
-            pw.Container(height: 0.5, color: rand),
-            pw.SizedBox(height: 4),
-          ],
           if (isOptie) ...<pw.Widget>[
             bedragRegel(
               omschrijving: 'Totaal optie excl. btw',
@@ -380,7 +317,56 @@ class OffertePdfInzethorWidget {
       resultaat.add(netteRegel);
     }
 
+    final prijsResultaat =
+        OffertePrijsBerekeningService.resultaatUitMomentopname(
+          model,
+          kortingToestaan: false,
+        );
+    _voegVrijeArtikelPrijsregelsToe(
+      resultaat: resultaat,
+      prijsregels: prijsResultaat.vrijeArtikelPrijsregels,
+    );
+
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
+  }
+
+  static void _voegVrijeArtikelPrijsregelsToe({
+    required List<OffertePdfTechnischeRegel> resultaat,
+    required Iterable<OfferteToegepastePrijsregelModel> prijsregels,
+  }) {
+    for (final prijsregel in prijsregels) {
+      if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
+        continue;
+      }
+      if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
+        continue;
+      }
+
+      final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
+      final toonAlleenOmschrijving =
+          prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
+      if (!toonPrijs && !toonAlleenOmschrijving) {
+        continue;
+      }
+
+      final omschrijving =
+          OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+            prijsregel,
+          ).trim();
+      if (omschrijving.isEmpty) {
+        continue;
+      }
+
+      resultaat.add(
+        OffertePdfTechnischeRegel(
+          titel: omschrijving,
+          waarde: '',
+          prijsTekst: toonPrijs
+              ? '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}'
+              : '',
+        ),
+      );
+    }
   }
 
   static OffertePdfTechnischeRegel _normaliseerTechnischeRegelVoorOfferte({
@@ -915,12 +901,6 @@ class OffertePdfInzethorWidget {
   <path d="M $x $buitenOnder l -4 -7 M $x $buitenOnder l 4 -7"
     stroke="#4B5563" stroke-width="0.9" fill="none"/>
 ''';
-  }
-
-  static bool _isAlgemeneArtikelPrijsregel(
-    OfferteToegepastePrijsregelModel regel,
-  ) {
-    return regel.bronPrijsregelId.trim().startsWith('toegepast_project_');
   }
 }
 

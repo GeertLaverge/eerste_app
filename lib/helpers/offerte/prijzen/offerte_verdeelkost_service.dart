@@ -32,6 +32,12 @@ class OfferteVerdeelkostService {
       'tijdelijk_vrij_geselecteerde_verdeelkost::';
   static const String _oudeToegepasteProjectPrijsPrefix = 'toegepast_project_';
 
+  /// Verhoog deze versie wanneer de verdeling of aantalsweging wijzigt.
+  ///
+  /// Hierdoor worden reeds opgeslagen verdeelmomentopnames éénmalig opnieuw
+  /// berekend met de actuele logica per werkelijk aantal stuks.
+  static const int _verdeelRekenVersie = 2;
+
   /// Geeft de projectbrede identiteit van een gekoppelde interne verdeelkost.
   /// Gelijknamige verdeelkosten uit verschillende artikelgroepen zijn één kost.
   static String gekoppeldeVerdeelkostSleutel(
@@ -1116,6 +1122,7 @@ class OfferteVerdeelkostService {
         .toList(growable: false);
 
     return jsonEncode(<String, Object?>{
+      'verdeelRekenVersie': _verdeelRekenVersie,
       'formulierType': formulierType,
       'artikelen': gegevens,
       'prijsprofiel': profielGegevens,

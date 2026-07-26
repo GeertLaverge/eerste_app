@@ -1,7 +1,7 @@
+// THIMACO-CONTROLE: BIJKOMENDE-WERKEN-RECHTS-UITGELIJND-20260725
 import 'package:flutter/material.dart';
 
 import 'offerte_prijs_eenheid.dart';
-import 'offerte_prijs_uitschrijfmodus.dart';
 import 'offerte_project_prijs_service.dart';
 import 'offerte_toegepaste_prijsregel_model.dart';
 
@@ -19,7 +19,6 @@ class OfferteProjectPrijsOverzichtKaart extends StatelessWidget {
   static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
 
   @override
   Widget build(BuildContext context) {
@@ -64,30 +63,16 @@ class OfferteProjectPrijsOverzichtKaart extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Bijkomende werken/materiaal',
-                      style: TextStyle(
-                        color: _tekstDonker,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Eenmalig berekend over de gekozen posities van deze offerte.',
-                      style: TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Bijkomende werken/materiaal',
+                  style: TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-              if (onBewerken != null) ...<Widget>[
+              if (onBewerken != null)
                 IconButton(
                   tooltip: 'Bijkomende werken/materiaal bewerken',
                   onPressed: onBewerken,
@@ -97,27 +82,9 @@ class OfferteProjectPrijsOverzichtKaart extends StatelessWidget {
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 2),
-              ],
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF9FAFB),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: _rand),
-                ),
-                child: Text(
-                  '${resultaat.aantalArtikelen} artikel${resultaat.aantalArtikelen == 1 ? '' : 'en'}',
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
               color: const Color(0xFFFAFAFA),
@@ -127,15 +94,14 @@ class OfferteProjectPrijsOverzichtKaart extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: List<Widget>.generate(regels.length, (index) {
-                final regel = regels[index];
                 return _ProjectPrijsRegel(
-                  regel: regel,
+                  regel: regels[index],
                   toonOnderRand: index < regels.length - 1,
                 );
               }),
             ),
           ),
-          const SizedBox(height: 11),
+          const SizedBox(height: 10),
           Row(
             children: <Widget>[
               const Expanded(
@@ -181,10 +147,6 @@ class _ProjectPrijsRegel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final alleenIntern =
-        regel.uitschrijfmodus == OffertePrijsUitschrijfmodus.alleenOverzicht;
-    final isOptie = regel.uitschrijfmodus.isOptie;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
       decoration: BoxDecoration(
@@ -193,66 +155,48 @@ class _ProjectPrijsRegel extends StatelessWidget {
             : null,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        regel.omschrijving,
-                        style: const TextStyle(
-                          color: _tekstDonker,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    if (alleenIntern || isOptie) ...<Widget>[
-                      const SizedBox(width: 7),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF7ED),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          isOptie ? 'optie' : 'intern',
-                          style: const TextStyle(
-                            color: Color(0xFFEA580C),
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  _berekeningTekst(regel),
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            child: Text(
+              regel.omschrijving,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _tekstDonker,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
           const SizedBox(width: 14),
-          Text(
-            _euro(regel.totaalExclBtw),
-            style: const TextStyle(
-              color: _groen,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text.rich(
+                TextSpan(
+                  children: <InlineSpan>[
+                    TextSpan(
+                      text: _berekeningZonderTotaal(regel),
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    TextSpan(
+                      text: _euro(regel.totaalExclBtw),
+                      style: const TextStyle(
+                        color: _groen,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],
@@ -260,21 +204,26 @@ class _ProjectPrijsRegel extends StatelessWidget {
     );
   }
 
-  static String _berekeningTekst(OfferteToegepastePrijsregelModel regel) {
-    if (regel.eenheid == OffertePrijsEenheid.vast) {
-      return 'Vaste projectprijs';
-    }
+  static String _berekeningZonderTotaal(
+    OfferteToegepastePrijsregelModel regel,
+  ) {
+    final eenheidTekst = switch (regel.eenheid) {
+      OffertePrijsEenheid.vast => 'st',
+      OffertePrijsEenheid.oppervlakte => 'm²',
+      _ => 'm',
+    };
+    final hoeveelheid = _getal(regel.hoeveelheid);
 
-    final hoeveelheid = regel.hoeveelheid
+    return '${_euro(regel.prijsExclBtw)}/$eenheidTekst'
+        ' × $hoeveelheid $eenheidTekst = ';
+  }
+
+  static String _getal(double waarde) {
+    return waarde
         .toStringAsFixed(4)
         .replaceFirst(RegExp(r'0+$'), '')
         .replaceFirst(RegExp(r'[.,]$'), '')
         .replaceAll('.', ',');
-    final suffix = regel.eenheid == OffertePrijsEenheid.oppervlakte
-        ? 'm²'
-        : 'm';
-
-    return '$hoeveelheid $suffix × ${_euro(regel.prijsExclBtw)}';
   }
 
   static String _euro(double waarde) {

@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: VERDEELKOST-DOELMARKERING-20260724-ALGEMEEN
+// THIMACO-CONTROLE: PROJECTREGELS-NIET-IN-POSITIEPRIJS-20260725
 import 'dart:convert';
 
 import '../../opmeting/raam/opmeting_raam_keuzemenu_model.dart';
@@ -22,6 +22,8 @@ class OfferteAlgemeenArtikelPrijsService {
 
   static const String _tijdelijkeVrijePrijsPrefix = 'tijdelijk_vrij_';
   static const String _toegepasteProjectPrijsPrefix = 'toegepast_project_';
+  static const String _oudeAutomatischeProjectPrijsPrefix =
+      'automatisch_alleArtikelen_';
 
   static bool moetTechnischeMomentopnameBijwerken({
     required OfferteArtikelPrijsDataModel prijsData,
@@ -125,8 +127,16 @@ class OfferteAlgemeenArtikelPrijsService {
         );
   }
 
-  /// Bouwt de automatische vrije prijsregels uit Instellingen opnieuw op.
-  /// Eenmalige regels uit het zwevende prijsvenster blijven behouden.
+  /// Bouwt de automatische vrije prijsregels per artikel opnieuw op.
+  ///
+  /// Regels uit de categorie "Alle artikelen" horen bewust niet in de
+  /// positieprijs. Niet-verdeelde projectregels worden projectbreed berekend
+  /// en onderaan getoond als "Bijkomende werken/materiaal". Alleen de
+  /// verdeelde interne kost wordt door de verdeelkostservice over de
+  /// afzonderlijke posities verdeeld.
+  ///
+  /// Eenmalige vrije regels uit het zwevende artikelprijsvenster blijven
+  /// behouden.
   static OfferteArtikelPrijsDataModel maakVrijeArtikelMomentopname({
     required OfferteArtikelPrijsDataModel prijsData,
     required OffertePrijsprofielModel profiel,
@@ -134,7 +144,11 @@ class OfferteAlgemeenArtikelPrijsService {
   }) {
     final berekendOp = DateTime.now().toUtc().toIso8601String();
     final tijdelijkeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where(_isTijdelijkeVrijePrijsSelectie)
+        .where(
+          (selectie) =>
+              _isTijdelijkeVrijePrijsSelectie(selectie) &&
+              !_isProjectPrijsSelectie(selectie),
+        )
         .toList(growable: false);
 
     final tijdelijkePrijsregelIds = tijdelijkeSelecties
@@ -146,7 +160,7 @@ class OfferteAlgemeenArtikelPrijsService {
         .where((regel) => !tijdelijkePrijsregelIds.contains(regel.id))
         .map((regel) {
           return OfferteVrijePrijsSelectieModel(
-            id: 'automatisch_${regel.id}',
+            id: 'automatisch_${regel.categorie.name}_${regel.id}',
             bronPrijsregelId: regel.id,
             omschrijving: regel.omschrijving,
             bedragPerStukExclBtw: regel.prijsExclBtw,
@@ -183,7 +197,7 @@ class OfferteAlgemeenArtikelPrijsService {
         .where(
           (selectie) =>
               _isTijdelijkeVrijePrijsSelectie(selectie) &&
-              !_isGekozenProjectPrijsSelectie(selectie) &&
+              !_isProjectPrijsSelectie(selectie) &&
               !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .map((selectie) {
@@ -425,13 +439,6 @@ class OfferteAlgemeenArtikelPrijsService {
               selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .toList(growable: false);
-    final gekozenProjectPrijsSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              _isGekozenProjectPrijsSelectie(selectie) &&
-              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
-        )
-        .toList(growable: false);
     final bestaandeAutomatischeSelecties = prijsData.vrijeArtikelPrijsSelecties
         .where(
           (selectie) =>
@@ -469,7 +476,6 @@ class OfferteAlgemeenArtikelPrijsService {
       vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
         ...bestaandeAutomatischeSelecties,
         ...verdeelkostMarkeringen,
-        ...gekozenProjectPrijsSelecties,
         ...tijdelijkeSelecties,
       ],
     );
@@ -493,6 +499,7 @@ class OfferteAlgemeenArtikelPrijsService {
               selectie.actief &&
               selectie.isGeldig &&
               selectie.heeftBedrag &&
+              !_isProjectPrijsSelectie(selectie) &&
               !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
         )
         .map((selectie) {
@@ -570,7 +577,7 @@ class OfferteAlgemeenArtikelPrijsService {
   static List<OffertePrijsregelModel> _geldigeAutomatischeArtikelRegels(
     OffertePrijsprofielModel profiel,
   ) {
-    return profiel
+    final regels = profiel
         .regelsVoorCategorie(OffertePrijsCategorie.vrijPerArtikel)
         .where((regel) {
           return regel.actief &&
@@ -582,6 +589,17 @@ class OfferteAlgemeenArtikelPrijsService {
               );
         })
         .toList(growable: false);
+
+    regels.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+      if (volgorde != 0) return volgorde;
+
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return List<OffertePrijsregelModel>.unmodifiable(regels);
   }
 
   static String _maakTechnischePrijsSignatuur({
@@ -595,6 +613,7 @@ class OfferteAlgemeenArtikelPrijsService {
         .map(
           (regel) => <String, Object?>{
             'id': regel.id,
+            'categorie': regel.categorie.name,
             'omschrijving': regel.omschrijving,
             'prijsExclBtw': regel.prijsExclBtw,
             'eenheid': regel.eenheid.jsonWaarde,
@@ -626,6 +645,7 @@ class OfferteAlgemeenArtikelPrijsService {
         .map(
           (regel) => <String, Object?>{
             'id': regel.id,
+            'categorie': regel.categorie.name,
             'omschrijving': regel.omschrijving,
             'prijsExclBtw': regel.prijsExclBtw,
             'eenheid': regel.eenheid.jsonWaarde,
@@ -679,6 +699,11 @@ class OfferteAlgemeenArtikelPrijsService {
     OfferteVrijePrijsSelectieModel selectie,
   ) {
     return selectie.id.startsWith(_tijdelijkeVrijePrijsPrefix);
+  }
+
+  static bool _isProjectPrijsSelectie(OfferteVrijePrijsSelectieModel selectie) {
+    return _isGekozenProjectPrijsSelectie(selectie) ||
+        selectie.id.startsWith(_oudeAutomatischeProjectPrijsPrefix);
   }
 
   static bool _isGekozenProjectPrijsSelectie(

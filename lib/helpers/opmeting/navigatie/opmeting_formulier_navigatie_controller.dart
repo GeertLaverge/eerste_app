@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: HORDEUR-PROJECTKLEUR-NAVIGATIE-20260726
 import 'package:flutter/material.dart';
 
 import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
@@ -29,9 +30,7 @@ class OpmetingFormulierNavigatieController {
 
   bool _formulierOpenenBezig = false;
 
-  Future<void> openRaamopmeting({
-    String formulierType = 'pvcRaam',
-  }) async {
+  Future<void> openRaamopmeting({String formulierType = 'pvcRaam'}) async {
     if (_formulierOpenenBezig) {
       return;
     }
@@ -112,14 +111,11 @@ class OpmetingFormulierNavigatieController {
                 return OpmetingVasteInzethorFiche(
                   klantNaam: klantNaam,
                   bestaandeOpmeting: bestaandeOpmeting,
-                  ralKleurToebehoren:
-                      leesTitelhoofd().ralKleurToebehoren,
+                  ralKleurToebehoren: leesTitelhoofd().ralKleurToebehoren,
                   standaardPrijsPerStukExclBtw:
                       standaardPrijsprofiel?.standaardPrijsPerStukExclBtw ?? 0,
                   standaardWinstmargePercentage:
-                      standaardPrijsprofiel
-                              ?.standaardWinstmargePercentage ??
-                          0,
+                      standaardPrijsprofiel?.standaardWinstmargePercentage ?? 0,
                   standaardKortingPercentage:
                       standaardPrijsprofiel?.standaardKortingPercentage ?? 0,
                 );
@@ -168,6 +164,7 @@ class OpmetingFormulierNavigatieController {
                 return OpmetingVliegendeurFiche(
                   klantNaam: klantNaam,
                   bestaandeOpmeting: bestaandeOpmeting,
+                  projectRalKleur: leesTitelhoofd().ralKleurToebehoren.trim(),
                 );
               },
             ),
@@ -183,9 +180,7 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
-  Future<void> bewerkOpmeting(
-    OpmetingOverzichtRaamItem item,
-  ) async {
+  Future<void> bewerkOpmeting(OpmetingOverzichtRaamItem item) async {
     if (item.formulierTypeGenormaliseerd == 'vasteInzethor') {
       await openVasteInzethor(bestaandeOpmeting: item);
       return;
@@ -214,9 +209,7 @@ class OpmetingFormulierNavigatieController {
     }
 
     final actieveKlantNaam = leesKlantNaam().trim();
-    await herlaadOpmetingen(
-      actieveKlantNaam.isEmpty ? null : actieveKlantNaam,
-    );
+    await herlaadOpmetingen(actieveKlantNaam.isEmpty ? null : actieveKlantNaam);
   }
 
   Future<void> _wachtTotPopupEnDialogGeslotenZijn() async {

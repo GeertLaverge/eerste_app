@@ -1,0 +1,279 @@
+﻿THIMACO - SCAN ALGEMENE PRIJSREGELS
+Datum: 25/07/2026 20:33:13
+Project: C:\Users\geert\mijn_app\eerste_app
+Git-backupbranch: backup/prijsregel-cleanup-20260725_203256
+Git-backupcommit: b3f01108ed60ea6e4373709e6dbe6746e39be011
+Extra backup: C:\Users\geert\mijn_app\thimaco_voor_prijsregel_cleanup_20260725_203256.zip
+
+============================================================
+MOGELIJKE OUDE BESTANDEN
+============================================================
+[AANWEZIG] lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart | 37662 bytes
+[AANWEZIG] lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart | 31300 bytes
+[AANWEZIG] lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart | 6714 bytes
+[AANWEZIG] lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart | 4669 bytes
+[AANWEZIG] lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart | 34613 bytes
+[AANWEZIG] lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart | 28397 bytes
+
+============================================================
+VERWIJZINGEN IN DART-BESTANDEN
+============================================================
+
+ZOEKTERM: OfferteAlgemenePrijsregel
+  lib\helpers\app_storage.dart:59 | static const String _offerteAlgemenePrijsregelsKey =
+  lib\helpers\app_storage.dart:674 | static OfferteAlgemenePrijsregelsModel _decodeOfferteAlgemenePrijsregels(
+  lib\helpers\app_storage.dart:678 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:685 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:688 | return OfferteAlgemenePrijsregelsModel.fromJson(
+  lib\helpers\app_storage.dart:692 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:696 | static String encodeOfferteAlgemenePrijsregelsVoorSync(
+  lib\helpers\app_storage.dart:697 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\app_storage.dart:702 | static Future<OfferteAlgemenePrijsregelsModel>
+  lib\helpers\app_storage.dart:703 | laadOfferteAlgemenePrijsregelsVoorSync() async {
+  lib\helpers\app_storage.dart:706 | return _decodeOfferteAlgemenePrijsregels(
+  lib\helpers\app_storage.dart:707 | prefs.getString(_offerteAlgemenePrijsregelsKey),
+  lib\helpers\app_storage.dart:711 | static Future<OfferteAlgemenePrijsregelsModel>
+  lib\helpers\app_storage.dart:712 | laadOfferteAlgemenePrijsregels() async {
+  lib\helpers\app_storage.dart:713 | return laadOfferteAlgemenePrijsregelsVoorSync();
+  lib\helpers\app_storage.dart:716 | static Future<void> bewaarOfferteAlgemenePrijsregels(
+  lib\helpers\app_storage.dart:717 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\app_storage.dart:723 | _offerteAlgemenePrijsregelsKey,
+  lib\helpers\app_storage.dart:724 | encodeOfferteAlgemenePrijsregelsVoorSync(bijgewerkt),
+  lib\helpers\app_storage.dart:730 | static Future<void> bewaarOfferteAlgemenePrijsregelsVoorSync(
+  lib\helpers\app_storage.dart:731 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\app_storage.dart:736 | _offerteAlgemenePrijsregelsKey,
+  lib\helpers\app_storage.dart:737 | encodeOfferteAlgemenePrijsregelsVoorSync(opslag),
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:3 | class OfferteAlgemenePrijsregelsModel {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:4 | OfferteAlgemenePrijsregelsModel({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:5 | List<OfferteAlgemenePrijsregelModel> prijsregels =
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:6 | const <OfferteAlgemenePrijsregelModel>[],
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:13 | final List<OfferteAlgemenePrijsregelModel> prijsregels;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:16 | factory OfferteAlgemenePrijsregelsModel.leeg() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:17 | return OfferteAlgemenePrijsregelsModel();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:26 | OfferteAlgemenePrijsregelsModel copyWith({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:27 | List<OfferteAlgemenePrijsregelModel>? prijsregels,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:30 | return OfferteAlgemenePrijsregelsModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:36 | OfferteAlgemenePrijsregelsModel metPrijsregel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:37 | OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:39 | final bijgewerkt = List<OfferteAlgemenePrijsregelModel>.from(prijsregels);
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:57 | OfferteAlgemenePrijsregelsModel zonderPrijsregel(String prijsregelId) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:78 | OfferteAlgemenePrijsregelsModel metWijzigingsDatum() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:92 | factory OfferteAlgemenePrijsregelsModel.fromJson(Map<String, dynamic> json) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:95 | return OfferteAlgemenePrijsregelsModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:100 | (item) => OfferteAlgemenePrijsregelModel.fromJson(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:106 | : const <OfferteAlgemenePrijsregelModel>[],
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:111 | static List<OfferteAlgemenePrijsregelModel> _normaliseerPrijsregels(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:112 | Iterable<OfferteAlgemenePrijsregelModel> prijsregels,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:114 | final perId = <String, OfferteAlgemenePrijsregelModel>{};
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:141 | return List<OfferteAlgemenePrijsregelModel>.unmodifiable(resultaat);
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:4 | class OfferteAlgemenePrijsregelModel {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:5 | OfferteAlgemenePrijsregelModel({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:59 | OfferteAlgemenePrijsregelModel copyWith({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:72 | return OfferteAlgemenePrijsregelModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:91 | OfferteAlgemenePrijsregelModel metWijzigingsDatum() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:111 | factory OfferteAlgemenePrijsregelModel.fromJson(Map<String, dynamic> json) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_model.dart:112 | return OfferteAlgemenePrijsregelModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:18 | class OfferteAlgemenePrijsregelToepassenController {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:19 | const OfferteAlgemenePrijsregelToepassenController({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:50 | OfferteAlgemenePrijsregelModel? tijdelijkePrijsregel;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:53 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:131 | final resultaat = await toonOfferteAlgemenePrijsregelToepassenDialog(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:143 | OfferteAlgemenePrijsregelToepassenActie.nieuwePrijsregelToevoegen) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:204 | OfferteAlgemenePrijsregelToepassenActie.toepassenOpOfferte,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:212 | OfferteAlgemenePrijsregelToepassenActie
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:234 | required OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:240 | final nieuwePrijsregel = await toonOfferteAlgemenePrijsregelDialog(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:308 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:442 | required OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:443 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:448 | await AppStorage.bewaarOfferteAlgemenePrijsregels(bijgewerkt);
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:464 | int _volgendeVolgorde(OfferteAlgemenePrijsregelsModel opslag) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:480 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:558 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:691 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:841 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:903 | List<OfferteAlgemenePrijsregelToepassenGroep> _bouwGroepen({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:905 | required List<OfferteAlgemenePrijsregelModel> prijsregels,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:919 | <String, List<OfferteAlgemenePrijsregelToepassenPositie>>{};
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:984 | () => <OfferteAlgemenePrijsregelToepassenPositie>[],
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:987 | OfferteAlgemenePrijsregelToepassenPositie(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1001 | final aanwezigeGroepen = <OfferteAlgemenePrijsregelToepassenGroep>[];
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1003 | final overigeGroepen = <OfferteAlgemenePrijsregelToepassenGroep>[];
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1009 | final groep = OfferteAlgemenePrijsregelToepassenGroep(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1012 | posities: List<OfferteAlgemenePrijsregelToepassenPositie>.unmodifiable(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1014 | const <OfferteAlgemenePrijsregelToepassenPositie>[],
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1041 | return List<OfferteAlgemenePrijsregelToepassenGroep>.unmodifiable(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1042 | <OfferteAlgemenePrijsregelToepassenGroep>[
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1050 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1068 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:1130 | final OfferteAlgemenePrijsregelModel prijsregel;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:5 | class OfferteAlgemenePrijsregelToepassenPositie {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:6 | const OfferteAlgemenePrijsregelToepassenPositie({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:29 | class OfferteAlgemenePrijsregelToepassenGroep {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:30 | const OfferteAlgemenePrijsregelToepassenGroep({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:33 | this.posities = const <OfferteAlgemenePrijsregelToepassenPositie>[],
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:38 | final List<OfferteAlgemenePrijsregelToepassenPositie> posities;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:43 | enum OfferteAlgemenePrijsregelToepassenActie {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:49 | class OfferteAlgemenePrijsregelToepassenResultaat {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:50 | const OfferteAlgemenePrijsregelToepassenResultaat({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:57 | final OfferteAlgemenePrijsregelModel? prijsregel;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:60 | final OfferteAlgemenePrijsregelToepassenActie actie;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:63 | Future<OfferteAlgemenePrijsregelToepassenResultaat?>
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:64 | toonOfferteAlgemenePrijsregelToepassenDialog({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:66 | required List<OfferteAlgemenePrijsregelModel> prijsregels,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:67 | required List<OfferteAlgemenePrijsregelToepassenGroep> groepen,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:70 | return showDialog<OfferteAlgemenePrijsregelToepassenResultaat>(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:74 | return _OfferteAlgemenePrijsregelToepassenDialog(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:83 | class _OfferteAlgemenePrijsregelToepassenDialog extends StatefulWidget {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:84 | const _OfferteAlgemenePrijsregelToepassenDialog({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:90 | final List<OfferteAlgemenePrijsregelModel> prijsregels;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:91 | final List<OfferteAlgemenePrijsregelToepassenGroep> groepen;
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:95 | State<_OfferteAlgemenePrijsregelToepassenDialog> createState() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:96 | return _OfferteAlgemenePrijsregelToepassenDialogState();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:100 | class _OfferteAlgemenePrijsregelToepassenDialogState
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:101 | extends State<_OfferteAlgemenePrijsregelToepassenDialog> {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:115 | OfferteAlgemenePrijsregelModel get _geselecteerdePrijsregel {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:125 | List<OfferteAlgemenePrijsregelToepassenGroep> get _groepenInOfferte {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:131 | List<OfferteAlgemenePrijsregelToepassenGroep> get _overigeGroepen {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:144 | List<OfferteAlgemenePrijsregelToepassenPositie> get _beschikbarePosities {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:145 | final resultaat = <OfferteAlgemenePrijsregelToepassenPositie>[];
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:294 | OfferteAlgemenePrijsregelToepassenActie
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:311 | OfferteAlgemenePrijsregelToepassenActie.toepassenOpOfferte,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:559 | Widget _bouwAanwezigeGroep(OfferteAlgemenePrijsregelToepassenGroep groep) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:667 | Widget _bouwOverigeGroep(OfferteAlgemenePrijsregelToepassenGroep groep) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:798 | OfferteAlgemenePrijsregelToepassenGroep groep,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:821 | OfferteAlgemenePrijsregelToepassenGroep groep,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:822 | OfferteAlgemenePrijsregelToepassenPositie positie,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:836 | bool _groepIsToegelaten(OfferteAlgemenePrijsregelToepassenGroep groep) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:842 | bool _heleGroepGeselecteerd(OfferteAlgemenePrijsregelToepassenGroep groep) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:849 | OfferteAlgemenePrijsregelToepassenGroep groep,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:884 | const OfferteAlgemenePrijsregelToepassenResultaat(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:889 | OfferteAlgemenePrijsregelToepassenActie.nieuwePrijsregelToevoegen,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:894 | void _sluitMetResultaat(OfferteAlgemenePrijsregelToepassenActie actie) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:906 | OfferteAlgemenePrijsregelToepassenResultaat(
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:13 | required List<OfferteAlgemenePrijsregelModel> prijsregels,
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:55 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:179 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:260 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:313 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:343 | required OfferteAlgemenePrijsregelModel prijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:9 | Future<OfferteAlgemenePrijsregelModel?> toonOfferteAlgemenePrijsregelDialog({
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:12 | OfferteAlgemenePrijsregelModel? bestaandePrijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:14 | return showDialog<OfferteAlgemenePrijsregelModel>(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:18 | return _OfferteAlgemenePrijsregelDialog(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:35 | class _OfferteAlgemenePrijsregelDialog extends StatefulWidget {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:36 | const _OfferteAlgemenePrijsregelDialog({
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:42 | final OfferteAlgemenePrijsregelModel? bestaandePrijsregel;
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:45 | State<_OfferteAlgemenePrijsregelDialog> createState() {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:46 | return _OfferteAlgemenePrijsregelDialogState();
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:50 | class _OfferteAlgemenePrijsregelDialogState
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:51 | extends State<_OfferteAlgemenePrijsregelDialog> {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:886 | final prijsregel = OfferteAlgemenePrijsregelModel(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:31 | OfferteAlgemenePrijsregelsModel? _opslag;
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:51 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:74 | OfferteAlgemenePrijsregelsModel opslag, {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:89 | await AppStorage.bewaarOfferteAlgemenePrijsregels(bijgewerkt);
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:126 | final prijsregel = await toonOfferteAlgemenePrijsregelDialog(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:142 | OfferteAlgemenePrijsregelModel prijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:150 | final gewijzigd = await toonOfferteAlgemenePrijsregelDialog(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:167 | OfferteAlgemenePrijsregelModel prijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:213 | OfferteAlgemenePrijsregelModel prijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:233 | OfferteAlgemenePrijsregelModel prijsregel,
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:256 | final hernummerd = <OfferteAlgemenePrijsregelModel>[];
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:414 | Widget _bouwOpslagSamenvatting(OfferteAlgemenePrijsregelsModel opslag) {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:516 | OfferteAlgemenePrijsregelModel prijsregel, {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:790 | String _prijsEnFormuleTekst(OfferteAlgemenePrijsregelModel prijsregel) {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:804 | String _artikelLabels(OfferteAlgemenePrijsregelModel prijsregel) {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:820 | int _volgendeVolgorde(OfferteAlgemenePrijsregelsModel opslag) {
+
+ZOEKTERM: OfferteAlgemenePrijsregelsModel
+  lib\helpers\app_storage.dart:674 | static OfferteAlgemenePrijsregelsModel _decodeOfferteAlgemenePrijsregels(
+  lib\helpers\app_storage.dart:678 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:685 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:688 | return OfferteAlgemenePrijsregelsModel.fromJson(
+  lib\helpers\app_storage.dart:692 | return OfferteAlgemenePrijsregelsModel.leeg();
+  lib\helpers\app_storage.dart:697 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\app_storage.dart:702 | static Future<OfferteAlgemenePrijsregelsModel>
+  lib\helpers\app_storage.dart:711 | static Future<OfferteAlgemenePrijsregelsModel>
+  lib\helpers\app_storage.dart:717 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\app_storage.dart:731 | OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:3 | class OfferteAlgemenePrijsregelsModel {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:4 | OfferteAlgemenePrijsregelsModel({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:16 | factory OfferteAlgemenePrijsregelsModel.leeg() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:17 | return OfferteAlgemenePrijsregelsModel();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:26 | OfferteAlgemenePrijsregelsModel copyWith({
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:30 | return OfferteAlgemenePrijsregelsModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:36 | OfferteAlgemenePrijsregelsModel metPrijsregel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:57 | OfferteAlgemenePrijsregelsModel zonderPrijsregel(String prijsregelId) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:78 | OfferteAlgemenePrijsregelsModel metWijzigingsDatum() {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:92 | factory OfferteAlgemenePrijsregelsModel.fromJson(Map<String, dynamic> json) {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:95 | return OfferteAlgemenePrijsregelsModel(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:234 | required OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:442 | required OfferteAlgemenePrijsregelsModel opslag,
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:464 | int _volgendeVolgorde(OfferteAlgemenePrijsregelsModel opslag) {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:31 | OfferteAlgemenePrijsregelsModel? _opslag;
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:74 | OfferteAlgemenePrijsregelsModel opslag, {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:414 | Widget _bouwOpslagSamenvatting(OfferteAlgemenePrijsregelsModel opslag) {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:820 | int _volgendeVolgorde(OfferteAlgemenePrijsregelsModel opslag) {
+
+ZOEKTERM: OfferteAlgemenePrijzenPagina
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:11 | class OfferteAlgemenePrijzenPagina extends StatefulWidget {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:12 | const OfferteAlgemenePrijzenPagina({super.key});
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:15 | State<OfferteAlgemenePrijzenPagina> createState() {
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:16 | return _OfferteAlgemenePrijzenPaginaState();
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:20 | class _OfferteAlgemenePrijzenPaginaState
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:21 | extends State<OfferteAlgemenePrijzenPagina> {
+
+ZOEKTERM: OfferteAlgemenePrijsregelToepassenController
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:18 | class OfferteAlgemenePrijsregelToepassenController {
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:19 | const OfferteAlgemenePrijsregelToepassenController({
+
+ZOEKTERM: toonOfferteAlgemenePrijsregelDialog
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:240 | final nieuwePrijsregel = await toonOfferteAlgemenePrijsregelDialog(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:9 | Future<OfferteAlgemenePrijsregelModel?> toonOfferteAlgemenePrijsregelDialog({
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:126 | final prijsregel = await toonOfferteAlgemenePrijsregelDialog(
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:150 | final gewijzigd = await toonOfferteAlgemenePrijsregelDialog(
+
+ZOEKTERM: toonOfferteAlgemenePrijsregelToepassenDialog
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:131 | final resultaat = await toonOfferteAlgemenePrijsregelToepassenDialog(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:64 | toonOfferteAlgemenePrijsregelToepassenDialog({
+
+ZOEKTERM: laadOfferteAlgemenePrijsregels
+  lib\helpers\app_storage.dart:703 | laadOfferteAlgemenePrijsregelsVoorSync() async {
+  lib\helpers\app_storage.dart:712 | laadOfferteAlgemenePrijsregels() async {
+  lib\helpers\app_storage.dart:713 | return laadOfferteAlgemenePrijsregelsVoorSync();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:53 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:480 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:51 | final opslag = await AppStorage.laadOfferteAlgemenePrijsregels();
+
+ZOEKTERM: bewaarOfferteAlgemenePrijsregels
+  lib\helpers\app_storage.dart:716 | static Future<void> bewaarOfferteAlgemenePrijsregels(
+  lib\helpers\app_storage.dart:730 | static Future<void> bewaarOfferteAlgemenePrijsregelsVoorSync(
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:448 | await AppStorage.bewaarOfferteAlgemenePrijsregels(bijgewerkt);
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:89 | await AppStorage.bewaarOfferteAlgemenePrijsregels(bijgewerkt);
+
+ZOEKTERM: offerte_algemene_prijsregel
+  lib\helpers\app_storage.dart:16 | import 'offerte/prijzen/offerte_algemene_prijsregels_model.dart';
+  lib\helpers\app_storage.dart:60 | 'thimaco_offerte_algemene_prijsregels';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregels_model.dart:1 | import 'offerte_algemene_prijsregel_model.dart';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:3 | import '../../../paginas/instellingen/offerte_prijzen/offerte_algemene_prijsregel_dialog.dart';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:9 | import 'offerte_algemene_prijsregel_model.dart';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:10 | import 'offerte_algemene_prijsregel_toepassen_op_dialog.dart';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_controller.dart:11 | import 'offerte_algemene_prijsregels_model.dart';
+  lib\helpers\offerte\prijzen\offerte_algemene_prijsregel_toepassen_op_dialog.dart:3 | import 'offerte_algemene_prijsregel_model.dart';
+  lib\helpers\offerte\prijzen\offerte_automatische_prijsregel_sync_service.dart:3 | import 'offerte_algemene_prijsregel_model.dart';
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijsregel_dialog.dart:4 | import '../../../helpers/offerte/prijzen/offerte_algemene_prijsregel_model.dart';
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:4 | import '../../../helpers/offerte/prijzen/offerte_algemene_prijsregel_model.dart';
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:5 | import '../../../helpers/offerte/prijzen/offerte_algemene_prijsregels_model.dart';
+  lib\paginas\instellingen\offerte_prijzen\offerte_algemene_prijzen_pagina.dart:9 | import 'offerte_algemene_prijsregel_dialog.dart';
+
+ZOEKTERM: offerte_algemene_prijzen_pagina
+  Geen verwijzingen gevonden.
+
+============================================================
+SAMENVATTING
+============================================================
+Totaal gevonden verwijzingen: 230
+
+Er is nog niets verwijderd of aangepast.
+Gebruik dit rapport voor de gerichte cleanup in stap 2.

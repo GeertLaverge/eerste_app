@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
 import 'package:flutter/material.dart';
 
 import '../../../paginas/instellingen/offerte_prijzen/offerte_prijsregel_dialog.dart';
@@ -8,20 +9,36 @@ import 'offerte_prijsregel_model.dart';
 enum OffertePrijsregelsVensterActie {
   toepassenOpDezePositie,
   toepassenOpAlleGelijkePosities,
-  toepassenOpOfferte,
+  toevoegenNietBewaren,
+  toevoegenEnBewaren,
   bewarenInInstellingen,
 }
 
 class OffertePrijsregelsVensterResultaat {
-  const OffertePrijsregelsVensterResultaat({
+  OffertePrijsregelsVensterResultaat({
     required this.actie,
     required this.prijsregels,
-    this.gekozenPrijsregel,
-  });
+    Map<String, Set<String>> formulierTypesPerPrijsregelId =
+        const <String, Set<String>>{},
+  }) : formulierTypesPerPrijsregelId = Map<String, Set<String>>.unmodifiable(
+         formulierTypesPerPrijsregelId.map((prijsregelId, formulierTypes) {
+           return MapEntry<String, Set<String>>(
+             prijsregelId,
+             Set<String>.unmodifiable(formulierTypes),
+           );
+         }),
+       );
 
   final OffertePrijsregelsVensterActie actie;
   final List<OffertePrijsregelModel> prijsregels;
-  final OffertePrijsregelModel? gekozenPrijsregel;
+
+  /// Tijdelijke opmeetficheselectie per projectprijsregel.
+  ///
+  /// De bestaande prijsmodellen en JSON-opslag blijven ongewijzigd.
+  /// De projectcontroller maakt voor iedere geselecteerde opmeetfiche een
+  /// bestaande prijsregelkopie met hetzelfde prijsregel-ID en een eigen
+  /// `formulierType`.
+  final Map<String, Set<String>> formulierTypesPerPrijsregelId;
 }
 
 Future<OffertePrijsregelsVensterResultaat?>
@@ -35,9 +52,12 @@ toonOffertePrijsregelsZwevendVenster({
       const <OffertePrijsregelModel>[],
   bool toonToepassenOpDezePositie = false,
   bool toonToepassenOpAlleGelijkePosities = false,
-  bool toonToepassenOpOfferte = false,
+  bool toonProjectActies = false,
+  bool toonProjectOfferteActies = true,
   bool behoudFormulierTypePerRegel = false,
   Map<String, String> formulierTypeLabels = const <String, String>{},
+  Map<String, Set<String>> beginFormulierTypesPerPrijsregelId =
+      const <String, Set<String>>{},
   bool toonBeheerActies = true,
   bool toonFormulierTypeBijRegel = false,
 }) {
@@ -56,9 +76,11 @@ toonOffertePrijsregelsZwevendVenster({
         beginPrijsregels: beginPrijsregels,
         toonToepassenOpDezePositie: toonToepassenOpDezePositie,
         toonToepassenOpAlleGelijkePosities: toonToepassenOpAlleGelijkePosities,
-        toonToepassenOpOfferte: toonToepassenOpOfferte,
+        toonProjectActies: toonProjectActies,
+        toonProjectOfferteActies: toonProjectOfferteActies,
         behoudFormulierTypePerRegel: behoudFormulierTypePerRegel,
         formulierTypeLabels: formulierTypeLabels,
+        beginFormulierTypesPerPrijsregelId: beginFormulierTypesPerPrijsregelId,
         toonBeheerActies: toonBeheerActies,
         toonFormulierTypeBijRegel: toonFormulierTypeBijRegel,
       );
@@ -78,9 +100,11 @@ class _OffertePrijsregelsZwevendVenster extends StatefulWidget {
     required this.beginPrijsregels,
     required this.toonToepassenOpDezePositie,
     required this.toonToepassenOpAlleGelijkePosities,
-    required this.toonToepassenOpOfferte,
+    required this.toonProjectActies,
+    required this.toonProjectOfferteActies,
     required this.behoudFormulierTypePerRegel,
     required this.formulierTypeLabels,
+    required this.beginFormulierTypesPerPrijsregelId,
     required this.toonBeheerActies,
     required this.toonFormulierTypeBijRegel,
   });
@@ -92,9 +116,11 @@ class _OffertePrijsregelsZwevendVenster extends StatefulWidget {
   final List<OffertePrijsregelModel> beginPrijsregels;
   final bool toonToepassenOpDezePositie;
   final bool toonToepassenOpAlleGelijkePosities;
-  final bool toonToepassenOpOfferte;
+  final bool toonProjectActies;
+  final bool toonProjectOfferteActies;
   final bool behoudFormulierTypePerRegel;
   final Map<String, String> formulierTypeLabels;
+  final Map<String, Set<String>> beginFormulierTypesPerPrijsregelId;
   final bool toonBeheerActies;
   final bool toonFormulierTypeBijRegel;
 
@@ -112,13 +138,15 @@ class _OffertePrijsregelsZwevendVensterState
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   late List<OffertePrijsregelModel> _regels;
-  String? _gekozenPrijsregelSleutel;
+  late Map<String, Set<String>> _formulierTypesPerPrijsregelId;
+
   Offset? _positie;
 
   @override
   void initState() {
     super.initState();
-    _regels = widget.beginPrijsregels
+
+    final bronRegels = widget.beginPrijsregels
         .map(
           (regel) => regel.copyWith(
             categorie: widget.categorie,
@@ -127,9 +155,95 @@ class _OffertePrijsregelsZwevendVensterState
                 : widget.formulierType,
           ),
         )
-        .toList(growable: true);
+        .toList(growable: false);
+
+    _formulierTypesPerPrijsregelId = <String, Set<String>>{};
+
+    for (final entry in widget.beginFormulierTypesPerPrijsregelId.entries) {
+      final geldigeFormulierTypes = _normaliseerBeschikbareFormulierTypes(
+        entry.value,
+      );
+
+      if (geldigeFormulierTypes.isNotEmpty) {
+        _formulierTypesPerPrijsregelId[entry.key] = geldigeFormulierTypes;
+      }
+    }
+
+    final samengevoegdeRegels = <OffertePrijsregelModel>[];
+    final indexPerPrijsregelId = <String, int>{};
+
+    for (final regel in bronRegels) {
+      if (!widget.toonProjectActies) {
+        samengevoegdeRegels.add(regel);
+        continue;
+      }
+
+      final geselecteerdeFormulierTypes = _formulierTypesPerPrijsregelId
+          .putIfAbsent(regel.id, () => <String>{});
+
+      final canoniekFormulierType = _canoniekBeschikbaarFormulierType(
+        regel.formulierType,
+      );
+
+      if (canoniekFormulierType != null) {
+        geselecteerdeFormulierTypes.add(canoniekFormulierType);
+      }
+
+      final bestaandIndex = indexPerPrijsregelId[regel.id];
+
+      if (bestaandIndex == null) {
+        indexPerPrijsregelId[regel.id] = samengevoegdeRegels.length;
+        samengevoegdeRegels.add(regel);
+        continue;
+      }
+
+      final bestaand = samengevoegdeRegels[bestaandIndex];
+
+      if (_isNieuwer(regel.gewijzigdOp, bestaand.gewijzigdOp)) {
+        samengevoegdeRegels[bestaandIndex] = regel;
+      }
+    }
+
+    _regels = samengevoegdeRegels;
+
+    for (var index = 0; index < _regels.length; index++) {
+      final regel = _regels[index];
+
+      if (!widget.toonProjectActies) {
+        continue;
+      }
+
+      final geselecteerdeFormulierTypes =
+          _formulierTypesPerPrijsregelId[regel.id] ?? <String>{};
+
+      if (geselecteerdeFormulierTypes.isNotEmpty) {
+        final eersteFormulierType = _eersteGeselecteerdeFormulierType(
+          geselecteerdeFormulierTypes,
+        );
+
+        if (eersteFormulierType != null) {
+          _regels[index] = regel.copyWith(formulierType: eersteFormulierType);
+        }
+
+        continue;
+      }
+
+      final standaardFormulierType =
+          _canoniekBeschikbaarFormulierType(regel.formulierType) ??
+          (_formulierTypeOpties.isEmpty
+              ? null
+              : _formulierTypeOpties.first.formulierType);
+
+      if (standaardFormulierType != null) {
+        _formulierTypesPerPrijsregelId[regel.id] = <String>{
+          standaardFormulierType,
+        };
+
+        _regels[index] = regel.copyWith(formulierType: standaardFormulierType);
+      }
+    }
+
     _sorteerRegels();
-    _kiesEersteBeschikbarePrijsregel();
   }
 
   List<OffertePrijsregelFormulierOptie> get _formulierTypeOpties {
@@ -143,44 +257,11 @@ class _OffertePrijsregelsZwevendVensterState
         .toList(growable: false);
   }
 
-  OffertePrijsregelModel? get _gekozenPrijsregel {
-    final gekozenSleutel = _gekozenPrijsregelSleutel;
-    if (gekozenSleutel == null) return null;
-
-    for (final regel in _regels) {
-      if (_regelSleutel(regel) == gekozenSleutel &&
-          regel.actief &&
-          regel.isGeldig &&
-          regel.prijsExclBtw > 0.0) {
-        return regel;
-      }
-    }
-    return null;
-  }
-
-  void _kiesEersteBeschikbarePrijsregel() {
-    final huidigeKeuze = _gekozenPrijsregel;
-    if (huidigeKeuze != null) return;
-
-    _gekozenPrijsregelSleutel = null;
-    for (final regel in _regels) {
-      if (regel.actief && regel.isGeldig && regel.prijsExclBtw > 0.0) {
-        _gekozenPrijsregelSleutel = _regelSleutel(regel);
-        return;
-      }
-    }
-  }
-
-  void _kiesPrijsregel(OffertePrijsregelModel regel) {
-    if (!regel.actief || !regel.isGeldig || regel.prijsExclBtw <= 0.0) {
-      return;
-    }
-    setState(() {
-      _gekozenPrijsregelSleutel = _regelSleutel(regel);
-    });
-  }
-
   String _regelSleutel(OffertePrijsregelModel regel) {
+    if (widget.toonProjectActies) {
+      return regel.id;
+    }
+
     return '${_normaliseerFormulierType(regel.formulierType)}|${regel.id}';
   }
 
@@ -188,17 +269,70 @@ class _OffertePrijsregelsZwevendVensterState
     return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
   }
 
+  static bool _isNieuwer(String eerste, String tweede) {
+    final eersteDatum = DateTime.tryParse(eerste);
+    final tweedeDatum = DateTime.tryParse(tweede);
+
+    if (eersteDatum != null && tweedeDatum != null) {
+      return eersteDatum.isAfter(tweedeDatum);
+    }
+
+    if (eersteDatum != null) return true;
+    if (tweedeDatum != null) return false;
+
+    return eerste.compareTo(tweede) > 0;
+  }
+
+  String? _canoniekBeschikbaarFormulierType(String waarde) {
+    final sleutel = _normaliseerFormulierType(waarde);
+
+    for (final optie in _formulierTypeOpties) {
+      if (_normaliseerFormulierType(optie.formulierType) == sleutel) {
+        return optie.formulierType;
+      }
+    }
+
+    return null;
+  }
+
+  Set<String> _normaliseerBeschikbareFormulierTypes(Iterable<String> waarden) {
+    final sleutels = waarden.map(_normaliseerFormulierType).toSet();
+
+    return <String>{
+      for (final optie in _formulierTypeOpties)
+        if (sleutels.contains(_normaliseerFormulierType(optie.formulierType)))
+          optie.formulierType,
+    };
+  }
+
+  String? _eersteGeselecteerdeFormulierType(Set<String> selectie) {
+    for (final optie in _formulierTypeOpties) {
+      if (selectie.contains(optie.formulierType)) {
+        return optie.formulierType;
+      }
+    }
+
+    return selectie.isEmpty ? null : selectie.first;
+  }
+
   void _sorteerRegels() {
     _regels.sort((eerste, tweede) {
-      if (widget.behoudFormulierTypePerRegel) {
+      if (widget.behoudFormulierTypePerRegel && !widget.toonProjectActies) {
         final formulierVergelijking = _formulierTypeLabel(eerste.formulierType)
             .toLowerCase()
             .compareTo(_formulierTypeLabel(tweede.formulierType).toLowerCase());
-        if (formulierVergelijking != 0) return formulierVergelijking;
+
+        if (formulierVergelijking != 0) {
+          return formulierVergelijking;
+        }
       }
 
       final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
-      if (volgorde != 0) return volgorde;
+
+      if (volgorde != 0) {
+        return volgorde;
+      }
+
       return eerste.omschrijving.toLowerCase().compareTo(
         tweede.omschrijving.toLowerCase(),
       );
@@ -207,9 +341,11 @@ class _OffertePrijsregelsZwevendVensterState
 
   int get _volgendeVolgorde {
     if (_regels.isEmpty) return 0;
+
     final hoogste = _regels
         .map((regel) => regel.volgorde)
         .reduce((eerste, tweede) => eerste > tweede ? eerste : tweede);
+
     return hoogste + 10;
   }
 
@@ -219,7 +355,9 @@ class _OffertePrijsregelsZwevendVensterState
       categorie: widget.categorie,
       formulierType: widget.formulierType,
       volgendeVolgorde: _volgendeVolgorde,
-      formulierTypeOpties: _formulierTypeOpties,
+      formulierTypeOpties: widget.toonProjectActies
+          ? const <OffertePrijsregelFormulierOptie>[]
+          : _formulierTypeOpties,
       bevestigKnopTekst: 'Toepassen',
       bevestigKnopIcoon: Icons.check_rounded,
     );
@@ -228,22 +366,36 @@ class _OffertePrijsregelsZwevendVensterState
 
     setState(() {
       _regels.add(resultaat);
-      _sorteerRegels();
-      if (resultaat.actief &&
-          resultaat.isGeldig &&
-          resultaat.prijsExclBtw > 0.0) {
-        _gekozenPrijsregelSleutel = _regelSleutel(resultaat);
+
+      if (widget.toonProjectActies) {
+        final standaardFormulierType =
+            _canoniekBeschikbaarFormulierType(resultaat.formulierType) ??
+            (_formulierTypeOpties.isEmpty
+                ? null
+                : _formulierTypeOpties.first.formulierType);
+
+        if (standaardFormulierType != null) {
+          _formulierTypesPerPrijsregelId[resultaat.id] = <String>{
+            standaardFormulierType,
+          };
+        }
       }
+
+      _sorteerRegels();
     });
   }
 
   Future<void> _bewerkRegel(OffertePrijsregelModel regel) async {
+    final bestaandeSelectie = _geselecteerdeFormulierTypesVoor(regel);
+
     final resultaat = await toonOffertePrijsregelDialog(
       context: context,
       categorie: widget.categorie,
       formulierType: regel.formulierType,
       volgendeVolgorde: regel.volgorde,
-      formulierTypeOpties: _formulierTypeOpties,
+      formulierTypeOpties: widget.toonProjectActies
+          ? const <OffertePrijsregelFormulierOptie>[]
+          : _formulierTypeOpties,
       bestaandePrijsregel: regel,
       bevestigKnopTekst: 'Toepassen',
       bevestigKnopIcoon: Icons.check_rounded,
@@ -255,14 +407,38 @@ class _OffertePrijsregelsZwevendVensterState
       final index = _regels.indexWhere(
         (item) => _regelSleutel(item) == _regelSleutel(regel),
       );
-      if (index >= 0) {
-        _regels[index] = resultaat;
+
+      if (index < 0) return;
+
+      if (regel.id != resultaat.id) {
+        _formulierTypesPerPrijsregelId.remove(regel.id);
       }
+
+      if (widget.toonProjectActies) {
+        final genormaliseerdeSelectie = _normaliseerBeschikbareFormulierTypes(
+          bestaandeSelectie,
+        );
+
+        if (genormaliseerdeSelectie.isNotEmpty) {
+          _formulierTypesPerPrijsregelId[resultaat.id] =
+              genormaliseerdeSelectie;
+        } else {
+          final standaardFormulierType =
+              _canoniekBeschikbaarFormulierType(resultaat.formulierType) ??
+              (_formulierTypeOpties.isEmpty
+                  ? null
+                  : _formulierTypeOpties.first.formulierType);
+
+          if (standaardFormulierType != null) {
+            _formulierTypesPerPrijsregelId[resultaat.id] = <String>{
+              standaardFormulierType,
+            };
+          }
+        }
+      }
+
+      _regels[index] = resultaat;
       _sorteerRegels();
-      if (_gekozenPrijsregelSleutel == _regelSleutel(regel)) {
-        _gekozenPrijsregelSleutel = _regelSleutel(resultaat);
-      }
-      _kiesEersteBeschikbarePrijsregel();
     });
   }
 
@@ -305,11 +481,12 @@ class _OffertePrijsregelsZwevendVensterState
       _regels.removeWhere(
         (item) => _regelSleutel(item) == _regelSleutel(regel),
       );
-      if (_gekozenPrijsregelSleutel == _regelSleutel(regel)) {
-        _gekozenPrijsregelSleutel = null;
+
+      if (widget.toonProjectActies) {
+        _formulierTypesPerPrijsregelId.remove(regel.id);
       }
+
       _hernummerVolgorde();
-      _kiesEersteBeschikbarePrijsregel();
     });
   }
 
@@ -318,15 +495,195 @@ class _OffertePrijsregelsZwevendVensterState
       final index = _regels.indexWhere(
         (item) => _regelSleutel(item) == _regelSleutel(regel),
       );
+
       if (index < 0) return;
+
       _regels[index] = regel.copyWith(
         actief: actief,
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       );
-      if (!actief && _gekozenPrijsregelSleutel == _regelSleutel(regel)) {
-        _gekozenPrijsregelSleutel = null;
-      }
-      _kiesEersteBeschikbarePrijsregel();
+    });
+  }
+
+  Set<String> _geselecteerdeFormulierTypesVoor(OffertePrijsregelModel regel) {
+    final bestaand = _formulierTypesPerPrijsregelId[regel.id];
+
+    if (bestaand != null && bestaand.isNotEmpty) {
+      return Set<String>.from(bestaand);
+    }
+
+    final canoniek = _canoniekBeschikbaarFormulierType(regel.formulierType);
+
+    return canoniek == null ? <String>{} : <String>{canoniek};
+  }
+
+  String _formulierTypeSelectieTekst(OffertePrijsregelModel regel) {
+    final geselecteerd = _geselecteerdeFormulierTypesVoor(regel);
+
+    final labels = <String>[
+      for (final optie in _formulierTypeOpties)
+        if (geselecteerd.contains(optie.formulierType)) optie.label,
+    ];
+
+    if (labels.isEmpty) {
+      return 'Opmeetfiches kiezen';
+    }
+
+    if (labels.length == 1) {
+      return labels.first;
+    }
+
+    if (labels.length == 2) {
+      return labels.join(' + ');
+    }
+
+    return '${labels.length} opmeetfiches geselecteerd';
+  }
+
+  Future<void> _toonFormulierTypeSelectie(OffertePrijsregelModel regel) async {
+    if (_formulierTypeOpties.isEmpty) return;
+
+    final beginSelectie = _geselecteerdeFormulierTypesVoor(regel);
+
+    if (beginSelectie.isEmpty) {
+      beginSelectie.add(_formulierTypeOpties.first.formulierType);
+    }
+
+    final gekozen = await showDialog<Set<String>>(
+      context: context,
+      builder: (dialogContext) {
+        final tijdelijkeSelectie = Set<String>.from(beginSelectie);
+
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Opmeetfiches kiezen',
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+              content: SizedBox(
+                width: 430,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Text(
+                      'Kies op welke opmeetfiches '
+                      '“${regel.omschrijving}” moet worden berekend.',
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 12,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 320),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: _formulierTypeOpties
+                              .map((optie) {
+                                final geselecteerd = tijdelijkeSelectie
+                                    .contains(optie.formulierType);
+
+                                return CheckboxListTile(
+                                  value: geselecteerd,
+                                  activeColor: _groen,
+                                  controlAffinity:
+                                      ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                  title: Text(
+                                    optie.label,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  onChanged: (waarde) {
+                                    setDialogState(() {
+                                      if (waarde == true) {
+                                        tijdelijkeSelectie.add(
+                                          optie.formulierType,
+                                        );
+                                      } else {
+                                        tijdelijkeSelectie.remove(
+                                          optie.formulierType,
+                                        );
+                                      }
+                                    });
+                                  },
+                                );
+                              })
+                              .toList(growable: false),
+                        ),
+                      ),
+                    ),
+                    if (tijdelijkeSelectie.isEmpty) ...<Widget>[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Selecteer minstens één opmeetfiche.',
+                        style: TextStyle(
+                          color: Color(0xFFDC2626),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: _groen),
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Annuleren'),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _groen),
+                  onPressed: tijdelijkeSelectie.isEmpty
+                      ? null
+                      : () {
+                          Navigator.pop(
+                            dialogContext,
+                            Set<String>.from(tijdelijkeSelectie),
+                          );
+                        },
+                  child: const Text('Toepassen'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (gekozen == null || gekozen.isEmpty || !mounted) return;
+
+    setState(() {
+      final index = _regels.indexWhere(
+        (item) => _regelSleutel(item) == _regelSleutel(regel),
+      );
+
+      if (index < 0) return;
+
+      final genormaliseerd = _normaliseerBeschikbareFormulierTypes(gekozen);
+
+      if (genormaliseerd.isEmpty) return;
+
+      _formulierTypesPerPrijsregelId[regel.id] = genormaliseerd;
+
+      final eersteFormulierType = _eersteGeselecteerdeFormulierType(
+        genormaliseerd,
+      );
+
+      _regels[index] = regel.copyWith(
+        formulierType: eersteFormulierType ?? regel.formulierType,
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      );
     });
   }
 
@@ -334,8 +691,12 @@ class _OffertePrijsregelsZwevendVensterState
     final index = _regels.indexWhere(
       (item) => _regelSleutel(item) == _regelSleutel(regel),
     );
+
     final nieuweIndex = index + richting;
-    if (index < 0 || nieuweIndex < 0 || nieuweIndex >= _regels.length) return;
+
+    if (index < 0 || nieuweIndex < 0 || nieuweIndex >= _regels.length) {
+      return;
+    }
 
     setState(() {
       final verplaatst = _regels.removeAt(index);
@@ -345,31 +706,48 @@ class _OffertePrijsregelsZwevendVensterState
   }
 
   void _hernummerVolgorde() {
+    if (widget.toonProjectActies) {
+      for (var index = 0; index < _regels.length; index++) {
+        _regels[index] = _regels[index].copyWith(volgorde: index * 10);
+      }
+
+      return;
+    }
+
     if (!widget.behoudFormulierTypePerRegel) {
       for (var index = 0; index < _regels.length; index++) {
         _regels[index] = _regels[index].copyWith(volgorde: index * 10);
       }
+
       return;
     }
 
     final volgendePerFormulierType = <String, int>{};
+
     for (var index = 0; index < _regels.length; index++) {
       final regel = _regels[index];
       final sleutel = _normaliseerFormulierType(regel.formulierType);
       final volgnummer = volgendePerFormulierType[sleutel] ?? 0;
+
       _regels[index] = regel.copyWith(volgorde: volgnummer * 10);
+
       volgendePerFormulierType[sleutel] = volgnummer + 1;
     }
   }
 
   void _sluitMetActie(OffertePrijsregelsVensterActie actie) {
     _hernummerVolgorde();
+
     Navigator.pop(
       context,
       OffertePrijsregelsVensterResultaat(
         actie: actie,
         prijsregels: List<OffertePrijsregelModel>.unmodifiable(_regels),
-        gekozenPrijsregel: _gekozenPrijsregel,
+        formulierTypesPerPrijsregelId: <String, Set<String>>{
+          for (final regel in _regels)
+            if (widget.toonProjectActies)
+              regel.id: _geselecteerdeFormulierTypesVoor(regel),
+        },
       ),
     );
   }
@@ -377,9 +755,11 @@ class _OffertePrijsregelsZwevendVensterState
   @override
   Widget build(BuildContext context) {
     final scherm = MediaQuery.sizeOf(context);
+
     final vensterBreedte = scherm.width < 592
         ? (scherm.width - 16).clamp(280.0, scherm.width).toDouble()
         : (scherm.width - 32).clamp(560.0, 920.0).toDouble();
+
     final vensterHoogte = scherm.height < 468
         ? (scherm.height - 16).clamp(300.0, scherm.height).toDouble()
         : (scherm.height - 48).clamp(420.0, 720.0).toDouble();
@@ -390,6 +770,7 @@ class _OffertePrijsregelsZwevendVensterState
           .clamp(8.0, scherm.height)
           .toDouble(),
     );
+
     final positie = _positie ?? beginPositie;
 
     return Material(
@@ -415,6 +796,7 @@ class _OffertePrijsregelsZwevendVensterState
                       final huidige = _positie ?? beginPositie;
                       final maximumX = scherm.width - vensterBreedte - 8;
                       final maximumY = scherm.height - vensterHoogte - 8;
+
                       setState(() {
                         _positie = Offset(
                           (huidige.dx + details.delta.dx)
@@ -550,6 +932,7 @@ class _OffertePrijsregelsZwevendVensterState
                                 const Divider(height: 1, color: _rand),
                             itemBuilder: (context, index) {
                               final regel = _regels[index];
+
                               return _bouwPrijsregelRij(regel, index);
                             },
                           ),
@@ -596,31 +979,49 @@ class _OffertePrijsregelsZwevendVensterState
                               'Toepassen op alle gelijke posities',
                             ),
                           ),
-                        if (widget.toonToepassenOpOfferte)
+                        if (widget.toonProjectActies &&
+                            widget.toonProjectOfferteActies) ...<Widget>[
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: _gekozenPrijsregel == null
-                                  ? _tekstGrijs
-                                  : _groen,
-                              side: BorderSide(
-                                color: _gekozenPrijsregel == null
-                                    ? _rand
-                                    : _groen,
-                              ),
+                              foregroundColor: _groen,
+                              side: const BorderSide(color: _groen),
                             ),
-                            onPressed: _gekozenPrijsregel == null
-                                ? null
-                                : () => _sluitMetActie(
-                                    OffertePrijsregelsVensterActie
-                                        .toepassenOpOfferte,
-                                  ),
+                            onPressed: () => _sluitMetActie(
+                              OffertePrijsregelsVensterActie
+                                  .toevoegenNietBewaren,
+                            ),
                             icon: const Icon(
-                              Icons.rule_folder_outlined,
+                              Icons.playlist_add_rounded,
                               size: 18,
                             ),
-                            label: const Text('Kies uw artikelen'),
+                            label: const Text('Toevoegen niet bewaren'),
                           ),
-                        if (widget.toonBeheerActies)
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: _groen,
+                            ),
+                            onPressed: () => _sluitMetActie(
+                              OffertePrijsregelsVensterActie.toevoegenEnBewaren,
+                            ),
+                            icon: const Icon(
+                              Icons.library_add_check_outlined,
+                              size: 18,
+                            ),
+                            label: const Text('Toevoegen en bewaren'),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _groen,
+                              side: const BorderSide(color: _groen),
+                            ),
+                            onPressed: () => _sluitMetActie(
+                              OffertePrijsregelsVensterActie
+                                  .bewarenInInstellingen,
+                            ),
+                            icon: const Icon(Icons.save_outlined, size: 18),
+                            label: const Text('Bewaren'),
+                          ),
+                        ] else if (widget.toonBeheerActies)
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
                               backgroundColor: _groen,
@@ -650,28 +1051,7 @@ class _OffertePrijsregelsZwevendVensterState
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (widget.toonToepassenOpOfferte) ...<Widget>[
-            IconButton(
-              tooltip: _gekozenPrijsregelSleutel == _regelSleutel(regel)
-                  ? 'Gekozen prijsregel'
-                  : 'Deze prijsregel kiezen',
-              visualDensity: VisualDensity.compact,
-              onPressed:
-                  regel.actief && regel.isGeldig && regel.prijsExclBtw > 0.0
-                  ? () => _kiesPrijsregel(regel)
-                  : null,
-              icon: Icon(
-                _gekozenPrijsregelSleutel == _regelSleutel(regel)
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color: _gekozenPrijsregelSleutel == _regelSleutel(regel)
-                    ? _groen
-                    : _tekstGrijs,
-              ),
-            ),
-            const SizedBox(width: 2),
-          ],
-          if (widget.toonBeheerActies) ...<Widget>[
+          if (widget.toonBeheerActies && !widget.toonProjectActies) ...<Widget>[
             Switch.adaptive(
               value: regel.actief,
               activeThumbColor: _groen,
@@ -691,7 +1071,108 @@ class _OffertePrijsregelsZwevendVensterState
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                if (widget.toonFormulierTypeBijRegel) ...<Widget>[
+                if (widget.toonProjectActies) ...<Widget>[
+                  const SizedBox(height: 7),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 12,
+                    runSpacing: 8,
+                    children: <Widget>[
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _wisselActief(regel, !regel.actief),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Checkbox(
+                                value: regel.actief,
+                                fillColor: WidgetStateProperty.resolveWith((
+                                  states,
+                                ) {
+                                  return states.contains(WidgetState.selected)
+                                      ? _groen
+                                      : null;
+                                }),
+                                visualDensity: VisualDensity.compact,
+                                onChanged: (waarde) {
+                                  _wisselActief(regel, waarde ?? false);
+                                },
+                              ),
+                              const SizedBox(width: 2),
+                              const Text(
+                                'Automatisch toepassen',
+                                style: TextStyle(
+                                  color: _tekstDonker,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (_formulierTypeOpties.isNotEmpty)
+                        SizedBox(
+                          width: 300,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(9),
+                            onTap: () => _toonFormulierTypeSelectie(regel),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: regel.isVerdeeldeProjectkost
+                                    ? 'Opmeetfiches voor interne verdeling'
+                                    : 'Opmeetfiches / artikelgroepen',
+                                isDense: true,
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                  borderSide: const BorderSide(color: _rand),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(9),
+                                  borderSide: const BorderSide(color: _rand),
+                                ),
+                              ),
+                              child: Row(
+                                children: <Widget>[
+                                  const Icon(
+                                    Icons.checklist_rounded,
+                                    color: _groen,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _formulierTypeSelectieTekst(regel),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: _tekstDonker,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.arrow_drop_down_rounded,
+                                    color: _tekstGrijs,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ] else if (widget.toonFormulierTypeBijRegel) ...<Widget>[
                   const SizedBox(height: 3),
                   Text(
                     _formulierTypeLabel(regel.formulierType),
@@ -783,6 +1264,7 @@ class _OffertePrijsregelsZwevendVensterState
       'pvcDeur' => 'PVC deur',
       'aluDeur' => 'ALU deur',
       'vasteInzethor' => 'Vaste inzethor',
+      'vliegendeur' => 'Vliegendeur',
       final String waarde when waarde.isNotEmpty => waarde,
       _ => 'Artikel',
     };
@@ -790,6 +1272,7 @@ class _OffertePrijsregelsZwevendVensterState
 
   static String _formatteerEuro(double waarde) {
     final veilig = waarde.isFinite ? waarde : 0.0;
+
     return '€ ${veilig.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 }

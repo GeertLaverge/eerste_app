@@ -10,15 +10,11 @@ Future<void> main() async {
   await AgendaMeldingService.initialiseren();
   await PostcodeHelper.initialiseren();
 
-  runApp(
-    const ThimacoApp(),
-  );
+  runApp(const ThimacoApp());
 }
 
 class ThimacoApp extends StatelessWidget {
-  const ThimacoApp({
-    super.key,
-  });
+  const ThimacoApp({super.key});
 
   @override
   Widget build(BuildContext context) {

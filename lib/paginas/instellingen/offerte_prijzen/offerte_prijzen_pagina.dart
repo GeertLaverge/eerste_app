@@ -1,10 +1,25 @@
+// THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
 import 'package:flutter/material.dart';
 
+import '../../../helpers/app_storage.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijs_categorie.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijsprofiel_model.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijsregel_beheer_service.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
+import '../../../helpers/offerte/prijzen/offerte_prijsregels_zwevend_venster.dart';
+import '../../../helpers/offerte/prijzen/offerte_verdeelkost_service.dart';
 import 'offerte_prijzen_fiche_pagina.dart';
 
-class OffertePrijzenPagina extends StatelessWidget {
+class OffertePrijzenPagina extends StatefulWidget {
   const OffertePrijzenPagina({super.key});
 
+  @override
+  State<OffertePrijzenPagina> createState() {
+    return _OffertePrijzenPaginaState();
+  }
+}
+
+class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _achtergrond = Color(0xFFF7F8FA);
@@ -69,6 +84,343 @@ class OffertePrijzenPagina extends StatelessWidget {
         ),
       ];
 
+  bool _projectPrijsregelsBezig = false;
+
+  List<_OffertePrijsFicheKeuze> get _actieveFiches {
+    return _fiches.where((fiche) => fiche.actief).toList(growable: false);
+  }
+
+  static String _normaliseerFormulierType(String waarde) {
+    return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
+  }
+
+  static bool _isNieuwer(String eerste, String tweede) {
+    final eersteDatum = DateTime.tryParse(eerste);
+    final tweedeDatum = DateTime.tryParse(tweede);
+
+    if (eersteDatum != null && tweedeDatum != null) {
+      return eersteDatum.isAfter(tweedeDatum);
+    }
+
+    if (eersteDatum != null) return true;
+    if (tweedeDatum != null) return false;
+
+    return eerste.compareTo(tweede) > 0;
+  }
+
+  String _projectPrijsregelGroepSleutel(OffertePrijsregelModel regel) {
+    if (regel.isVerdeeldeProjectkost) {
+      final verdeelSleutel =
+          OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(regel);
+      if (verdeelSleutel.isNotEmpty) {
+        return 'verdeelkost::$verdeelSleutel';
+      }
+    }
+
+    return 'prijsregel::${regel.id}';
+  }
+
+  Map<String, List<OffertePrijsregelModel>>
+  _maakGekoppeldeVerdeelkostBronnenPerRegelId(
+    List<OffertePrijsregelModel> prijsregels,
+  ) {
+    final perSleutel = <String, List<OffertePrijsregelModel>>{};
+
+    for (final regel in prijsregels) {
+      final sleutel = OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(
+        regel,
+      );
+
+      if (sleutel.isEmpty) continue;
+
+      perSleutel
+          .putIfAbsent(sleutel, () => <OffertePrijsregelModel>[])
+          .add(regel);
+    }
+
+    final perRegelId = <String, List<OffertePrijsregelModel>>{};
+
+    for (final gekoppeldeRegels in perSleutel.values) {
+      final onwijzigbaar = List<OffertePrijsregelModel>.unmodifiable(
+        gekoppeldeRegels,
+      );
+
+      for (final regel in gekoppeldeRegels) {
+        perRegelId[regel.id] = onwijzigbaar;
+      }
+    }
+
+    return perRegelId;
+  }
+
+  List<OffertePrijsregelModel> _combineerProjectPrijsregelsVoorVenster(
+    List<OffertePrijsregelModel> prijsregels,
+  ) {
+    final resultaat = <OffertePrijsregelModel>[];
+    final indexPerGroepSleutel = <String, int>{};
+
+    for (final regel in prijsregels) {
+      final groepSleutel = _projectPrijsregelGroepSleutel(regel);
+      final bestaandIndex = indexPerGroepSleutel[groepSleutel];
+
+      if (bestaandIndex == null) {
+        indexPerGroepSleutel[groepSleutel] = resultaat.length;
+        resultaat.add(regel);
+        continue;
+      }
+
+      final bestaand = resultaat[bestaandIndex];
+
+      if (_isNieuwer(regel.gewijzigdOp, bestaand.gewijzigdOp)) {
+        resultaat[bestaandIndex] = regel;
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+
+      if (volgorde != 0) return volgorde;
+
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return List<OffertePrijsregelModel>.unmodifiable(resultaat);
+  }
+
+  Map<String, Set<String>> _maakFormulierTypeSelectiesPerPrijsregelId({
+    required List<OffertePrijsregelModel> allePrijsregels,
+    required List<OffertePrijsregelModel> zichtbarePrijsregels,
+  }) {
+    final formulierTypesPerGroep = <String, Set<String>>{};
+
+    for (final regel in allePrijsregels) {
+      if (regel.id.trim().isEmpty) continue;
+
+      formulierTypesPerGroep
+          .putIfAbsent(_projectPrijsregelGroepSleutel(regel), () => <String>{})
+          .add(regel.formulierType);
+    }
+
+    return <String, Set<String>>{
+      for (final zichtbareRegel in zichtbarePrijsregels)
+        zichtbareRegel.id: Set<String>.unmodifiable(
+          formulierTypesPerGroep[_projectPrijsregelGroepSleutel(
+                zichtbareRegel,
+              )] ??
+              <String>{zichtbareRegel.formulierType},
+        ),
+    };
+  }
+
+  List<OffertePrijsregelModel> _breidProjectPrijsregelsUitVoorFormulierTypes({
+    required List<OffertePrijsregelModel> prijsregels,
+    required Map<String, Set<String>> formulierTypesPerPrijsregelId,
+    required Map<String, List<OffertePrijsregelModel>>
+    gekoppeldeBronnenPerRegelId,
+  }) {
+    final resultaat = <OffertePrijsregelModel>[];
+    final fichePerSleutel = <String, _OffertePrijsFicheKeuze>{
+      for (final fiche in _actieveFiches)
+        _normaliseerFormulierType(fiche.formulierType): fiche,
+    };
+
+    for (final regel in prijsregels) {
+      final geselecteerdeFormulierTypes =
+          formulierTypesPerPrijsregelId[regel.id] ??
+          <String>{regel.formulierType};
+      final gekoppeldeBronnen =
+          gekoppeldeBronnenPerRegelId[regel.id] ??
+          const <OffertePrijsregelModel>[];
+      final toegevoegdeSleutels = <String>{};
+
+      for (final formulierType in geselecteerdeFormulierTypes) {
+        final sleutel = _normaliseerFormulierType(formulierType);
+        final fiche = fichePerSleutel[sleutel];
+
+        if (fiche == null || !toegevoegdeSleutels.add(sleutel)) {
+          continue;
+        }
+
+        OffertePrijsregelModel? bestaandeVerdeelkostBron;
+        if (regel.isVerdeeldeProjectkost) {
+          for (final bron in gekoppeldeBronnen) {
+            if (_normaliseerFormulierType(bron.formulierType) == sleutel) {
+              bestaandeVerdeelkostBron = bron;
+              break;
+            }
+          }
+        }
+
+        resultaat.add(
+          regel.copyWith(
+            id: bestaandeVerdeelkostBron?.id ?? regel.id,
+            categorie: OffertePrijsCategorie.alleArtikelen,
+            formulierType: fiche.formulierType,
+            volgorde: bestaandeVerdeelkostBron?.volgorde ?? regel.volgorde,
+          ),
+        );
+      }
+    }
+
+    return List<OffertePrijsregelModel>.unmodifiable(resultaat);
+  }
+
+  Future<void> _openProjectPrijsregelsVenster() async {
+    if (_projectPrijsregelsBezig) return;
+
+    setState(() {
+      _projectPrijsregelsBezig = true;
+    });
+
+    try {
+      final profielenPerFormulierType = <String, OffertePrijsprofielModel>{};
+      final beginRegels = <OffertePrijsregelModel>[];
+
+      for (final fiche in _actieveFiches) {
+        final bestaand = await AppStorage.laadOffertePrijsProfiel(
+          fiche.formulierType,
+        );
+
+        final profiel =
+            bestaand ??
+            OffertePrijsprofielModel.leeg(
+              formulierType: fiche.formulierType,
+              formulierNaam: fiche.naam,
+            );
+
+        profielenPerFormulierType[_normaliseerFormulierType(
+              fiche.formulierType,
+            )] =
+            profiel;
+
+        beginRegels.addAll(
+          OffertePrijsregelBeheerService.bewaardePrijsregelsVoorCategorie(
+            profiel: profiel,
+            categorie: OffertePrijsCategorie.alleArtikelen,
+            formulierType: fiche.formulierType,
+          ),
+        );
+      }
+
+      if (!mounted) return;
+
+      final gekoppeldeBronnenPerRegelId =
+          _maakGekoppeldeVerdeelkostBronnenPerRegelId(beginRegels);
+
+      final huidigeRegels = _combineerProjectPrijsregelsVoorVenster(
+        beginRegels,
+      );
+
+      final formulierTypeSelectiesPerPrijsregelId =
+          _maakFormulierTypeSelectiesPerPrijsregelId(
+            allePrijsregels: beginRegels,
+            zichtbarePrijsregels: huidigeRegels,
+          );
+
+      final formulierTypeLabels = <String, String>{
+        for (final fiche in _actieveFiches) fiche.formulierType: fiche.naam,
+      };
+
+      setState(() {
+        _projectPrijsregelsBezig = false;
+      });
+
+      final resultaat = await toonOffertePrijsregelsZwevendVenster(
+        context: context,
+        titel: 'Prijsregel toepassen op…',
+        subtitel:
+            'Beheer algemene offerteprijzen voor alle soorten opmeetfiches',
+        formulierType: _actieveFiches.first.formulierType,
+        categorie: OffertePrijsCategorie.alleArtikelen,
+        beginPrijsregels: huidigeRegels,
+        toonProjectActies: true,
+        toonProjectOfferteActies: false,
+        behoudFormulierTypePerRegel: true,
+        formulierTypeLabels: formulierTypeLabels,
+        beginFormulierTypesPerPrijsregelId:
+            formulierTypeSelectiesPerPrijsregelId,
+        toonFormulierTypeBijRegel: true,
+      );
+
+      if (resultaat == null || !mounted) return;
+
+      if (resultaat.actie !=
+          OffertePrijsregelsVensterActie.bewarenInInstellingen) {
+        return;
+      }
+
+      setState(() {
+        _projectPrijsregelsBezig = true;
+      });
+
+      final prijsregelsVoorOpslag =
+          _breidProjectPrijsregelsUitVoorFormulierTypes(
+            prijsregels: resultaat.prijsregels,
+            formulierTypesPerPrijsregelId:
+                resultaat.formulierTypesPerPrijsregelId,
+            gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
+          );
+
+      for (final fiche in _actieveFiches) {
+        final sleutel = _normaliseerFormulierType(fiche.formulierType);
+
+        final profiel =
+            profielenPerFormulierType[sleutel] ??
+            OffertePrijsprofielModel.leeg(
+              formulierType: fiche.formulierType,
+              formulierNaam: fiche.naam,
+            );
+
+        final regelsVoorFormulierType = prijsregelsVoorOpslag
+            .where((regel) {
+              return regel.categorie == OffertePrijsCategorie.alleArtikelen &&
+                  _normaliseerFormulierType(regel.formulierType) == sleutel;
+            })
+            .toList(growable: false);
+
+        final bijgewerkt =
+            OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
+              profiel: profiel,
+              categorie: OffertePrijsCategorie.alleArtikelen,
+              formulierType: fiche.formulierType,
+              prijsregels: regelsVoorFormulierType,
+            );
+
+        await AppStorage.bewaarOffertePrijsProfiel(bijgewerkt);
+      }
+
+      if (!mounted) return;
+
+      _toonMelding('Prijsregels bewaard bij alle gekozen opmeetfiches.');
+    } catch (e) {
+      if (mounted) {
+        _toonMelding(
+          'De prijsregels konden niet worden geladen of bewaard: $e',
+          fout: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _projectPrijsregelsBezig = false;
+        });
+      }
+    }
+  }
+
+  void _toonMelding(String tekst, {bool fout = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: fout ? const Color(0xFFDC2626) : _groen,
+        content: Text(tekst),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,6 +433,22 @@ class OffertePrijzenPagina extends StatelessWidget {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black87,
         elevation: 0,
+        actions: <Widget>[
+          if (_projectPrijsregelsBezig)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 19,
+                  height: 19,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.3,
+                    color: _groen,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       body: Align(
         alignment: Alignment.topLeft,
@@ -97,15 +465,14 @@ class OffertePrijzenPagina extends StatelessWidget {
                   border: Border.all(color: _rand),
                 ),
                 child: const Text(
-                  'Beheer hieronder de artikelspecifieke offerteprijzen '
-                  'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
-                  'PVC en ALU raam, PVC en ALU schuifraam en PVC en ALU '
-                  'deur zijn actief. Iedere fiche heeft een eigen '
-                  'prijsprofiel. Technische-keuzeprijzen zijn niet van '
-                  'toepassing op Vaste inzethor en Vliegendeur. U kunt '
-                  'artikelspecifieke prijsregels toevoegen, wijzigen, '
-                  'ordenen en tijdelijk uitschakelen. Zonwering wordt '
-                  'later gekoppeld.',
+                  'Beheer bovenaan de algemene prijsregels die op één of '
+                  'meerdere soorten opmeetfiches kunnen worden toegepast. '
+                  'Daaronder beheert u de artikelspecifieke offerteprijzen '
+                  'per soort opmeetfiche. Vaste inzethor, Vliegendeur, PVC en '
+                  'ALU raam, PVC en ALU schuifraam en PVC en ALU deur zijn '
+                  'actief. Technische-keuzeprijzen zijn niet van toepassing '
+                  'op Vaste inzethor en Vliegendeur. Zonwering wordt later '
+                  'gekoppeld.',
                   style: TextStyle(
                     color: _tekstGrijs,
                     fontSize: 13,
@@ -114,6 +481,8 @@ class OffertePrijzenPagina extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 14),
+              _bouwProjectPrijsregelsTegel(),
               const SizedBox(height: 18),
               const _SectieTitel(
                 titel: 'Prijzen per artikel',
@@ -130,6 +499,73 @@ class OffertePrijzenPagina extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _bouwProjectPrijsregelsTegel() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+      decoration: BoxDecoration(
+        color: _lichtGroen,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _groen, width: 1.2),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: _groen),
+            ),
+            child: const Icon(Icons.rule_folder_outlined, color: _groen),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Prijsregels voor meerdere opmeetfiches',
+                  style: TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Maak één prijsregel en vink alle opmeetfiches aan waarop '
+                  'de regel automatisch mag worden berekend.',
+                  style: TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 12.2,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: _groen,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            ),
+            onPressed: _projectPrijsregelsBezig
+                ? null
+                : _openProjectPrijsregelsVenster,
+            icon: const Icon(Icons.checklist_rounded, size: 18),
+            label: const Text(
+              'Prijsregel toepassen op…',
+              style: TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -231,7 +667,7 @@ class _SectieTitel extends StatelessWidget {
           Text(
             titel,
             style: const TextStyle(
-              color: OffertePrijzenPagina._tekstDonker,
+              color: _OffertePrijzenPaginaState._tekstDonker,
               fontSize: 14,
               fontWeight: FontWeight.w900,
             ),
@@ -240,7 +676,7 @@ class _SectieTitel extends StatelessWidget {
           Text(
             subtitel,
             style: const TextStyle(
-              color: OffertePrijzenPagina._tekstGrijs,
+              color: _OffertePrijzenPaginaState._tekstGrijs,
               fontSize: 11.8,
               height: 1.3,
               fontWeight: FontWeight.w600,

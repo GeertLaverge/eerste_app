@@ -343,10 +343,19 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.copyWith(offertePrijsData: prijsData);
   }
 
+  /// Geeft het werkelijke aantal stuks binnen één overzichtspositie.
+  ///
+  /// Algemene raam-, deur- en schuifraamposities stellen telkens één stuk voor.
+  /// Artikeltypes met een eigen aantalveld, zoals vaste inzethorren en
+  /// vliegendeuren, gebruiken dat opgeslagen aantal. Een ongeldig of leeg
+  /// aantal wordt altijd veilig als één stuk behandeld.
   static int aantalVoorArtikel(OpmetingOverzichtRaamItem artikel) {
-    return artikel.vasteInzethorData?.aantal ??
+    final aantal =
+        artikel.vasteInzethorData?.aantal ??
         artikel.vliegendeurData?.aantal ??
         1;
+
+    return aantal < 1 ? 1 : aantal;
   }
 
   static int breedteMmVoorArtikel(OpmetingOverzichtRaamItem artikel) {

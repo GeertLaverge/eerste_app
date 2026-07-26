@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: GEKOPPELDE-VERDEELKOST-MENU-20260724
+// THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -13,7 +13,6 @@ import 'offerte_prijsinstellingen_momentopname.dart';
 import 'offerte_prijsprofiel_model.dart';
 import 'offerte_prijsregel_beheer_service.dart';
 import 'offerte_prijsregel_model.dart';
-import 'offerte_prijsregel_toepassen_op_dialog.dart';
 import 'offerte_prijsregels_zwevend_venster.dart';
 import 'offerte_verdeelkost_service.dart';
 
@@ -57,28 +56,6 @@ class OfferteProjectPrijsregelController {
 
   String _normaliseerPrijsFormulierType(String waarde) {
     return waarde.trim().toLowerCase().replaceAll('_', '').replaceAll(' ', '');
-  }
-
-  String _artikelKeuzeOmschrijving(OpmetingOverzichtRaamItem artikel) {
-    final aantal = OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(
-      artikel,
-    );
-    final breedte = OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
-      artikel,
-    );
-    final hoogte = OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
-      artikel,
-    );
-    final maat = '$breedte × $hoogte mm';
-    if (aantal > 1) {
-      return '$aantal stuks · $maat';
-    }
-    return maat;
-  }
-
-  String _prijsregelArtikelLabel(OpmetingOverzichtRaamItem artikel) {
-    final basis = _artikelKeuzeOmschrijving(artikel);
-    return artikel.isOfferteOptie ? 'Optie · $basis' : basis;
   }
 
   void _toonMelding(String tekst, {bool fout = false}) {
@@ -159,7 +136,8 @@ class OfferteProjectPrijsregelController {
           prijsregels: resultaat.prijsregels,
         );
         break;
-      case OffertePrijsregelsVensterActie.toepassenOpOfferte:
+      case OffertePrijsregelsVensterActie.toevoegenNietBewaren:
+      case OffertePrijsregelsVensterActie.toevoegenEnBewaren:
         break;
     }
   }
@@ -318,94 +296,163 @@ class OfferteProjectPrijsregelController {
     return List<OfferteArtikelPrijsKoppeling>.unmodifiable(resultaat);
   }
 
+  String _projectPrijsregelGroepSleutel(OffertePrijsregelModel regel) {
+    if (regel.isVerdeeldeProjectkost) {
+      final verdeelSleutel =
+          OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(regel);
+      if (verdeelSleutel.isNotEmpty) {
+        return 'verdeelkost::$verdeelSleutel';
+      }
+    }
+
+    return 'prijsregel::${regel.id}';
+  }
+
   Map<String, List<OffertePrijsregelModel>>
   _maakGekoppeldeVerdeelkostBronnenPerRegelId(
     List<OffertePrijsregelModel> prijsregels,
   ) {
     final perSleutel = <String, List<OffertePrijsregelModel>>{};
+
     for (final regel in prijsregels) {
       final sleutel = OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(
         regel,
       );
+
       if (sleutel.isEmpty) continue;
+
       perSleutel
           .putIfAbsent(sleutel, () => <OffertePrijsregelModel>[])
           .add(regel);
     }
 
     final perRegelId = <String, List<OffertePrijsregelModel>>{};
+
     for (final gekoppeldeRegels in perSleutel.values) {
       final onwijzigbaar = List<OffertePrijsregelModel>.unmodifiable(
         gekoppeldeRegels,
       );
+
       for (final regel in gekoppeldeRegels) {
         perRegelId[regel.id] = onwijzigbaar;
       }
     }
+
     return perRegelId;
   }
 
-  List<OffertePrijsregelModel> _combineerGekoppeldeVerdeelkostenVoorVenster(
+  List<OffertePrijsregelModel> _combineerProjectPrijsregelsVoorVenster(
     List<OffertePrijsregelModel> prijsregels,
   ) {
-    final nieuwstePerSleutel = <String, OffertePrijsregelModel>{};
+    final resultaat = <OffertePrijsregelModel>[];
+    final indexPerGroepSleutel = <String, int>{};
+
     for (final regel in prijsregels) {
-      final sleutel = OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(
-        regel,
-      );
-      if (sleutel.isEmpty) continue;
-      final bestaand = nieuwstePerSleutel[sleutel];
-      if (bestaand == null ||
-          regel.gewijzigdOp.compareTo(bestaand.gewijzigdOp) > 0) {
-        nieuwstePerSleutel[sleutel] = regel;
+      final groepSleutel = _projectPrijsregelGroepSleutel(regel);
+      final bestaandIndex = indexPerGroepSleutel[groepSleutel];
+
+      if (bestaandIndex == null) {
+        indexPerGroepSleutel[groepSleutel] = resultaat.length;
+        resultaat.add(regel);
+        continue;
+      }
+
+      final bestaand = resultaat[bestaandIndex];
+
+      if (regel.gewijzigdOp.compareTo(bestaand.gewijzigdOp) > 0) {
+        resultaat[bestaandIndex] = regel;
       }
     }
 
-    final resultaat = <OffertePrijsregelModel>[];
-    final gezieneSleutels = <String>{};
-    for (final regel in prijsregels) {
-      final sleutel = OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(
-        regel,
+    resultaat.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+      if (volgorde != 0) return volgorde;
+
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
       );
-      if (sleutel.isEmpty) {
-        resultaat.add(regel);
-      } else if (gezieneSleutels.add(sleutel)) {
-        resultaat.add(nieuwstePerSleutel[sleutel] ?? regel);
-      }
-    }
+    });
+
     return List<OffertePrijsregelModel>.unmodifiable(resultaat);
   }
 
-  List<OffertePrijsregelModel> _breidGekoppeldeVerdeelkostenUitVoorBewaren({
+  Map<String, Set<String>> _maakFormulierTypeSelectiesPerPrijsregelId({
+    required List<OffertePrijsregelModel> allePrijsregels,
+    required List<OffertePrijsregelModel> zichtbarePrijsregels,
+  }) {
+    final formulierTypesPerGroep = <String, Set<String>>{};
+
+    for (final regel in allePrijsregels) {
+      if (regel.id.trim().isEmpty) continue;
+
+      formulierTypesPerGroep
+          .putIfAbsent(_projectPrijsregelGroepSleutel(regel), () => <String>{})
+          .add(regel.formulierType);
+    }
+
+    return <String, Set<String>>{
+      for (final zichtbareRegel in zichtbarePrijsregels)
+        zichtbareRegel.id: Set<String>.unmodifiable(
+          formulierTypesPerGroep[_projectPrijsregelGroepSleutel(
+                zichtbareRegel,
+              )] ??
+              <String>{zichtbareRegel.formulierType},
+        ),
+    };
+  }
+
+  List<OffertePrijsregelModel> _breidProjectPrijsregelsUitVoorFormulierTypes({
     required List<OffertePrijsregelModel> prijsregels,
+    required Map<String, Set<String>> formulierTypesPerPrijsregelId,
+    required List<OfferteArtikelPrijsKoppeling> bronGroepen,
     required Map<String, List<OffertePrijsregelModel>>
     gekoppeldeBronnenPerRegelId,
   }) {
     final resultaat = <OffertePrijsregelModel>[];
+    final bronGroepPerSleutel = <String, OfferteArtikelPrijsKoppeling>{
+      for (final bronGroep in bronGroepen)
+        _normaliseerPrijsFormulierType(bronGroep.formulierType): bronGroep,
+    };
+
     for (final regel in prijsregels) {
-      if (!regel.isVerdeeldeProjectkost) {
-        resultaat.add(regel);
-        continue;
-      }
+      final geselecteerdeFormulierTypes =
+          formulierTypesPerPrijsregelId[regel.id] ??
+          <String>{regel.formulierType};
+      final gekoppeldeBronnen =
+          gekoppeldeBronnenPerRegelId[regel.id] ??
+          const <OffertePrijsregelModel>[];
+      final toegevoegdeSleutels = <String>{};
 
-      final gekoppeldeBronnen = gekoppeldeBronnenPerRegelId[regel.id];
-      if (gekoppeldeBronnen == null || gekoppeldeBronnen.isEmpty) {
-        resultaat.add(regel);
-        continue;
-      }
+      for (final formulierType in geselecteerdeFormulierTypes) {
+        final sleutel = _normaliseerPrijsFormulierType(formulierType);
+        final bronGroep = bronGroepPerSleutel[sleutel];
 
-      for (final bron in gekoppeldeBronnen) {
+        if (bronGroep == null || !toegevoegdeSleutels.add(sleutel)) {
+          continue;
+        }
+
+        OffertePrijsregelModel? bestaandeVerdeelkostBron;
+        if (regel.isVerdeeldeProjectkost) {
+          for (final bron in gekoppeldeBronnen) {
+            if (_normaliseerPrijsFormulierType(bron.formulierType) == sleutel) {
+              bestaandeVerdeelkostBron = bron;
+              break;
+            }
+          }
+        }
+
         resultaat.add(
           regel.copyWith(
-            id: bron.id,
+            id: bestaandeVerdeelkostBron?.id ?? regel.id,
             categorie: OffertePrijsCategorie.alleArtikelen,
-            formulierType: bron.formulierType,
-            volgorde: bron.volgorde,
+            formulierType: bronGroep.formulierType,
+            volgorde: bestaandeVerdeelkostBron?.volgorde ?? regel.volgorde,
           ),
         );
       }
     }
-    return resultaat;
+
+    return List<OffertePrijsregelModel>.unmodifiable(resultaat);
   }
 
   Future<void> openPrijsVoorAlleArtikelenVenster() async {
@@ -439,313 +486,180 @@ class OfferteProjectPrijsregelController {
 
     final gekoppeldeBronnenPerRegelId =
         _maakGekoppeldeVerdeelkostBronnenPerRegelId(beginRegels);
-    var huidigeRegels = _combineerGekoppeldeVerdeelkostenVoorVenster(
-      beginRegels,
-    );
+    final huidigeRegels = _combineerProjectPrijsregelsVoorVenster(beginRegels);
+    final formulierTypeSelectiesPerPrijsregelId =
+        _maakFormulierTypeSelectiesPerPrijsregelId(
+          allePrijsregels: beginRegels,
+          zichtbarePrijsregels: huidigeRegels,
+        );
     final formulierTypeLabels = <String, String>{
       for (final bronGroep in bronGroepen)
         bronGroep.formulierType: bronGroep.formulierNaam,
     };
 
-    while (isMounted()) {
-      final resultaat = await toonOffertePrijsregelsZwevendVenster(
-        context: context,
-        titel: 'Prijsregel toepassen op…',
-        subtitel:
-            'Kies één prijsregel en koppel die daarna één keer aan de gewenste posities',
-        formulierType: bronGroepen.first.formulierType,
-        categorie: OffertePrijsCategorie.alleArtikelen,
-        beginPrijsregels: huidigeRegels,
-        toonToepassenOpOfferte: true,
-        behoudFormulierTypePerRegel: true,
-        formulierTypeLabels: formulierTypeLabels,
-        toonFormulierTypeBijRegel: true,
-      );
-
-      if (resultaat == null || !isMounted()) return;
-      huidigeRegels = resultaat.prijsregels;
-
-      switch (resultaat.actie) {
-        case OffertePrijsregelsVensterActie.toepassenOpOfferte:
-          final gekozenPrijsregel = resultaat.gekozenPrijsregel;
-          if (gekozenPrijsregel == null) {
-            _toonMelding('Kies eerst één actieve prijsregel.', fout: true);
-            continue;
-          }
-
-          final selectie = await _openPrijsregelArtikelSelectie(
-            prijsregel: gekozenPrijsregel,
-          );
-          if (selectie == null || !isMounted()) return;
-
-          await _pasPrijsregelToeOpGeselecteerdePosities(
-            prijsregel: gekozenPrijsregel,
-            artikelIds: selectie.artikelIds,
-          );
-          if (!isMounted() || !selectie.kiesNogEenPrijsregel) {
-            return;
-          }
-          break;
-        case OffertePrijsregelsVensterActie.bewarenInInstellingen:
-          await _bewaarProjectPrijsregelsVoorAlleFormulierTypes(
-            resultaat.prijsregels,
-            bronGroepen: bronGroepen,
-            gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
-          );
-          return;
-        case OffertePrijsregelsVensterActie.toepassenOpDezePositie:
-        case OffertePrijsregelsVensterActie.toepassenOpAlleGelijkePosities:
-          return;
-      }
-    }
-  }
-
-  Future<OffertePrijsregelToepassenOpResultaat?>
-  _openPrijsregelArtikelSelectie({
-    required OffertePrijsregelModel prijsregel,
-  }) async {
-    final artikelen = leesArtikelen();
-    final positieLabelPerId = offerteController.positiesService
-        .maakBronPositieLabels(artikelen);
-    final geordendeItems = offerteController.positiesService
-        .groepeerBronPositiesVoorOverzicht(artikelen);
-
-    final keuzes = geordendeItems
-        .where((artikel) => !artikel.isVerwijderd && !artikel.isNietRekenen)
-        .map((artikel) {
-          final koppeling =
-              OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(artikel);
-          final prijsData =
-              OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(artikel);
-          final optieNietBeschikbaar =
-              prijsregel.isVerdeeldeProjectkost &&
-              !artikel.teltMeeInHoofdofferte;
-          final beschikbaar =
-              !artikel.isNietRekenen &&
-              koppeling != null &&
-              prijsData != null &&
-              !optieNietBeschikbaar;
-          final aantalArtikelen =
-              OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(artikel);
-          final bedrag = beschikbaar
-              ? OfferteAlgemeenArtikelPrijsService.berekenPrijsregelTotaalExclBtw(
-                  prijsregel: prijsregel,
-                  aantal: aantalArtikelen,
-                  breedteMm:
-                      OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
-                        artikel,
-                      ),
-                  hoogteMm:
-                      OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
-                        artikel,
-                      ),
-                )
-              : 0.0;
-
-          return OffertePrijsregelToepassenOpKeuze(
-            artikelId: artikel.id,
-            positieLabel: positieLabelPerId[artikel.id] ?? 'Positie',
-            artikelLabel: _prijsregelArtikelLabel(artikel),
-            groepId:
-                koppeling?.adapterId ?? artikel.formulierTypeGenormaliseerd,
-            groepLabel: koppeling?.formulierNaam ?? artikel.formulierTypeLabel,
-            bedragExclBtw: bedrag,
-            aantalArtikelen: aantalArtikelen,
-            beschikbaar: beschikbaar,
-            nietBeschikbaarReden: optieNietBeschikbaar
-                ? 'Optieposities worden niet opgenomen in een interne verdeelkost.'
-                : 'Dit artikeltype ondersteunt de gezamenlijke prijsopslag nog niet.',
-          );
-        })
-        .toList(growable: false);
-
-    return toonOffertePrijsregelToepassenOpDialog(
+    final resultaat = await toonOffertePrijsregelsZwevendVenster(
       context: context,
-      prijsregelOmschrijving:
-          '${prijsregel.omschrijving} · € ${prijsregel.prijsExclBtw.toStringAsFixed(2).replaceAll('.', ',')} excl. btw',
-      keuzes: keuzes,
-      verdeelProjectTotaalExclBtw: prijsregel.isVerdeeldeProjectkost
-          ? prijsregel.prijsExclBtw
-          : null,
+      titel: 'Prijsregel toepassen op…',
+      subtitel:
+          'Beheer tijdelijke projectprijsregels en algemene offerteprijzen',
+      formulierType: bronGroepen.first.formulierType,
+      categorie: OffertePrijsCategorie.alleArtikelen,
+      beginPrijsregels: huidigeRegels,
+      toonProjectActies: true,
+      behoudFormulierTypePerRegel: true,
+      formulierTypeLabels: formulierTypeLabels,
+      beginFormulierTypesPerPrijsregelId: formulierTypeSelectiesPerPrijsregelId,
+      toonFormulierTypeBijRegel: true,
     );
-  }
 
-  Future<void> _pasPrijsregelToeOpGeselecteerdePosities({
-    required OffertePrijsregelModel prijsregel,
-    required Set<String> artikelIds,
-  }) async {
-    if (artikelIds.isEmpty) return;
+    if (resultaat == null || !isMounted()) return;
 
-    if (prijsregel.isVerdeeldeProjectkost) {
-      await _pasGeselecteerdeVerdeelkostToe(
-        prijsregel: prijsregel,
-        artikelIds: artikelIds,
-      );
-      return;
-    }
-
-    final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(leesArtikelen());
-    final gewijzigdeItems = <OpmetingOverzichtRaamItem>[];
-
-    for (var index = 0; index < nieuweLijst.length; index++) {
-      final huidig = nieuweLijst[index];
-
-      if (huidig.isVerwijderd ||
-          huidig.isNietRekenen ||
-          !artikelIds.contains(huidig.id)) {
-        continue;
-      }
-      final doelKoppeling =
-          OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(huidig);
-      final huidigePrijsData =
-          OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(huidig);
-      if (doelKoppeling == null || huidigePrijsData == null) continue;
-
-      final bijgewerktePrijsData =
-          OfferteAlgemeenArtikelPrijsService.voegGekozenProjectPrijsregelToe(
-            prijsData: huidigePrijsData,
-            prijsregel: prijsregel,
-            doelFormulierType: doelKoppeling.formulierType,
-          );
-      final bijgewerkt = OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
-        artikel: huidig,
-        prijsData: bijgewerktePrijsData,
-      ).metNieuweWijzigingsDatum();
-
-      nieuweLijst[index] = bijgewerkt;
-      gewijzigdeItems.add(bijgewerkt);
-    }
-
-    if (gewijzigdeItems.isEmpty) {
-      if (isMounted()) {
-        _toonMelding(
-          'De prijsregel kon niet op de gekozen posities worden toegepast.',
-          fout: true,
+    switch (resultaat.actie) {
+      case OffertePrijsregelsVensterActie.toevoegenNietBewaren:
+        await _verwerkProjectPrijsregels(
+          prijsregels: resultaat.prijsregels,
+          formulierTypesPerPrijsregelId:
+              resultaat.formulierTypesPerPrijsregelId,
+          bronGroepen: bronGroepen,
+          gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
+          toevoegenAanProject: true,
+          bewarenInInstellingen: false,
         );
-      }
-      return;
-    }
-
-    if (isMounted()) {
-      vervangArtikelen(nieuweLijst);
-    }
-
-    for (final bijgewerkt in gewijzigdeItems) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    await herberekenPrijsMomentopnames(gewijzigdeItems.first.klantNaam);
-
-    if (isMounted()) {
-      final aantal = gewijzigdeItems.length;
-      _toonMelding(
-        'Prijsregel “${prijsregel.omschrijving}” toegepast op '
-        '${aantal == 1 ? '1 positie' : '$aantal posities'}.',
-      );
+        break;
+      case OffertePrijsregelsVensterActie.toevoegenEnBewaren:
+        await _verwerkProjectPrijsregels(
+          prijsregels: resultaat.prijsregels,
+          formulierTypesPerPrijsregelId:
+              resultaat.formulierTypesPerPrijsregelId,
+          bronGroepen: bronGroepen,
+          gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
+          toevoegenAanProject: true,
+          bewarenInInstellingen: true,
+        );
+        break;
+      case OffertePrijsregelsVensterActie.bewarenInInstellingen:
+        await _verwerkProjectPrijsregels(
+          prijsregels: resultaat.prijsregels,
+          formulierTypesPerPrijsregelId:
+              resultaat.formulierTypesPerPrijsregelId,
+          bronGroepen: bronGroepen,
+          gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
+          toevoegenAanProject: false,
+          bewarenInInstellingen: true,
+        );
+        break;
+      case OffertePrijsregelsVensterActie.toepassenOpDezePositie:
+      case OffertePrijsregelsVensterActie.toepassenOpAlleGelijkePosities:
+        break;
     }
   }
 
-  Future<void> _pasGeselecteerdeVerdeelkostToe({
-    required OffertePrijsregelModel prijsregel,
-    required Set<String> artikelIds,
-  }) async {
-    final huidigeLijst = List<OpmetingOverzichtRaamItem>.from(leesArtikelen());
-    final resultaat =
-        OfferteVerdeelkostService.stelGeselecteerdeProjectVerdeelkostDoelenIn(
-          alleOpmetingen: huidigeLijst,
-          klantNaam: leesKlantNaam(),
-          prijsregel: prijsregel,
-          artikelIds: artikelIds,
-        );
-
-    if (!resultaat.gewijzigd) {
-      if (isMounted()) {
-        _toonMelding(
-          'De verdeelkost kon niet aan de gekozen posities worden gekoppeld.',
-          fout: true,
-        );
-      }
-      return;
-    }
-
-    if (isMounted()) {
-      vervangArtikelen(resultaat.opmetingen);
-    }
-
-    // De doelmarkeringen worden in de bestaande vrije-prijsopslag bewaard.
-    // De herberekening zet ze daarna om naar één correct verdeeld projectbedrag.
-    final oudeWijzigingsdatums = <String, String>{
-      for (final artikel in huidigeLijst) artikel.id: artikel.gewijzigdOp,
-    };
-    for (final artikel in resultaat.opmetingen) {
-      if (oudeWijzigingsdatums[artikel.id] == artikel.gewijzigdOp) continue;
-      await AppStorage.werkOpmetingBij(artikel);
-    }
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
-
-    await herberekenPrijsMomentopnames(leesKlantNaam());
-
-    if (isMounted()) {
-      final aantal = artikelIds.length;
-      _toonMelding(
-        'Verdeelkost “${prijsregel.omschrijving}” verdeeld over '
-        '${aantal == 1 ? '1 positie' : '$aantal posities'}.',
-      );
-    }
-  }
-
-  Future<void> _bewaarProjectPrijsregelsVoorAlleFormulierTypes(
-    List<OffertePrijsregelModel> prijsregels, {
+  Future<void> _verwerkProjectPrijsregels({
+    required List<OffertePrijsregelModel> prijsregels,
+    required Map<String, Set<String>> formulierTypesPerPrijsregelId,
     required List<OfferteArtikelPrijsKoppeling> bronGroepen,
     required Map<String, List<OffertePrijsregelModel>>
     gekoppeldeBronnenPerRegelId,
+    required bool toevoegenAanProject,
+    required bool bewarenInInstellingen,
   }) async {
-    final prijsregelsVoorOpslag = _breidGekoppeldeVerdeelkostenUitVoorBewaren(
+    if (!toevoegenAanProject && !bewarenInInstellingen) return;
+
+    final prijsregelsVoorOpslag = _breidProjectPrijsregelsUitVoorFormulierTypes(
       prijsregels: prijsregels,
+      formulierTypesPerPrijsregelId: formulierTypesPerPrijsregelId,
+      bronGroepen: bronGroepen,
       gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
     );
     final betrokkenFormulierTypes = bronGroepen
         .map((groep) => _normaliseerPrijsFormulierType(groep.formulierType))
         .toSet();
-    final overigeTijdelijkeRegels = leesTitelhoofd()
-        .tijdelijkeProjectPrijsregels
-        .where((regel) {
-          return regel.categorie != OffertePrijsCategorie.alleArtikelen ||
-              !betrokkenFormulierTypes.contains(
-                _normaliseerPrijsFormulierType(regel.formulierType),
-              );
-        })
-        .toList(growable: false);
+    final profielenPerFormulierType = <String, OffertePrijsprofielModel>{};
 
-    var nieuwTitelhoofd = leesTitelhoofd().copyWith(
-      tijdelijkeProjectPrijsregels: overigeTijdelijkeRegels,
-    );
+    Future<OffertePrijsprofielModel> laadProfiel(
+      OfferteArtikelPrijsKoppeling bronGroep,
+    ) async {
+      final sleutel = _normaliseerPrijsFormulierType(bronGroep.formulierType);
+      final bestaand = profielenPerFormulierType[sleutel];
+      if (bestaand != null) return bestaand;
 
-    for (final bronGroep in bronGroepen) {
-      final formulierType = bronGroep.formulierType;
-      final formulierSleutel = _normaliseerPrijsFormulierType(formulierType);
-      final regelsVoorFormulierType = prijsregelsVoorOpslag
+      final profiel = await laadPrijsprofiel(bronGroep.formulierType);
+      profielenPerFormulierType[sleutel] = profiel;
+      return profiel;
+    }
+
+    List<OffertePrijsregelModel> regelsVoor(
+      OfferteArtikelPrijsKoppeling bronGroep,
+    ) {
+      final formulierSleutel = _normaliseerPrijsFormulierType(
+        bronGroep.formulierType,
+      );
+      return prijsregelsVoorOpslag
           .where((regel) {
             return regel.categorie == OffertePrijsCategorie.alleArtikelen &&
                 _normaliseerPrijsFormulierType(regel.formulierType) ==
                     formulierSleutel;
           })
           .toList(growable: false);
+    }
 
-      var profiel = await laadPrijsprofiel(formulierType);
-      profiel = OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
-        profiel: profiel,
-        categorie: OffertePrijsCategorie.alleArtikelen,
-        formulierType: formulierType,
-        prijsregels: regelsVoorFormulierType,
+    var nieuwTitelhoofd = leesTitelhoofd();
+
+    if (toevoegenAanProject) {
+      final overigeTijdelijkeRegels = nieuwTitelhoofd
+          .tijdelijkeProjectPrijsregels
+          .where((regel) {
+            return regel.categorie != OffertePrijsCategorie.alleArtikelen ||
+                !betrokkenFormulierTypes.contains(
+                  _normaliseerPrijsFormulierType(regel.formulierType),
+                );
+          })
+          .toList(growable: true);
+      final tijdelijkeVerschillen = <OffertePrijsregelModel>[];
+
+      for (final bronGroep in bronGroepen) {
+        final formulierType = bronGroep.formulierType;
+        final profiel = await laadProfiel(bronGroep);
+        final bewaardeRegels =
+            OffertePrijsregelBeheerService.bewaardePrijsregelsVoorCategorie(
+              profiel: profiel,
+              categorie: OffertePrijsCategorie.alleArtikelen,
+              formulierType: formulierType,
+            );
+        tijdelijkeVerschillen.addAll(
+          OffertePrijsregelBeheerService.maakTijdelijkePrijsregelVerschillen(
+            prijsregels: regelsVoor(bronGroep),
+            bewaardePrijsregels: bewaardeRegels,
+            categorie: OffertePrijsCategorie.alleArtikelen,
+            formulierType: formulierType,
+          ),
+        );
+      }
+
+      nieuwTitelhoofd = nieuwTitelhoofd.copyWith(
+        tijdelijkeProjectPrijsregels: <OffertePrijsregelModel>[
+          ...overigeTijdelijkeRegels,
+          ...tijdelijkeVerschillen,
+        ],
       );
-      await AppStorage.bewaarOffertePrijsProfiel(profiel);
-      nieuwTitelhoofd = nieuwTitelhoofd.metPrijsinstellingenMomentopname(
-        maakPrijsinstellingenMomentopname(profiel),
-      );
+    }
+
+    if (bewarenInInstellingen) {
+      for (final bronGroep in bronGroepen) {
+        final formulierType = bronGroep.formulierType;
+        var profiel = await laadProfiel(bronGroep);
+        profiel =
+            OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
+              profiel: profiel,
+              categorie: OffertePrijsCategorie.alleArtikelen,
+              formulierType: formulierType,
+              prijsregels: regelsVoor(bronGroep),
+            );
+        await AppStorage.bewaarOffertePrijsProfiel(profiel);
+        nieuwTitelhoofd = nieuwTitelhoofd.metPrijsinstellingenMomentopname(
+          maakPrijsinstellingenMomentopname(profiel),
+        );
+      }
     }
 
     nieuwTitelhoofd = nieuwTitelhoofd.metWijzigingsDatum();
@@ -756,9 +670,22 @@ class OfferteProjectPrijsregelController {
     if (!isMounted()) return;
     vervangTitelhoofd(nieuwTitelhoofd);
     await herberekenPrijsMomentopnames(leesKlantNaam());
-    if (isMounted()) {
+
+    if (!isMounted()) return;
+    if (toevoegenAanProject && bewarenInInstellingen) {
       _toonMelding(
-        'Prijsregels bewaard in Instellingen → Offerteprijzen bij de juiste artikelgroepen.',
+        'Prijsregels toegevoegd aan deze offerte en bewaard in '
+        'Instellingen → Offerteprijzen.',
+      );
+    } else if (toevoegenAanProject) {
+      _toonMelding(
+        'Prijsregels toegevoegd aan deze offerte zonder ze in '
+        'Instellingen te bewaren.',
+      );
+    } else {
+      _toonMelding(
+        'Prijsregels bewaard in Instellingen → Offerteprijzen bij de '
+        'juiste artikelgroepen.',
       );
     }
   }

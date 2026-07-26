@@ -28,7 +28,6 @@ class OffertePdfVliegendeurWidget {
 
   static const double _basisPrijsRegelHoogte = 34;
   static const double _basisOptiePrijsRegelHoogte = 78;
-  static const double _afzonderlijkePrijsregelHoogte = 18;
 
   static double berekenTotalePositieHoogte(
     OpmetingOverzichtRaamItem positie, {
@@ -77,7 +76,6 @@ class OffertePdfVliegendeurWidget {
         regels: regels,
         notities: positie.notities,
         legeTekst: 'Geen technische keuzes ingevuld.',
-        toonPrijsZone: false,
       ),
       prijsBlok: _bouwPrijsBlok(
         positie,
@@ -104,17 +102,7 @@ class OffertePdfVliegendeurWidget {
     required bool kortingToestaan,
     required bool isOptie,
   }) {
-    final resultaat = _prijsResultaatVoor(
-      positie,
-      kortingToestaan: kortingToestaan && !isOptie,
-    );
-    final aantalRegels = resultaat == null
-        ? 0
-        : resultaat.afzonderlijkePrijsregelsVoorOfferte.length +
-              resultaat.omschrijvingZonderPrijsRegelsVoorOfferte.length;
-
-    return (isOptie ? _basisOptiePrijsRegelHoogte : _basisPrijsRegelHoogte) +
-        (aantalRegels * _afzonderlijkePrijsregelHoogte);
+    return isOptie ? _basisOptiePrijsRegelHoogte : _basisPrijsRegelHoogte;
   }
 
   static pw.Widget _bouwPrijsBlok(
@@ -129,13 +117,6 @@ class OffertePdfVliegendeurWidget {
       positie,
       kortingToestaan: kortingToestaanEffectief,
     );
-    final omschrijvingZonderPrijsRegels =
-        resultaat?.omschrijvingZonderPrijsRegelsVoorOfferte ?? const [];
-    final afzonderlijkeRegels =
-        resultaat?.afzonderlijkePrijsregelsVoorOfferte ?? const [];
-    final heeftBijkomendeRegels =
-        omschrijvingZonderPrijsRegels.isNotEmpty ||
-        afzonderlijkeRegels.isNotEmpty;
     final totaalVoorKorting = resultaat == null
         ? 0.0
         : resultaat.offerteTotaalExclBtw +
@@ -221,56 +202,6 @@ class OffertePdfVliegendeurWidget {
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: <pw.Widget>[
-          for (final prijsregel in omschrijvingZonderPrijsRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Text(
-                OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
-                  prijsregel,
-                ),
-                maxLines: 1,
-                style: const pw.TextStyle(
-                  color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                  fontSize: 7.2,
-                ),
-              ),
-            ),
-          for (final prijsregel in afzonderlijkeRegels)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 4),
-              child: pw.Row(
-                children: <pw.Widget>[
-                  pw.Expanded(
-                    child: pw.Text(
-                      OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
-                        prijsregel,
-                      ),
-                      maxLines: 1,
-                      style: const pw.TextStyle(
-                        color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                        fontSize: 7.2,
-                      ),
-                    ),
-                  ),
-                  pw.SizedBox(width: 8),
-                  pw.Text(
-                    '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}',
-                    style: pw.TextStyle(
-                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                      fontSize: 7.4,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          if (heeftBijkomendeRegels) ...<pw.Widget>[
-            pw.Container(
-              height: 0.5,
-              color: OffertePdfArtikelLayoutHelper.rand,
-            ),
-            pw.SizedBox(height: 4),
-          ],
           if (isOptie) ...<pw.Widget>[
             bedragRegel(
               omschrijving: 'Totaal optie excl. btw',
@@ -363,7 +294,54 @@ class OffertePdfVliegendeurWidget {
       resultaat.add(OffertePdfTechnischeRegel(titel: titel, waarde: waarde));
     }
 
+    final prijsResultaat = _prijsResultaatVoor(positie, kortingToestaan: false);
+    if (prijsResultaat != null) {
+      _voegVrijeArtikelPrijsregelsToe(
+        resultaat: resultaat,
+        prijsResultaat: prijsResultaat,
+      );
+    }
+
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
+  }
+
+  static void _voegVrijeArtikelPrijsregelsToe({
+    required List<OffertePdfTechnischeRegel> resultaat,
+    required OfferteBerekeningResultaat prijsResultaat,
+  }) {
+    for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+      if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
+        continue;
+      }
+      if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
+        continue;
+      }
+
+      final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
+      final toonAlleenOmschrijving =
+          prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
+      if (!toonPrijs && !toonAlleenOmschrijving) {
+        continue;
+      }
+
+      final omschrijving =
+          OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
+            prijsregel,
+          ).trim();
+      if (omschrijving.isEmpty) {
+        continue;
+      }
+
+      resultaat.add(
+        OffertePdfTechnischeRegel(
+          titel: omschrijving,
+          waarde: '',
+          prijsTekst: toonPrijs
+              ? '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}'
+              : '',
+        ),
+      );
+    }
   }
 
   static bool _isAfmetingsRegel(String titel) {

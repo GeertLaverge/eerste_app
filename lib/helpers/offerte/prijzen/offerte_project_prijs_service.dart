@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PROJECTPRIJS-ONDERAAN-PER-WERKELIJK-STUK-20260725
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../../opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'offerte_artikel_prijs_koppeling_service.dart';
@@ -388,10 +389,6 @@ class OfferteProjectPrijsService {
     required List<_ProjectArtikelGegevens> artikelen,
     required OffertePrijsEenheid eenheid,
   }) {
-    if (eenheid == OffertePrijsEenheid.vast) {
-      return 1.0;
-    }
-
     var totaal = 0.0;
 
     for (final artikel in artikelen) {

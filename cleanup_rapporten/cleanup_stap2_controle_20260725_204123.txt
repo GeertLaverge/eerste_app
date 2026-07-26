@@ -1,0 +1,34 @@
+﻿THIMACO - CLEANUP STAP 2 - EXTERNE VERWIJZINGEN
+Datum: 25/07/2026 20:41:24
+Project: C:\Users\geert\mijn_app\eerste_app
+
+ZOEKTERM: OfferteAlgemenePrijsregelToepassenController
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: toonOfferteAlgemenePrijsregelToepassenDialog
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: toonOfferteAlgemenePrijsregelDialog
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: OfferteAlgemenePrijzenPagina
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: OfferteAutomatischePrijsregelSyncService
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: offerte_algemene_prijsregel_toepassen_controller
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: offerte_algemene_prijsregel_toepassen_op_dialog
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: offerte_automatische_prijsregel_sync_service
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: offerte_algemene_prijsregel_dialog
+  Geen externe verwijzingen gevonden.
+
+ZOEKTERM: offerte_algemene_prijzen_pagina
+  Geen externe verwijzingen gevonden.
+

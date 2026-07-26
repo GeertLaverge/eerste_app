@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: HORDEUR-PROJECTKLEUR-SYNC-20260726
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import '../../app_storage.dart';
 import '../../sync/onedrive_sync_service.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
+import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import 'opmeting_project_titelhoofd_kaart.dart';
 import 'opmeting_project_titelhoofd_model.dart';
 
@@ -126,7 +128,7 @@ class OpmetingProjectTitelhoofdController {
     }
 
     if (ralKleurToebehorenGewijzigd) {
-      bijgewerkteOpmetingen = synchroniseerProjectkleurInVasteInzethorPosities(
+      bijgewerkteOpmetingen = synchroniseerProjectkleurInToebehorenPosities(
         bijgewerkteOpmetingen,
         klantNaam: naamVoorBestand,
         projectkleur: titelhoofdVoorState.ralKleurToebehoren,
@@ -154,7 +156,7 @@ class OpmetingProjectTitelhoofdController {
   }
 
   ({List<OpmetingOverzichtRaamItem> opmetingen, bool gewijzigd})
-  synchroniseerProjectkleurInVasteInzethorPosities(
+  synchroniseerProjectkleurInToebehorenPosities(
     Iterable<OpmetingOverzichtRaamItem> opmetingen, {
     required String klantNaam,
     required String projectkleur,
@@ -169,47 +171,130 @@ class OpmetingProjectTitelhoofdController {
           klantSleutel.isNotEmpty &&
           !item.isVerwijderd &&
           item.klantNaam.trim().toLowerCase() == klantSleutel;
-      final model = item.vasteInzethorData;
 
-      if (!hoortBijActieveKlant || model == null || !model.isProjectkleur) {
+      if (!hoortBijActieveKlant) {
         resultaat.add(item);
         continue;
       }
 
-      final bijgewerktModel =
-          model.ralKleurToebehorenWaarde.trim() == netteProjectkleur
-          ? model
-          : model.copyWith(ralKleurToebehorenWaarde: netteProjectkleur);
-      final bijgewerkteTechnischeRegels =
-          _werkProjectkleurBijInTechnischeRegels(
-            item.technischeRegels,
-            projectkleur: netteProjectkleur,
-          );
-      final technischeRegelsGewijzigd = !_zijnTechnischeRegelsGelijk(
-        item.technischeRegels,
-        bijgewerkteTechnischeRegels,
-      );
+      var bijgewerktItem = item;
+      var itemGewijzigd = false;
 
-      if (identical(bijgewerktModel, model) && !technischeRegelsGewijzigd) {
+      final vasteInzethor = bijgewerktItem.vasteInzethorData;
+      if (vasteInzethor?.isProjectkleur == true) {
+        final bijgewerktModel =
+            vasteInzethor!.ralKleurToebehorenWaarde.trim() == netteProjectkleur
+            ? vasteInzethor
+            : vasteInzethor.copyWith(
+                ralKleurToebehorenWaarde: netteProjectkleur,
+              );
+        final bijgewerkteTechnischeRegels =
+            _werkProjectkleurBijInTechnischeRegels(
+              bijgewerktItem.technischeRegels,
+              projectkleur: netteProjectkleur,
+            );
+        final technischeRegelsGewijzigd = !_zijnTechnischeRegelsGelijk(
+          bijgewerktItem.technischeRegels,
+          bijgewerkteTechnischeRegels,
+        );
+
+        if (!identical(bijgewerktModel, vasteInzethor) ||
+            technischeRegelsGewijzigd) {
+          bijgewerktItem = bijgewerktItem.copyWith(
+            vasteInzethorData: bijgewerktModel,
+            technischeRegels: bijgewerkteTechnischeRegels,
+          );
+          itemGewijzigd = true;
+        }
+      }
+
+      final vliegendeur = bijgewerktItem.vliegendeurData;
+      if (vliegendeur?.isProjectKleur == true) {
+        final bijgewerkteTechnischeRegels =
+            _werkVliegendeurProjectkleurBijInTechnischeRegels(
+              bijgewerktItem.technischeRegels,
+              projectkleur: netteProjectkleur,
+            );
+
+        if (!_zijnTechnischeRegelsGelijk(
+          bijgewerktItem.technischeRegels,
+          bijgewerkteTechnischeRegels,
+        )) {
+          bijgewerktItem = bijgewerktItem.copyWith(
+            technischeRegels: bijgewerkteTechnischeRegels,
+          );
+          itemGewijzigd = true;
+        }
+      }
+
+      if (!itemGewijzigd) {
         resultaat.add(item);
         continue;
       }
 
       gewijzigd = true;
-      resultaat.add(
-        item
-            .copyWith(
-              vasteInzethorData: bijgewerktModel,
-              technischeRegels: bijgewerkteTechnischeRegels,
-            )
-            .metNieuweWijzigingsDatum(),
-      );
+      resultaat.add(bijgewerktItem.metNieuweWijzigingsDatum());
     }
 
     return (
       opmetingen: List<OpmetingOverzichtRaamItem>.unmodifiable(resultaat),
       gewijzigd: gewijzigd,
     );
+  }
+
+  /// Behoudt de bestaande publieke methode voor code die deze naam al gebruikt.
+  ({List<OpmetingOverzichtRaamItem> opmetingen, bool gewijzigd})
+  synchroniseerProjectkleurInVasteInzethorPosities(
+    Iterable<OpmetingOverzichtRaamItem> opmetingen, {
+    required String klantNaam,
+    required String projectkleur,
+  }) {
+    return synchroniseerProjectkleurInToebehorenPosities(
+      opmetingen,
+      klantNaam: klantNaam,
+      projectkleur: projectkleur,
+    );
+  }
+
+  List<OpmetingOverzichtTechnischeRegel>
+  _werkVliegendeurProjectkleurBijInTechnischeRegels(
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels, {
+    required String projectkleur,
+  }) {
+    final waarde = projectkleur.trim().isEmpty
+        ? OpmetingVliegendeurModel.kleurNogTeBepalen
+        : projectkleur.trim();
+    final resultaat = <OpmetingOverzichtTechnischeRegel>[];
+    var kleurRegelToegevoegd = false;
+
+    for (final regel in technischeRegels) {
+      final titelSleutel = _normaliseerTechnischeRegelTitelVoorProjectkleur(
+        regel.titel,
+      );
+
+      if (titelSleutel != 'kleur') {
+        resultaat.add(regel);
+        continue;
+      }
+
+      if (!kleurRegelToegevoegd) {
+        resultaat.add(
+          OpmetingOverzichtTechnischeRegel(
+            titel: regel.titel.trim().isEmpty ? 'Kleur' : regel.titel,
+            waarde: waarde,
+          ),
+        );
+        kleurRegelToegevoegd = true;
+      }
+    }
+
+    if (!kleurRegelToegevoegd) {
+      resultaat.add(
+        OpmetingOverzichtTechnischeRegel(titel: 'Kleur', waarde: waarde),
+      );
+    }
+
+    return List<OpmetingOverzichtTechnischeRegel>.unmodifiable(resultaat);
   }
 
   List<OpmetingOverzichtTechnischeRegel> _werkProjectkleurBijInTechnischeRegels(
@@ -285,7 +370,9 @@ class OpmetingProjectTitelhoofdController {
   Future<void> _bewaarRalKleurToebehorenInPosities() async {
     final bijgewerktPerId = <String, OpmetingOverzichtRaamItem>{
       for (final item in leesOpmetingen())
-        if (item.vasteInzethorData?.isRalKleurToebehoren == true) item.id: item,
+        if (item.vasteInzethorData?.isRalKleurToebehoren == true ||
+            item.vliegendeurData?.isProjectKleur == true)
+          item.id: item,
     };
 
     if (bijgewerktPerId.isEmpty) {
@@ -302,9 +389,9 @@ class OpmetingProjectTitelhoofdController {
             return item;
           }
 
-          final oudeWaarde =
+          final oudeVasteInzethorWaarde =
               item.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ?? '';
-          final nieuweWaarde =
+          final nieuweVasteInzethorWaarde =
               bijgewerkt.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ??
               '';
           final technischeRegelsZijnGelijk = _zijnTechnischeRegelsGelijk(
@@ -312,7 +399,8 @@ class OpmetingProjectTitelhoofdController {
             bijgewerkt.technischeRegels,
           );
 
-          if (oudeWaarde == nieuweWaarde && technischeRegelsZijnGelijk) {
+          if (oudeVasteInzethorWaarde == nieuweVasteInzethorWaarde &&
+              technischeRegelsZijnGelijk) {
             return item;
           }
 
