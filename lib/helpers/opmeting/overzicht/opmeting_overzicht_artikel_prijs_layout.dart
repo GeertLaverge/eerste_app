@@ -115,7 +115,6 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   @override

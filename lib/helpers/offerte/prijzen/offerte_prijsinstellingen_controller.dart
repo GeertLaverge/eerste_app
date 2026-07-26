@@ -491,6 +491,7 @@ class OffertePrijsinstellingenController {
       await herlaadOpmetingen(klantNaam, true);
 
       if (!isMounted()) return;
+      if (!context.mounted) return;
 
       if (ModalRoute.of(context)?.isCurrent == true) {
         _toonAutomatischePrijsMelding(wijzigingen);

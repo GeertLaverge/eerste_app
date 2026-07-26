@@ -449,7 +449,7 @@ class OpmetingVliegendeurPainter extends CustomPainter {
   void _tekenTekstAchtergrond(Canvas canvas, Rect rect) {
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(3)),
-      Paint()..color = Colors.white.withOpacity(0.92),
+      Paint()..color = Colors.white.withValues(alpha: 0.92),
     );
   }
 
@@ -556,7 +556,7 @@ class OpmetingVliegendeurPainter extends CustomPainter {
 
   Paint _draairichtingPaint() {
     return Paint()
-      ..color = _lijn.withOpacity(0.82)
+      ..color = _lijn.withValues(alpha: 0.82)
       ..strokeWidth = 1.4
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;

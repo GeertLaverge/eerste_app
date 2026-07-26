@@ -242,6 +242,110 @@ void main() {
       expect(resultaat.waarden[sleutel], '[{"id":"cloud"}]');
     });
   });
+  group('SyncMergeService JSON-recordcollecties', () {
+    test(
+      'onafhankelijke wijzigingen in verschillende records blijven bestaan',
+      () {
+        final resultaat = SyncMergeService.mergeJsonRecords(
+          lokaal: const <Map<String, dynamic>>[
+            <String, dynamic>{'id': 'menu-a', 'naam': 'Lokaal gewijzigd'},
+          ],
+          cloud: const <Map<String, dynamic>>[
+            <String, dynamic>{'id': 'menu-b', 'naam': 'Cloud gewijzigd'},
+          ],
+          lokaleMetadata: const <String, SyncJsonRecordMetadata>{
+            'menu-a': SyncJsonRecordMetadata(
+              gewijzigdOp: '2026-07-26T12:00:00.000Z',
+              verwijderd: false,
+            ),
+          },
+          cloudMetadata: const <String, SyncJsonRecordMetadata>{
+            'menu-b': SyncJsonRecordMetadata(
+              gewijzigdOp: '2026-07-26T12:30:00.000Z',
+              verwijderd: false,
+            ),
+          },
+          idVoorRecord: _recordId,
+        );
+
+        expect(resultaat.records, hasLength(2));
+        expect(
+          resultaat.records.map((record) => record['id']),
+          containsAll(<String>['menu-a', 'menu-b']),
+        );
+      },
+    );
+
+    test('nieuwere tombstone houdt een verwijderd record weg', () {
+      final resultaat = SyncMergeService.mergeJsonRecords(
+        lokaal: const <Map<String, dynamic>>[],
+        cloud: const <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'kleur-1', 'naam': 'Oude cloudkleur'},
+        ],
+        lokaleMetadata: const <String, SyncJsonRecordMetadata>{
+          'kleur-1': SyncJsonRecordMetadata(
+            gewijzigdOp: '2026-07-26T13:00:00.000Z',
+            verwijderd: true,
+          ),
+        },
+        cloudMetadata: const <String, SyncJsonRecordMetadata>{
+          'kleur-1': SyncJsonRecordMetadata(
+            gewijzigdOp: '2026-07-26T12:00:00.000Z',
+            verwijderd: false,
+          ),
+        },
+        idVoorRecord: _recordId,
+      );
+
+      expect(resultaat.records, isEmpty);
+      expect(resultaat.metadata['kleur-1']!.verwijderd, isTrue);
+    });
+
+    test('lokale opslag markeert wijzigingen en verwijderingen per record', () {
+      final metadata = SyncMergeService.updateJsonRecordMetadata(
+        oudeRecords: const <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'a', 'naam': 'Ongewijzigd'},
+          <String, dynamic>{'id': 'b', 'naam': 'Wordt verwijderd'},
+          <String, dynamic>{'id': 'c', 'naam': 'Oud'},
+        ],
+        nieuweRecords: const <Map<String, dynamic>>[
+          <String, dynamic>{'id': 'a', 'naam': 'Ongewijzigd'},
+          <String, dynamic>{'id': 'c', 'naam': 'Nieuw'},
+        ],
+        bestaandeMetadata: const <String, SyncJsonRecordMetadata>{
+          'a': SyncJsonRecordMetadata(
+            gewijzigdOp: '2026-07-25T10:00:00.000Z',
+            verwijderd: false,
+          ),
+        },
+        idVoorRecord: _recordId,
+        gewijzigdOp: '2026-07-26T14:00:00.000Z',
+      );
+
+      expect(metadata['a']!.gewijzigdOp, '2026-07-25T10:00:00.000Z');
+      expect(metadata['b']!.verwijderd, isTrue);
+      expect(metadata['c']!.gewijzigdOp, '2026-07-26T14:00:00.000Z');
+      expect(metadata['c']!.verwijderd, isFalse);
+    });
+
+    test('leveranciersleutel gebruikt e-mail hoofdletterongevoelig', () {
+      final eerste = SyncMergeService.syncIdVoorLeverancierRecord(
+        const <String, dynamic>{
+          'naam': 'Leverancier A',
+          'email': 'Info@Voorbeeld.be',
+        },
+      );
+      final tweede = SyncMergeService.syncIdVoorLeverancierRecord(
+        const <String, dynamic>{
+          'naam': 'Andere schrijfwijze',
+          'email': 'info@voorbeeld.be',
+        },
+      );
+
+      expect(eerste, tweede);
+      expect(eerste, 'email:info@voorbeeld.be');
+    });
+  });
 }
 
 AgendaItem _agendaItem({
@@ -278,4 +382,8 @@ OpmetingProjectTitelhoofd _titelhoofd({
     klantNaam: klantNaam,
     gewijzigdOp: gewijzigdOp,
   );
+}
+
+String _recordId(Map<String, dynamic> record) {
+  return record['id']?.toString() ?? '';
 }

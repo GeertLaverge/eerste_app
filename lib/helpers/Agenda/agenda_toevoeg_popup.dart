@@ -230,6 +230,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     );
 
     if (gekozen == null) return;
+    if (!mounted) return;
 
     if (minuten(gekozen) < minuten(startTijd)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -348,7 +349,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: DropdownButtonFormField<String>(
-        value: aanspreking,
+        initialValue: aanspreking,
         isExpanded: true,
         decoration: InputDecoration(
           hintText: 'Aanspreking',
@@ -894,7 +895,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 const SizedBox(height: 10),
                 SwitchListTile(
                   value: volledigeDag,
-                  activeColor: const Color(0xFF0B7A3B),
+                  activeThumbColor: const Color(0xFF0B7A3B),
                   contentPadding: EdgeInsets.zero,
                   onChanged: (waarde) {
                     setState(() {

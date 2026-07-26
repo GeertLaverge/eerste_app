@@ -30,12 +30,12 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
       height: menuGrootte.height,
       padding: const EdgeInsets.all(7),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFD1D5DB)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -257,12 +257,12 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
       width: breedte,
       constraints: BoxConstraints(maxHeight: maxHoogte),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _rand),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

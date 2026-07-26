@@ -41,39 +41,23 @@ class AgendaFilterMenu extends StatelessWidget {
     required ValueChanged<bool> onChanged,
   }) {
     return Container(
-      margin: const EdgeInsets.only(
-        bottom: 6,
-      ),
+      margin: const EdgeInsets.only(bottom: 6),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(
-          14,
-        ),
-        border: Border.all(
-          color: Colors.grey.shade200,
-        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: SwitchListTile(
         dense: true,
-        contentPadding: const EdgeInsets.fromLTRB(
-          14,
-          2,
-          8,
-          2,
-        ),
-        activeColor: Colors.white,
-        activeTrackColor: const Color(
-          0xFF0B7A3B,
-        ),
+        contentPadding: const EdgeInsets.fromLTRB(14, 2, 8, 2),
+        activeThumbColor: Colors.white,
+        activeTrackColor: const Color(0xFF0B7A3B),
         inactiveTrackColor: Colors.grey.shade300,
         value: waarde,
         onChanged: onChanged,
         title: Text(
           tekst,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
     );
@@ -83,12 +67,7 @@ class AgendaFilterMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          4,
-          4,
-          4,
-          8,
-        ),
+        padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

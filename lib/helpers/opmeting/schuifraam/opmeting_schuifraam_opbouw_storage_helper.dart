@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../sync/onedrive_sync_service.dart';
 import 'opmeting_schuifraam_model.dart';
 
 class OpmetingSchuifraamOpbouwStorageHelper {
@@ -68,5 +69,8 @@ class OpmetingSchuifraamOpbouwStorageHelper {
       _sleutel,
       jsonEncode(geldigeOpbouwen.map((opbouw) => opbouw.toJson()).toList()),
     );
+
+    await OneDriveSyncService.registreerLokaleWijziging();
+    OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 }

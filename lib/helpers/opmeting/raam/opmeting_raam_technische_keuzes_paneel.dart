@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
-import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_vulling_helper.dart';
 
 class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {

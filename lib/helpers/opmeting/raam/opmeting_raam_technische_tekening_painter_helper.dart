@@ -34,7 +34,7 @@ class OpmetingRaamTechnischeTekeningPainterHelper {
     canvas.drawRect(
       rechthoek,
       Paint()
-        ..color = Colors.white.withOpacity(0.94)
+        ..color = Colors.white.withValues(alpha: 0.94)
         ..style = PaintingStyle.fill,
     );
 

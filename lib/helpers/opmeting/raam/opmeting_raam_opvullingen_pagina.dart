@@ -551,7 +551,7 @@ class _OpmetingRaamOpvullingenPaginaState
         color: opvulling.weergaveKleur,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: opvulling.kleur.withOpacity(0.95),
+          color: opvulling.kleur.withValues(alpha: 0.95),
           width: 1.5,
         ),
       ),
@@ -708,11 +708,17 @@ class _OpmetingRaamOpvullingenPaginaState
     OpmetingRaamOpvullingModel? opvulling,
     OpmetingRaamOpvullingGroepModel? beginGroep,
   }) async {
+    final huidigeContext = context;
+
     if (_groepen.isEmpty) {
       await _openGroepEditor();
       if (_groepen.isEmpty) {
         return;
       }
+    }
+
+    if (!mounted || !huidigeContext.mounted) {
+      return;
     }
 
     final naamController = TextEditingController(text: opvulling?.naam ?? '');
@@ -725,7 +731,7 @@ class _OpmetingRaamOpvullingenPaginaState
 
     try {
       final resultaat = await showDialog<OpmetingRaamOpvullingModel>(
-        context: context,
+        context: huidigeContext,
         barrierDismissible: false,
         builder: (context) {
           return StatefulBuilder(
@@ -749,7 +755,7 @@ class _OpmetingRaamOpvullingenPaginaState
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         DropdownButtonFormField<String>(
-                          value: groep.id,
+                          initialValue: groep.id,
                           decoration: const InputDecoration(
                             labelText: 'Submenu',
                             border: OutlineInputBorder(),
@@ -809,8 +815,10 @@ class _OpmetingRaamOpvullingenPaginaState
                                 width: 34,
                                 height: 34,
                                 decoration: BoxDecoration(
-                                  color: Color(waarde).withOpacity(
-                                    transparantie.clamp(0.05, 1.0).toDouble(),
+                                  color: Color(waarde).withValues(
+                                    alpha: transparantie
+                                        .clamp(0.05, 1.0)
+                                        .toDouble(),
                                   ),
                                   borderRadius: BorderRadius.circular(9),
                                   border: Border.all(
@@ -867,7 +875,7 @@ class _OpmetingRaamOpvullingenPaginaState
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
                           value: actief,
-                          activeColor: _groen,
+                          activeThumbColor: _groen,
                           title: const Text(
                             'Actief tonen in opmeetfiche',
                             style: TextStyle(

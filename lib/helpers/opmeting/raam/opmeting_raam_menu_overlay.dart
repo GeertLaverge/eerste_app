@@ -7,7 +7,6 @@ import 'opmeting_raam_opvulling_menu.dart';
 import 'opmeting_raam_opvulling_model.dart';
 import 'opmeting_raam_tekenvlak_acties.dart';
 import 'opmeting_raam_tekenvlak_menus.dart';
-import 'opmeting_raam_verplaatsbaar_menu.dart';
 import 'opmeting_raam_zwevende_menus_controller.dart';
 
 typedef OpmetingRaamMenuVersleepCallback =

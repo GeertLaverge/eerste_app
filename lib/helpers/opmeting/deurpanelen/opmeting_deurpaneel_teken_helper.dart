@@ -368,8 +368,8 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
     final vulPaint = Paint()
       ..style = PaintingStyle.fill
       ..color = isVleugelOverdekkend
-          ? Colors.white.withOpacity(0.96)
-          : const Color(0xFFE7F6EC).withOpacity(0.28);
+          ? Colors.white.withValues(alpha: 0.96)
+          : const Color(0xFFE7F6EC).withValues(alpha: 0.28);
 
     canvas.drawRect(paneelVlak, vulPaint);
   }
@@ -409,7 +409,7 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
       canvas: canvas,
       paneelVlak: paneelVlak,
       tekening: dxfTekening,
-      kleur: _tekstDonker.withOpacity(0.88),
+      kleur: _tekstDonker.withValues(alpha: 0.88),
       margePx: 0,
       strokeWidth: 1.18,
       behoudVerhouding: false,
@@ -446,7 +446,7 @@ class OpmetingDeurpaneelTekenvlakPainter extends CustomPainter {
     final onderStart = Offset(scharnierX, binnenVlak.bottom);
 
     final haloPaint = Paint()
-      ..color = Colors.white.withOpacity(0.88)
+      ..color = Colors.white.withValues(alpha: 0.88)
       ..strokeWidth = 4.4
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;

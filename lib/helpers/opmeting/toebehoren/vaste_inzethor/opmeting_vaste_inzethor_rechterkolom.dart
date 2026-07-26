@@ -723,33 +723,38 @@ class _KeuzeSectie extends StatelessWidget {
       ...keuzes,
     ];
 
-    return _SectieKaart(
-      titel: titel,
-      children: zichtbareKeuzes
-          .map((keuze) {
-            return RadioListTile<String>(
-              value: keuze,
-              groupValue: waarde,
-              onChanged: (nieuw) {
-                if (nieuw != null) {
-                  onChanged(nieuw);
-                }
-              },
-              activeColor: _OpmetingVasteInzethorRechterkolomState._groen,
-              dense: true,
-              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                labelBouwer(keuze),
-                style: const TextStyle(
-                  color: _OpmetingVasteInzethorRechterkolomState._tekst,
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
+    return RadioGroup<String>(
+      groupValue: waarde,
+      onChanged: (nieuw) {
+        if (nieuw != null) {
+          onChanged(nieuw);
+        }
+      },
+      child: _SectieKaart(
+        titel: titel,
+        children: zichtbareKeuzes
+            .map((keuze) {
+              return RadioListTile<String>(
+                value: keuze,
+                activeColor: _OpmetingVasteInzethorRechterkolomState._groen,
+                dense: true,
+                visualDensity: const VisualDensity(
+                  horizontal: -4,
+                  vertical: -4,
                 ),
-              ),
-            );
-          })
-          .toList(growable: false),
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  labelBouwer(keuze),
+                  style: const TextStyle(
+                    color: _OpmetingVasteInzethorRechterkolomState._tekst,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              );
+            })
+            .toList(growable: false),
+      ),
     );
   }
 }

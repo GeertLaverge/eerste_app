@@ -5,7 +5,7 @@ import '../Agenda/agenda_item.dart';
 import '../Agenda/agenda_repository.dart';
 import '../Agenda/agenda_tijd_picker.dart';
 
-class KlantenficheKraanReserverenBlok extends StatelessWidget {
+class KlantenficheKraanReserverenBlok extends StatefulWidget {
   final bool kraanNodig;
   final String klantNaam;
   final String klantNr;
@@ -28,7 +28,8 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
     required int startMinuut,
     required int eindUur,
     required int eindMinuut,
-  }) onKraanGereserveerd;
+  })
+  onKraanGereserveerd;
 
   const KlantenficheKraanReserverenBlok({
     super.key,
@@ -50,9 +51,17 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
     required this.onKraanGereserveerd,
   });
 
+  @override
+  State<KlantenficheKraanReserverenBlok> createState() {
+    return _KlantenficheKraanReserverenBlokState();
+  }
+}
+
+class _KlantenficheKraanReserverenBlokState
+    extends State<KlantenficheKraanReserverenBlok> {
   Future<List<DateTime>> ingeplandeDatums() async {
     final itemsPerDag = await AgendaRepository.laadItems();
-    final naam = klantNaam.trim().toLowerCase();
+    final naam = widget.klantNaam.trim().toLowerCase();
 
     final datums = <DateTime>[];
 
@@ -61,7 +70,8 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
         if (item.isVerwijderd) continue;
         if (item.type != 'planning') continue;
 
-        final zelfdeKlant = item.naamKlant.trim().toLowerCase() == naam ||
+        final zelfdeKlant =
+            item.naamKlant.trim().toLowerCase() == naam ||
             item.titel.trim().toLowerCase() == naam;
 
         if (zelfdeKlant) {
@@ -75,31 +85,24 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
     return datums;
   }
 
-  Future<void> reserveerKraan(
-    BuildContext context,
-    DateTime datum,
-  ) async {
+  Future<void> reserveerKraan(DateTime datum) async {
     final start = await AgendaTijdPicker.kiesTijd(
       context: context,
       titel: 'Starttijd kraan',
-      beginTijd: const TimeOfDay(
-        hour: 7,
-        minute: 0,
-      ),
+      beginTijd: const TimeOfDay(hour: 7, minute: 0),
     );
 
     if (start == null) return;
+    if (!mounted) return;
 
     final eind = await AgendaTijdPicker.kiesTijd(
       context: context,
       titel: 'Eindtijd kraan',
-      beginTijd: TimeOfDay(
-        hour: start.hour,
-        minute: start.minute,
-      ),
+      beginTijd: TimeOfDay(hour: start.hour, minute: start.minute),
     );
 
     if (eind == null) return;
+    if (!mounted) return;
 
     final startMin = (start.hour * 60) + start.minute;
     final eindMin = (eind.hour * 60) + eind.minute;
@@ -119,16 +122,16 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
     final kraanItem = AgendaItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       updatedAt: DateTime.now().toIso8601String(),
-      titel: 'Kraan - $klantNaam',
+      titel: 'Kraan - ${widget.klantNaam}',
       type: 'kraan',
-      klantNr: klantNr,
-      naamKlant: klantNaam,
-      straatnaam: straatnaam,
-      huisNr: huisNr,
-      gemeente: gemeente,
-      postcode: postcode,
-      gsm: gsm,
-      email: email,
+      klantNr: widget.klantNr,
+      naamKlant: widget.klantNaam,
+      straatnaam: widget.straatnaam,
+      huisNr: widget.huisNr,
+      gemeente: widget.gemeente,
+      postcode: widget.postcode,
+      gsm: widget.gsm,
+      email: widget.email,
       startUur: start.hour,
       startMinuut: start.minute,
       eindUur: eind.hour,
@@ -143,18 +146,16 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
       itemsPerDag: itemsPerDag,
     );
 
-    final naam = klantNaam.trim().toLowerCase();
+    final naam = widget.klantNaam.trim().toLowerCase();
 
     final aangepasteItems = nieuweItems.map((datumKey, items) {
       final aangepasteLijst = items.map((item) {
-        final zelfdeKlant = item.naamKlant.trim().toLowerCase() == naam ||
+        final zelfdeKlant =
+            item.naamKlant.trim().toLowerCase() == naam ||
             item.titel.trim().toLowerCase() == naam;
 
         if (zelfdeKlant && item.type != 'kraan') {
-          return item.copyWith(
-            kraanNodig: false,
-            kraanIngepland: true,
-          );
+          return item.copyWith(kraanNodig: false, kraanIngepland: true);
         }
 
         return item;
@@ -167,7 +168,7 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
       Map<String, List<AgendaItem>>.from(aangepasteItems),
     );
 
-    await onKraanGereserveerd(
+    await widget.onKraanGereserveerd(
       datum: AgendaDatumHelper.datumKey(datum),
       startUur: start.hour,
       startMinuut: start.minute,
@@ -175,7 +176,7 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
       eindMinuut: eind.minute,
     );
 
-    if (!context.mounted) return;
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -192,60 +193,56 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
   }
 
   String tijdTekst() {
-    if (kraanStartUur == null ||
-        kraanStartMinuut == null ||
-        kraanEindUur == null ||
-        kraanEindMinuut == null) {
+    if (widget.kraanStartUur == null ||
+        widget.kraanStartMinuut == null ||
+        widget.kraanEindUur == null ||
+        widget.kraanEindMinuut == null) {
       return '';
     }
 
-    return '${kraanStartUur!.toString().padLeft(2, '0')}:'
-        '${kraanStartMinuut!.toString().padLeft(2, '0')} - '
-        '${kraanEindUur!.toString().padLeft(2, '0')}:'
-        '${kraanEindMinuut!.toString().padLeft(2, '0')}';
+    return '${widget.kraanStartUur!.toString().padLeft(2, '0')}:'
+        '${widget.kraanStartMinuut!.toString().padLeft(2, '0')} - '
+        '${widget.kraanEindUur!.toString().padLeft(2, '0')}:'
+        '${widget.kraanEindMinuut!.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
-    final heeftKraanReservatie = kraanDatum.trim().isNotEmpty;
+    final heeftKraanReservatie = widget.kraanDatum.trim().isNotEmpty;
 
     return Column(
       children: [
         CheckboxListTile(
-          value: kraanNodig,
+          value: widget.kraanNodig,
           activeColor: const Color(0xFF0B7A3B),
           contentPadding: EdgeInsets.zero,
           title: const Text(
             'Kraan nodig bij deze klant',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700),
           ),
           onChanged: (waarde) {
-            onKraanNodigChanged(waarde ?? false);
+            widget.onKraanNodigChanged(waarde ?? false);
           },
         ),
-        if (kraanNodig && heeftKraanReservatie)
+        if (widget.kraanNodig && heeftKraanReservatie)
           Container(
             width: double.infinity,
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.brown.withOpacity(0.08),
+              color: Colors.brown.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.brown,
-              ),
+              border: Border.all(color: Colors.brown),
             ),
             child: Text(
-              '🏗️ Kraan gereserveerd op $kraanDatum\n${tijdTekst()}',
+              '🏗️ Kraan gereserveerd op ${widget.kraanDatum}\n${tijdTekst()}',
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 color: Colors.brown,
               ),
             ),
           ),
-        if (kraanNodig && !heeftKraanReservatie)
+        if (widget.kraanNodig && !heeftKraanReservatie)
           FutureBuilder<List<DateTime>>(
             future: ingeplandeDatums(),
             builder: (context, snapshot) {
@@ -276,19 +273,14 @@ class KlantenficheKraanReserverenBlok extends StatelessWidget {
                 children: datums.map((datum) {
                   return ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Text(
-                      '🏗️',
-                      style: TextStyle(fontSize: 20),
-                    ),
+                    leading: const Text('🏗️', style: TextStyle(fontSize: 20)),
                     title: Text(
                       datumTekst(datum),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                     trailing: ElevatedButton(
                       onPressed: () {
-                        reserveerKraan(context, datum);
+                        reserveerKraan(datum);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.brown,

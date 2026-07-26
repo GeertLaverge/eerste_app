@@ -5,7 +5,6 @@ import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import 'opmeting_raam_basis_maten.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
-import 'opmeting_raam_model.dart';
 import 'opmeting_raam_notities.dart';
 import 'opmeting_raam_technische_keuzes_paneel.dart';
 import 'opmeting_raam_tekenvlak.dart';

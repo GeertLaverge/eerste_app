@@ -69,7 +69,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
         border: Border.all(color: _rand),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -373,7 +373,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
       decoration: BoxDecoration(
         color: _lichtGroen,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: _groen.withOpacity(0.35)),
+        border: Border.all(color: _groen.withValues(alpha: 0.35)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,

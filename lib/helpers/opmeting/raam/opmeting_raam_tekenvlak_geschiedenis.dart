@@ -1,6 +1,5 @@
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
-import 'opmeting_raam_opvulling_model.dart';
 
 class OpmetingRaamTekeningMoment {
   const OpmetingRaamTekeningMoment({

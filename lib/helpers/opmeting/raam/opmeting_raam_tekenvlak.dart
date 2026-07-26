@@ -35,8 +35,6 @@ import 'opmeting_raam_kleinhout_actie_helper.dart';
 import 'opmeting_raam_tstijl_actie_helper.dart';
 import 'opmeting_raam_tstijl_helper.dart';
 import 'opmeting_raam_vleugel_actie_helper.dart';
-import 'opmeting_raam_vleugel_helper.dart';
-import 'opmeting_raam_vlak_helper.dart';
 import 'opmeting_raam_kleinhout_instellingen_helper.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
 import 'opmeting_raam_tekenvlak_weergave_status_helper.dart';
@@ -1168,7 +1166,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
         rect = rect == null
             ? nieuweVleugel.vlak
-            : rect!.expandToInclude(nieuweVleugel.vlak);
+            : rect.expandToInclude(nieuweVleugel.vlak);
       }
 
       return rect ?? oudeGroep.first.vlak;
@@ -3255,7 +3253,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
       if (eersteKaderId != null) {
         _actiefKleinhoutKaderId = eersteKaderId;
-        _vervangKleinhouten(_kleinhoutenVoorKader(eersteKaderId!));
+        _vervangKleinhouten(_kleinhoutenVoorKader(eersteKaderId));
         _vervangKleinhoutVlakSelectie(
           _geselecteerdeKleinhoutVlakIdsPerKader[eersteKaderId] ??
               const <String>{},
@@ -3263,7 +3261,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       }
 
       if (eersteSelectie != null) {
-        _laadKleinhoutInstellingenVoorVlak(eersteSelectie!);
+        _laadKleinhoutInstellingenVoorVlak(eersteSelectie);
       }
     });
   }

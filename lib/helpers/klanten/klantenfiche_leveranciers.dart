@@ -66,8 +66,9 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
       return 'Geen artikelen';
     }
 
-    final allesGeleverd =
-        geselecteerdeArtikelen.every((regel) => regel.geleverd);
+    final allesGeleverd = geselecteerdeArtikelen.every(
+      (regel) => regel.geleverd,
+    );
 
     final allesBesteld = geselecteerdeArtikelen.every((regel) => regel.besteld);
 
@@ -82,8 +83,9 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
       return Colors.grey;
     }
 
-    final allesGeleverd =
-        geselecteerdeArtikelen.every((regel) => regel.geleverd);
+    final allesGeleverd = geselecteerdeArtikelen.every(
+      (regel) => regel.geleverd,
+    );
 
     final allesBesteld = geselecteerdeArtikelen.every((regel) => regel.besteld);
 
@@ -119,16 +121,12 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
           children: [
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: geselecteerdeLeverancier,
-                decoration: const InputDecoration(
-                  labelText: 'Leverancier',
-                ),
+                initialValue: geselecteerdeLeverancier,
+                decoration: const InputDecoration(labelText: 'Leverancier'),
                 items: leveranciers.map((leverancier) {
                   return DropdownMenuItem(
                     value: leverancier.naam,
-                    child: Text(
-                      leverancier.naam,
-                    ),
+                    child: Text(leverancier.naam),
                   );
                 }).toList(),
                 onChanged: (waarde) {
@@ -142,17 +140,10 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
             const SizedBox(width: 10),
             Expanded(
               child: DropdownButtonFormField<String>(
-                value: geselecteerdArtikel,
-                decoration: const InputDecoration(
-                  labelText: 'Artikel',
-                ),
+                initialValue: geselecteerdArtikel,
+                decoration: const InputDecoration(labelText: 'Artikel'),
                 items: artikelen.map((artikel) {
-                  return DropdownMenuItem(
-                    value: artikel,
-                    child: Text(
-                      artikel,
-                    ),
-                  );
+                  return DropdownMenuItem(value: artikel, child: Text(artikel));
                 }).toList(),
                 onChanged: (waarde) {
                   setState(() {
@@ -182,9 +173,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
               if (bestaatAl) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text(
-                      'Artikel staat reeds in de lijst',
-                    ),
+                    content: Text('Artikel staat reeds in de lijst'),
                   ),
                 );
                 return;
@@ -208,15 +197,12 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 12,
-            vertical: 10,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: bestelStatusKleur.withOpacity(0.08),
+            color: bestelStatusKleur.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: bestelStatusKleur.withOpacity(0.35),
+              color: bestelStatusKleur.withValues(alpha: 0.35),
             ),
           ),
           child: Text(
@@ -236,9 +222,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFE5E7EB),
-              ),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: Column(
               children: [
@@ -261,9 +245,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                   children: [
                     const Text(
                       'Besteld',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Checkbox(
                       value: regel.besteld,
@@ -282,9 +264,7 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                     const SizedBox(width: 20),
                     const Text(
                       'Geleverd',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     Checkbox(
                       value: regel.geleverd,
@@ -306,13 +286,10 @@ class _KlantenficheLeveranciersState extends State<KlantenficheLeveranciers> {
                         });
                         geefWijzigingDoor();
                       },
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.red,
-                      ),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           );

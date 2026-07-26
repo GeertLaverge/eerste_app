@@ -9,10 +9,7 @@ import 'agenda_tijd_picker.dart';
 class AgendaDagtaakPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
 
-  const AgendaDagtaakPopup({
-    super.key,
-    this.bestaandItem,
-  });
+  const AgendaDagtaakPopup({super.key, this.bestaandItem});
 
   @override
   State<AgendaDagtaakPopup> createState() => _AgendaDagtaakPopupState();
@@ -27,9 +24,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
   bool heeftTijd = false;
   String homeKeuze = 'zelfdeDag';
 
-  final dagenController = TextEditingController(
-    text: '1',
-  );
+  final dagenController = TextEditingController(text: '1');
 
   DateTime? gekozenHomeDatum;
 
@@ -50,17 +45,11 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
       heeftTijd = !item.volledigeDag;
 
       if (item.startUur != null && item.startMinuut != null) {
-        startTijd = TimeOfDay(
-          hour: item.startUur!,
-          minute: item.startMinuut!,
-        );
+        startTijd = TimeOfDay(hour: item.startUur!, minute: item.startMinuut!);
       }
 
       if (item.eindUur != null && item.eindMinuut != null) {
-        eindTijd = TimeOfDay(
-          hour: item.eindUur!,
-          minute: item.eindMinuut!,
-        );
+        eindTijd = TimeOfDay(hour: item.eindUur!, minute: item.eindMinuut!);
       }
 
       homeKeuze = item.homeWeergaveType;
@@ -120,6 +109,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
     );
 
     if (gekozen == null) return;
+    if (!mounted) return;
 
     if (minuten(gekozen) <= minuten(startTijd)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,10 +151,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
                   const Text(
                     'Annuleren zonder toevoegen?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -172,10 +159,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
                         ? 'Wijzigingen worden niet opgeslagen.'
                         : 'Dagtaak wordt niet toegevoegd.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.black54, fontSize: 14),
                   ),
                   const SizedBox(height: 18),
                   Row(
@@ -226,16 +210,11 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 13,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.grey.shade300,
-          ),
+          border: Border.all(color: Colors.grey.shade300),
         ),
         child: Row(
           children: [
@@ -257,11 +236,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              Icons.access_time,
-              color: Color(0xFF0B7A3B),
-              size: 20,
-            ),
+            const Icon(Icons.access_time, color: Color(0xFF0B7A3B), size: 20),
           ],
         ),
       ),
@@ -308,9 +283,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
     );
   }
 
-  Future<void> plaatsInAgenda({
-    required bool bewaren,
-  }) async {
+  Future<void> plaatsInAgenda({required bool bewaren}) async {
     final naam = naamController.text.trim();
 
     if (naam.isEmpty) {
@@ -362,10 +335,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
 
     if (!mounted) return;
 
-    Navigator.pop(
-      context,
-      maakItem(),
-    );
+    Navigator.pop(context, maakItem());
   }
 
   void kiesTemplate(AgendaDagtaakTemplate template) {
@@ -411,9 +381,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
               horizontal: 14,
               vertical: 14,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           ),
         ),
         const SizedBox(height: 10),
@@ -484,25 +452,15 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
         ),
         if (heeftTijd) ...[
           const SizedBox(height: 10),
-          tijdKaart(
-            titel: 'Starttijd',
-            tijd: startTijd,
-            onTap: kiesStartTijd,
-          ),
-          tijdKaart(
-            titel: 'Eindtijd',
-            tijd: eindTijd,
-            onTap: kiesEindTijd,
-          ),
+          tijdKaart(titel: 'Starttijd', tijd: startTijd, onTap: kiesStartTijd),
+          tijdKaart(titel: 'Eindtijd', tijd: eindTijd, onTap: kiesEindTijd),
         ],
         const SizedBox(height: 14),
         const Align(
           alignment: Alignment.centerLeft,
           child: Text(
             'Tonen op homepagina',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
         const SizedBox(height: 8),
@@ -511,95 +469,89 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
             color: const Color(0xFFE7F6EC),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Column(
-            children: [
-              RadioListTile<String>(
-                activeColor: const Color(0xFF0B7A3B),
-                value: 'zelfdeDag',
-                groupValue: homeKeuze,
-                title: const Text('Zelfde dag'),
-                onChanged: (value) {
-                  setState(() {
-                    homeKeuze = value!;
-                    gekozenHomeDatum = null;
-                  });
+          child: RadioGroup<String>(
+            groupValue: homeKeuze,
+            onChanged: (value) async {
+              if (value == null) return;
+
+              if (value != 'datum') {
+                setState(() {
+                  homeKeuze = value;
+                  gekozenHomeDatum = null;
+                });
+                return;
+              }
+
+              setState(() {
+                homeKeuze = value;
+              });
+
+              final datum = await showDatePicker(
+                context: context,
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: const ColorScheme.light(
+                        primary: Color(0xFF0B7A3B),
+                        onPrimary: Colors.white,
+                        surface: Colors.white,
+                        onSurface: Colors.black,
+                      ),
+                    ),
+                    child: child!,
+                  );
                 },
-              ),
-              RadioListTile<String>(
-                activeColor: const Color(0xFF0B7A3B),
-                value: 'dagenVooraf',
-                groupValue: homeKeuze,
-                title: const Text('Zoveel dagen vooraf'),
-                onChanged: (value) {
-                  setState(() {
-                    homeKeuze = value!;
-                    gekozenHomeDatum = null;
-                  });
-                },
-              ),
-              if (homeKeuze == 'dagenVooraf')
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: TextField(
-                    controller: dagenController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Aantal dagen',
+                initialDate: gekozenHomeDatum ?? DateTime.now(),
+                firstDate: DateTime(2020),
+                lastDate: DateTime(2050),
+              );
+
+              if (datum == null || !mounted) return;
+
+              setState(() {
+                gekozenHomeDatum = datum;
+              });
+            },
+            child: Column(
+              children: [
+                const RadioListTile<String>(
+                  activeColor: Color(0xFF0B7A3B),
+                  value: 'zelfdeDag',
+                  title: Text('Zelfde dag'),
+                ),
+                const RadioListTile<String>(
+                  activeColor: Color(0xFF0B7A3B),
+                  value: 'dagenVooraf',
+                  title: Text('Zoveel dagen vooraf'),
+                ),
+                if (homeKeuze == 'dagenVooraf')
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: TextField(
+                      controller: dagenController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Aantal dagen',
+                      ),
+                    ),
+                  ),
+                RadioListTile<String>(
+                  activeColor: const Color(0xFF0B7A3B),
+                  value: 'datum',
+                  title: Text(
+                    gekozenHomeDatum == null
+                        ? 'Kies datum'
+                        : 'Gekozen datum ${gekozenHomeDatum!.day}/${gekozenHomeDatum!.month}/${gekozenHomeDatum!.year}',
+                    style: TextStyle(
+                      color: homeKeuze == 'datum'
+                          ? Colors.black87
+                          : Colors.black38,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-              RadioListTile<String>(
-                activeColor: const Color(0xFF0B7A3B),
-                value: 'datum',
-                groupValue: homeKeuze,
-                title: Text(
-                  gekozenHomeDatum == null
-                      ? 'Kies datum'
-                      : 'Gekozen datum ${gekozenHomeDatum!.day}/${gekozenHomeDatum!.month}/${gekozenHomeDatum!.year}',
-                  style: TextStyle(
-                    color:
-                        homeKeuze == 'datum' ? Colors.black87 : Colors.black38,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                onChanged: (value) async {
-                  setState(() {
-                    homeKeuze = value!;
-                  });
-
-                  final datum = await showDatePicker(
-                    context: context,
-                    builder: (
-                      context,
-                      child,
-                    ) {
-                      return Theme(
-                        data: Theme.of(
-                          context,
-                        ).copyWith(
-                          colorScheme: const ColorScheme.light(
-                            primary: Color(0xFF0B7A3B),
-                            onPrimary: Colors.white,
-                            surface: Colors.white,
-                            onSurface: Colors.black,
-                          ),
-                        ),
-                        child: child!,
-                      );
-                    },
-                    initialDate: gekozenHomeDatum ?? DateTime.now(),
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2050),
-                  );
-
-                  if (datum == null) return;
-
-                  setState(() {
-                    gekozenHomeDatum = datum;
-                  });
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -620,21 +572,11 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  'verwijderen',
-                );
+                Navigator.pop(context, 'verwijderen');
               },
-              icon: const Icon(
-                Icons.delete_outline,
-                color: Colors.red,
-              ),
-              label: const Text(
-                'Dagtaak verwijderen',
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.red,
-              ),
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              label: const Text('Dagtaak verwijderen'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
             ),
           ),
         ],
@@ -643,13 +585,9 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
           width: double.infinity,
           child: OutlinedButton(
             onPressed: () {
-              plaatsInAgenda(
-                bewaren: false,
-              );
+              plaatsInAgenda(bewaren: false);
             },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.black,
-            ),
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.black),
             child: Text(
               isBewerken
                   ? 'Wijzigingen opslaan'
@@ -663,18 +601,14 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                plaatsInAgenda(
-                  bewaren: true,
-                );
+                plaatsInAgenda(bewaren: true);
               },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(0, 50),
                 backgroundColor: const Color(0xFF0B7A3B),
                 foregroundColor: Colors.white,
               ),
-              child: const Text(
-                'Plaats in agenda en bewaar',
-              ),
+              child: const Text('Plaats in agenda en bewaar'),
             ),
           ),
         ],
@@ -696,9 +630,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: Colors.grey.shade300,
-            ),
+            border: Border.all(color: Colors.grey.shade300),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,61 +646,53 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
               const SizedBox(height: 10),
               if (templates.isEmpty)
                 const Padding(
-                  padding: EdgeInsets.symmetric(
-                    vertical: 10,
-                  ),
+                  padding: EdgeInsets.symmetric(vertical: 10),
                   child: Text(
                     'Nog geen opgeslagen dagtaken',
-                    style: TextStyle(
-                      color: Colors.black45,
-                    ),
+                    style: TextStyle(color: Colors.black45),
                   ),
                 ),
               if (templates.isNotEmpty)
-                ...templates.map(
-                  (template) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () {
-                                kiesTemplate(template);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                minimumSize: const Size(0, 46),
-                                alignment: Alignment.centerLeft,
-                              ),
-                              child: Text(
-                                template.naam,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () async {
-                              await verwijderTemplate(template);
+                ...templates.map((template) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              kiesTemplate(template);
                             },
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.red.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.delete_outline,
-                                color: Colors.red,
-                              ),
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size(0, 46),
+                              alignment: Alignment.centerLeft,
+                            ),
+                            child: Text(template.naam),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () async {
+                            await verwijderTemplate(template);
+                          },
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
                             ),
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
             ],
           ),
         ),
@@ -804,17 +728,10 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 28,
-        vertical: 24,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 460,
-        ),
+        constraints: const BoxConstraints(maxWidth: 460),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: SizedBox(
@@ -823,10 +740,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.task_alt,
-                      color: Color(0xFF0B7A3B),
-                    ),
+                    const Icon(Icons.task_alt, color: Color(0xFF0B7A3B)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -845,12 +759,7 @@ class _AgendaDagtaakPopupState extends State<AgendaDagtaakPopup> {
                 ),
                 Expanded(
                   child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        keuzeBlok(),
-                        formulierBlok(),
-                      ],
-                    ),
+                    child: Column(children: [keuzeBlok(), formulierBlok()]),
                   ),
                 ),
                 vasteKnoppen(),

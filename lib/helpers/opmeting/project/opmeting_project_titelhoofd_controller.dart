@@ -506,6 +506,9 @@ class OpmetingProjectTitelhoofdController {
     if (!isMounted()) {
       return;
     }
+    if (!context.mounted) {
+      return;
+    }
 
     if (klanten.isEmpty) {
       toonMelding('Geen klanten gevonden in de blauwe agenda.', true);

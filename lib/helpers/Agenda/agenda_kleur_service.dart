@@ -30,6 +30,6 @@ class AgendaKleurService {
   }
 
   static Color achtergrond(String type) {
-    return kleur(type).withOpacity(0.14);
+    return kleur(type).withValues(alpha: 0.14);
   }
 }

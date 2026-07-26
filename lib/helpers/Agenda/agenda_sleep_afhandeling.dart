@@ -41,11 +41,7 @@ class AgendaSleepAfhandeling {
               onTap: () {
                 ScaffoldMessenger.of(context).hideCurrentSnackBar();
               },
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
-              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 20),
             ),
           ],
         ),
@@ -60,15 +56,9 @@ class AgendaSleepAfhandeling {
         item.type == 'afspraak';
   }
 
-  static void toonFout(
-    BuildContext context,
-    String melding,
-  ) {
+  static void toonFout(BuildContext context, String melding) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(melding),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(melding), backgroundColor: Colors.red),
     );
   }
 
@@ -79,10 +69,7 @@ class AgendaSleepAfhandeling {
     required AgendaItem item,
     required Map<String, List<AgendaItem>> itemsPerDag,
   }) async {
-    final actie = await AgendaSleepKeuzePopup.toon(
-      context,
-      item: item,
-    );
+    final actie = await AgendaSleepKeuzePopup.toon(context, item: item);
 
     if (actie == null) return null;
 
@@ -111,6 +98,8 @@ class AgendaSleepAfhandeling {
     }
 
     if (actie.actie == AgendaSleepActie.tijdAanpassen) {
+      if (!context.mounted) return null;
+
       final tijd = await AgendaSleepTijdPopup.toon(
         context,
         huidigeStart: TimeOfDay(
@@ -143,7 +132,9 @@ class AgendaSleepAfhandeling {
         );
 
         if (kraanFout != null) {
-          toonFout(context, kraanFout);
+          if (context.mounted) {
+            toonFout(context, kraanFout);
+          }
           return null;
         }
       }
@@ -164,6 +155,8 @@ class AgendaSleepAfhandeling {
 
       return nieuweItems;
     }
+
+    if (!context.mounted) return null;
 
     final tijd = await AgendaSleepTijdPopup.toon(
       context,
@@ -207,7 +200,9 @@ class AgendaSleepAfhandeling {
     }
 
     if (foutmelding != null) {
-      toonFout(context, foutmelding);
+      if (context.mounted) {
+        toonFout(context, foutmelding);
+      }
       return null;
     }
 
@@ -219,7 +214,9 @@ class AgendaSleepAfhandeling {
       );
 
       if (kraanFout != null) {
-        toonFout(context, kraanFout);
+        if (context.mounted) {
+          toonFout(context, kraanFout);
+        }
         return null;
       }
     }
@@ -267,7 +264,9 @@ class AgendaSleepAfhandeling {
 
       nieuweItems = metKraan;
 
-      toonKraanMelding(context);
+      if (context.mounted) {
+        toonKraanMelding(context);
+      }
     }
 
     return nieuweItems;

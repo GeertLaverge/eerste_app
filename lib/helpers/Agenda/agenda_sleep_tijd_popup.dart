@@ -31,28 +31,17 @@ class AgendaSleepTijdPopup {
             vertical: 24,
           ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              22,
-            ),
+            borderRadius: BorderRadius.circular(22),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(
-              18,
-            ),
+            padding: const EdgeInsets.all(18),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.access_time,
-                      color: Color(
-                        0xFF0B7A3B,
-                      ),
-                    ),
-                    const SizedBox(
-                      width: 10,
-                    ),
+                    const Icon(Icons.access_time, color: Color(0xFF0B7A3B)),
+                    const SizedBox(width: 10),
                     const Expanded(
                       child: Text(
                         'Tijden',
@@ -64,79 +53,47 @@ class AgendaSleepTijdPopup {
                     ),
                     IconButton(
                       onPressed: () {
-                        Navigator.pop(
-                          context,
-                        );
+                        Navigator.pop(context);
                       },
-                      icon: const Icon(
-                        Icons.close,
-                      ),
+                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
-                const SizedBox(
-                  height: 18,
-                ),
-                const SizedBox(
-                  height: 6,
-                ),
+                const SizedBox(height: 18),
+                const SizedBox(height: 6),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(
-                        context,
-                        true,
-                      );
+                      Navigator.pop(context, true);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(
-                        0xFF0B7A3B,
-                      ),
+                      backgroundColor: const Color(0xFF0B7A3B),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          14,
-                        ),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'Tijden behouden',
-                    ),
+                    child: const Text('Tijden behouden'),
                   ),
                 ),
-                const SizedBox(
-                  height: 12,
-                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   height: 54,
                   child: OutlinedButton(
                     onPressed: () {
-                      Navigator.pop(
-                        context,
-                        false,
-                      );
+                      Navigator.pop(context, false);
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(
-                        0xFF0B7A3B,
-                      ),
-                      side: const BorderSide(
-                        color: Color(
-                          0xFF0B7A3B,
-                        ),
-                      ),
+                      foregroundColor: const Color(0xFF0B7A3B),
+                      side: const BorderSide(color: Color(0xFF0B7A3B)),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          14,
-                        ),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    child: const Text(
-                      'Tijden aanpassen',
-                    ),
+                    child: const Text('Tijden aanpassen'),
                   ),
                 ),
               ],
@@ -151,9 +108,11 @@ class AgendaSleepTijdPopup {
     }
 
     if (keuze) {
-      return const AgendaSleepTijdResultaat(
-        tijdenBehouden: true,
-      );
+      return const AgendaSleepTijdResultaat(tijdenBehouden: true);
+    }
+
+    if (!context.mounted) {
+      return null;
     }
 
     final nieuweStart = await AgendaTijdPicker.kiesTijd(
@@ -162,7 +121,7 @@ class AgendaSleepTijdPopup {
       beginTijd: huidigeStart,
     );
 
-    if (nieuweStart == null) {
+    if (nieuweStart == null || !context.mounted) {
       return null;
     }
 

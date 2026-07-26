@@ -252,7 +252,7 @@ class _OpmetingRaamTechnischeTekeningEditorState
           const SizedBox(height: 8),
           _bouwTweeKolommen(
             links: DropdownButtonFormField<OpmetingRaamTechnischePositie>(
-              value: concept.positie,
+              initialValue: concept.positie,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Positie',
@@ -281,7 +281,7 @@ class _OpmetingRaamTechnischeTekeningEditorState
           const SizedBox(height: 8),
           _bouwTweeKolommen(
             links: DropdownButtonFormField<OpmetingRaamTechnischeMaatPlaatsing>(
-              value: concept.maatPlaatsing,
+              initialValue: concept.maatPlaatsing,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Plaatsing',
@@ -327,7 +327,7 @@ class _OpmetingRaamTechnischeTekeningEditorState
           const SizedBox(height: 8),
           _bouwTweeKolommen(
             links: DropdownButtonFormField<OpmetingRaamTechnischeInhoudType>(
-              value: concept.inhoudType,
+              initialValue: concept.inhoudType,
               isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Invulling',
@@ -351,7 +351,7 @@ class _OpmetingRaamTechnischeTekeningEditorState
             rechts:
                 concept.inhoudType == OpmetingRaamTechnischeInhoudType.raster
                 ? DropdownButtonFormField<OpmetingRaamTechnischRasterPatroon>(
-                    value: concept.rasterPatroon,
+                    initialValue: concept.rasterPatroon,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'Rasterpatroon',
@@ -404,7 +404,7 @@ class _OpmetingRaamTechnischeTekeningEditorState
   }) {
     return _bouwTweeKolommen(
       links: DropdownButtonFormField<OpmetingRaamTechnischeMaatKeuze>(
-        value: waarde,
+        initialValue: waarde,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: titel,

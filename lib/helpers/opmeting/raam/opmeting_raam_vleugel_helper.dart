@@ -357,7 +357,7 @@ class OpmetingRaamVleugelHelper {
     required Rect binnen,
   }) {
     final profielVulling = Paint()
-      ..color = Colors.white.withOpacity(0.95)
+      ..color = Colors.white.withValues(alpha: 0.95)
       ..style = PaintingStyle.fill;
 
     final profielLijn = Paint()
@@ -431,7 +431,7 @@ class OpmetingRaamVleugelHelper {
 
   static void _tekenMakelaar({required Canvas canvas, required Rect makelaar}) {
     final vulling = Paint()
-      ..color = Colors.white.withOpacity(0.98)
+      ..color = Colors.white.withValues(alpha: 0.98)
       ..style = PaintingStyle.fill;
 
     final lijn = Paint()

@@ -351,7 +351,7 @@ class _OpmetingKaderToevoegenDialoogState
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _gekoppeldAanKaderId,
+          initialValue: _gekoppeldAanKaderId,
           isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Bestaand kader',
@@ -377,7 +377,7 @@ class _OpmetingKaderToevoegenDialoogState
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<OpmetingKaderZijde>(
-          value: _zijde,
+          initialValue: _zijde,
           isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Zijde',
@@ -421,7 +421,7 @@ class _OpmetingKaderToevoegenDialoogState
         const Text('Uitlijning', style: TextStyle(fontWeight: FontWeight.w800)),
         const SizedBox(height: 8),
         DropdownButtonFormField<OpmetingKaderUitlijning>(
-          value: _uitlijning,
+          initialValue: _uitlijning,
           isExpanded: true,
           decoration: const InputDecoration(
             labelText: 'Plaatsing langs de raakzijde',

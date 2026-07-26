@@ -11,7 +11,6 @@ import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
-import 'opmeting_raam_opvulling_model.dart';
 import 'opmeting_raam_technische_layout_helper.dart';
 import 'opmeting_raam_technische_tekening_painter_helper.dart';
 import 'opmeting_raam_tstijl_helper.dart';
@@ -216,7 +215,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         canvas: canvas,
         size: size,
         tekenGebied: basisBuiten,
-        samenstelling: effectieveSamenstelling!,
+        samenstelling: effectieveSamenstelling,
       );
     } else {
       final technischeLayout = OpmetingRaamTechnischeLayoutHelper.bereken(
@@ -244,7 +243,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       );
     }
 
-    if (heeftMeerdereKaders && effectieveSamenstelling != null) {
+    if (heeftMeerdereKaders) {
       _tekenMaatvoeringPerKader(
         canvas: canvas,
         tekenGebied: basisBuiten,
@@ -373,8 +372,6 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
         actiefRect != null &&
         actiefRect.width > 0 &&
         actiefRect.height > 0) {
-      final actiefGroepWeergave = technischeGroepPerKaderId[actieveId];
-
       final actiefBuiten = OpmetingRaamKaderHelper.buitenKader(
         size: size,
         breedteMm: actiefKader.breedteMm,

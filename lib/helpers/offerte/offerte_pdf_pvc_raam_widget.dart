@@ -297,7 +297,7 @@ class OffertePdfPvcRaamWidget {
         continue;
       }
 
-      final regelSleutel = '${uitschrijfSleutel}|';
+      final regelSleutel = '$uitschrijfSleutel|';
       if (!gebruikteRegels.add(regelSleutel)) {
         weergegevenTechnischePrijsSleutels.add(uitschrijfSleutel);
         continue;

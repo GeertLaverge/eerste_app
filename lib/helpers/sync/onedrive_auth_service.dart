@@ -80,10 +80,6 @@ class OneDriveAuthService {
 
       final account = await pca.currentAccount;
 
-      if (account == null) {
-        return 'ACCOUNT_DEBUG: GEEN CURRENT ACCOUNT';
-      }
-
       return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN\n$account';
     } catch (e) {
       return 'ACCOUNT_DEBUG_FOUT: $e';

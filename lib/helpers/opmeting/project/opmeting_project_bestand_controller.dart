@@ -287,11 +287,13 @@ class OpmetingProjectBestandController {
   }
 
   Future<_NieuweOpmetingKlantResultaat?> _vraagKlantNaam() async {
+    final huidigeContext = context;
     final klanten = await _laadKlantenVoorNieuweOpmeting();
     if (!isMounted()) return null;
+    if (!huidigeContext.mounted) return null;
 
     final resultaat = await showDialog<_NieuweOpmetingKlantResultaat>(
-      context: context,
+      context: huidigeContext,
       barrierDismissible: false,
       builder: (dialogContext) {
         return _KlantNaamDialog(beginNaam: leesKlantNaam(), klanten: klanten);
@@ -505,6 +507,8 @@ class OpmetingProjectBestandController {
   }
 
   Future<void> wisBestand() async {
+    final huidigeContext = context;
+
     await OneDriveSyncService().slimmeSync(magLoginVragen: true);
     if (!isMounted()) return;
 
@@ -526,6 +530,7 @@ class OpmetingProjectBestandController {
     );
 
     if (gekozenKlant == null || !isMounted()) return;
+    if (!huidigeContext.mounted) return;
 
     final teWissenOpmetingen =
         klanten[gekozenKlant] ?? const <OpmetingOverzichtRaamItem>[];
@@ -535,7 +540,7 @@ class OpmetingProjectBestandController {
     }
 
     final bevestigen = await showDialog<bool>(
-      context: context,
+      context: huidigeContext,
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -651,18 +656,21 @@ class OpmetingProjectBestandController {
   }
 
   Future<void> eindeOpmeting() async {
+    final huidigeContext = context;
+
     final heeftOpmetingen =
         leesOpmetingen().isNotEmpty ||
         (await AppStorage.laadOpmetingenVoorSync()).isNotEmpty;
     if (!isMounted()) return;
+    if (!huidigeContext.mounted) return;
 
     if (!heeftOpmetingen) {
-      await Navigator.of(context).maybePop();
+      await Navigator.of(huidigeContext).maybePop();
       return;
     }
 
     final keuze = await showDialog<String>(
-      context: context,
+      context: huidigeContext,
       builder: (dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -709,7 +717,8 @@ class OpmetingProjectBestandController {
       if (!isMounted()) return;
     }
 
-    await Navigator.of(context).maybePop();
+    if (!huidigeContext.mounted) return;
+    await Navigator.of(huidigeContext).maybePop();
   }
 }
 
@@ -935,7 +944,7 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               DropdownButtonFormField<String>(
-                value: geselecteerde == null
+                initialValue: geselecteerde == null
                     ? null
                     : _klantWaarde(geselecteerde),
                 isExpanded: true,

@@ -700,7 +700,7 @@ class _OpmetingSchuifraamSamenstellingDialogState
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<OpmetingSchuifraamSysteem>(
-                value: _systeem,
+                initialValue: _systeem,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   border: OutlineInputBorder(),

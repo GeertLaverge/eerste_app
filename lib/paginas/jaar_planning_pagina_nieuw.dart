@@ -17,7 +17,6 @@ import '../helpers/Agenda/agenda_verplaats_state.dart';
 import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_jaar_maand_kolom.dart';
 import '../helpers/Agenda/agenda_jaar_maand_breedte.dart';
-import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
@@ -158,13 +157,17 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> openItem(DateTime dag, AgendaItem item) async {
+    final huidigeContext = context;
+
     setState(() {
       geselecteerdeDag = dag;
     });
     final geopend = await AgendaKlantFicheOpenHelper.openAlsKlantPlanning(
-      context: context,
+      context: huidigeContext,
       item: item,
     );
+
+    if (!mounted || !huidigeContext.mounted) return;
 
     if (geopend) {
       await laadAgendaItems();
@@ -177,12 +180,13 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     }
 
     final resultaat = await AgendaItemOpenHelper.open(
-      context: context,
+      context: huidigeContext,
       item: item,
       geplandeItems: agendaItems[AgendaDatumHelper.datumKey(dag)] ?? [],
     );
 
     if (resultaat == null) return;
+    if (!mounted || !huidigeContext.mounted) return;
 
     if (resultaat == 'verplaatsen') {
       startVerplaatsen(oudeDag: dag, item: item);
@@ -221,7 +225,7 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
       );
 
       if (foutmelding != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(huidigeContext).showSnackBar(
           SnackBar(content: Text(foutmelding), backgroundColor: Colors.red),
         );
         return;
@@ -244,15 +248,19 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
   }
 
   Future<void> openToevoegPopup() async {
-    final gekozenType = await AgendaTypeKeuzePopup.open(context);
+    final huidigeContext = context;
+    final gekozenType = await AgendaTypeKeuzePopup.open(huidigeContext);
 
     if (gekozenType == null) return;
+    if (!mounted || !huidigeContext.mounted) return;
 
     AgendaItem? nieuwItem;
 
     if (gekozenType == 'afspraak') {
+      if (!mounted || !huidigeContext.mounted) return;
+
       nieuwItem = await showDialog<AgendaItem>(
-        context: context,
+        context: huidigeContext,
         builder: (context) {
           return AgendaToevoegPopup(
             vastType: 'afspraak',
@@ -264,8 +272,10 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     }
 
     if (gekozenType == 'dagtaak') {
+      if (!mounted || !huidigeContext.mounted) return;
+
       nieuwItem = await showDialog<AgendaItem>(
-        context: context,
+        context: huidigeContext,
         builder: (context) {
           return AgendaToevoegPopup(
             vastType: 'dagtaak',
@@ -277,8 +287,10 @@ class _JaarPlanningPaginaNieuwState extends State<JaarPlanningPaginaNieuw> {
     }
 
     if (gekozenType == 'verlof') {
+      if (!mounted || !huidigeContext.mounted) return;
+
       nieuwItem = await showDialog<AgendaItem>(
-        context: context,
+        context: huidigeContext,
         builder: (context) {
           return const AgendaVerlofPopup();
         },

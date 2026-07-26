@@ -99,7 +99,7 @@ class OpmetingRaamVullingTekenHelper {
       midden,
       diameter / 2,
       Paint()
-        ..color = Colors.white.withOpacity(0.90)
+        ..color = Colors.white.withValues(alpha: 0.90)
         ..style = PaintingStyle.fill,
     );
 
@@ -125,7 +125,7 @@ class OpmetingRaamVullingTekenHelper {
     canvas.drawRect(
       vlak,
       Paint()
-        ..color = _selectieKleur.withOpacity(0.13)
+        ..color = _selectieKleur.withValues(alpha: 0.13)
         ..style = PaintingStyle.fill,
     );
 

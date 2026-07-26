@@ -4,7 +4,6 @@ import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
 import '../../deurpanelen/opmeting_deurpaneel_tekst_helper.dart';
 import '../../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
-import '../../schuifraam/opmeting_schuifraam_model.dart';
 import '../opmeting_raam_keuzemenu_model.dart';
 import '../opmeting_raam_kleinhout_helper.dart';
 import '../opmeting_raam_kleinhout_model.dart';
@@ -735,30 +734,6 @@ class _OpmetingRaamOverzichtContext {
     }
 
     return '${rechts - links} × ${onder - boven} mm';
-  }
-
-  String _naamVoorOverzichtSleutel(String sleutel) {
-    if (_isGroepSleutel(sleutel)) {
-      final ids = _kaderIdsUitGroepSleutel(sleutel).toList()..sort();
-
-      if (ids.isEmpty) {
-        return 'Groep';
-      }
-
-      return 'Groep ${ids.map(_kaderNaamVoorId).join(' + ')}';
-    }
-
-    return _kaderNaamVoorId(sleutel);
-  }
-
-  String _kaderNaamVoorId(String kaderId) {
-    for (final kader in kaderSamenstelling.kaders) {
-      if (kader.id == kaderId) {
-        return kader.naam.trim().isEmpty ? 'Kader' : kader.naam.trim();
-      }
-    }
-
-    return kaderId.trim().isEmpty ? 'Kader' : kaderId;
   }
 
   OpmetingRaamKeuzeOptie _optieVoorMenuEnSelectie({

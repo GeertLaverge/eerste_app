@@ -629,7 +629,7 @@ class OpmetingRaamKeuzeOptie {
 
     if (_technischeTekening != null) {
       return List<OpmetingRaamTechnischeTekeningInstelling>.unmodifiable(
-        <OpmetingRaamTechnischeTekeningInstelling>[_technischeTekening!],
+        <OpmetingRaamTechnischeTekeningInstelling>[_technischeTekening],
       );
     }
 

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'Agenda/agenda_dagtaak_template.dart';
 import 'Agenda/agenda_item.dart';
 import 'sync/onedrive_sync_service.dart';
+import 'sync/sync_merge_service.dart';
 
 import '../helpers/notities/notitie_actie_model.dart';
 import '../helpers/notities/notitie_model.dart';
@@ -21,11 +22,23 @@ class AppStorage {
 
   static const String _dagtaakTemplatesKey = 'dagtaak_templates';
 
+  static const String _dagtaakTemplatesSyncMetaKey =
+      'dagtaak_templates_sync_meta';
+
+  static const String _leveranciersKey = 'leveranciers_lijst';
+
+  static const String _leveranciersSyncMetaKey = 'leveranciers_lijst_sync_meta';
+
   static const String _klantenFichesKey = 'klanten_fiches';
 
   static const String _notitiesKey = 'thimaco_notities';
 
+  static const String _notitiesSyncMetaKey = 'thimaco_notities_sync_meta';
+
   static const String _notitieActiesKey = 'thimaco_notitie_acties';
+
+  static const String _notitieActiesSyncMetaKey =
+      'thimaco_notitie_acties_sync_meta';
 
   static const String _opmetingRaamOpvullingenKey = 'opmeting_raam_opvullingen';
 
@@ -52,6 +65,9 @@ class AppStorage {
   static const String _opmetingProjectKleurenKey =
       'thimaco_opmeting_project_kleuren';
 
+  static const String _opmetingProjectKleurenSyncMetaKey =
+      'thimaco_opmeting_project_kleuren_sync_meta';
+
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
 
@@ -64,6 +80,74 @@ class AppStorage {
   static Future<void> _syncBackup() async {
     await OneDriveSyncService.registreerLokaleWijziging();
     OneDriveSyncService().uploadBackupOpAchtergrond();
+  }
+
+  static List<Map<String, dynamic>> decodeJsonMapLijstVoorSync(
+    String? jsonString,
+  ) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return <Map<String, dynamic>>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List) {
+        return <Map<String, dynamic>>[];
+      }
+
+      return decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  static String encodeJsonMapLijstVoorSync(
+    Iterable<Map<String, dynamic>> records,
+  ) {
+    return jsonEncode(records.toList());
+  }
+
+  static String _standaardSyncId(Map<String, dynamic> record) {
+    return record['id']?.toString().trim() ?? '';
+  }
+
+  static String _syncMetaKeyVoorDataKey(String dataKey) {
+    return '${dataKey}_sync_meta';
+  }
+
+  static Future<void> _bewaarJsonMapLijstMetSyncMetadata({
+    required String dataKey,
+    required String metadataKey,
+    required List<Map<String, dynamic>> records,
+    required String Function(Map<String, dynamic> record) idVoorRecord,
+    required bool sync,
+  }) async {
+    final prefs = await openBox();
+    final oudeRecords = decodeJsonMapLijstVoorSync(prefs.getString(dataKey));
+    final bestaandeMetadata = SyncMergeService.decodeJsonRecordMetadata(
+      prefs.getString(metadataKey),
+    );
+    final gewijzigdOp = DateTime.now().toUtc().toIso8601String();
+    final nieuweMetadata = SyncMergeService.updateJsonRecordMetadata(
+      oudeRecords: oudeRecords,
+      nieuweRecords: records,
+      bestaandeMetadata: bestaandeMetadata,
+      idVoorRecord: idVoorRecord,
+      gewijzigdOp: gewijzigdOp,
+    );
+
+    await prefs.setString(dataKey, encodeJsonMapLijstVoorSync(records));
+    await prefs.setString(
+      metadataKey,
+      SyncMergeService.encodeJsonRecordMetadata(nieuweMetadata),
+    );
+
+    if (sync) {
+      await _syncBackup();
+    }
   }
 
   // ------------------------------------------------------------
@@ -92,14 +176,34 @@ class AppStorage {
   static Future<void> bewaarDagtaakTemplates(
     List<AgendaDagtaakTemplate> templates,
   ) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _dagtaakTemplatesKey,
-      jsonEncode(templates.map((template) => template.toJson()).toList()),
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _dagtaakTemplatesKey,
+      metadataKey: _dagtaakTemplatesSyncMetaKey,
+      records: templates.map((template) => template.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
     );
+  }
 
-    await _syncBackup();
+  // ------------------------------------------------------------
+  // LEVERANCIERS
+  // ------------------------------------------------------------
+
+  static Future<List<Map<String, dynamic>>> laadLeveranciersVoorSync() async {
+    final prefs = await openBox();
+    return decodeJsonMapLijstVoorSync(prefs.getString(_leveranciersKey));
+  }
+
+  static Future<void> bewaarLeveranciers(
+    List<Map<String, dynamic>> leveranciers,
+  ) async {
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _leveranciersKey,
+      metadataKey: _leveranciersSyncMetaKey,
+      records: leveranciers,
+      idVoorRecord: SyncMergeService.syncIdVoorLeverancierRecord,
+      sync: true,
+    );
   }
 
   // ------------------------------------------------------------
@@ -195,10 +299,17 @@ class AppStorage {
     Map<String, List<AgendaItem>> itemsPerDag,
   ) async {
     final prefs = await openBox();
+    final opgeslagenItems = _decodeAgendaItems(
+      prefs.getString(_agendaItemsNieuwKey),
+    );
+    final itemsMetTombstones = SyncMergeService.behoudAgendaTombstones(
+      actueleItems: itemsPerDag,
+      opgeslagenItems: opgeslagenItems,
+    );
 
     await prefs.setString(
       _agendaItemsNieuwKey,
-      encodeAgendaItemsVoorSync(itemsPerDag),
+      encodeAgendaItemsVoorSync(itemsMetTombstones),
     );
 
     await _syncBackup();
@@ -256,14 +367,13 @@ class AppStorage {
   // ------------------------------------------------------------
 
   static Future<void> bewaarNotities(List<NotitieModel> notities) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _notitiesKey,
-      jsonEncode(notities.map((notitie) => notitie.toJson()).toList()),
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _notitiesKey,
+      metadataKey: _notitiesSyncMetaKey,
+      records: notities.map((notitie) => notitie.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
     );
-
-    await _syncBackup();
   }
 
   static Future<List<NotitieModel>> laadNotities() async {
@@ -285,14 +395,13 @@ class AppStorage {
   static Future<void> bewaarNotitieActies(
     List<NotitieActieModel> acties,
   ) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _notitieActiesKey,
-      jsonEncode(acties.map((actie) => actie.toJson()).toList()),
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _notitieActiesKey,
+      metadataKey: _notitieActiesSyncMetaKey,
+      records: acties.map((actie) => actie.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
     );
-
-    await _syncBackup();
   }
 
   static Future<List<NotitieActieModel>> laadNotitieActies() async {
@@ -513,19 +622,24 @@ class AppStorage {
     required String key,
     required List<OpmetingRaamKeuzeMenu> menus,
     required bool sync,
+    bool metadataBijwerken = true,
   }) async {
-    final prefs = await openBox();
-
     final genormaliseerdeMenus = _normaliseerOpmetingRaamKeuzemenus(menus);
+    final records = genormaliseerdeMenus.map((menu) => menu.toJson()).toList();
 
-    await prefs.setString(
-      key,
-      jsonEncode(genormaliseerdeMenus.map((menu) => menu.toJson()).toList()),
-    );
-
-    if (sync) {
-      await _syncBackup();
+    if (!metadataBijwerken) {
+      final prefs = await openBox();
+      await prefs.setString(key, encodeJsonMapLijstVoorSync(records));
+      return;
     }
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: key,
+      metadataKey: _syncMetaKeyVoorDataKey(key),
+      records: records,
+      idVoorRecord: _standaardSyncId,
+      sync: sync,
+    );
   }
 
   static Future<void> bewaarOpmetingRaamKeuzemenus(
@@ -554,6 +668,7 @@ class AppStorage {
       key: _opmetingRaamKeuzemenusKeyVoorFormulier(formulierType),
       menus: menus,
       sync: false,
+      metadataBijwerken: false,
     );
   }
 
@@ -590,25 +705,42 @@ class AppStorage {
   // OFFERTEPRIJZEN
   // ------------------------------------------------------------
 
+  static List<OffertePrijsprofielModel> decodeOffertePrijsProfielenVoorSync(
+    String? jsonString,
+  ) {
+    return OffertePrijsOpslagCodec.decode(jsonString);
+  }
+
+  static String encodeOffertePrijsProfielenVoorSync(
+    List<OffertePrijsprofielModel> profielen,
+  ) {
+    return OffertePrijsOpslagCodec.encode(profielen);
+  }
+
   static Future<List<OffertePrijsprofielModel>>
   laadOffertePrijsProfielen() async {
     final prefs = await openBox();
 
-    return OffertePrijsOpslagCodec.decode(
+    return decodeOffertePrijsProfielenVoorSync(
       prefs.getString(_offertePrijsProfielenKey),
     );
   }
 
-  static Future<void> bewaarOffertePrijsProfielen(
+  static Future<void> bewaarOffertePrijsProfielenVoorSync(
     List<OffertePrijsprofielModel> profielen,
   ) async {
     final prefs = await openBox();
 
     await prefs.setString(
       _offertePrijsProfielenKey,
-      OffertePrijsOpslagCodec.encode(profielen),
+      encodeOffertePrijsProfielenVoorSync(profielen),
     );
+  }
 
+  static Future<void> bewaarOffertePrijsProfielen(
+    List<OffertePrijsprofielModel> profielen,
+  ) async {
+    await bewaarOffertePrijsProfielenVoorSync(profielen);
     await _syncBackup();
   }
 
@@ -667,9 +799,8 @@ class AppStorage {
   // OPMETING - PROJECT TITELHOOFD
   // ------------------------------------------------------------
 
-  static Map<String, OpmetingProjectTitelhoofd> _decodeProjectTitelhoofden(
-    String? jsonString,
-  ) {
+  static Map<String, OpmetingProjectTitelhoofd>
+  decodeOpmetingProjectTitelhoofdenVoorSync(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) {
       return <String, OpmetingProjectTitelhoofd>{};
     }
@@ -715,7 +846,7 @@ class AppStorage {
   laadOpmetingProjectTitelhoofdenVoorSync() async {
     final prefs = await openBox();
 
-    return _decodeProjectTitelhoofden(
+    return decodeOpmetingProjectTitelhoofdenVoorSync(
       prefs.getString(_opmetingProjectTitelhoofdenKey),
     );
   }
@@ -810,21 +941,19 @@ class AppStorage {
   static Future<void> bewaarOpmetingProjectKleuren(
     List<OpmetingProjectKleurSubmenu> kleuren,
   ) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _opmetingProjectKleurenKey,
-      encodeOpmetingProjectKleurenVoorSync(kleuren),
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _opmetingProjectKleurenKey,
+      metadataKey: _opmetingProjectKleurenSyncMetaKey,
+      records: kleuren.map((submenu) => submenu.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
     );
-
-    await _syncBackup();
   }
 
   static Future<void> bewaarOpmetingProjectKleurenVoorSync(
     List<OpmetingProjectKleurSubmenu> kleuren,
   ) async {
     final prefs = await openBox();
-
     await prefs.setString(
       _opmetingProjectKleurenKey,
       encodeOpmetingProjectKleurenVoorSync(kleuren),
@@ -1050,58 +1179,6 @@ class AppStorage {
         naam == 'nadienst' ||
         naam == 'klant' ||
         naam == 'onbekend';
-  }
-
-  static bool _isBlauweAgendaAfspraak(Map<String, dynamic> map) {
-    final waarden = <String>[
-      _leesEersteTekst(map, const <String>[
-        'type',
-        'soort',
-        'categorie',
-        'agendaType',
-        'itemType',
-        'status',
-        'label',
-      ]),
-      _leesEersteTekst(map, const <String>[
-        'kleur',
-        'color',
-        'kleurCode',
-        'colorCode',
-      ]),
-    ].join(' ').toLowerCase();
-
-    if (waarden.contains('afspraak') ||
-        waarden.contains('blauw') ||
-        waarden.contains('blue') ||
-        waarden.contains('2196f3') ||
-        waarden.contains('1976d2') ||
-        waarden.contains('0xff42a5f5')) {
-      return true;
-    }
-
-    if (waarden.contains('vakantie') ||
-        waarden.contains('verlof') ||
-        waarden.contains('dagtaak') ||
-        waarden.contains('planning') ||
-        waarden.contains('opvolging')) {
-      return false;
-    }
-
-    final heeftKlantGegevens = _leesEersteTekst(map, const <String>[
-      'klantNaam',
-      'klant',
-      'naamKlant',
-    ]).trim().isNotEmpty;
-
-    final titel = _leesEersteTekst(map, const <String>[
-      'titel',
-      'title',
-      'onderwerp',
-      'naam',
-    ]).toLowerCase();
-
-    return heeftKlantGegevens || titel.contains('afspraak');
   }
 
   static String _leesEersteTekst(

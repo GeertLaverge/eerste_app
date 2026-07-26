@@ -23,10 +23,7 @@ class AgendaKlantPlanningTijdHelper {
               children: [
                 const Text(
                   'Planning klant',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
@@ -66,13 +63,15 @@ class AgendaKlantPlanningTijdHelper {
       );
     }
 
+    if (!context.mounted) return null;
+
     final start = await AgendaTijdPicker.kiesTijd(
       context: context,
       titel: 'Starttijd',
       beginTijd: const TimeOfDay(hour: 7, minute: 0),
     );
 
-    if (start == null) return null;
+    if (start == null || !context.mounted) return null;
 
     final einde = await AgendaTijdPicker.kiesTijd(
       context: context,

@@ -274,10 +274,8 @@ class AgendaJaarMaandKolom extends StatelessWidget {
                                             child: JaarItemBlok(item: item),
                                           ),
                                           child: InkWell(
-                                            onTap: datum == null
-                                                ? null
-                                                : () =>
-                                                      onItemOpenen(datum, item),
+                                            onTap: () =>
+                                                onItemOpenen(datum, item),
                                             child: JaarItemBlok(item: item),
                                           ),
                                         );

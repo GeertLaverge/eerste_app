@@ -255,7 +255,7 @@ class OpmetingRaamTekenvlakSchaalDataHelper {
       Rect? resultaat;
 
       for (final rect in rects) {
-        resultaat = resultaat == null ? rect : resultaat!.expandToInclude(rect);
+        resultaat = resultaat == null ? rect : resultaat.expandToInclude(rect);
       }
 
       return resultaat ?? Rect.zero;

@@ -75,12 +75,12 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       width: breedte,
       constraints: BoxConstraints(maxHeight: maxHoogte ?? double.infinity),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: rand),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -314,36 +314,40 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       actieveOpvullingen,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Text(
-          'Kies eerst het submenu en daarna het type.',
-          style: TextStyle(
-            color: tekstGrijs,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+    return RadioGroup<String>(
+      groupValue: geselecteerdeOpvullingId,
+      onChanged: onOpvullingGekozen,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Kies eerst het submenu en daarna het type.',
+            style: TextStyle(
+              color: tekstGrijs,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-        if (gekozen != null) ...[
+          if (gekozen != null) ...[
+            const SizedBox(height: 8),
+            _gekozenOpvullingSamenvatting(gekozen),
+          ],
           const SizedBox(height: 8),
-          _gekozenOpvullingSamenvatting(gekozen),
-        ],
-        const SizedBox(height: 8),
-        ...groepen.map((groep) {
-          final items =
-              actieveOpvullingen
-                  .where((opvulling) => opvulling.groepId == groep.id)
-                  .toList()
-                ..sort(_sorteerOpvullingen);
+          ...groepen.map((groep) {
+            final items =
+                actieveOpvullingen
+                    .where((opvulling) => opvulling.groepId == groep.id)
+                    .toList()
+                  ..sort(_sorteerOpvullingen);
 
-          return _groepTegel(
-            groep: groep,
-            items: items,
-            isGekozenGroep: gekozen?.groepId == groep.id,
-          );
-        }),
-      ],
+            return _groepTegel(
+              groep: groep,
+              items: items,
+              isGekozenGroep: gekozen?.groepId == groep.id,
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -453,11 +457,9 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
           children: [
             Radio<String>(
               value: opvulling.id,
-              groupValue: geselecteerdeOpvullingId,
               activeColor: groen,
               visualDensity: VisualDensity.compact,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              onChanged: onOpvullingGekozen,
             ),
             const SizedBox(width: 3),
             _kleurVak(
@@ -551,7 +553,10 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       decoration: BoxDecoration(
         color: kleur,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: basisKleur.withOpacity(0.95), width: 1.4),
+        border: Border.all(
+          color: basisKleur.withValues(alpha: 0.95),
+          width: 1.4,
+        ),
       ),
     );
   }

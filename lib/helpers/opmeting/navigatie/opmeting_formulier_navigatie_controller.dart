@@ -50,6 +50,10 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      if (!context.mounted) {
+        return;
+      }
+
       final resultaat = await Navigator.of(context)
           .push<OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
@@ -104,6 +108,10 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      if (!context.mounted) {
+        return;
+      }
+
       final resultaat = await Navigator.of(context)
           .push<OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
@@ -154,6 +162,10 @@ class OpmetingFormulierNavigatieController {
       await _wachtTotPopupEnDialogGeslotenZijn();
 
       if (!isMounted()) {
+        return;
+      }
+
+      if (!context.mounted) {
         return;
       }
 

@@ -1,7 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../helpers/app_storage.dart';
 
 class LeveranciersPagina extends StatefulWidget {
   const LeveranciersPagina({super.key});
@@ -33,27 +31,21 @@ class _LeveranciersPaginaState extends State<LeveranciersPagina> {
   }
 
   Future<void> laadLeveranciers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final tekst = prefs.getString('leveranciers_lijst') ?? '[]';
-    final lijst = jsonDecode(tekst) as List;
+    final lijst = await AppStorage.laadLeveranciersVoorSync();
+
+    if (!mounted) {
+      return;
+    }
 
     setState(() {
-      leveranciers = lijst.map((e) => Leverancier.fromJson(e)).toList();
+      leveranciers = lijst.map(Leverancier.fromJson).toList();
     });
   }
 
   Future<void> bewaarLeveranciers() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString(
-      'leveranciers_lijst',
-      jsonEncode(leveranciers.map((e) => e.toJson()).toList()),
+    await AppStorage.bewaarLeveranciers(
+      leveranciers.map((leverancier) => leverancier.toJson()).toList(),
     );
-
-    // TIJDELIJK UITGESCHAKELD VOOR SYNC DEBUG
-    /*
-await OneDriveSyncService().uploadBackupOpAchtergrond();
-*/
   }
 
   List<Leverancier> get gefilterdeLeveranciers {

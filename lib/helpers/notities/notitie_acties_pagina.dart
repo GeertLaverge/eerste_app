@@ -4,9 +4,7 @@ import 'notitie_actie_model.dart';
 import 'notitie_repository.dart';
 
 class NotitieActiesPagina extends StatefulWidget {
-  const NotitieActiesPagina({
-    super.key,
-  });
+  const NotitieActiesPagina({super.key});
 
   @override
   State<NotitieActiesPagina> createState() => _NotitieActiesPaginaState();
@@ -147,7 +145,7 @@ class _NotitieActiesPaginaState extends State<NotitieActiesPagina> {
         NotitieActieModel(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           naam: naam.trim(),
-          kleurWaarde: gekozenKleur.value,
+          kleurWaarde: gekozenKleur.toARGB32(),
         ),
       );
     });
@@ -155,13 +153,9 @@ class _NotitieActiesPaginaState extends State<NotitieActiesPagina> {
     await _bewaar();
   }
 
-  Future<void> _actieVerwijderen(
-    NotitieActieModel actie,
-  ) async {
+  Future<void> _actieVerwijderen(NotitieActieModel actie) async {
     setState(() {
-      _acties.removeWhere(
-        (a) => a.id == actie.id,
-      );
+      _acties.removeWhere((a) => a.id == actie.id);
     });
 
     await _bewaar();
@@ -177,23 +171,14 @@ class _NotitieActiesPaginaState extends State<NotitieActiesPagina> {
         elevation: 0,
         title: const Text(
           'Acties notities',
-          style: TextStyle(
-            fontWeight: FontWeight.normal,
-          ),
+          style: TextStyle(fontWeight: FontWeight.normal),
         ),
         actions: [
-          IconButton(
-            onPressed: _actieToevoegen,
-            icon: const Icon(Icons.add),
-          ),
+          IconButton(onPressed: _actieToevoegen, icon: const Icon(Icons.add)),
         ],
       ),
       body: _acties.isEmpty
-          ? const Center(
-              child: Text(
-                'Nog geen acties aangemaakt.',
-              ),
-            )
+          ? const Center(child: Text('Nog geen acties aangemaakt.'))
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: _acties.length,
@@ -209,12 +194,10 @@ class _NotitieActiesPaginaState extends State<NotitieActiesPagina> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE5E7EB),
-                    ),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
+                        color: Colors.black.withValues(alpha: 0.04),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -242,9 +225,7 @@ class _NotitieActiesPaginaState extends State<NotitieActiesPagina> {
                       ),
                       IconButton(
                         onPressed: () => _actieVerwijderen(actie),
-                        icon: const Icon(
-                          Icons.delete_outline,
-                        ),
+                        icon: const Icon(Icons.delete_outline),
                       ),
                     ],
                   ),

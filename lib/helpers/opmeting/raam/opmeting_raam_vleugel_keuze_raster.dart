@@ -14,9 +14,7 @@ class OpmetingRaamVleugelKeuzeRaster extends StatelessWidget {
   final ValueChanged<OpmetingRaamVleugelType> onTypeGeselecteerd;
 
   static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFD1D5DB);
-  static const Color _tekst = Color(0xFF111827);
   static const Color _subtekst = Color(0xFF6B7280);
 
   @override
@@ -28,12 +26,12 @@ class OpmetingRaamVleugelKeuzeRaster extends StatelessWidget {
       height: 590,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _rand),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 12,
             offset: const Offset(0, 5),
           ),
@@ -176,7 +174,7 @@ class _VleugelKeuzeTegel extends StatelessWidget {
             boxShadow: geselecteerd
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF0B7A3B).withOpacity(0.12),
+                      color: const Color(0xFF0B7A3B).withValues(alpha: 0.12),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),

@@ -2,12 +2,21 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../sync/onedrive_sync_service.dart';
 import 'opmeting_deurpaneel_model.dart';
 
 class OpmetingDeurpaneelStorageHelper {
   const OpmetingDeurpaneelStorageHelper._();
 
   static const String opslagSleutel = 'thimaco_deurpanelen_bibliotheek';
+
+  static const String gewijzigdOpSleutel =
+      'thimaco_deurpanelen_bibliotheek_gewijzigd_op';
+
+  static Future<void> _registreerWijzigingVoorSync() async {
+    await OneDriveSyncService.registreerLokaleWijziging();
+    OneDriveSyncService().uploadBackupOpAchtergrond();
+  }
 
   static Future<List<OpmetingDeurpaneel>?> laadPanelen() async {
     final prefs = await SharedPreferences.getInstance();
@@ -45,10 +54,43 @@ class OpmetingDeurpaneelStorageHelper {
     );
 
     await prefs.setString(opslagSleutel, encoded);
+    await prefs.setString(
+      gewijzigdOpSleutel,
+      DateTime.now().toUtc().toIso8601String(),
+    );
+
+    await _registreerWijzigingVoorSync();
+  }
+
+  static Future<void> bewaarPanelenVoorSync({
+    required String? jsonTekst,
+    required String? gewijzigdOp,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final tekst = jsonTekst?.trim() ?? '';
+
+    if (tekst.isEmpty) {
+      await prefs.remove(opslagSleutel);
+    } else {
+      await prefs.setString(opslagSleutel, tekst);
+    }
+
+    final datum = gewijzigdOp?.trim() ?? '';
+    if (datum.isEmpty) {
+      await prefs.remove(gewijzigdOpSleutel);
+    } else {
+      await prefs.setString(gewijzigdOpSleutel, datum);
+    }
   }
 
   static Future<void> wisPanelen() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(opslagSleutel);
+    await prefs.setString(opslagSleutel, '[]');
+    await prefs.setString(
+      gewijzigdOpSleutel,
+      DateTime.now().toUtc().toIso8601String(),
+    );
+
+    await _registreerWijzigingVoorSync();
   }
 }

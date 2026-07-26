@@ -38,7 +38,7 @@ class OpmetingRaamTechnischeSoortResultaat {
 
     if (_oudeTekening != null) {
       return List<OpmetingRaamTechnischeTekeningInstelling>.unmodifiable(
-        <OpmetingRaamTechnischeTekeningInstelling>[_oudeTekening!],
+        <OpmetingRaamTechnischeTekeningInstelling>[_oudeTekening],
       );
     }
 

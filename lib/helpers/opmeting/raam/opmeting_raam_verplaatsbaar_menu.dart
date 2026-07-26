@@ -42,7 +42,7 @@ class OpmetingRaamVerplaatsbaarMenu extends StatelessWidget {
               border: Border.all(color: const Color(0xFF086330)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.10),
+                  color: Colors.black.withValues(alpha: 0.10),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),

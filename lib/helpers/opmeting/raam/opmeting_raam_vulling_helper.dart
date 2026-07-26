@@ -57,7 +57,7 @@ class OpmetingRaamVullingLegendaItem {
   Color get kleur => Color(kleurWaarde);
 
   Color get weergaveKleur {
-    return kleur.withOpacity(transparantie.clamp(0.05, 1.0).toDouble());
+    return kleur.withValues(alpha: transparantie.clamp(0.05, 1.0).toDouble());
   }
 }
 

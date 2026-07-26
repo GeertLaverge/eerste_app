@@ -6,7 +6,6 @@ import 'opmeting_raam_tstijl_helper.dart';
 import 'opmeting_raam_vlak_helper.dart';
 import 'opmeting_raam_vleugel_helper.dart';
 import 'opmeting_raam_vulling_helper.dart';
-import 'opmeting_raam_opvulling_model.dart';
 
 class OpmetingRaamTStijlVerplaatsResultaat {
   const OpmetingRaamTStijlVerplaatsResultaat({

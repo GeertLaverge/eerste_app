@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import '../../app_storage.dart';
 import 'opmeting_raam_keuze_menu_helper.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
-import 'opmeting_raam_niet_combineerbaar_keuzemenu.dart';
 import 'opmeting_raam_technisch_menu_dialoog.dart';
 
 class OpmetingRaamMenuBeheerHelper {
@@ -111,6 +110,10 @@ class OpmetingRaamMenuBeheerHelper {
       huidigeMenus: keuzemenus,
     );
 
+    if (!context.mounted) {
+      return null;
+    }
+
     final resultaat = await toonOpmetingRaamTechnischMenuDialoog(
       context: context,
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
@@ -169,6 +172,10 @@ class OpmetingRaamMenuBeheerHelper {
       huidigeMenus: keuzemenus,
       uitTeSluitenMenuId: menu.id,
     );
+
+    if (!context.mounted) {
+      return null;
+    }
 
     final resultaat = await toonOpmetingRaamTechnischMenuDialoog(
       context: context,

@@ -606,7 +606,7 @@ class OpmetingRaamKleinhoutHelper {
     switch (type) {
       case OpmetingRaamKleinhoutType.opGlasRecht:
         final vulling = Paint()
-          ..color = Colors.white.withOpacity(0.92)
+          ..color = Colors.white.withValues(alpha: 0.92)
           ..style = PaintingStyle.fill;
 
         final rand = Paint()
@@ -638,7 +638,7 @@ class OpmetingRaamKleinhoutHelper {
 
       case OpmetingRaamKleinhoutType.inGlas:
         final vulling = Paint()
-          ..color = const Color(0xFF9CA3AF).withOpacity(0.24)
+          ..color = const Color(0xFF9CA3AF).withValues(alpha: 0.24)
           ..style = PaintingStyle.fill;
 
         final rand = Paint()

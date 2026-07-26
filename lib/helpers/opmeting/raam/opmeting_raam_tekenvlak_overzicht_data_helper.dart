@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 import 'opmeting_raam_model.dart';
-import 'opmeting_raam_opvulling_model.dart';
 import 'opmeting_raam_vulling_helper.dart';
-import 'opmeting_raam_technische_layout_helper.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
 
 class OpmetingRaamTekenvlakOverzichtDataHelper {

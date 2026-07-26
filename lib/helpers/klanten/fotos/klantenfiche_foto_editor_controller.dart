@@ -1,13 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum FotoEditorTool {
-  tekenen,
-  rechteLijn,
-  tekst,
-  pijl,
-  cirkel,
-  rechthoek,
-}
+enum FotoEditorTool { tekenen, rechteLijn, tekst, pijl, cirkel, rechthoek }
 
 class TekenLijn {
   final List<Offset> punten;
@@ -93,9 +86,7 @@ class KlantenficheFotoEditorController {
 
   Offset? laatsteVormVerplaatsPositie;
 
-  void startNieuweLijn(
-    Offset startPunt,
-  ) {
+  void startNieuweLijn(Offset startPunt) {
     huidigeLijn = TekenLijn(
       punten: [startPunt],
       kleur: actieveKleur,
@@ -105,9 +96,7 @@ class KlantenficheFotoEditorController {
     lijnen.add(huidigeLijn!);
   }
 
-  void voegPuntToe(
-    Offset punt,
-  ) {
+  void voegPuntToe(Offset punt) {
     huidigeLijn?.punten.add(punt);
   }
 
@@ -132,9 +121,7 @@ class KlantenficheFotoEditorController {
     geselecteerdeVorm = null;
   }
 
-  void selecteerLijn(
-    TekenLijn lijn,
-  ) {
+  void selecteerLijn(TekenLijn lijn) {
     deselecteerAlles();
 
     lijn.geselecteerd = true;
@@ -142,9 +129,7 @@ class KlantenficheFotoEditorController {
     geselecteerdeLijn = lijn;
   }
 
-  void selecteerTekst(
-    TekenTekst tekst,
-  ) {
+  void selecteerTekst(TekenTekst tekst) {
     deselecteerAlles();
 
     tekst.geselecteerd = true;
@@ -152,10 +137,7 @@ class KlantenficheFotoEditorController {
     geselecteerdeTekst = tekst;
   }
 
-  void voegTekstToe({
-    required Offset positie,
-    required String tekst,
-  }) {
+  void voegTekstToe({required Offset positie, required String tekst}) {
     deselecteerAlles();
 
     final nieuweTekst = TekenTekst(
@@ -205,20 +187,12 @@ class KlantenficheFotoEditorController {
   }) {
     deselecteerAlles();
 
-    final rect = Rect.fromPoints(
-      start,
-      einde,
-    );
+    final rect = Rect.fromPoints(start, einde);
 
     final vorm = TekenVorm(
       rect: rect,
       hoeken: type == FotoEditorTool.rechthoek
-          ? [
-              rect.topLeft,
-              rect.topRight,
-              rect.bottomRight,
-              rect.bottomLeft,
-            ]
+          ? [rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft]
           : null,
       kleur: actieveKleur,
       type: type,
@@ -229,18 +203,14 @@ class KlantenficheFotoEditorController {
     geselecteerdeVorm = vorm;
   }
 
-  void selecteerVorm(
-    TekenVorm vorm,
-  ) {
+  void selecteerVorm(TekenVorm vorm) {
     deselecteerAlles();
 
     vorm.geselecteerd = true;
     geselecteerdeVorm = vorm;
   }
 
-  void selecteerVormOpPunt(
-    Offset punt,
-  ) {
+  void selecteerVormOpPunt(Offset punt) {
     deselecteerAlles();
 
     for (final vorm in vormen.reversed) {
@@ -265,11 +235,7 @@ class KlantenficheFotoEditorController {
           final start = hoeken[i];
           final einde = hoeken[(i + 1) % hoeken.length];
 
-          final afstand = afstandTotLijnSegment(
-            punt,
-            start,
-            einde,
-          );
+          final afstand = afstandTotLijnSegment(punt, start, einde);
 
           if (afstand < 35) {
             selecteerVorm(vorm);
@@ -294,11 +260,7 @@ class KlantenficheFotoEditorController {
     geselecteerdeVorm = null;
   }
 
-  double afstandTotLijnSegment(
-    Offset punt,
-    Offset lijnStart,
-    Offset lijnEind,
-  ) {
+  double afstandTotLijnSegment(Offset punt, Offset lijnStart, Offset lijnEind) {
     final dx = lijnEind.dx - lijnStart.dx;
     final dy = lijnEind.dy - lijnStart.dy;
 
@@ -306,7 +268,8 @@ class KlantenficheFotoEditorController {
       return (punt - lijnStart).distance;
     }
 
-    final t = ((punt.dx - lijnStart.dx) * dx + (punt.dy - lijnStart.dy) * dy) /
+    final t =
+        ((punt.dx - lijnStart.dx) * dx + (punt.dy - lijnStart.dy) * dy) /
         (dx * dx + dy * dy);
 
     final begrensd = t.clamp(0.0, 1.0);
@@ -319,9 +282,7 @@ class KlantenficheFotoEditorController {
     return (punt - projectie).distance;
   }
 
-  void selecteerTekstOpPunt(
-    Offset punt,
-  ) {
+  void selecteerTekstOpPunt(Offset punt) {
     deselecteerAlles();
 
     for (final tekst in teksten.reversed) {
@@ -339,9 +300,7 @@ class KlantenficheFotoEditorController {
     }
   }
 
-  void selecteerLijnOpPunt(
-    Offset punt,
-  ) {
+  void selecteerLijnOpPunt(Offset punt) {
     deselecteerAlles();
 
     for (final lijn in lijnen.reversed) {
@@ -360,23 +319,17 @@ class KlantenficheFotoEditorController {
     }
   }
 
-  void startVerplaatsen(
-    Offset positie,
-  ) {
+  void startVerplaatsen(Offset positie) {
     lijnWordtVerplaatst = true;
     laatsteVerplaatsPositie = positie;
   }
 
-  void startVormVerplaatsen(
-    Offset positie,
-  ) {
+  void startVormVerplaatsen(Offset positie) {
     vormWordtVerplaatst = true;
     laatsteVormVerplaatsPositie = positie;
   }
 
-  void verplaatsGeselecteerdeVorm(
-    Offset nieuwePositie,
-  ) {
+  void verplaatsGeselecteerdeVorm(Offset nieuwePositie) {
     if (!vormWordtVerplaatst) return;
     if (geselecteerdeVorm == null) return;
     if (laatsteVormVerplaatsPositie == null) return;
@@ -393,9 +346,7 @@ class KlantenficheFotoEditorController {
     laatsteVormVerplaatsPositie = null;
   }
 
-  void verplaatsGeselecteerdeLijn(
-    Offset nieuwePositie,
-  ) {
+  void verplaatsGeselecteerdeLijn(Offset nieuwePositie) {
     if (!lijnWordtVerplaatst) return;
     if (geselecteerdeLijn == null) return;
     if (laatsteVerplaatsPositie == null) return;
@@ -414,17 +365,13 @@ class KlantenficheFotoEditorController {
     laatsteVerplaatsPositie = null;
   }
 
-  void startTekstVerplaatsen(
-    Offset positie,
-  ) {
+  void startTekstVerplaatsen(Offset positie) {
     tekstWordtVerplaatst = true;
 
     laatsteTekstVerplaatsPositie = positie;
   }
 
-  void verplaatsGeselecteerdeTekst(
-    Offset nieuwePositie,
-  ) {
+  void verplaatsGeselecteerdeTekst(Offset nieuwePositie) {
     if (!tekstWordtVerplaatst) return;
 
     if (geselecteerdeTekst == null) return;
@@ -444,9 +391,7 @@ class KlantenficheFotoEditorController {
     laatsteTekstVerplaatsPositie = null;
   }
 
-  bool selecteerHandleOpPunt(
-    Offset punt,
-  ) {
+  bool selecteerHandleOpPunt(Offset punt) {
     if (geselecteerdeLijn == null) {
       return false;
     }
@@ -475,25 +420,22 @@ class KlantenficheFotoEditorController {
     return false;
   }
 
-  void verplaatsHandle(
-    Offset nieuwePositie,
-  ) {
+  void verplaatsHandle(Offset nieuwePositie) {
     if (geselecteerdeLijn == null) return;
     if (geselecteerdHandleIndex == null) return;
 
     geselecteerdeLijn!.punten[geselecteerdHandleIndex!] = nieuwePositie;
   }
 
-  bool selecteerVormHandleOpPunt(
-    Offset punt,
-  ) {
+  bool selecteerVormHandleOpPunt(Offset punt) {
     if (geselecteerdeVorm == null) {
       return false;
     }
 
     const afstand = 55.0;
 
-    final hoeken = geselecteerdeVorm!.type == FotoEditorTool.rechthoek &&
+    final hoeken =
+        geselecteerdeVorm!.type == FotoEditorTool.rechthoek &&
             geselecteerdeVorm!.hoeken != null
         ? geselecteerdeVorm!.hoeken!
         : [
@@ -514,9 +456,7 @@ class KlantenficheFotoEditorController {
     return false;
   }
 
-  void verplaatsVormHandle(
-    Offset nieuwePositie,
-  ) {
+  void verplaatsVormHandle(Offset nieuwePositie) {
     if (geselecteerdeVorm == null) return;
     if (geselecteerdeVormHandleIndex == null) return;
     if (geselecteerdeVorm!.type == FotoEditorTool.rechthoek &&
@@ -527,26 +467,6 @@ class KlantenficheFotoEditorController {
     }
 
     final rect = geselecteerdeVorm!.rect;
-
-    Offset topLeft = rect.topLeft;
-    Offset topRight = rect.topRight;
-    Offset bottomRight = rect.bottomRight;
-    Offset bottomLeft = rect.bottomLeft;
-
-    switch (geselecteerdeVormHandleIndex) {
-      case 0:
-        topLeft = nieuwePositie;
-        break;
-      case 1:
-        topRight = nieuwePositie;
-        break;
-      case 2:
-        bottomRight = nieuwePositie;
-        break;
-      case 3:
-        bottomLeft = nieuwePositie;
-        break;
-    }
 
     Offset vasteHoek;
 
@@ -567,9 +487,6 @@ class KlantenficheFotoEditorController {
         return;
     }
 
-    geselecteerdeVorm!.rect = Rect.fromPoints(
-      vasteHoek,
-      nieuwePositie,
-    );
+    geselecteerdeVorm!.rect = Rect.fromPoints(vasteHoek, nieuwePositie);
   }
 }

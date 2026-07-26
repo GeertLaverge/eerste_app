@@ -79,9 +79,9 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
 
       if (leverancierVergelijk != 0) return leverancierVergelijk;
 
-      return a.artikel.artikelNaam
-          .toLowerCase()
-          .compareTo(b.artikel.artikelNaam.toLowerCase());
+      return a.artikel.artikelNaam.toLowerCase().compareTo(
+        b.artikel.artikelNaam.toLowerCase(),
+      );
     });
 
     return lijnen;
@@ -113,9 +113,7 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
 
     if (!bestaatAl) {
       klantLeverancier.gekozenArtikelen.add(
-        KlantArtikel(
-          artikelNaam: gekozenArtikel!,
-        ),
+        KlantArtikel(artikelNaam: gekozenArtikel!),
       );
     }
 
@@ -188,7 +186,7 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: gekozenLeverancier,
+                  initialValue: gekozenLeverancier,
                   decoration: _veldDecoratie(
                     label: 'Leverancier',
                     icon: Icons.business,
@@ -213,7 +211,7 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
               const SizedBox(width: 10),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: gekozenArtikel,
+                  initialValue: gekozenArtikel,
                   decoration: _veldDecoratie(
                     label: 'Artikel',
                     icon: Icons.inventory_2_outlined,
@@ -221,10 +219,7 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
                   items: artikelen.map((artikel) {
                     return DropdownMenuItem<String>(
                       value: artikel,
-                      child: Text(
-                        artikel,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(artikel, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: gekozenLeverancier == null
@@ -304,25 +299,15 @@ class _LeveranciersBlokState extends State<LeveranciersBlok> {
       prefixIcon: Icon(icon),
       filled: true,
       fillColor: Colors.grey.shade50,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 14,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: BorderSide(
-          color: Colors.grey.shade300,
-        ),
+        borderSide: BorderSide(color: Colors.grey.shade300),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(
-          color: Colors.blueGrey,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.blueGrey, width: 2),
       ),
     );
   }
@@ -343,10 +328,7 @@ class _LijstTitel extends StatelessWidget {
         SizedBox(width: 8),
         Expanded(
           flex: 3,
-          child: Text(
-            'Artikel',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          child: Text('Artikel', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
         SizedBox(width: 78, child: Text('Besteld')),
         SizedBox(width: 82, child: Text('Geleverd')),
@@ -379,10 +361,7 @@ class _ArtikelRij extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -402,25 +381,17 @@ class _ArtikelRij extends StatelessWidget {
             child: Text(
               leverancierNaam,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             flex: 3,
-            child: Text(
-              artikelNaam,
-              overflow: TextOverflow.ellipsis,
-            ),
+            child: Text(artikelNaam, overflow: TextOverflow.ellipsis),
           ),
           SizedBox(
             width: 78,
-            child: Checkbox(
-              value: besteld,
-              onChanged: onBesteldChanged,
-            ),
+            child: Checkbox(value: besteld, onChanged: onBesteldChanged),
           ),
           SizedBox(
             width: 82,

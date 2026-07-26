@@ -13,12 +13,8 @@ import '../helpers/opmeting/fotos/opmeting_foto_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
-import '../helpers/opmeting/raam/opmeting_raam_kleinhout_model.dart';
-import '../helpers/opmeting/raam/opmeting_raam_notities.dart';
 import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
-import '../helpers/opmeting/raam/opmeting_raam_toolbalk.dart';
 import '../helpers/opmeting/raam/opmeting_raam_vulling_helper.dart';
-import '../helpers/opmeting/raam/opmeting_raam_technische_keuzes_paneel.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_menu_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_menu_beheer_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_maten_helper.dart';
@@ -122,7 +118,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   List<OpmetingRaamKleinhoutLegendaItem> gekozenKleinhouten =
       <OpmetingRaamKleinhoutLegendaItem>[];
 
-  List<OpmetingRaamKeuzeMenu> _keuzemenus = <OpmetingRaamKeuzeMenu>[];
+  final List<OpmetingRaamKeuzeMenu> _keuzemenus = <OpmetingRaamKeuzeMenu>[];
   late OpmetingKaderSamenstelling _kaderSamenstelling;
 
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
@@ -139,7 +135,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   bool _opvullingenOpen = false;
   bool _kleinhoutenOpen = false;
 
-  OpmetingDeurpaneelKeuze? _actieveDeurpaneelKeuze;
   List<OpmetingDeurpaneelToewijzing> _deurpaneelToewijzingen =
       const <OpmetingDeurpaneelToewijzing>[];
 
@@ -527,7 +522,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     OpmetingDeurpaneelActieveKeuzeController.kies(keuze);
 
     setState(() {
-      _actieveDeurpaneelKeuze = keuze;
       actieveTool = 'deurpanelen';
     });
 
@@ -562,12 +556,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
   void _zetControllerTekst(TextEditingController controller, int waarde) {
     OpmetingRaamMatenHelper.zetControllerTekst(controller, waarde);
-  }
-
-  String get _actiefKaderIdVoorKeuzes {
-    return OpmetingRaamKeuzeSelectieHelper.actiefKaderIdVoorKeuzes(
-      kaderSamenstelling: _kaderSamenstelling,
-    );
   }
 
   String get _actieveKeuzeSleutel {
@@ -1127,8 +1115,9 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
       if (eersteItem.nummer != tweedeItem.nummer ||
           eersteItem.naam != tweedeItem.naam ||
-          eersteItem.kleur.value != tweedeItem.kleur.value ||
-          eersteItem.weergaveKleur.value != tweedeItem.weergaveKleur.value) {
+          eersteItem.kleur.toARGB32() != tweedeItem.kleur.toARGB32() ||
+          eersteItem.weergaveKleur.toARGB32() !=
+              tweedeItem.weergaveKleur.toARGB32()) {
         return false;
       }
     }
@@ -1281,13 +1270,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     );
   }
 
-  OpmetingRaamKeuzeOptie _optieVoorSelectie(OpmetingRaamKeuzeMenu menu) {
-    return OpmetingRaamKeuzeSelectieHelper.optieVoorSelectie(
-      selecties: _actieveKeuzeSelecties,
-      menu: menu,
-    );
-  }
-
   List<OpmetingRaamTechnischeTekeningInstelling>
   _actieveTechnischeTekeningenVoorKader(String kaderId) {
     return OpmetingRaamKeuzeSelectieHelper.actieveTechnischeTekeningenVoorSleutel(
@@ -1370,24 +1352,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     return OpmetingRaamKeuzeMenuHelper.standaardExtraWaarden(optie);
   }
 
-  void _werkExtraWaardeBij({
-    required OpmetingRaamKeuzeMenu menu,
-    required String veldId,
-    required dynamic waarde,
-  }) {
-    final selectie = _selectieVoorMenu(menu);
-
-    final nieuweExtraWaarden = Map<String, dynamic>.from(selectie.extraWaarden);
-
-    nieuweExtraWaarden[veldId] = waarde;
-
-    setState(() {
-      _actieveKeuzeSelecties[menu.id] = selectie.copyWith(
-        extraWaarden: nieuweExtraWaarden,
-      );
-    });
-  }
-
   Future<void> _wisselBeheerSlot() async {
     final nieuweWaarde =
         await OpmetingRaamMenuBeheerHelper.vraagBeheerSlotWissel(
@@ -1457,24 +1421,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     await _bewaarKeuzemenus(nieuweMenus);
-  }
-
-  Future<void> _opslaan() async {
-    final aantalIngevuldeKeuzes = _keuzemenus.where((menu) {
-      final optie = _optieVoorSelectie(menu);
-
-      return !optie.isGeenKeuze;
-    }).length;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Opmeting raam voorlopig lokaal getest. '
-          '$aantalIngevuldeKeuzes technische keuze(s) ingevuld.',
-        ),
-        backgroundColor: const Color(0xFF0B7A3B),
-      ),
-    );
   }
 
   Future<void> _voegOpmetingToeAanOverzicht() async {

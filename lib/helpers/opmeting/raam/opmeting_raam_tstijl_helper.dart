@@ -845,7 +845,7 @@ class OpmetingRaamTStijlHelper {
     );
 
     final vulling = Paint()
-      ..color = Colors.white.withOpacity(0.85)
+      ..color = Colors.white.withValues(alpha: 0.85)
       ..style = PaintingStyle.fill;
 
     final lijn = Paint()

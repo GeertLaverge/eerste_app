@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'opmeting_deurpaneel_model.dart';
-import 'opmeting_deurpaneel_storage_helper.dart';
+import 'opmeting_deurpaneel_storage_helper.dart' as deurpaneel_storage;
 
 class OpmetingDeurpaneelBibliotheek {
   OpmetingDeurpaneelBibliotheek._();
@@ -26,10 +26,10 @@ class OpmetingDeurpaneelBibliotheek {
     _ladenBezig = true;
 
     try {
-      final opgeslagenPanelen =
-          await OpmetingDeurpaneelStorageHelper.laadPanelen();
+      final opgeslagenPanelen = await deurpaneel_storage
+          .OpmetingDeurpaneelStorageHelper.laadPanelen();
 
-      if (opgeslagenPanelen != null && opgeslagenPanelen.isNotEmpty) {
+      if (opgeslagenPanelen != null) {
         panelen.value = List<OpmetingDeurpaneel>.unmodifiable(
           _sorteerPanelen(opgeslagenPanelen),
         );
@@ -59,14 +59,18 @@ class OpmetingDeurpaneelBibliotheek {
     panelen.value = List<OpmetingDeurpaneel>.unmodifiable(opgeschoondePanelen);
     _geladen = true;
 
-    await OpmetingDeurpaneelStorageHelper.bewaarPanelen(opgeschoondePanelen);
+    await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
+      opgeschoondePanelen,
+    );
   }
 
   static Future<void> resetNaarTestPanelen() async {
     panelen.value = List<OpmetingDeurpaneel>.unmodifiable(_testPanelen);
     _geladen = true;
 
-    await OpmetingDeurpaneelStorageHelper.bewaarPanelen(_testPanelen);
+    await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
+      _testPanelen,
+    );
   }
 
   static Future<void> wisselActief(String paneelId) async {
@@ -85,7 +89,9 @@ class OpmetingDeurpaneelBibliotheek {
     panelen.value = List<OpmetingDeurpaneel>.unmodifiable(nieuwePanelen);
     _geladen = true;
 
-    await OpmetingDeurpaneelStorageHelper.bewaarPanelen(nieuwePanelen);
+    await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
+      nieuwePanelen,
+    );
   }
 
   static List<OpmetingDeurpaneel> _sorteerPanelen(

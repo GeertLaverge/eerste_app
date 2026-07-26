@@ -23,10 +23,8 @@ class NotitieDagContainer extends StatelessWidget {
   final ValueChanged<NotitieModel> onNotitieChanged;
   final ValueChanged<NotitieModel> onNotitieVerwijderd;
 
-  final void Function(
-    NotitieModel notitie,
-    String nieuweDatumKey,
-  ) onNotitieVerplaatst;
+  final void Function(NotitieModel notitie, String nieuweDatumKey)
+  onNotitieVerplaatst;
 
   String get _titel {
     final delen = datumKey.split('-');
@@ -59,11 +57,7 @@ class NotitieDagContainer extends StatelessWidget {
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.only(
-                  left: 2,
-                  right: 2,
-                  bottom: 5,
-                ),
+                padding: const EdgeInsets.only(left: 2, right: 2, bottom: 5),
                 child: Row(
                   children: [
                     Text(
@@ -98,7 +92,7 @@ class NotitieDagContainer extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.035),
+                      color: Colors.black.withValues(alpha: 0.035),
                       blurRadius: 7,
                       offset: const Offset(0, 2),
                     ),

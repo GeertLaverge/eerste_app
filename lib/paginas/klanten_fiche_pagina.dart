@@ -248,10 +248,11 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
   }
 
   Future<void> _verstuurOpvolgFicheNaarBureau() async {
+    final huidigeContext = context;
     final naam = naamController.text.trim();
 
     if (naam.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(huidigeContext).showSnackBar(
         const SnackBar(
           content: Text('Geef eerst een klantnaam in.'),
           backgroundColor: Colors.red,
@@ -261,7 +262,7 @@ class _KlantenFichePaginaState extends State<KlantenFichePagina> {
     }
 
     if (opvolgTakenController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(huidigeContext).showSnackBar(
         const SnackBar(
           content: Text('Vul eerst de nog af te werken taken in.'),
           backgroundColor: Colors.red,
@@ -294,6 +295,7 @@ ${_extraWerkenTekst()}
     );
 
     if (!mounted) return;
+    if (!huidigeContext.mounted) return;
 
     if (resultaat == 'MAIL_OK') {
       setState(() {
@@ -303,22 +305,26 @@ ${_extraWerkenTekst()}
 
       await automatischBewaren();
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      if (!huidigeContext.mounted) return;
+
+      ScaffoldMessenger.of(huidigeContext).showSnackBar(
         const SnackBar(
           content: Text('Opvolgfiche verstuurd naar bureau.'),
           backgroundColor: Color(0xFF0B7A3B),
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(huidigeContext).showSnackBar(
         SnackBar(content: Text(resultaat), backgroundColor: Colors.red),
       );
     }
   }
 
   Future<void> _klantIsOpgevolgd() async {
+    final huidigeContext = context;
     final bevestigen = await showDialog<bool>(
-      context: context,
+      context: huidigeContext,
       builder: (context) {
         return AlertDialog(
           title: const Text('Fiche nagekeken?'),
@@ -350,6 +356,8 @@ ${_extraWerkenTekst()}
     );
 
     if (bevestigen != true) return;
+    if (!mounted) return;
+    if (!huidigeContext.mounted) return;
 
     setState(() {
       klantStatus = 'Opvolgen';
@@ -359,7 +367,10 @@ ${_extraWerkenTekst()}
 
     await automatischBewaren();
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    if (!mounted) return;
+    if (!huidigeContext.mounted) return;
+
+    ScaffoldMessenger.of(huidigeContext).showSnackBar(
       const SnackBar(
         content: Text('Klant staat klaar om opnieuw in te plannen.'),
         backgroundColor: Color(0xFF0B7A3B),
@@ -381,7 +392,7 @@ ${_extraWerkenTekst()}
               onTerug: () async {
                 await automatischBewaren();
 
-                if (!mounted) return;
+                if (!context.mounted) return;
 
                 Navigator.pop(context);
               },
@@ -499,6 +510,7 @@ ${_extraWerkenTekst()}
                       );
 
                   if (!mounted) return;
+                  if (!context.mounted) return;
 
                   if (resultaat == 'MAIL_OK') {
                     setState(() {
@@ -506,6 +518,9 @@ ${_extraWerkenTekst()}
                     });
 
                     await automatischBewaren();
+
+                    if (!mounted) return;
+                    if (!context.mounted) return;
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(

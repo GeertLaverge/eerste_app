@@ -29,13 +29,9 @@ import '../helpers/Agenda/agenda_weekdag_balk.dart';
 import '../helpers/Agenda/agenda_weergave_type.dart';
 import '../helpers/Agenda/agenda_melding_service.dart';
 import '../helpers/app_storage.dart';
-import '../helpers/klanten/fiche/klantenfiche_repository.dart';
-import '../helpers/Agenda/agenda_tijd_picker.dart';
-import '../helpers/Agenda/agenda_klant_planning_tijd_helper.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
-import '../paginas/klanten_fiche_pagina.dart';
 import 'jaar_planning_pagina_nieuw.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
@@ -391,6 +387,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       item: item,
     );
 
+    if (!mounted) {
+      return;
+    }
+
     if (geopend) {
       await laadAgendaItems();
 
@@ -414,6 +414,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     );
 
     if (resultaat == null) {
+      return;
+    }
+
+    if (!mounted) {
       return;
     }
 
@@ -518,6 +522,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       return;
     }
 
+    if (!mounted) {
+      return;
+    }
+
     if (gekozenType == 'verlof') {
       final nieuwItem = await showDialog<AgendaItem>(
         context: context,
@@ -593,6 +601,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     AgendaItem? conceptItem;
 
     while (true) {
+      if (!mounted) {
+        return;
+      }
+
       final nieuwItem = await showDialog<AgendaItem>(
         context: context,
         builder: (context) {
@@ -606,6 +618,10 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       );
 
       if (nieuwItem == null) {
+        return;
+      }
+
+      if (!mounted) {
         return;
       }
 
@@ -754,6 +770,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                         if (!mounted) {
                           return;
                         }
+                        if (!context.mounted) {
+                          return;
+                        }
 
                         setState(() {
                           agendaItems = nieuweItems;
@@ -795,6 +814,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                       );
 
                       if (!mounted) {
+                        return;
+                      }
+                      if (!context.mounted) {
                         return;
                       }
 
@@ -846,6 +868,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                 );
 
                 if (!mounted) {
+                  return;
+                }
+                if (!context.mounted) {
                   return;
                 }
 

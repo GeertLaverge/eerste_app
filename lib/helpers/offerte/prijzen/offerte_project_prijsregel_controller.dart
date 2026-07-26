@@ -99,6 +99,8 @@ class OfferteProjectPrijsregelController {
           formulierType: formulierType,
         );
 
+    if (!context.mounted) return;
+
     final resultaat = await toonOffertePrijsregelsZwevendVenster(
       context: context,
       titel: 'Vrije prijs per artikel',
@@ -496,6 +498,8 @@ class OfferteProjectPrijsregelController {
       for (final bronGroep in bronGroepen)
         bronGroep.formulierType: bronGroep.formulierNaam,
     };
+
+    if (!context.mounted) return;
 
     final resultaat = await toonOffertePrijsregelsZwevendVenster(
       context: context,

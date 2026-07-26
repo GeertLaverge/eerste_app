@@ -79,12 +79,12 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
       width: breedte,
       constraints: BoxConstraints(maxHeight: maxHoogte ?? double.infinity),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.98),
+        color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: rand),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
+            color: Colors.black.withValues(alpha: 0.10),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

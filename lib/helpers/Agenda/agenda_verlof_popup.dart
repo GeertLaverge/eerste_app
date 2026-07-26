@@ -7,10 +7,7 @@ import 'agenda_tijd_picker.dart';
 class AgendaVerlofPopup extends StatefulWidget {
   final AgendaItem? bestaandItem;
 
-  const AgendaVerlofPopup({
-    super.key,
-    this.bestaandItem,
-  });
+  const AgendaVerlofPopup({super.key, this.bestaandItem});
 
   @override
   State<AgendaVerlofPopup> createState() => _AgendaVerlofPopupState();
@@ -38,17 +35,11 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
     volledigeDag = item.volledigeDag;
 
     if (item.startUur != null && item.startMinuut != null) {
-      startTijd = TimeOfDay(
-        hour: item.startUur!,
-        minute: item.startMinuut!,
-      );
+      startTijd = TimeOfDay(hour: item.startUur!, minute: item.startMinuut!);
     }
 
     if (item.eindUur != null && item.eindMinuut != null) {
-      eindTijd = TimeOfDay(
-        hour: item.eindUur!,
-        minute: item.eindMinuut!,
-      );
+      eindTijd = TimeOfDay(hour: item.eindUur!, minute: item.eindMinuut!);
     }
   }
 
@@ -87,6 +78,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
     );
 
     if (gekozen == null) return;
+    if (!mounted) return;
 
     if (minuten(gekozen) <= minuten(startTijd)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -113,16 +105,11 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
       borderRadius: BorderRadius.circular(14),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 13,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: Colors.grey.shade300,
-          ),
+          border: Border.all(color: Colors.grey.shade300),
         ),
         child: Row(
           children: [
@@ -144,25 +131,16 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              Icons.access_time,
-              color: Color(0xFF0B7A3B),
-              size: 20,
-            ),
+            const Icon(Icons.access_time, color: Color(0xFF0B7A3B), size: 20),
           ],
         ),
       ),
     );
   }
 
-  Widget veld(
-    TextEditingController controller,
-    String label,
-  ) {
+  Widget veld(TextEditingController controller, String label) {
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 8,
-      ),
+      padding: const EdgeInsets.only(bottom: 8),
       child: TextField(
         controller: controller,
         decoration: InputDecoration(
@@ -173,11 +151,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
             horizontal: 14,
             vertical: 14,
           ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(
-              14,
-            ),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );
@@ -208,10 +182,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                   const Text(
                     'Annuleren zonder toevoegen?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -219,10 +190,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                         ? 'Wijzigingen worden niet opgeslagen.'
                         : 'Verlof wordt niet toegevoegd.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 14,
-                    ),
+                    style: const TextStyle(color: Colors.black54, fontSize: 14),
                   ),
                   const SizedBox(height: 18),
                   Row(
@@ -312,27 +280,17 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
   }
 
   void verwijderen() {
-    Navigator.pop(
-      context,
-      'verwijderen',
-    );
+    Navigator.pop(context, 'verwijderen');
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(
-        horizontal: 28,
-        vertical: 24,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 460,
-        ),
+        constraints: const BoxConstraints(maxWidth: 460),
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: SingleChildScrollView(
@@ -341,10 +299,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.beach_access,
-                      color: Color(0xFF0B7A3B),
-                    ),
+                    const Icon(Icons.beach_access, color: Color(0xFF0B7A3B)),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -362,13 +317,10 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                veld(
-                  naamController,
-                  'Naam',
-                ),
+                veld(naamController, 'Naam'),
                 SwitchListTile(
                   value: volledigeDag,
-                  activeColor: const Color(0xFF0B7A3B),
+                  activeThumbColor: const Color(0xFF0B7A3B),
                   contentPadding: EdgeInsets.zero,
                   onChanged: (waarde) {
                     setState(() {
@@ -377,9 +329,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                   },
                   title: const Text(
                     'Volledige dag',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
                 if (!volledigeDag) ...[
@@ -406,9 +356,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                             Icons.delete_outline,
                             color: Colors.red,
                           ),
-                          label: const Text(
-                            'Verlof verwijderen',
-                          ),
+                          label: const Text('Verlof verwijderen'),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.red,
                           ),
@@ -425,9 +373,7 @@ class _AgendaVerlofPopupState extends State<AgendaVerlofPopup> {
                           backgroundColor: const Color(0xFF0B7A3B),
                           foregroundColor: Colors.white,
                         ),
-                        child: Text(
-                          isBewerken ? 'Opslaan' : 'Toevoegen',
-                        ),
+                        child: Text(isBewerken ? 'Opslaan' : 'Toevoegen'),
                       ),
                     ),
                   ],
