@@ -2054,7 +2054,11 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     final style = TextStyle(
       color: _maatKleur,
       fontSize: _maatLettergrootteVoor(buitenmaat),
-      fontWeight: buitenmaat ? FontWeight.w800 : FontWeight.w600,
+      fontWeight: vasteMaatvoering
+          ? FontWeight.w400
+          : buitenmaat
+          ? FontWeight.w800
+          : FontWeight.w600,
     );
 
     final painter = _maakTekstPainter(tekst: tekst, style: style);
@@ -2116,7 +2120,11 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     final style = TextStyle(
       color: _maatKleur,
       fontSize: _maatLettergrootteVoor(buitenmaat),
-      fontWeight: buitenmaat ? FontWeight.w800 : FontWeight.w600,
+      fontWeight: vasteMaatvoering
+          ? FontWeight.w400
+          : buitenmaat
+          ? FontWeight.w800
+          : FontWeight.w600,
     );
 
     final painter = _maakTekstPainter(tekst: tekst, style: style);

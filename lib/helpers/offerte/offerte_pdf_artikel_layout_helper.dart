@@ -42,9 +42,11 @@ class OffertePdfArtikelLayoutHelper {
   // De hoogteberekening en de effectieve PDF-rij gebruiken dezelfde vaste
   // waarden. Daardoor worden lange technische lijsten niet meer na enkele
   // regels afgekapt door een verschil tussen geschatte en echte rijhoogte.
-  static const double technischeRegelHoogte = 14;
-  static const double compacteTechnischeRegelHoogte = 11.5;
+  static const double technischeTekstGrootte = 8.0;
+  static const double technischeRegelHoogte = 15;
+  static const double compacteTechnischeRegelHoogte = 15;
   static const double technischeKolomVerticalePadding = 15;
+  static const double tekenMarge = PdfPageFormat.cm;
 
   static List<OffertePdfTechnischeRegel> combineerTechnischeRegels(
     List<OffertePdfTechnischeRegel> regels,
@@ -240,11 +242,14 @@ class OffertePdfArtikelLayoutHelper {
               ),
             ),
           ),
-          pw.SizedBox(height: 5),
           pw.Expanded(
             child: pw.Padding(
-              padding: const pw.EdgeInsets.fromLTRB(8, 0, 8, 5),
-              child: pw.Center(child: tekening),
+              padding: const pw.EdgeInsets.all(tekenMarge),
+              child: pw.FittedBox(
+                fit: pw.BoxFit.contain,
+                alignment: pw.Alignment.center,
+                child: tekening,
+              ),
             ),
           ),
         ],
@@ -281,10 +286,9 @@ class OffertePdfArtikelLayoutHelper {
           if (bovenMelding.trim().isNotEmpty) ...<pw.Widget>[
             pw.Text(
               bovenMelding.trim(),
-              style: pw.TextStyle(
-                color: oranje,
-                fontSize: compact ? 6.9 : 7.4,
-                fontWeight: pw.FontWeight.bold,
+              style: const pw.TextStyle(
+                color: tekstDonker,
+                fontSize: technischeTekstGrootte,
               ),
             ),
             pw.SizedBox(height: compact ? 5 : 7),
@@ -294,7 +298,10 @@ class OffertePdfArtikelLayoutHelper {
           if (samengevoegdeRegels.isEmpty)
             pw.Text(
               legeTekst,
-              style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.4),
+              style: const pw.TextStyle(
+                color: tekstDonker,
+                fontSize: technischeTekstGrootte,
+              ),
             )
           else
             for (var index = 0; index < samengevoegdeRegels.length; index++)
@@ -310,19 +317,18 @@ class OffertePdfArtikelLayoutHelper {
             pw.SizedBox(height: compact ? 5 : 7),
             pw.Text(
               'Opmerkingen',
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 color: tekstDonker,
-                fontSize: compact ? 7.5 : 8.1,
-                fontWeight: pw.FontWeight.bold,
+                fontSize: technischeTekstGrootte,
               ),
             ),
             pw.SizedBox(height: 3),
             pw.Text(
               notities.trim(),
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 color: tekstDonker,
-                fontSize: compact ? 6.7 : 7.4,
-                lineSpacing: 1.2,
+                fontSize: technischeTekstGrootte,
+                lineSpacing: 1.4,
               ),
             ),
           ],
@@ -362,9 +368,9 @@ class OffertePdfArtikelLayoutHelper {
                     children: [
                       pw.TextSpan(
                         text: regel.titel,
-                        style: pw.TextStyle(
-                          color: tekstGrijs,
-                          fontSize: compact ? 6.6 : 7.2,
+                        style: const pw.TextStyle(
+                          color: tekstDonker,
+                          fontSize: technischeTekstGrootte,
                         ),
                       ),
                       if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
@@ -372,10 +378,9 @@ class OffertePdfArtikelLayoutHelper {
                       if (regel.waarde.isNotEmpty)
                         pw.TextSpan(
                           text: regel.waarde,
-                          style: pw.TextStyle(
+                          style: const pw.TextStyle(
                             color: tekstDonker,
-                            fontSize: compact ? 6.7 : 7.3,
-                            fontWeight: pw.FontWeight.bold,
+                            fontSize: technischeTekstGrootte,
                           ),
                         ),
                     ],
@@ -392,10 +397,9 @@ class OffertePdfArtikelLayoutHelper {
                 regel.prijsTekst,
                 maxLines: 1,
                 textAlign: pw.TextAlign.right,
-                style: pw.TextStyle(
+                style: const pw.TextStyle(
                   color: tekstDonker,
-                  fontSize: compact ? 6.8 : 7.4,
-                  fontWeight: pw.FontWeight.bold,
+                  fontSize: technischeTekstGrootte,
                 ),
               ),
             ),

@@ -42,7 +42,7 @@ class OfferteKlantgegevens {
         : titelhoofd.telefoon.trim();
 
     return OfferteKlantgegevens(
-      naam: titelhoofd.klantNaam.trim(),
+      naam: titelhoofd.klantNaamMetAanspreking.trim(),
       contactpersoon: titelhoofd.contactpersoon.trim(),
       adres: volledigAdres,
       postcodeEnGemeente: titelhoofd.plaats.trim(),

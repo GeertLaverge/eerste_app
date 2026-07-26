@@ -24,8 +24,8 @@ class OffertePdfService {
 
   static const double _detailPaddingBoven = 27;
   static const double _detailPaddingOnder = 22;
-  static const double _artikelKopHoogte = 64;
-  static const double _ruimteTussenArtikels = 14;
+  static const double _artikelKopHoogte = 32;
+  static const double _ruimteTussenArtikels = 10;
   static const double _paginaVoetReserve = 36;
   static const double _basisEindBerekeningReserve = 106;
 
@@ -204,7 +204,6 @@ class OffertePdfService {
                             ),
                           ],
                         ),
-                        pw.Spacer(),
                         _bouwWelkomBlok(),
                         pw.SizedBox(height: 24),
                         _bouwVoetregel(),
@@ -289,10 +288,10 @@ class OffertePdfService {
               lineSpacing: 1.5,
             ),
           ),
-          pw.SizedBox(height: 6),
+          pw.SizedBox(height: 2),
           pw.Align(
             alignment: pw.Alignment.centerLeft,
-            child: pw.Container(width: 32, height: 1.4, color: oranje),
+            child: pw.Container(width: 26, height: 1.1, color: oranje),
           ),
           pw.SizedBox(height: 13),
           if (data.klant.contactpersoon.trim().isNotEmpty)
@@ -587,7 +586,7 @@ class OffertePdfService {
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: <pw.Widget>[
                 pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: <pw.Widget>[
                     pw.RichText(
                       text: pw.TextSpan(
@@ -596,7 +595,7 @@ class OffertePdfService {
                             text: artikel.kopLabel,
                             style: pw.TextStyle(
                               color: tekstDonker,
-                              fontSize: 14,
+                              fontSize: 11.9,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -604,7 +603,7 @@ class OffertePdfService {
                             text: '  -  $artikelType',
                             style: pw.TextStyle(
                               color: oranje,
-                              fontSize: 14,
+                              fontSize: 11.9,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -612,46 +611,50 @@ class OffertePdfService {
                       ),
                     ),
                     if (uitvoeringsRegels.isNotEmpty) ...<pw.Widget>[
-                      pw.SizedBox(width: 8),
+                      pw.SizedBox(width: 6),
                       pw.Expanded(
-                        child: pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: <pw.Widget>[
-                            for (final regel in uitvoeringsRegels)
-                              pw.Padding(
-                                padding: const pw.EdgeInsets.only(bottom: 1.5),
-                                child: pw.Text(
-                                  regel,
-                                  style: pw.TextStyle(
-                                    color: tekstGrijs,
-                                    fontSize: 9.5,
-                                    fontWeight: pw.FontWeight.normal,
+                        child: pw.Padding(
+                          padding: const pw.EdgeInsets.only(top: 1.5),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: <pw.Widget>[
+                              for (final regel in uitvoeringsRegels)
+                                pw.Padding(
+                                  padding: const pw.EdgeInsets.only(
+                                    bottom: 1.5,
+                                  ),
+                                  child: pw.Text(
+                                    regel,
+                                    style: pw.TextStyle(
+                                      color: tekstGrijs,
+                                      fontSize: 8.6,
+                                      fontWeight: pw.FontWeight.normal,
+                                    ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ],
                 ),
                 if (isOptie) ...<pw.Widget>[
-                  pw.SizedBox(height: 3),
+                  pw.SizedBox(height: 2),
                   pw.Text(
                     'Optie — niet meegerekend in het eindtotaal',
                     style: pw.TextStyle(
                       color: tekstDonker,
-                      fontSize: 8.5,
+                      fontSize: 7.8,
                       fontWeight: pw.FontWeight.normal,
                     ),
                   ),
                 ],
-                pw.SizedBox(height: 6),
+                pw.SizedBox(height: 2),
                 pw.Align(
                   alignment: pw.Alignment.centerLeft,
-                  child: pw.Container(width: 32, height: 1.4, color: oranje),
+                  child: pw.Container(width: 26, height: 1.1, color: oranje),
                 ),
-                pw.Spacer(),
               ],
             ),
           ),
@@ -921,8 +924,9 @@ class OffertePdfService {
     final extraRegels = uitvoeringsRegels.length > 1
         ? uitvoeringsRegels.length - 1
         : 0;
+    final optieMeldingHoogte = positie.isOfferteOptie ? 10.0 : 0.0;
 
-    return _artikelKopHoogte + extraRegels * 11.5;
+    return _artikelKopHoogte + optieMeldingHoogte + extraRegels * 9.5;
   }
 
   static double _berekenGebruikteArtikelHoogte(
@@ -982,7 +986,7 @@ class OffertePdfService {
               'Extra werk/materiaal inbegrepen in offerte',
               style: pw.TextStyle(
                 color: tekstDonker,
-                fontSize: 9.5,
+                fontSize: 8.6,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
@@ -1019,7 +1023,7 @@ class OffertePdfService {
                       textAlign: pw.TextAlign.right,
                       style: pw.TextStyle(
                         color: tekstDonker,
-                        fontSize: 9.5,
+                        fontSize: 8.6,
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -1057,7 +1061,7 @@ class OffertePdfService {
                   textAlign: pw.TextAlign.right,
                   style: pw.TextStyle(
                     color: tekstDonker,
-                    fontSize: 9.5,
+                    fontSize: 8.6,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
@@ -1132,7 +1136,7 @@ class OffertePdfService {
               'Opties voor alle artikelen — niet meegerekend in eindtotaal',
               style: pw.TextStyle(
                 color: tekstDonker,
-                fontSize: 9.5,
+                fontSize: 8.6,
                 fontWeight: pw.FontWeight.bold,
               ),
             ),
@@ -1157,7 +1161,7 @@ class OffertePdfService {
                     _formatteerEuro(opties[index].bedragExclBtw),
                     style: pw.TextStyle(
                       color: oranje,
-                      fontSize: 9.5,
+                      fontSize: 8.6,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),

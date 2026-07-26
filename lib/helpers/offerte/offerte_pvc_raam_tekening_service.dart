@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-PVC-TEKENING-WITTE-RAND-AFGESNEDEN-20260726
 // THIMACO-CONTROLE: OFFERTE-PVC-MAATVOERING-GELIJK-INZETHOR-20260720
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -29,6 +30,16 @@ class OffertePvcRaamTekeningService {
       7.2 * _offerteMaatvoeringFactor;
   static const double _offerteMaatLijndikte = 0.9 * _offerteMaatvoeringFactor;
 
+  // Een pixel wordt als inhoud beschouwd zodra hij voldoende afwijkt van de
+  // volledig witte achtergrond. Zo blijven ook lichtgrijze maatlijnen en
+  // technische vlakken behouden.
+  static const int _witteRandDrempel = 252;
+
+  // Kleine veiligheidsmarge rond de gevonden tekening, uitgedrukt in logische
+  // pixels. De uniforme PDF-marge wordt afzonderlijk door de artikel-layout
+  // toegepast.
+  static const double _uitsnijVeiligheidsmarge = 4;
+
   static Future<Map<String, Uint8List>> maakTekeningen(
     Iterable<OpmetingOverzichtRaamItem> posities,
   ) async {
@@ -57,6 +68,8 @@ class OffertePvcRaamTekeningService {
   static Future<Uint8List?> _maakTekening(
     OpmetingOverzichtRaamItem positie,
   ) async {
+    ui.Image? volledigeAfbeelding;
+
     try {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
@@ -77,17 +90,142 @@ class OffertePvcRaamTekeningService {
       painter.paint(canvas, _logischeGrootte);
 
       final picture = recorder.endRecording();
-      final afbeelding = await picture.toImage(
+      volledigeAfbeelding = await picture.toImage(
         (_logischeGrootte.width * _pixelRatio).round(),
         (_logischeGrootte.height * _pixelRatio).round(),
       );
-      final data = await afbeelding.toByteData(format: ui.ImageByteFormat.png);
-      afbeelding.dispose();
+      picture.dispose();
 
-      return data?.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      return await _maakBijgesnedenPng(volledigeAfbeelding);
     } catch (_) {
       // De PDF-widget heeft een veilige kadertekening als terugval.
       return null;
+    } finally {
+      volledigeAfbeelding?.dispose();
     }
+  }
+
+  static Future<Uint8List?> _maakBijgesnedenPng(
+    ui.Image volledigeAfbeelding,
+  ) async {
+    final ruweData = await volledigeAfbeelding.toByteData(
+      format: ui.ImageByteFormat.rawRgba,
+    );
+
+    if (ruweData == null) {
+      return _encodeerPng(volledigeAfbeelding);
+    }
+
+    final breedte = volledigeAfbeelding.width;
+    final hoogte = volledigeAfbeelding.height;
+    final pixels = ruweData.buffer.asUint8List(
+      ruweData.offsetInBytes,
+      ruweData.lengthInBytes,
+    );
+
+    var minimumX = breedte;
+    var minimumY = hoogte;
+    var maximumX = -1;
+    var maximumY = -1;
+
+    for (var y = 0; y < hoogte; y++) {
+      final rijStart = y * breedte * 4;
+
+      for (var x = 0; x < breedte; x++) {
+        final index = rijStart + x * 4;
+        final rood = pixels[index];
+        final groen = pixels[index + 1];
+        final blauw = pixels[index + 2];
+        final alpha = pixels[index + 3];
+
+        if (!_isTekeningPixel(
+          rood: rood,
+          groen: groen,
+          blauw: blauw,
+          alpha: alpha,
+        )) {
+          continue;
+        }
+
+        if (x < minimumX) minimumX = x;
+        if (x > maximumX) maximumX = x;
+        if (y < minimumY) minimumY = y;
+        if (y > maximumY) maximumY = y;
+      }
+    }
+
+    if (maximumX < minimumX || maximumY < minimumY) {
+      return _encodeerPng(volledigeAfbeelding);
+    }
+
+    final marge = (_uitsnijVeiligheidsmarge * _pixelRatio).round();
+
+    minimumX = (minimumX - marge).clamp(0, breedte - 1).toInt();
+    minimumY = (minimumY - marge).clamp(0, hoogte - 1).toInt();
+    maximumX = (maximumX + marge).clamp(0, breedte - 1).toInt();
+    maximumY = (maximumY + marge).clamp(0, hoogte - 1).toInt();
+
+    final uitsnijBreedte = maximumX - minimumX + 1;
+    final uitsnijHoogte = maximumY - minimumY + 1;
+
+    if (uitsnijBreedte <= 1 || uitsnijHoogte <= 1) {
+      return _encodeerPng(volledigeAfbeelding);
+    }
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, uitsnijBreedte.toDouble(), uitsnijHoogte.toDouble()),
+      Paint()..color = Colors.white,
+    );
+
+    canvas.drawImageRect(
+      volledigeAfbeelding,
+      Rect.fromLTWH(
+        minimumX.toDouble(),
+        minimumY.toDouble(),
+        uitsnijBreedte.toDouble(),
+        uitsnijHoogte.toDouble(),
+      ),
+      Rect.fromLTWH(0, 0, uitsnijBreedte.toDouble(), uitsnijHoogte.toDouble()),
+      Paint()
+        ..isAntiAlias = true
+        ..filterQuality = FilterQuality.high,
+    );
+
+    final picture = recorder.endRecording();
+    final bijgesnedenAfbeelding = await picture.toImage(
+      uitsnijBreedte,
+      uitsnijHoogte,
+    );
+    picture.dispose();
+
+    try {
+      return await _encodeerPng(bijgesnedenAfbeelding);
+    } finally {
+      bijgesnedenAfbeelding.dispose();
+    }
+  }
+
+  static bool _isTekeningPixel({
+    required int rood,
+    required int groen,
+    required int blauw,
+    required int alpha,
+  }) {
+    if (alpha <= 8) {
+      return false;
+    }
+
+    return rood < _witteRandDrempel ||
+        groen < _witteRandDrempel ||
+        blauw < _witteRandDrempel;
+  }
+
+  static Future<Uint8List?> _encodeerPng(ui.Image afbeelding) async {
+    final data = await afbeelding.toByteData(format: ui.ImageByteFormat.png);
+
+    return data?.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }
 }
