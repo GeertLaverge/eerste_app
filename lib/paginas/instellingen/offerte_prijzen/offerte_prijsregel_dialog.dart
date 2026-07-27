@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-VOORAF-GESELECTEERD-20260726
 // THIMACO-CONTROLE: GEDEELDE-VERDEELKOST-KEUZEMENU-20260723
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -28,6 +29,8 @@ Future<OffertePrijsregelModel?> toonOffertePrijsregelDialog({
   required int volgendeVolgorde,
   List<OfferteTechnischeKeuzeRef> technischeKeuzes =
       const <OfferteTechnischeKeuzeRef>[],
+  OfferteTechnischeKeuzeRef? beginTechnischeKeuze,
+  bool technischeKeuzeVergrendeld = false,
   List<OffertePrijsregelFormulierOptie> formulierTypeOpties =
       const <OffertePrijsregelFormulierOptie>[],
   List<OffertePrijsregelModel> verdeelgroepOpties =
@@ -45,6 +48,8 @@ Future<OffertePrijsregelModel?> toonOffertePrijsregelDialog({
         formulierType: formulierType,
         volgendeVolgorde: volgendeVolgorde,
         technischeKeuzes: technischeKeuzes,
+        beginTechnischeKeuze: beginTechnischeKeuze,
+        technischeKeuzeVergrendeld: technischeKeuzeVergrendeld,
         formulierTypeOpties: formulierTypeOpties,
         verdeelgroepOpties: verdeelgroepOpties,
         bestaandePrijsregel: bestaandePrijsregel,
@@ -65,6 +70,8 @@ class _OffertePrijsregelDialog extends StatefulWidget {
     required this.verdeelgroepOpties,
     required this.bevestigKnopTekst,
     required this.bevestigKnopIcoon,
+    required this.technischeKeuzeVergrendeld,
+    this.beginTechnischeKeuze,
     this.bestaandePrijsregel,
   });
 
@@ -72,6 +79,8 @@ class _OffertePrijsregelDialog extends StatefulWidget {
   final String formulierType;
   final int volgendeVolgorde;
   final List<OfferteTechnischeKeuzeRef> technischeKeuzes;
+  final OfferteTechnischeKeuzeRef? beginTechnischeKeuze;
+  final bool technischeKeuzeVergrendeld;
   final List<OffertePrijsregelFormulierOptie> formulierTypeOpties;
   final List<OffertePrijsregelModel> verdeelgroepOpties;
   final OffertePrijsregelModel? bestaandePrijsregel;
@@ -260,7 +269,9 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
         ? bestaand!.id
         : _nieuweVerdeelgroepId;
 
-    _technischeKeuze = _vindActueleTechnischeKeuze(bestaand?.technischeKeuze);
+    _technischeKeuze = _vindActueleTechnischeKeuze(
+      bestaand?.technischeKeuze ?? widget.beginTechnischeKeuze,
+    );
 
     if (_isTechnischePrijs && _technischeKeuze != null) {
       final tekst = _technischeKeuze!.hoeUitschrijven.trim();
@@ -650,6 +661,57 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
   }
 
   Widget _bouwTechnischeKeuze() {
+    final technischeKeuze = _technischeKeuze;
+
+    if (widget.technischeKeuzeVergrendeld && technischeKeuze != null) {
+      final pad = <String>[
+        technischeKeuze.menuTitelMomentopname.trim(),
+        technischeKeuze.submenuTitelMomentopname.trim(),
+        technischeKeuze.keuzeTitelMomentopname.trim(),
+      ].where((deel) => deel.isNotEmpty).join(' · ');
+
+      return Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFBBF7D0)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Icon(Icons.link_rounded, color: _groen, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Gekoppelde technische keuze',
+                    style: TextStyle(
+                      color: _groen,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    pad.isEmpty ? technischeKeuze.hoeUitschrijven : pad,
+                    style: const TextStyle(
+                      color: Color(0xFF166534),
+                      fontSize: 11.5,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return OfferteTechnischeKeuzeDropdown(
       keuzes: widget.technischeKeuzes,
       waarde: _technischeKeuze,

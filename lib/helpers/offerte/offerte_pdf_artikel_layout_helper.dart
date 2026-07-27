@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PDF-CONST-TEXTSTYLE-NORMAAL-FIX-20260726
+// THIMACO-CONTROLE: TECHNISCHE-REGELS-UNIFORM-ZONDER-SCHAALVERKLEINING-20260726
 // THIMACO-CONTROLE: ALGEMENE-ARTIKEL-LAYOUT-VOLLE-BREEDTE-20260720
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -44,9 +46,8 @@ class OffertePdfArtikelLayoutHelper {
   // regels afgekapt door een verschil tussen geschatte en echte rijhoogte.
   static const double technischeTekstGrootte = 8.0;
   static const double technischeRegelHoogte = 15;
-  static const double compacteTechnischeRegelHoogte = 15;
   static const double technischeKolomVerticalePadding = 15;
-  static const double tekenMarge = PdfPageFormat.cm;
+  static const double tekenMarge = 5 * PdfPageFormat.mm;
 
   static List<OffertePdfTechnischeRegel> combineerTechnischeRegels(
     List<OffertePdfTechnischeRegel> regels,
@@ -93,14 +94,6 @@ class OffertePdfArtikelLayoutHelper {
     String bovenMelding = '',
   }) {
     final samengevoegdeRegels = combineerTechnischeRegels(regels);
-    final compact = _gebruikCompacteTechnischeOpmaak(
-      regels: samengevoegdeRegels,
-      notities: notities,
-      bovenMelding: bovenMelding,
-    );
-    final regelHoogte = compact
-        ? compacteTechnischeRegelHoogte
-        : technischeRegelHoogte;
     var benodigdeHoogte = technischeKolomVerticalePadding;
 
     if (bovenMelding.trim().isNotEmpty) {
@@ -112,7 +105,12 @@ class OffertePdfArtikelLayoutHelper {
     if (samengevoegdeRegels.isEmpty) {
       benodigdeHoogte += 20;
     } else {
-      benodigdeHoogte += samengevoegdeRegels.length * regelHoogte;
+      for (final regel in samengevoegdeRegels) {
+        benodigdeHoogte += _technischeRegelHoogteVoor(
+          regel,
+          toonPrijsZone: true,
+        );
+      }
     }
 
     if (notities.trim().isNotEmpty) {
@@ -308,7 +306,6 @@ class OffertePdfArtikelLayoutHelper {
               _bouwTechnischeRegel(
                 regel: samengevoegdeRegels[index],
                 laatste: index == samengevoegdeRegels.length - 1,
-                compact: compact,
                 toonPrijsZone: toonPrijsZone,
               ),
           if (notities.trim().isNotEmpty) ...<pw.Widget>[
@@ -340,15 +337,21 @@ class OffertePdfArtikelLayoutHelper {
   static pw.Widget _bouwTechnischeRegel({
     required OffertePdfTechnischeRegel regel,
     required bool laatste,
-    required bool compact,
     required bool toonPrijsZone,
   }) {
-    final regelHoogte = compact
-        ? compacteTechnischeRegelHoogte
-        : technischeRegelHoogte;
+    final regelHoogte = _technischeRegelHoogteVoor(
+      regel,
+      toonPrijsZone: toonPrijsZone,
+    );
+    final regelTekst = _technischeRegelTekst(regel);
+    final aantalRegels = _technischeRegelAantalRegels(
+      regel,
+      toonPrijsZone: toonPrijsZone,
+    );
 
     return pw.Container(
       height: regelHoogte,
+      padding: const pw.EdgeInsets.symmetric(vertical: 2),
       decoration: pw.BoxDecoration(
         border: laatste
             ? null
@@ -358,34 +361,13 @@ class OffertePdfArtikelLayoutHelper {
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: <pw.Widget>[
           pw.Expanded(
-            child: pw.Align(
-              alignment: pw.Alignment.centerLeft,
-              child: pw.FittedBox(
-                fit: pw.BoxFit.scaleDown,
-                alignment: pw.Alignment.centerLeft,
-                child: pw.RichText(
-                  text: pw.TextSpan(
-                    children: [
-                      pw.TextSpan(
-                        text: regel.titel,
-                        style: const pw.TextStyle(
-                          color: tekstDonker,
-                          fontSize: technischeTekstGrootte,
-                        ),
-                      ),
-                      if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
-                        pw.TextSpan(text: ': '),
-                      if (regel.waarde.isNotEmpty)
-                        pw.TextSpan(
-                          text: regel.waarde,
-                          style: const pw.TextStyle(
-                            color: tekstDonker,
-                            fontSize: technischeTekstGrootte,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+            child: pw.Text(
+              regelTekst,
+              maxLines: aantalRegels,
+              style: const pw.TextStyle(
+                color: tekstDonker,
+                fontSize: technischeTekstGrootte,
+                lineSpacing: 1.2,
               ),
             ),
           ),
@@ -407,6 +389,44 @@ class OffertePdfArtikelLayoutHelper {
         ],
       ),
     );
+  }
+
+  static String _technischeRegelTekst(OffertePdfTechnischeRegel regel) {
+    final titel = regel.titel.trim();
+    final waarde = regel.waarde.trim();
+
+    if (titel.isEmpty) return waarde;
+    if (waarde.isEmpty) return titel;
+
+    return '$titel: $waarde';
+  }
+
+  static int _technischeRegelAantalRegels(
+    OffertePdfTechnischeRegel regel, {
+    required bool toonPrijsZone,
+  }) {
+    final tekst = _technischeRegelTekst(regel);
+    final tekensPerRegel = toonPrijsZone ? 38 : 50;
+
+    return _geschatAantalRegels(
+      tekst,
+      tekensPerRegel: tekensPerRegel,
+    ).clamp(1, 3).toInt();
+  }
+
+  static double _technischeRegelHoogteVoor(
+    OffertePdfTechnischeRegel regel, {
+    required bool toonPrijsZone,
+  }) {
+    final aantalRegels = _technischeRegelAantalRegels(
+      regel,
+      toonPrijsZone: toonPrijsZone,
+    );
+
+    if (aantalRegels <= 1) return technischeRegelHoogte;
+    if (aantalRegels == 2) return 25;
+
+    return 35;
   }
 
   static String _opEenRegel(String waarde) {

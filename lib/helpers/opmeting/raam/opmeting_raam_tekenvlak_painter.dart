@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAATVOERING-LICHTGRIJS-20260726
 // THIMACO-CONTROLE: VASTE-MAATVOERING-AFSTANDEN-20260722
 import 'package:flutter/material.dart';
 
@@ -124,7 +125,13 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
   final double vasteMaatLijndikte;
 
   static const Color _maatKleur = Color(0xFF111827);
+  static const Color _offerteMaatKleur = Color(0xFF9CA3AF);
   static const double _kwartDraai = 1.5707963267948966;
+
+  Color get _effectieveMaatKleur {
+    return vasteMaatvoering ? _offerteMaatKleur : _maatKleur;
+  }
+
   static const double _standaardVasteMaatLettergrootte = 11.0;
 
   double get _veiligeMaatvoeringSchaalCorrectie {
@@ -1425,7 +1432,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       // tussen de deur/kadertekening en de gewone totale breedtemaat.
       final y = buitenKader.bottom + _maatRuimte(14);
       final maatLijnPaint = Paint()
-        ..color = _maatKleur
+        ..color = _effectieveMaatKleur
         ..strokeWidth = _maatLijndikte(0.8)
         ..style = PaintingStyle.stroke;
 
@@ -1574,7 +1581,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required int breedteMm,
   }) {
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.65)
       ..style = PaintingStyle.stroke;
 
@@ -1607,7 +1614,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required int hoogteMm,
   }) {
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.65)
       ..style = PaintingStyle.stroke;
 
@@ -1873,7 +1880,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       ..sort();
 
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.75)
       ..style = PaintingStyle.stroke;
 
@@ -1917,7 +1924,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
       ..sort();
 
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.75)
       ..style = PaintingStyle.stroke;
 
@@ -1957,7 +1964,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required int maatBreedteMm,
   }) {
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.9)
       ..style = PaintingStyle.stroke;
 
@@ -1990,7 +1997,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required int maatHoogteMm,
   }) {
     final hulplijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(0.9)
       ..style = PaintingStyle.stroke;
 
@@ -2025,7 +2032,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required bool buitenmaat,
   }) {
     final lijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(buitenmaat ? 1.0 : 0.8)
       ..style = PaintingStyle.stroke;
 
@@ -2052,7 +2059,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     );
 
     final style = TextStyle(
-      color: _maatKleur,
+      color: _effectieveMaatKleur,
       fontSize: _maatLettergrootteVoor(buitenmaat),
       fontWeight: vasteMaatvoering
           ? FontWeight.w400
@@ -2091,7 +2098,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     required bool buitenmaat,
   }) {
     final lijnPaint = Paint()
-      ..color = _maatKleur
+      ..color = _effectieveMaatKleur
       ..strokeWidth = _maatLijndikte(buitenmaat ? 1.0 : 0.8)
       ..style = PaintingStyle.stroke;
 
@@ -2118,7 +2125,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     );
 
     final style = TextStyle(
-      color: _maatKleur,
+      color: _effectieveMaatKleur,
       fontSize: _maatLettergrootteVoor(buitenmaat),
       fontWeight: vasteMaatvoering
           ? FontWeight.w400
@@ -2168,7 +2175,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = _maatKleur
+        ..color = _effectieveMaatKleur
         ..style = PaintingStyle.fill,
     );
   }
@@ -2193,7 +2200,7 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = _maatKleur
+        ..color = _effectieveMaatKleur
         ..style = PaintingStyle.fill,
     );
   }

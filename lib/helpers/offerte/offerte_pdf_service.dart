@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: CENTRALE-OFFERTE-PDF-ARTIKELROUTER-20260726
+// THIMACO-CONTROLE: VOORBLAD-ONDERBLOK-VAST-ONDERAAN-EN-ARTIKELSPATIE-20260726
+// THIMACO-CONTROLE: VOORBLAD-WELKOM-TERUG-ONDERAAN-20260726
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -5,9 +8,7 @@ import 'package:printing/printing.dart';
 
 import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
-import 'offerte_pdf_inzethor_widget.dart';
-import 'offerte_pdf_pvc_raam_widget.dart';
-import 'offerte_pdf_vliegendeur_widget.dart';
+import 'offerte_pdf_artikel_router.dart';
 import 'offerte_pdf_model.dart';
 
 class OffertePdfService {
@@ -25,7 +26,7 @@ class OffertePdfService {
   static const double _detailPaddingBoven = 27;
   static const double _detailPaddingOnder = 22;
   static const double _artikelKopHoogte = 32;
-  static const double _ruimteTussenArtikels = 10;
+  static const double _ruimteTussenArtikels = 16;
   static const double _paginaVoetReserve = 36;
   static const double _basisEindBerekeningReserve = 106;
 
@@ -46,6 +47,7 @@ class OffertePdfService {
         logoData.lengthInBytes,
       ),
     );
+
     final toonzaal = pw.MemoryImage(
       toonzaalData.buffer.asUint8List(
         toonzaalData.offsetInBytes,
@@ -79,12 +81,14 @@ class OffertePdfService {
     );
 
     var paginaNummer = 2;
+
     for (
       var detailIndex = 0;
       detailIndex < detailPaginas.length;
       detailIndex++
     ) {
       final pagina = detailPaginas[detailIndex];
+
       document.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -100,6 +104,7 @@ class OffertePdfService {
           ),
         ),
       );
+
       paginaNummer++;
     }
 
@@ -122,6 +127,7 @@ class OffertePdfService {
           ),
         ),
       );
+
       paginaNummer++;
     }
 
@@ -177,36 +183,49 @@ class OffertePdfService {
                 pw.Expanded(
                   child: pw.Padding(
                     padding: const pw.EdgeInsets.symmetric(horizontal: 42),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                    child: pw.Stack(
+                      fit: pw.StackFit.expand,
                       children: <pw.Widget>[
-                        pw.Row(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: <pw.Widget>[
-                            pw.Expanded(
-                              flex: 10,
-                              child: _bouwBedrijfsblok(logo),
-                            ),
-                            pw.SizedBox(width: 26),
-                            pw.Expanded(
-                              flex: 11,
-                              child: pw.Column(
-                                crossAxisAlignment:
-                                    pw.CrossAxisAlignment.stretch,
-                                children: <pw.Widget>[
-                                  _bouwKlantblok(data),
-                                  if (data.heeftProjectKleuren) ...<pw.Widget>[
-                                    pw.SizedBox(height: 10),
-                                    _bouwProjectKleurenBlok(data),
-                                  ],
-                                ],
+                        pw.Align(
+                          alignment: pw.Alignment.topCenter,
+                          child: pw.Row(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: <pw.Widget>[
+                              pw.Expanded(
+                                flex: 10,
+                                child: _bouwBedrijfsblok(logo),
                               ),
-                            ),
-                          ],
+                              pw.SizedBox(width: 26),
+                              pw.Expanded(
+                                flex: 11,
+                                child: pw.Column(
+                                  crossAxisAlignment:
+                                      pw.CrossAxisAlignment.stretch,
+                                  children: <pw.Widget>[
+                                    _bouwKlantblok(data),
+                                    if (data
+                                        .heeftProjectKleuren) ...<pw.Widget>[
+                                      pw.SizedBox(height: 10),
+                                      _bouwProjectKleurenBlok(data),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        _bouwWelkomBlok(),
-                        pw.SizedBox(height: 24),
-                        _bouwVoetregel(),
+                        pw.Align(
+                          alignment: pw.Alignment.bottomCenter,
+                          child: pw.Column(
+                            mainAxisSize: pw.MainAxisSize.min,
+                            crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                            children: <pw.Widget>[
+                              _bouwWelkomBlok(),
+                              pw.SizedBox(height: 18),
+                              _bouwVoetregel(),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -486,7 +505,11 @@ class OffertePdfService {
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.stretch,
         children: <pw.Widget>[
-          for (var index = 0; index < pagina.artikels.length; index++) ...[
+          for (
+            var index = 0;
+            index < pagina.artikels.length;
+            index++
+          ) ...<pw.Widget>[
             if (index > 0) pw.SizedBox(height: _ruimteTussenArtikels),
             _bouwArtikelBlok(data, pagina.artikels[index]),
           ],
@@ -562,13 +585,18 @@ class OffertePdfService {
     bool? kortingToestaan,
   }) {
     final isOptie = artikel.positie.isOfferteOptie;
+
     final kortingToestaanEffectief = kortingToestaan ?? !isOptie;
+
     final positieOpties = data.positiePrijsOptiesVoor(artikel.positie);
+
     final artikelType = artikel.positie.formulierTypeLabel;
+
     final uitvoeringsRegels =
         OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(
           artikel.positie,
         );
+
     final artikelKopHoogte = _artikelKopHoogteVoor(artikel.positie);
 
     return pw.SizedBox(
@@ -590,7 +618,7 @@ class OffertePdfService {
                   children: <pw.Widget>[
                     pw.RichText(
                       text: pw.TextSpan(
-                        children: [
+                        children: <pw.InlineSpan>[
                           pw.TextSpan(
                             text: artikel.kopLabel,
                             style: pw.TextStyle(
@@ -658,31 +686,14 @@ class OffertePdfService {
               ],
             ),
           ),
-          if (artikel.positie.vasteInzethorData != null)
-            OffertePdfInzethorWidget.bouwPositie(
-              positie: artikel.positie,
-              kortingToestaan: kortingToestaanEffectief,
-              isOptie: isOptie,
-              btwPercentage: data.btwPercentage,
-              btwRegelLabel: data.btwRegelLabel,
-            )
-          else if (artikel.positie.vliegendeurData != null)
-            OffertePdfVliegendeurWidget.bouwPositie(
-              positie: artikel.positie,
-              kortingToestaan: kortingToestaanEffectief,
-              isOptie: isOptie,
-              btwPercentage: data.btwPercentage,
-              btwRegelLabel: data.btwRegelLabel,
-            )
-          else
-            OffertePdfPvcRaamWidget.bouwPositie(
-              positie: artikel.positie,
-              isOptie: isOptie,
-              kortingToestaan: kortingToestaanEffectief,
-              btwPercentage: data.btwPercentage,
-              btwRegelLabel: data.btwRegelLabel,
-              tekeningPng: data.pvcRaamTekeningVoor(artikel.positie),
-            ),
+          OffertePdfArtikelRouter.bouwPositie(
+            positie: artikel.positie,
+            kortingToestaan: kortingToestaanEffectief,
+            isOptie: isOptie,
+            btwPercentage: data.btwPercentage,
+            btwRegelLabel: data.btwRegelLabel,
+            pvcRaamTekeningPng: data.pvcRaamTekeningVoor(artikel.positie),
+          ),
           if (positieOpties.isNotEmpty) ...<pw.Widget>[
             pw.SizedBox(height: 8),
             _bouwPositiePrijsOpties(positieOpties),
@@ -756,6 +767,7 @@ class OffertePdfService {
         _detailPaddingBoven -
         _detailPaddingOnder -
         _paginaVoetReserve;
+
     final eindBerekeningReserve = _berekenEindBerekeningReserve(data);
 
     // De Vliegendeur heeft geen prijsadapter. Voeg haar daarom nogmaals
@@ -763,6 +775,7 @@ class OffertePdfService {
     // Zo kan een toekomstige prijsfilter dit artikel nooit uit de PDF halen.
     String positieSleutel(OpmetingOverzichtRaamItem positie) {
       final id = positie.id.trim();
+
       return id.isNotEmpty ? 'id:$id' : 'object:${identityHashCode(positie)}';
     }
 
@@ -770,6 +783,7 @@ class OffertePdfService {
       ...data.offertePositiesVoorWeergave.map(positieSleutel),
       ...data.vliegendeurPositiesVoorWeergave.map(positieSleutel),
     };
+
     final zichtbarePosities = data.posities
         .where(
           (positie) => toegestaneSleutels.contains(positieSleutel(positie)),
@@ -803,6 +817,7 @@ class OffertePdfService {
       data,
       paginas.last.artikels,
     );
+
     if (laatstePaginaHoogte + eindBerekeningReserve > beschikbareHoogte) {
       paginas.add(
         _OfferteDetailPagina(artikels: const <_GenummerdeOffertePositie>[]),
@@ -850,9 +865,14 @@ class OffertePdfService {
     var gebruikteHoogte = 0.0;
 
     void bewaarHuidigePagina() {
-      if (huidigeArtikels.isEmpty) return;
+      if (huidigeArtikels.isEmpty) {
+        return;
+      }
+
       paginas.add(_OfferteDetailPagina(artikels: huidigeArtikels));
+
       huidigeArtikels = <_GenummerdeOffertePositie>[];
+
       gebruikteHoogte = 0.0;
     }
 
@@ -862,6 +882,7 @@ class OffertePdfService {
         artikel.positie,
         kortingToestaan: kortingToestaan,
       );
+
       final tussenruimte = huidigeArtikels.isEmpty
           ? 0.0
           : _ruimteTussenArtikels;
@@ -874,11 +895,13 @@ class OffertePdfService {
       if (huidigeArtikels.isNotEmpty) {
         gebruikteHoogte += _ruimteTussenArtikels;
       }
+
       huidigeArtikels.add(artikel);
       gebruikteHoogte += artikelHoogte;
     }
 
     bewaarHuidigePagina();
+
     return paginas;
   }
 
@@ -888,32 +911,20 @@ class OffertePdfService {
     bool? kortingToestaan,
   }) {
     final isOptie = positie.isOfferteOptie;
+
     final kortingToestaanEffectief = kortingToestaan ?? !isOptie;
+
     final positieOpties = data.positiePrijsOptiesVoor(positie);
+
     final optieRegelsHoogte = positieOpties.isEmpty
         ? 0.0
         : 32.0 + (positieOpties.length * 22.0) + 8.0;
 
-    final double inhoudHoogte;
-    if (positie.vasteInzethorData != null) {
-      inhoudHoogte = OffertePdfInzethorWidget.berekenTotalePositieHoogte(
-        positie,
-        kortingToestaan: kortingToestaanEffectief,
-        isOptie: isOptie,
-      );
-    } else if (positie.vliegendeurData != null) {
-      inhoudHoogte = OffertePdfVliegendeurWidget.berekenTotalePositieHoogte(
-        positie,
-        kortingToestaan: kortingToestaanEffectief,
-        isOptie: isOptie,
-      );
-    } else {
-      inhoudHoogte = OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(
-        positie,
-        kortingToestaan: kortingToestaanEffectief,
-        isOptie: isOptie,
-      );
-    }
+    final inhoudHoogte = OffertePdfArtikelRouter.berekenTotalePositieHoogte(
+      positie: positie,
+      kortingToestaan: kortingToestaanEffectief,
+      isOptie: isOptie,
+    );
 
     return _artikelKopHoogteVoor(positie) + inhoudHoogte + optieRegelsHoogte;
   }
@@ -921,9 +932,11 @@ class OffertePdfService {
   static double _artikelKopHoogteVoor(OpmetingOverzichtRaamItem positie) {
     final uitvoeringsRegels =
         OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(positie);
+
     final extraRegels = uitvoeringsRegels.length > 1
         ? uitvoeringsRegels.length - 1
         : 0;
+
     final optieMeldingHoogte = positie.isOfferteOptie ? 10.0 : 0.0;
 
     return _artikelKopHoogte + optieMeldingHoogte + extraRegels * 9.5;
@@ -933,13 +946,20 @@ class OffertePdfService {
     OfferteDocumentData data,
     List<_GenummerdeOffertePositie> artikels,
   ) {
-    if (artikels.isEmpty) return 0;
+    if (artikels.isEmpty) {
+      return 0;
+    }
 
     var hoogte = 0.0;
+
     for (var index = 0; index < artikels.length; index++) {
-      if (index > 0) hoogte += _ruimteTussenArtikels;
+      if (index > 0) {
+        hoogte += _ruimteTussenArtikels;
+      }
+
       hoogte += _berekenArtikelBlokHoogte(data, artikels[index].positie);
     }
+
     return hoogte;
   }
 
@@ -948,23 +968,32 @@ class OffertePdfService {
         data.afzonderlijkeProjectPrijsregelsVoorOfferte.length +
         data.projectOmschrijvingZonderPrijsRegelsVoorOfferte.length +
         data.algemeneArtikelPrijsregelsInbegrepenInOfferte.length;
+
     final aantalProjectOpties = data.lossePrijsOpties.length;
+
     var reserve = _basisEindBerekeningReserve;
-    if (data.kortingTotaalExclBtw > 0.0) reserve += 48.0;
+
+    if (data.kortingTotaalExclBtw > 0.0) {
+      reserve += 48.0;
+    }
+
     if (aantalProjectRegels > 0) {
       reserve += 38.0 + (aantalProjectRegels * 25.0);
     }
+
     if (aantalProjectOpties > 0) {
       reserve += 38.0 + (aantalProjectOpties * 24.0);
     }
+
     return reserve;
   }
 
   static pw.Widget _bouwProjectPrijsregels(OfferteDocumentData data) {
-    final projectRegels = [
+    final projectRegels = <dynamic>[
       ...data.projectOmschrijvingZonderPrijsRegelsVoorOfferte,
       ...data.afzonderlijkeProjectPrijsregelsVoorOfferte,
     ];
+
     final algemeneRegels = data.algemeneArtikelPrijsregelsInbegrepenInOfferte;
 
     return pw.Container(
@@ -1016,7 +1045,8 @@ class OffertePdfService {
                       ),
                     ),
                   ),
-                  if (projectRegels[index].toonAfzonderlijkePrijsOpOfferte) ...[
+                  if (projectRegels[index]
+                      .toonAfzonderlijkePrijsOpOfferte) ...<pw.Widget>[
                     pw.SizedBox(width: 18),
                     pw.Text(
                       _formatteerEuro(projectRegels[index].totaalExclBtw),
@@ -1121,6 +1151,7 @@ class OffertePdfService {
 
   static pw.Widget _bouwLossePrijsOpties(OfferteDocumentData data) {
     final opties = data.lossePrijsOpties;
+
     return pw.Container(
       decoration: pw.BoxDecoration(
         color: const PdfColor.fromInt(0xFFFFF7ED),
@@ -1218,21 +1249,29 @@ class OffertePdfService {
 
   static String _formatteerEuro(double waarde) {
     final veilig = waarde.isFinite ? waarde : 0.0;
+
     final delen = veilig.toStringAsFixed(2).split('.');
+
     final geheel = delen.first;
+
     final decimalen = delen.length > 1 ? delen[1] : '00';
+
     final negatief = geheel.startsWith('-');
+
     final cijfers = negatief ? geheel.substring(1) : geheel;
+
     final buffer = StringBuffer();
 
     for (var index = 0; index < cijfers.length; index++) {
       if (index > 0 && (cijfers.length - index) % 3 == 0) {
         buffer.write('.');
       }
+
       buffer.write(cijfers[index]);
     }
 
-    return '€ ${negatief ? '-' : ''}${buffer.toString()},$decimalen';
+    return '€ ${negatief ? '-' : ''}'
+        '${buffer.toString()},$decimalen';
   }
 
   static pw.Widget _bouwVoetregel() {
@@ -1282,7 +1321,9 @@ class OffertePdfService {
   static String _formatteerDatum(DateTime datum) {
     String twee(int waarde) => waarde.toString().padLeft(2, '0');
 
-    return '${twee(datum.day)}/${twee(datum.month)}/${datum.year}';
+    return '${twee(datum.day)}/'
+        '${twee(datum.month)}/'
+        '${datum.year}';
   }
 }
 

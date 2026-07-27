@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAATVOERING-KLEIN-FIJN-20260726
 // THIMACO-CONTROLE: OFFERTE-PVC-TEKENING-WITTE-RAND-AFGESNEDEN-20260726
 // THIMACO-CONTROLE: OFFERTE-PVC-MAATVOERING-GELIJK-INZETHOR-20260720
 import 'dart:typed_data';
@@ -25,10 +26,10 @@ class OffertePvcRaamTekeningService {
   // breedte verkleind. De doelmaten worden daarom vooraf vergroot. Na plaatsing
   // in de PDF zijn de pijlen, tekst en lijnen gelijk aan de vaste inzethor.
   static const double _offerteMaatvoeringFactor = 4.25;
-  static const double _offerteMaatPijlGrootte = 7.0 * _offerteMaatvoeringFactor;
+  static const double _offerteMaatPijlGrootte = 1.6 * _offerteMaatvoeringFactor;
   static const double _offerteMaatLettergrootte =
-      7.2 * _offerteMaatvoeringFactor;
-  static const double _offerteMaatLijndikte = 0.9 * _offerteMaatvoeringFactor;
+      6.2 * _offerteMaatvoeringFactor;
+  static const double _offerteMaatLijndikte = 0.18 * _offerteMaatvoeringFactor;
 
   // Een pixel wordt als inhoud beschouwd zodra hij voldoende afwijkt van de
   // volledig witte achtergrond. Zo blijven ook lichtgrijze maatlijnen en

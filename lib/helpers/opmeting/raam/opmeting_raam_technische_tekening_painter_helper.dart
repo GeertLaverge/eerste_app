@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: TECHNISCHE-ARCERING-SMALLE-VLAKKEN-20260726
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'opmeting_raam_keuzemenu_model.dart';
@@ -40,11 +43,23 @@ class OpmetingRaamTechnischeTekeningPainterHelper {
 
     canvas.save();
 
-    final clipRechthoek = rechthoek.deflate(1);
+    // Een vaste deflate van 1 pixel kan bij een zeer smal technisch vlak
+    // (bijvoorbeeld 10 mm na verschaling) een lege cliprechthoek opleveren.
+    // Wanneer dan niet wordt geclipt, lopen vooral diagonale patronen en
+    // kruisarceringen buiten hun eigen technische vlak door.
+    //
+    // Gebruik daarom een proportionele inset die nooit meer bedraagt dan
+    // twintig procent van de kleinste zijde. Ook extreem smalle vlakken
+    // behouden zo altijd een geldige clipzone.
+    final kleinsteZijde = math.min(rechthoek.width, rechthoek.height);
+    final clipInset = math.min(1.0, math.max(0.0, kleinsteZijde * 0.2));
+    final clipRechthoek = rechthoek.deflate(clipInset);
 
-    if (clipRechthoek.width > 0 && clipRechthoek.height > 0) {
-      canvas.clipRect(clipRechthoek);
-    }
+    canvas.clipRect(
+      clipRechthoek.width > 0 && clipRechthoek.height > 0
+          ? clipRechthoek
+          : rechthoek,
+    );
 
     if (instelling.inhoudType == OpmetingRaamTechnischeInhoudType.tekst) {
       _tekenTekst(

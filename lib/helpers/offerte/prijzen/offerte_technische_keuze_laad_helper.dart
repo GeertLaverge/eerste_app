@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-PRIJSKEUZES-BOOMVOLGORDE-20260726
 // THIMACO-CONTROLE: PRIJSKEUZE-GEBRUIKT-EFFECTIEVE-UITSCHRIJFTEKST-20260720
 import '../../app_storage.dart';
 import '../../opmeting/raam/opmeting_raam_keuzemenu_model.dart';
@@ -8,27 +9,90 @@ import 'offerte_technische_keuze_ref.dart';
 class OfferteTechnischeKeuzeLaadHelper {
   const OfferteTechnischeKeuzeLaadHelper._();
 
+  /// Bestaande laadroute voor dropdowns en andere schermen.
+  ///
+  /// Het resultaat blijft alfabetisch gesorteerd, zodat bestaande gebruikers
+  /// van deze helper exact hetzelfde gedrag behouden.
   static Future<List<OfferteTechnischeKeuzeRef>> laadVoorFormulierType(
+    String formulierType,
+  ) async {
+    final gegevens = await _laadGegevens(formulierType);
+
+    if (gegevens == null) {
+      return const <OfferteTechnischeKeuzeRef>[];
+    }
+
+    return bouwUitKeuzemenus(
+      formulierType: gegevens.formulierType,
+      menus: gegevens.menus,
+    );
+  }
+
+  /// Aanvullende laadroute voor de ingeklapte technische prijsboom.
+  ///
+  /// De volgorde van de menu's, submenu's en keuzes blijft gelijk aan de
+  /// ingestelde volgorde in “Nieuwe technische keuze”.
+  static Future<List<OfferteTechnischeKeuzeRef>>
+  laadVoorFormulierTypeInBoomVolgorde(String formulierType) async {
+    final gegevens = await _laadGegevens(formulierType);
+
+    if (gegevens == null) {
+      return const <OfferteTechnischeKeuzeRef>[];
+    }
+
+    return bouwUitKeuzemenusInBoomVolgorde(
+      formulierType: gegevens.formulierType,
+      menus: gegevens.menus,
+    );
+  }
+
+  static List<OfferteTechnischeKeuzeRef> bouwUitKeuzemenus({
+    required String formulierType,
+    required List<OpmetingRaamKeuzeMenu> menus,
+  }) {
+    final resultaat =
+        _bouwUitKeuzemenus(
+          formulierType: formulierType,
+          menus: menus,
+        ).toList(growable: false)..sort((eerste, tweede) {
+          return _zichtbaarLabel(
+            eerste,
+          ).toLowerCase().compareTo(_zichtbaarLabel(tweede).toLowerCase());
+        });
+
+    return List<OfferteTechnischeKeuzeRef>.unmodifiable(resultaat);
+  }
+
+  static List<OfferteTechnischeKeuzeRef> bouwUitKeuzemenusInBoomVolgorde({
+    required String formulierType,
+    required List<OpmetingRaamKeuzeMenu> menus,
+  }) {
+    return List<OfferteTechnischeKeuzeRef>.unmodifiable(
+      _bouwUitKeuzemenus(formulierType: formulierType, menus: menus),
+    );
+  }
+
+  static Future<_TechnischeKeuzeLaadGegevens?> _laadGegevens(
     String formulierType,
   ) async {
     final canoniekFormulierType = _canoniekFormulierType(formulierType);
 
     if (canoniekFormulierType.isEmpty ||
         canoniekFormulierType == 'vasteInzethor') {
-      return const <OfferteTechnischeKeuzeRef>[];
+      return null;
     }
 
     final menus = await AppStorage.laadOpmetingRaamKeuzemenusVoorFormulier(
       canoniekFormulierType,
     );
 
-    return bouwUitKeuzemenus(
+    return _TechnischeKeuzeLaadGegevens(
       formulierType: canoniekFormulierType,
       menus: menus,
     );
   }
 
-  static List<OfferteTechnischeKeuzeRef> bouwUitKeuzemenus({
+  static List<OfferteTechnischeKeuzeRef> _bouwUitKeuzemenus({
     required String formulierType,
     required List<OpmetingRaamKeuzeMenu> menus,
   }) {
@@ -57,14 +121,7 @@ class OfferteTechnischeKeuzeLaadHelper {
       }
     }
 
-    final resultaat = resultaatPerSleutel.values.toList(growable: false)
-      ..sort((eerste, tweede) {
-        return _zichtbaarLabel(
-          eerste,
-        ).toLowerCase().compareTo(_zichtbaarLabel(tweede).toLowerCase());
-      });
-
-    return List<OfferteTechnischeKeuzeRef>.unmodifiable(resultaat);
+    return resultaatPerSleutel.values.toList(growable: false);
   }
 
   static void _verzamelKeuzes({
@@ -214,4 +271,14 @@ class OfferteTechnischeKeuzeLaadHelper {
       _ => '',
     };
   }
+}
+
+class _TechnischeKeuzeLaadGegevens {
+  const _TechnischeKeuzeLaadGegevens({
+    required this.formulierType,
+    required this.menus,
+  });
+
+  final String formulierType;
+  final List<OpmetingRaamKeuzeMenu> menus;
 }
