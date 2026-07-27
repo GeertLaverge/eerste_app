@@ -161,7 +161,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                   alignment: Alignment.centerLeft,
                   child: Text(
                     widget.menuBeheerOntgrendeld
-                        ? 'Beheer de technische titels via “Titels beheren”.'
+                        ? 'Beheer de technische titels via “Keuze toevoegen..”.'
                         : 'Nog geen technische keuzes toegevoegd.',
                     style: const TextStyle(color: tekstGrijs, fontSize: 11.5),
                   ),
@@ -273,7 +273,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
           ),
           icon: const Icon(Icons.add_circle_outline, size: 18),
           label: const Text(
-            'Titels beheren',
+            'Keuze toevoegen..',
             style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
           ),
         ),

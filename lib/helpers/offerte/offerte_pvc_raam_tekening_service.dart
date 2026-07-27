@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: OFFERTE-TEKENING-VULT-PNG-MAATVOERING-VAST-20260727
 // THIMACO-CONTROLE: OFFERTE-MAATVOERING-KLEIN-FIJN-20260726
 // THIMACO-CONTROLE: OFFERTE-PVC-TEKENING-WITTE-RAND-AFGESNEDEN-20260726
 // THIMACO-CONTROLE: OFFERTE-PVC-MAATVOERING-GELIJK-INZETHOR-20260720
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -13,33 +15,32 @@ import 'prijzen/offerte_artikel_prijs_koppeling_service.dart';
 /// Maakt voor de offerte een PNG van exact dezelfde algemene raam- of
 /// deurtekening die op het overzichtsformulier wordt gebruikt.
 ///
-/// Hierdoor hoeft de PDF geen tweede, afwijkende tekenlogica te onderhouden.
-/// T-stijlen, vleugels, vullingen, kleinhouten, deurpanelen en technische
-/// symbolen volgen automatisch de bestaande overzichtstekening.
+/// De eigenlijke tekening wordt binnen de vaste PNG zo groot mogelijk gezet.
+/// De maatpijlen, maattekst en maatlijnen worden vóór die vergroting omgekeerd
+/// gecorrigeerd. Daardoor vullen raam en deur het tekenvlak, terwijl de
+/// maatvoering klein en onafhankelijk van de raamafmetingen blijft.
 class OffertePvcRaamTekeningService {
   const OffertePvcRaamTekeningService._();
 
   static const Size _logischeGrootte = Size(990, 600);
   static const double _pixelRatio = 2;
 
-  // De PNG wordt in de offerte tot ongeveer een kwart van zijn logische
-  // breedte verkleind. De doelmaten worden daarom vooraf vergroot. Na plaatsing
-  // in de PDF zijn de pijlen, tekst en lijnen gelijk aan de vaste inzethor.
+  // De vaste PDF-verkleining wordt vooraf gecompenseerd. Deze basismaten zijn
+  // dezelfde kleine, leesbare maatvoering als voorheen.
   static const double _offerteMaatvoeringFactor = 4.25;
   static const double _offerteMaatPijlGrootte = 1.6 * _offerteMaatvoeringFactor;
   static const double _offerteMaatLettergrootte =
       6.2 * _offerteMaatvoeringFactor;
   static const double _offerteMaatLijndikte = 0.18 * _offerteMaatvoeringFactor;
 
+  // Kleine marge rond de volledige tekening, inclusief maatvoering. De PDF
+  // voegt zelf daarnaast nog zijn normale binnenmarge toe.
+  static const double _doelMargeLogisch = 8;
+
   // Een pixel wordt als inhoud beschouwd zodra hij voldoende afwijkt van de
   // volledig witte achtergrond. Zo blijven ook lichtgrijze maatlijnen en
   // technische vlakken behouden.
   static const int _witteRandDrempel = 252;
-
-  // Kleine veiligheidsmarge rond de gevonden tekening, uitgedrukt in logische
-  // pixels. De uniforme PDF-marge wordt afzonderlijk door de artikel-layout
-  // toegepast.
-  static const double _uitsnijVeiligheidsmarge = 4;
 
   static Future<Map<String, Uint8List>> maakTekeningen(
     Iterable<OpmetingOverzichtRaamItem> posities,
@@ -69,56 +70,106 @@ class OffertePvcRaamTekeningService {
   static Future<Uint8List?> _maakTekening(
     OpmetingOverzichtRaamItem positie,
   ) async {
-    ui.Image? volledigeAfbeelding;
+    ui.Image? proefAfbeelding;
+    ui.Image? definitieveAfbeelding;
 
     try {
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
+      // Eerste render: bepaal hoeveel de eigenlijke tekening binnen de vaste
+      // 990 x 600 PNG kan worden vergroot.
+      proefAfbeelding = await _renderVolledigeAfbeelding(
+        positie: positie,
+        maatvoeringCorrectie: 1,
+      );
+      final proefBegrenzing = await _zoekTekeningBegrenzing(proefAfbeelding);
 
-      canvas.scale(_pixelRatio, _pixelRatio);
-      canvas.drawRect(
-        Offset.zero & _logischeGrootte,
-        Paint()..color = Colors.white,
+      if (proefBegrenzing == null) {
+        return await _encodeerPng(proefAfbeelding);
+      }
+
+      final geschatteVergroting = _berekenVulschaal(
+        afbeelding: proefAfbeelding,
+        begrenzing: proefBegrenzing,
       );
 
-      final painter = OpmetingOverzichtTekening(
-        item: positie,
-        toonAchtergrondRaster: false,
-        maatPijlGrootte: _offerteMaatPijlGrootte,
-        maatLettergrootte: _offerteMaatLettergrootte,
-        maatLijndikte: _offerteMaatLijndikte,
+      // Tweede render: verklein uitsluitend de maatvoering vooraf met exact
+      // dezelfde factor waarmee de volledige tekening straks wordt vergroot.
+      // Het raam/deur wordt dus groot, maar pijlen en tekst blijven klein.
+      definitieveAfbeelding = await _renderVolledigeAfbeelding(
+        positie: positie,
+        maatvoeringCorrectie: geschatteVergroting,
       );
-      painter.paint(canvas, _logischeGrootte);
-
-      final picture = recorder.endRecording();
-      volledigeAfbeelding = await picture.toImage(
-        (_logischeGrootte.width * _pixelRatio).round(),
-        (_logischeGrootte.height * _pixelRatio).round(),
+      final definitieveBegrenzing = await _zoekTekeningBegrenzing(
+        definitieveAfbeelding,
       );
-      picture.dispose();
 
-      return await _maakBijgesnedenPng(volledigeAfbeelding);
+      if (definitieveBegrenzing == null) {
+        return await _encodeerPng(definitieveAfbeelding);
+      }
+
+      return await _maakVullendePng(
+        volledigeAfbeelding: definitieveAfbeelding,
+        begrenzing: definitieveBegrenzing,
+      );
     } catch (_) {
       // De PDF-widget heeft een veilige kadertekening als terugval.
       return null;
     } finally {
-      volledigeAfbeelding?.dispose();
+      proefAfbeelding?.dispose();
+      definitieveAfbeelding?.dispose();
     }
   }
 
-  static Future<Uint8List?> _maakBijgesnedenPng(
-    ui.Image volledigeAfbeelding,
+  static Future<ui.Image> _renderVolledigeAfbeelding({
+    required OpmetingOverzichtRaamItem positie,
+    required double maatvoeringCorrectie,
+  }) async {
+    final veiligeCorrectie =
+        maatvoeringCorrectie.isFinite && maatvoeringCorrectie > 0
+        ? maatvoeringCorrectie
+        : 1.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    canvas.scale(_pixelRatio, _pixelRatio);
+    canvas.drawRect(
+      Offset.zero & _logischeGrootte,
+      Paint()..color = Colors.white,
+    );
+
+    final painter = OpmetingOverzichtTekening(
+      item: positie,
+      toonAchtergrondRaster: false,
+      maatPijlGrootte: _offerteMaatPijlGrootte / veiligeCorrectie,
+      maatLettergrootte: _offerteMaatLettergrootte / veiligeCorrectie,
+      maatLijndikte: _offerteMaatLijndikte / veiligeCorrectie,
+    );
+    painter.paint(canvas, _logischeGrootte);
+
+    final picture = recorder.endRecording();
+
+    try {
+      return await picture.toImage(
+        (_logischeGrootte.width * _pixelRatio).round(),
+        (_logischeGrootte.height * _pixelRatio).round(),
+      );
+    } finally {
+      picture.dispose();
+    }
+  }
+
+  static Future<_TekeningBegrenzing?> _zoekTekeningBegrenzing(
+    ui.Image afbeelding,
   ) async {
-    final ruweData = await volledigeAfbeelding.toByteData(
+    final ruweData = await afbeelding.toByteData(
       format: ui.ImageByteFormat.rawRgba,
     );
 
     if (ruweData == null) {
-      return _encodeerPng(volledigeAfbeelding);
+      return null;
     }
 
-    final breedte = volledigeAfbeelding.width;
-    final hoogte = volledigeAfbeelding.height;
+    final breedte = afbeelding.width;
+    final hoogte = afbeelding.height;
     final pixels = ruweData.buffer.asUint8List(
       ruweData.offsetInBytes,
       ruweData.lengthInBytes,
@@ -156,56 +207,83 @@ class OffertePvcRaamTekeningService {
     }
 
     if (maximumX < minimumX || maximumY < minimumY) {
-      return _encodeerPng(volledigeAfbeelding);
+      return null;
     }
 
-    final marge = (_uitsnijVeiligheidsmarge * _pixelRatio).round();
+    return _TekeningBegrenzing(
+      links: minimumX,
+      boven: minimumY,
+      rechts: maximumX,
+      onder: maximumY,
+    );
+  }
 
-    minimumX = (minimumX - marge).clamp(0, breedte - 1).toInt();
-    minimumY = (minimumY - marge).clamp(0, hoogte - 1).toInt();
-    maximumX = (maximumX + marge).clamp(0, breedte - 1).toInt();
-    maximumY = (maximumY + marge).clamp(0, hoogte - 1).toInt();
+  static double _berekenVulschaal({
+    required ui.Image afbeelding,
+    required _TekeningBegrenzing begrenzing,
+  }) {
+    final margePx = _doelMargeLogisch * _pixelRatio;
+    final beschikbareBreedte = math.max(
+      1.0,
+      afbeelding.width.toDouble() - 2 * margePx,
+    );
+    final beschikbareHoogte = math.max(
+      1.0,
+      afbeelding.height.toDouble() - 2 * margePx,
+    );
+    final schaal = math.min(
+      beschikbareBreedte / begrenzing.breedte,
+      beschikbareHoogte / begrenzing.hoogte,
+    );
 
-    final uitsnijBreedte = maximumX - minimumX + 1;
-    final uitsnijHoogte = maximumY - minimumY + 1;
-
-    if (uitsnijBreedte <= 1 || uitsnijHoogte <= 1) {
-      return _encodeerPng(volledigeAfbeelding);
+    if (!schaal.isFinite || schaal <= 0) {
+      return 1.0;
     }
+
+    // Extreme correcties zijn niet nodig en kunnen zeer dunne lijnen geven.
+    return schaal.clamp(0.5, 4.0).toDouble();
+  }
+
+  static Future<Uint8List?> _maakVullendePng({
+    required ui.Image volledigeAfbeelding,
+    required _TekeningBegrenzing begrenzing,
+  }) async {
+    final breedte = volledigeAfbeelding.width;
+    final hoogte = volledigeAfbeelding.height;
+    final schaal = _berekenVulschaal(
+      afbeelding: volledigeAfbeelding,
+      begrenzing: begrenzing,
+    );
+    final doelBreedte = begrenzing.breedte * schaal;
+    final doelHoogte = begrenzing.hoogte * schaal;
+    final doelLinks = (breedte - doelBreedte) / 2.0;
+    final doelBoven = (hoogte - doelHoogte) / 2.0;
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
 
     canvas.drawRect(
-      Rect.fromLTWH(0, 0, uitsnijBreedte.toDouble(), uitsnijHoogte.toDouble()),
+      Rect.fromLTWH(0, 0, breedte.toDouble(), hoogte.toDouble()),
       Paint()..color = Colors.white,
     );
 
     canvas.drawImageRect(
       volledigeAfbeelding,
-      Rect.fromLTWH(
-        minimumX.toDouble(),
-        minimumY.toDouble(),
-        uitsnijBreedte.toDouble(),
-        uitsnijHoogte.toDouble(),
-      ),
-      Rect.fromLTWH(0, 0, uitsnijBreedte.toDouble(), uitsnijHoogte.toDouble()),
+      begrenzing.rect,
+      Rect.fromLTWH(doelLinks, doelBoven, doelBreedte, doelHoogte),
       Paint()
         ..isAntiAlias = true
         ..filterQuality = FilterQuality.high,
     );
 
     final picture = recorder.endRecording();
-    final bijgesnedenAfbeelding = await picture.toImage(
-      uitsnijBreedte,
-      uitsnijHoogte,
-    );
+    final vullendeAfbeelding = await picture.toImage(breedte, hoogte);
     picture.dispose();
 
     try {
-      return await _encodeerPng(bijgesnedenAfbeelding);
+      return await _encodeerPng(vullendeAfbeelding);
     } finally {
-      bijgesnedenAfbeelding.dispose();
+      vullendeAfbeelding.dispose();
     }
   }
 
@@ -229,4 +307,24 @@ class OffertePvcRaamTekeningService {
 
     return data?.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
   }
+}
+
+class _TekeningBegrenzing {
+  const _TekeningBegrenzing({
+    required this.links,
+    required this.boven,
+    required this.rechts,
+    required this.onder,
+  });
+
+  final int links;
+  final int boven;
+  final int rechts;
+  final int onder;
+
+  double get breedte => (rechts - links + 1).toDouble();
+  double get hoogte => (onder - boven + 1).toDouble();
+
+  Rect get rect =>
+      Rect.fromLTWH(links.toDouble(), boven.toDouble(), breedte, hoogte);
 }

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OVERZICHT-ARTIKEL-OMSCHRIJVING-GELIJK-OFFERTE-20260727
 // THIMACO-CONTROLE: OVERZICHT-ARTIKEL-KAART-GEDEELDE-PRIJSOPBOUW-20260721
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +20,6 @@ import 'opmeting_overzicht_tekening.dart';
 
 class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   const OpmetingOverzichtArtikelKaart({
-    super.key,
     required this.item,
     required this.positieLabel,
     required this.berekenPrijzen,
@@ -81,6 +81,13 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
             _vliegendeurRegelsZonderAfmetingen(item.zichtbareTechnischeRegels),
           );
+    final uitvoeringsRegels =
+        OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(item);
+    final artikelOmschrijving = <String>[
+      item.formulierTypeLabel.trim(),
+      ...uitvoeringsRegels.map((regel) => regel.trim()),
+    ].where((regel) => regel.isNotEmpty).join('  -  ');
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -139,7 +146,27 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                   ),
                 ),
               ),
+              if (artikelOmschrijving.isNotEmpty) ...<Widget>[
+                const SizedBox(width: 10),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      artikelOmschrijving,
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w400,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               Expanded(
+                flex: 6,
                 child: Align(
                   alignment: Alignment.topRight,
                   child: Wrap(
@@ -172,9 +199,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                           onPressed: onKopieren,
                         ),
                         _ArtikelActieTekstKnop(
-                          tekst: item.isOfferteOptie
-                              ? 'optie wijzigen'
-                              : 'Groep in optie plaatsen',
+                          tekst: 'Groep in optie plaatsen',
                           onPressed: onOptieWijzigen,
                         ),
                         if (onNietRekenenWijzigen != null)
@@ -614,6 +639,68 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       }).toList(),
     );
   }
+
+  Widget _bouwTechnischeRijenNaastElkaar(
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _rand),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: List<Widget>.generate(technischeRegels.length, (index) {
+            final regel = technischeRegels[index];
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+              decoration: BoxDecoration(
+                border: index == technischeRegels.length - 1
+                    ? null
+                    : const Border(
+                        bottom: BorderSide(color: _rand, width: 0.8),
+                      ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 132,
+                    child: Text(
+                      regel.titel,
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      regel.waarde,
+                      textAlign: TextAlign.left,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
 }
 
 class _ArtikelActieTekstKnop extends StatelessWidget {
@@ -733,6 +820,7 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   @override

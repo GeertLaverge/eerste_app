@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: IPAD-ROTATIE-OVERZICHT-SNAPSHOT-NA-SCHAAL-20260727
+// THIMACO-CONTROLE: SCHUIFRAAM-ZIJKADERS-LOKALE-GEOMETRIE-20260726
 // THIMACO-CONTROLE: KADERLOKALE-DATA-ROTATIE-EN-HEROPENEN-20260722
 import 'dart:async';
 
@@ -1104,6 +1106,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
     if (resultaat == null) {
       _schaalController.bevestigWijziging(wijziging);
+
+      // Ook zonder schaalbare tekenonderdelen moet na een rotatie nog één
+      // nieuwe opbouw volgen. Zo wordt de overzichtsmomentopname met de
+      // definitieve tekenvlakgrootte bewaard en nooit met een tussenstand.
+      setState(() {});
       return;
     }
 
@@ -2221,11 +2228,20 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     required Size size,
     required String kaderId,
   }) {
-    if (widget.schuifraamSamenstelling?.isGeldig == true) {
-      return _bepaalVulvlakken(size);
-    }
-
     final samenstelling = _bruikbareKaderSamenstelling;
+    final schuifraamSamenstelling = widget.schuifraamSamenstelling;
+
+    if (schuifraamSamenstelling?.isGeldig == true) {
+      if (samenstelling == null || samenstelling.kaders.isEmpty) {
+        return _bepaalVulvlakken(size);
+      }
+
+      final hoofdKaderId = samenstelling.kaders.first.id;
+
+      if (kaderId == hoofdKaderId) {
+        return _bepaalVulvlakken(size);
+      }
+    }
 
     if (samenstelling == null) {
       return _bepaalVulvlakken(size);
@@ -6226,6 +6242,12 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   Widget _bouwTekenvlakInhoud(Size size) {
+    final vorigeTekenvlakGrootte = _actueleTekenvlakGrootte();
+    final tekenvlakGrootteIsGewijzigd =
+        vorigeTekenvlakGrootte != null &&
+        ((vorigeTekenvlakGrootte.width - size.width).abs() > 0.5 ||
+            (vorigeTekenvlakGrootte.height - size.height).abs() > 0.5);
+
     _registreerTekenvlakGrootte(size);
     _synchroniseerSchuifraamStructuur(size);
 
@@ -6267,15 +6289,23 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       kleinhouten: _kleinhouten,
     );
 
-    _meldOverzichtTekeningGewijzigd(
-      tekenvlakGrootte: size,
-      vulvlakken: vulvlakken,
-      vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
-      tStijlenPerKader: tStijlenPerKaderVoorWeergave,
-      vleugelsPerKader: vleugelsPerKaderVoorWeergave,
-      vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
-      kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
-    );
+    // Tijdens de eerste opbouw na een iPad-rotatie bevat `size` al de
+    // nieuwe tekenvlakgrootte, terwijl vleugels en andere kaderinhoud nog in
+    // de oude pixelcoördinaten kunnen staan. Bewaar die gemengde tussenstand
+    // nooit als overzichtsmomentopname. De schaalbewerking roept `setState`
+    // op; bij de daaropvolgende opbouw zijn grootte en coördinaten gelijk.
+    if (!tekenvlakGrootteIsGewijzigd &&
+        _schaalController.huidigeWijziging == null) {
+      _meldOverzichtTekeningGewijzigd(
+        tekenvlakGrootte: size,
+        vulvlakken: vulvlakken,
+        vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+        tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+        vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+        vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
+        kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+      );
+    }
 
     return OverlayPortal(
       controller: _zwevendeMenus.overlayController,

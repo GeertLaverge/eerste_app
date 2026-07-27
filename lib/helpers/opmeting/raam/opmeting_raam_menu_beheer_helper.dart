@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALLE-TITELS-OP-EEN-BLAD-BEHEREN-20260727
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
@@ -118,44 +119,12 @@ class OpmetingRaamMenuBeheerHelper {
       return null;
     }
 
-    final resultaat = await toonOpmetingRaamTechnischMenuDialoog(
+    return toonOpmetingRaamTechnischeMenusBeheerDialoog(
       context: context,
+      bestaandeMenus: keuzemenus,
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
       oplaadbareKeuzes: oplaadbareKeuzes,
     );
-
-    if (resultaat == null) {
-      return null;
-    }
-
-    final hoogsteVolgorde = keuzemenus.isEmpty
-        ? -1
-        : keuzemenus
-              .map((menu) => menu.volgorde)
-              .reduce((eerste, tweede) => eerste > tweede ? eerste : tweede);
-
-    final menuId = 'menu_${DateTime.now().microsecondsSinceEpoch}';
-
-    final basisMenu = OpmetingRaamKeuzeMenu.nieuw(
-      id: menuId,
-      titel: resultaat.titel,
-      volgorde: hoogsteVolgorde + 1,
-    );
-
-    final nieuweItems = _itemsVoorOpslagVanResultaat(resultaat);
-    final nieuweOpties = _optiesVanItems(
-      menuId: menuId,
-      geenOptie: basisMenu.geenOptie,
-      items: nieuweItems,
-    );
-
-    final nieuwMenu = basisMenu.copyWith(
-      actief: resultaat.actief,
-      opties: nieuweOpties,
-      items: nieuweItems,
-    );
-
-    return <OpmetingRaamKeuzeMenu>[...keuzemenus, nieuwMenu];
   }
 
   static Future<List<OpmetingRaamKeuzeMenu>?> laadOntbrekendeTitel({

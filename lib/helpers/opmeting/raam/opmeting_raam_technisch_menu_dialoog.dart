@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: STAMBOOM-WISSEN-INKLAPPEN-KEUZE-KOPIEREN-20260727
 // THIMACO-CONTROLE: ALLE-TITELS-OP-EEN-BLAD-EN-STABIELE-INVOEGDIALOOG-20260727
 // THIMACO-CONTROLE: RUSTIGE-STAMBOOM-EERST-STRUCTUUR-DAN-INVULLEN-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
@@ -2287,6 +2288,8 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
   final ScrollController _scrollController = ScrollController();
 
   late List<OpmetingRaamKeuzeMenu> _menus;
+  final Set<String> _openMenuIds = <String>{};
+  final Set<String> _openSubmenuSleutels = <String>{};
   String? _foutmelding;
   int _dropdownVersie = 0;
 
@@ -2392,6 +2395,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
 
     setState(() {
       _menus = <OpmetingRaamKeuzeMenu>[..._menus, nieuwMenu];
+      _openMenuIds.add(menuId);
       _nieuweTitelController.clear();
       _foutmelding = null;
       _dropdownVersie++;
@@ -2424,6 +2428,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
 
     setState(() {
       _menus = <OpmetingRaamKeuzeMenu>[..._menus, opgeladenMenu];
+      _openMenuIds.add(menuId);
       _foutmelding = null;
       _dropdownVersie++;
     });
@@ -2504,6 +2509,255 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
     });
   }
 
+  String _submenuSleutel(String menuId, String submenuId) {
+    return '$menuId/$submenuId';
+  }
+
+  void _wisselMenuOpen(String menuId) {
+    setState(() {
+      if (_openMenuIds.remove(menuId)) {
+        _openSubmenuSleutels.removeWhere(
+          (sleutel) => sleutel.startsWith('$menuId/'),
+        );
+      } else {
+        _openMenuIds.add(menuId);
+      }
+    });
+  }
+
+  void _wisselSubmenuOpen(String sleutel) {
+    setState(() {
+      if (!_openSubmenuSleutels.remove(sleutel)) {
+        _openSubmenuSleutels.add(sleutel);
+      }
+    });
+  }
+
+  Future<bool> _bevestigWissen({
+    required String titel,
+    required String melding,
+  }) async {
+    const rood = Color(0xFFDC2626);
+
+    final bevestigen = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          titlePadding: EdgeInsets.zero,
+          title: Container(
+            padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+            decoration: const BoxDecoration(
+              color: _lichtGroen,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.delete_outline_rounded, color: rood, size: 21),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    titel,
+                    style: const TextStyle(
+                      color: _groen,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          content: Text(melding),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: rood,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('Verwijderen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    return bevestigen == true;
+  }
+
+  Future<void> _verwijderTitel(OpmetingRaamKeuzeMenu menu) async {
+    final bevestigen = await _bevestigWissen(
+      titel: 'Titel verwijderen?',
+      melding:
+          'De titel “${menu.titel}” en alle onderliggende submenu’s en keuzes worden verwijderd. Weet je dit zeker?',
+    );
+
+    if (!mounted || !bevestigen) {
+      return;
+    }
+
+    setState(() {
+      _menus = _normaliseerVolgorde(
+        _menus.where((huidigMenu) => huidigMenu.id != menu.id).toList(),
+      );
+      _openMenuIds.remove(menu.id);
+      _openSubmenuSleutels.removeWhere(
+        (sleutel) => sleutel.startsWith('${menu.id}/'),
+      );
+      _dropdownVersie++;
+      _foutmelding = null;
+    });
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> _verwijderItemUitBoom({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required String itemId,
+  }) {
+    final resultaat = <OpmetingRaamKeuzeMenuItem>[];
+
+    for (final item in items) {
+      if (item.id == itemId) {
+        continue;
+      }
+
+      if (item.isSubmenu && item.kinderen.isNotEmpty) {
+        resultaat.add(
+          item.copyWith(
+            kinderen: _verwijderItemUitBoom(
+              items: item.kinderen,
+              itemId: itemId,
+            ),
+          ),
+        );
+      } else {
+        resultaat.add(item);
+      }
+    }
+
+    return resultaat;
+  }
+
+  Future<void> _verwijderBoomItem({
+    required OpmetingRaamKeuzeMenu menu,
+    required OpmetingRaamKeuzeMenuItem item,
+  }) async {
+    final naam = item.weergaveNaam.trim().isEmpty
+        ? item.isSubmenu
+              ? 'Submenu'
+              : 'Keuze'
+        : item.weergaveNaam.trim();
+    final isSubmenu = item.isSubmenu;
+    final bevestigen = await _bevestigWissen(
+      titel: isSubmenu ? 'Submenu verwijderen?' : 'Keuze verwijderen?',
+      melding: isSubmenu
+          ? 'Het submenu “$naam” en alles wat eronder staat wordt verwijderd. Weet je dit zeker?'
+          : 'De keuze “$naam” wordt verwijderd. Weet je dit zeker?',
+    );
+
+    if (!mounted || !bevestigen) {
+      return;
+    }
+
+    final nieuweItems = _verwijderItemUitBoom(
+      items: _bewerkbareItems(menu),
+      itemId: item.id,
+    );
+    final bijgewerktMenu = _menuMetItems(menu, nieuweItems);
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == bijgewerktMenu.id ? bijgewerktMenu : huidigMenu;
+      }).toList();
+      _openSubmenuSleutels.remove(_submenuSleutel(menu.id, item.id));
+      _foutmelding = null;
+    });
+  }
+
+  OpmetingRaamKeuzeMenuItem? _maakKeuzeKopie(OpmetingRaamKeuzeMenuItem bron) {
+    final bronOptie = bron.optie;
+
+    if (!bron.isKeuze || bronOptie == null || bronOptie.isGeenKeuze) {
+      return null;
+    }
+
+    final nieuwId = _nieuwId('soort');
+    final bronNaam = bronOptie.naam.trim();
+    final nieuweNaam = bronNaam.isEmpty ? 'Keuze kopie' : '$bronNaam kopie';
+    final nieuweOptie = bronOptie.copyWith(id: nieuwId, naam: nieuweNaam);
+
+    return OpmetingRaamKeuzeMenuItem.keuze(
+      optie: nieuweOptie,
+      actief: bron.actief,
+    );
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> _voegKopieNaKeuzeToe({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required String bronItemId,
+    required OpmetingRaamKeuzeMenuItem kopie,
+  }) {
+    var toegevoegd = false;
+
+    List<OpmetingRaamKeuzeMenuItem> verwerk(
+      List<OpmetingRaamKeuzeMenuItem> lijst,
+    ) {
+      final resultaat = <OpmetingRaamKeuzeMenuItem>[];
+
+      for (final item in lijst) {
+        if (!toegevoegd && item.isSubmenu && item.kinderen.isNotEmpty) {
+          final nieuweKinderen = verwerk(item.kinderen);
+          resultaat.add(item.copyWith(kinderen: nieuweKinderen));
+        } else {
+          resultaat.add(item);
+        }
+
+        if (!toegevoegd && item.id == bronItemId) {
+          resultaat.add(kopie);
+          toegevoegd = true;
+        }
+      }
+
+      return resultaat;
+    }
+
+    return verwerk(items);
+  }
+
+  void _kopieerKeuze({
+    required OpmetingRaamKeuzeMenu menu,
+    required OpmetingRaamKeuzeMenuItem keuze,
+  }) {
+    final kopie = _maakKeuzeKopie(keuze);
+
+    if (kopie == null) {
+      return;
+    }
+
+    final nieuweItems = _voegKopieNaKeuzeToe(
+      items: _bewerkbareItems(menu),
+      bronItemId: keuze.id,
+      kopie: kopie,
+    );
+    final bijgewerktMenu = _menuMetItems(menu, nieuweItems);
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == bijgewerktMenu.id ? bijgewerktMenu : huidigMenu;
+      }).toList();
+      _openMenuIds.add(menu.id);
+      _foutmelding = null;
+    });
+  }
+
   Future<void> _toonToevoegenAan({
     required OpmetingRaamKeuzeMenu menu,
     String? ouderSubmenuId,
@@ -2547,7 +2801,20 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
             nieuwItem: nieuwItem,
           );
 
-    _vervangMenu(_menuMetItems(menu, nieuweItems));
+    final bijgewerktMenu = _menuMetItems(menu, nieuweItems);
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == bijgewerktMenu.id ? bijgewerktMenu : huidigMenu;
+      }).toList();
+      _openMenuIds.add(menu.id);
+
+      if (ouderSubmenuId != null) {
+        _openSubmenuSleutels.add(_submenuSleutel(menu.id, ouderSubmenuId));
+      }
+
+      _foutmelding = null;
+    });
   }
 
   List<OpmetingRaamKeuzeMenuItem> _voegKindToe({
@@ -2858,6 +3125,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
   Widget _bouwMenuKaart(OpmetingRaamKeuzeMenu menu) {
     final items = _bewerkbareItems(menu);
     final aantalKeuzes = _aantalKeuzes(items);
+    final open = _openMenuIds.contains(menu.id);
 
     return Container(
       decoration: BoxDecoration(
@@ -2871,66 +3139,100 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
         children: [
           Material(
             color: _lichtGroen,
-            child: InkWell(
-              onTap: () => _toonToevoegenAan(menu: menu, doelNaam: menu.titel),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.account_tree_outlined,
-                      color: _groen,
-                      size: 21,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            menu.titel.trim().isEmpty
-                                ? 'Technische titel'
-                                : menu.titel.trim(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(6, 5, 5, 5),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () => _wisselMenuOpen(menu.id),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(7, 7, 5, 7),
+                        child: Row(
+                          children: [
+                            Icon(
+                              open
+                                  ? Icons.keyboard_arrow_down_rounded
+                                  : Icons.keyboard_arrow_right_rounded,
                               color: _groen,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w900,
+                              size: 23,
                             ),
-                          ),
-                          Text(
-                            aantalKeuzes == 0
-                                ? 'Tik om een keuze of submenu toe te voegen'
-                                : '$aantalKeuzes ${aantalKeuzes == 1 ? 'keuze' : 'keuzes'} · tik om verder uit te bouwen',
-                            style: const TextStyle(
-                              color: Color(0xFF4B5563),
-                              fontSize: 11.3,
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(width: 3),
+                            const Icon(
+                              Icons.account_tree_outlined,
+                              color: _groen,
+                              size: 21,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    menu.titel.trim().isEmpty
+                                        ? 'Technische titel'
+                                        : menu.titel.trim(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _groen,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  Text(
+                                    aantalKeuzes == 0
+                                        ? 'Nog geen keuzes toegevoegd'
+                                        : '$aantalKeuzes ${aantalKeuzes == 1 ? 'keuze' : 'keuzes'}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF4B5563),
+                                      fontSize: 11.3,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const Icon(
+                  ),
+                  IconButton(
+                    tooltip: 'Keuze of submenu toevoegen',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () =>
+                        _toonToevoegenAan(menu: menu, doelNaam: menu.titel),
+                    icon: const Icon(
                       Icons.add_circle_outline,
                       color: _groen,
                       size: 20,
                     ),
-                  ],
-                ),
+                  ),
+                  IconButton(
+                    tooltip: 'Titel verwijderen',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _verwijderTitel(menu),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (items.isEmpty)
+          if (open && items.isEmpty)
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Deze stamboom is nog leeg.',
+                'Deze stamboom is nog leeg. Gebruik de plusknop om een keuze of submenu toe te voegen.',
                 style: TextStyle(color: _tekstGrijs, fontSize: 12),
               ),
-            )
-          else
+            ),
+          if (open && items.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(10, 10, 10, 4),
               child: Column(
@@ -2955,6 +3257,10 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
 
     final naam = item.weergaveNaam.trim();
     final volledig = _keuzeIsVolledig(item);
+    final submenuSleutel = _submenuSleutel(menu.id, item.id);
+    final open =
+        item.isSubmenu && _openSubmenuSleutels.contains(submenuSleutel);
+    final aantalOnderliggendeKeuzes = _aantalKeuzes(item.kinderen);
 
     return Padding(
       padding: EdgeInsets.only(left: diepte * 18.0, bottom: 7),
@@ -2964,88 +3270,140 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
           Material(
             color: item.isSubmenu ? const Color(0xFFFAFAFA) : Colors.white,
             borderRadius: BorderRadius.circular(10),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: item.isSubmenu
-                  ? () => _toonToevoegenAan(
-                      menu: menu,
-                      ouderSubmenuId: item.id,
-                      doelNaam: naam,
-                    )
-                  : () => _bewerkKeuze(menu, item),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(10, 8, 9, 8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _rand),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      item.isSubmenu
-                          ? Icons.account_tree_outlined
-                          : volledig
-                          ? Icons.check_circle
-                          : Icons.warning_amber_rounded,
-                      color: item.isSubmenu
-                          ? _groen
-                          : volledig
-                          ? _groen
-                          : _oranje,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            naam.isEmpty
-                                ? item.isSubmenu
-                                      ? 'Submenu'
-                                      : 'Keuze'
-                                : naam,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF111827),
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w900,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _rand),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: item.isSubmenu
+                          ? () => _wisselSubmenuOpen(submenuSleutel)
+                          : () => _bewerkKeuze(menu, item),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(9, 8, 5, 8),
+                        child: Row(
+                          children: [
+                            if (item.isSubmenu)
+                              Icon(
+                                open
+                                    ? Icons.keyboard_arrow_down_rounded
+                                    : Icons.keyboard_arrow_right_rounded,
+                                color: _groen,
+                                size: 21,
+                              ),
+                            if (item.isSubmenu) const SizedBox(width: 2),
+                            Icon(
+                              item.isSubmenu
+                                  ? Icons.account_tree_outlined
+                                  : volledig
+                                  ? Icons.check_circle
+                                  : Icons.warning_amber_rounded,
+                              color: item.isSubmenu
+                                  ? _groen
+                                  : volledig
+                                  ? _groen
+                                  : _oranje,
+                              size: 18,
                             ),
-                          ),
-                          Text(
-                            item.isSubmenu
-                                ? 'Tik om een keuze of submenu toe te voegen'
-                                : volledig
-                                ? 'Volledig ingevuld'
-                                : 'Nog niet ingevuld · tik om in te vullen',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: _tekstGrijs,
-                              fontSize: 10.8,
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    naam.isEmpty
+                                        ? item.isSubmenu
+                                              ? 'Submenu'
+                                              : 'Keuze'
+                                        : naam,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: Color(0xFF111827),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  Text(
+                                    item.isSubmenu
+                                        ? aantalOnderliggendeKeuzes == 0
+                                              ? 'Nog geen onderliggende keuzes'
+                                              : '$aantalOnderliggendeKeuzes ${aantalOnderliggendeKeuzes == 1 ? 'keuze' : 'keuzes'} onder dit submenu'
+                                        : volledig
+                                        ? 'Volledig ingevuld'
+                                        : 'Nog niet ingevuld · tik om in te vullen',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: _tekstGrijs,
+                                      fontSize: 10.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                    Icon(
-                      item.isSubmenu
-                          ? Icons.add_circle_outline
-                          : Icons.chevron_right_rounded,
-                      color: item.isSubmenu
-                          ? _groen
-                          : volledig
-                          ? _groen
-                          : _oranje,
-                      size: 20,
+                  ),
+                  if (item.isSubmenu)
+                    IconButton(
+                      tooltip: 'Keuze of submenu toevoegen',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => _toonToevoegenAan(
+                        menu: menu,
+                        ouderSubmenuId: item.id,
+                        doelNaam: naam,
+                      ),
+                      icon: const Icon(
+                        Icons.add_circle_outline,
+                        color: _groen,
+                        size: 19,
+                      ),
+                    )
+                  else
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: _groen,
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 6,
+                        ),
+                        minimumSize: const Size(0, 32),
+                      ),
+                      onPressed: () => _kopieerKeuze(menu: menu, keuze: item),
+                      icon: const Icon(Icons.content_copy_rounded, size: 15),
+                      label: const Text(
+                        'Kopiëren',
+                        style: TextStyle(
+                          fontSize: 10.8,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ),
-                  ],
-                ),
+                  IconButton(
+                    tooltip: item.isSubmenu
+                        ? 'Submenu verwijderen'
+                        : 'Keuze verwijderen',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _verwijderBoomItem(menu: menu, item: item),
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Color(0xFFDC2626),
+                      size: 19,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          if (item.isSubmenu && item.kinderen.isNotEmpty)
+          if (item.isSubmenu && open && item.kinderen.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 7),
               child: Column(
