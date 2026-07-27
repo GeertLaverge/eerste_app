@@ -135,6 +135,9 @@ class OfferteTechnischePrijsMomentopnameService {
       OffertePrijsEenheid.tweeBreedtes => 2.0 * breedteMeter,
       OffertePrijsEenheid.eenHoogte => hoogteMeter,
       OffertePrijsEenheid.tweeHoogtes => 2.0 * hoogteMeter,
+      OffertePrijsEenheid.eenBreedteEenHoogte => breedteMeter + hoogteMeter,
+      OffertePrijsEenheid.tweeBreedtesEenHoogte =>
+        (2.0 * breedteMeter) + hoogteMeter,
       OffertePrijsEenheid.eenBreedteTweeHoogtes =>
         breedteMeter + (2.0 * hoogteMeter),
       OffertePrijsEenheid.omtrek => (2.0 * breedteMeter) + (2.0 * hoogteMeter),

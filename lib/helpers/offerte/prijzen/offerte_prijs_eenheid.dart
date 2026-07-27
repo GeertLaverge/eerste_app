@@ -20,6 +20,16 @@ enum OffertePrijsEenheid {
     benaming: '2 × hoogte',
     formuleBenaming: '2H',
   ),
+  eenBreedteEenHoogte(
+    jsonWaarde: 'eenBreedteEenHoogte',
+    benaming: '1 × breedte + 1 × hoogte',
+    formuleBenaming: '1B + 1H',
+  ),
+  tweeBreedtesEenHoogte(
+    jsonWaarde: 'tweeBreedtesEenHoogte',
+    benaming: '2 × breedte + 1 × hoogte',
+    formuleBenaming: '2B + 1H',
+  ),
   eenBreedteTweeHoogtes(
     jsonWaarde: 'eenBreedteTweeHoogtes',
     benaming: '1 × breedte + 2 × hoogte',

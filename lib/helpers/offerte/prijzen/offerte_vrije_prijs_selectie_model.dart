@@ -75,6 +75,9 @@ class OfferteVrijePrijsSelectieModel {
       OffertePrijsEenheid.tweeBreedtes => breedteMeter * 2.0,
       OffertePrijsEenheid.eenHoogte => hoogteMeter,
       OffertePrijsEenheid.tweeHoogtes => hoogteMeter * 2.0,
+      OffertePrijsEenheid.eenBreedteEenHoogte => breedteMeter + hoogteMeter,
+      OffertePrijsEenheid.tweeBreedtesEenHoogte =>
+        (breedteMeter * 2.0) + hoogteMeter,
       OffertePrijsEenheid.eenBreedteTweeHoogtes =>
         breedteMeter + (hoogteMeter * 2.0),
       OffertePrijsEenheid.omtrek => (breedteMeter * 2.0) + (hoogteMeter * 2.0),
