@@ -6,10 +6,7 @@ import 'agenda_kleur_service.dart';
 class AgendaItemSymbolenRij extends StatelessWidget {
   final List<AgendaItem> items;
 
-  const AgendaItemSymbolenRij({
-    super.key,
-    required this.items,
-  });
+  const AgendaItemSymbolenRij({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -34,10 +31,7 @@ class AgendaItemSymbolenRij extends StatelessWidget {
         if (extra > 0)
           Text(
             '+$extra',
-            style: const TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
           ),
       ],
     );

@@ -2,12 +2,8 @@ import '../app_storage.dart';
 import 'agenda_filter_state.dart';
 
 class AgendaFilterStorage {
-  static Future<AgendaFilterState> laad({
-    String soort = 'detail',
-  }) async {
-    final waarden = await AppStorage.laadAgendaFilters(
-      soort: soort,
-    );
+  static Future<AgendaFilterState> laad({String soort = 'detail'}) async {
+    final waarden = await AppStorage.laadAgendaFilters(soort: soort);
 
     return AgendaFilterState(
       toonPlanning: waarden['planningKlanten'] ?? true,
@@ -24,17 +20,14 @@ class AgendaFilterStorage {
     AgendaFilterState filters, {
     String soort = 'detail',
   }) async {
-    await AppStorage.bewaarAgendaFilters(
-      {
-        'planningKlanten': filters.toonPlanning,
-        'opvolging': filters.toonOpvolging,
-        'nadienst': filters.toonNadienst,
-        'afspraken': filters.toonAfspraak,
-        'dagTaken': filters.toonDagtaak,
-        'vakantie': filters.toonVerlof,
-        'kraan': filters.toonKraan,
-      },
-      soort: soort,
-    );
+    await AppStorage.bewaarAgendaFilters({
+      'planningKlanten': filters.toonPlanning,
+      'opvolging': filters.toonOpvolging,
+      'nadienst': filters.toonNadienst,
+      'afspraken': filters.toonAfspraak,
+      'dagTaken': filters.toonDagtaak,
+      'vakantie': filters.toonVerlof,
+      'kraan': filters.toonKraan,
+    }, soort: soort);
   }
 }

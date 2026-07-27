@@ -44,21 +44,14 @@ class OpmerkingenBlok extends StatelessWidget {
             filled: true,
             fillColor: Colors.grey.shade50,
             contentPadding: const EdgeInsets.all(14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
-              borderSide: BorderSide(
-                color: Colors.grey.shade300,
-              ),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
-              borderSide: const BorderSide(
-                color: Colors.blueGrey,
-                width: 2,
-              ),
+              borderSide: const BorderSide(color: Colors.blueGrey, width: 2),
             ),
           ),
         ),

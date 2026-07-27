@@ -6,10 +6,7 @@ class KlantenLeverancier {
   final String naam;
   final List<String> artikelen;
 
-  const KlantenLeverancier({
-    required this.naam,
-    required this.artikelen,
-  });
+  const KlantenLeverancier({required this.naam, required this.artikelen});
 
   factory KlantenLeverancier.fromJson(Map<String, dynamic> json) {
     return KlantenLeverancier(
@@ -27,18 +24,12 @@ class KlantenLeverancierService {
     final lijst = jsonDecode(tekst) as List<dynamic>;
 
     final leveranciers = lijst
-        .map(
-          (e) => KlantenLeverancier.fromJson(
-            Map<String, dynamic>.from(e),
-          ),
-        )
+        .map((e) => KlantenLeverancier.fromJson(Map<String, dynamic>.from(e)))
         .where((leverancier) => leverancier.naam.trim().isNotEmpty)
         .toList();
 
     leveranciers.sort(
-      (a, b) => a.naam.toLowerCase().compareTo(
-            b.naam.toLowerCase(),
-          ),
+      (a, b) => a.naam.toLowerCase().compareTo(b.naam.toLowerCase()),
     );
 
     return leveranciers;

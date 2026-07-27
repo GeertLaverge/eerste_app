@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-20260727
 // THIMACO-CONTROLE: DROPDOWN-TOONT-HOE-UITSCHRIJVEN-20260720
 import 'package:flutter/material.dart';
 
+import '../../../helpers/offerte/prijzen/offerte_technische_keuze_overeenkomst_helper.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 
 class OfferteTechnischeKeuzeDropdown extends StatelessWidget {
@@ -136,12 +138,9 @@ class OfferteTechnischeKeuzeDropdown extends StatelessWidget {
       return '';
     }
 
-    return <String>[
-      keuze.formulierType.trim(),
-      keuze.menuId.trim(),
-      keuze.submenuId.trim(),
-      keuze.keuzeId.trim(),
-    ].join('|');
+    return OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(
+      keuze,
+    );
   }
 }
 
@@ -151,12 +150,9 @@ class _TechnischeKeuzeOptie {
   final OfferteTechnischeKeuzeRef keuze;
 
   String get sleutel {
-    return <String>[
-      keuze.formulierType.trim(),
-      keuze.menuId.trim(),
-      keuze.submenuId.trim(),
-      keuze.keuzeId.trim(),
-    ].join('|');
+    return OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(
+      keuze,
+    );
   }
 
   String get label {

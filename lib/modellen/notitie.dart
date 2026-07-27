@@ -36,9 +36,9 @@ class Notitie {
       id: map['id'] ?? '',
       titel: map['titel'] ?? '',
       inhoud: map['inhoud'] ?? '',
-      acties: List<Map<String, dynamic>>.from(map['acties'] ?? [])
-          .map((actieMap) => NotitieActie.fromMap(actieMap))
-          .toList(),
+      acties: List<Map<String, dynamic>>.from(
+        map['acties'] ?? [],
+      ).map((actieMap) => NotitieActie.fromMap(actieMap)).toList(),
       afgewerkt: map['afgewerkt'] ?? false,
       aangemaaktOp: map['aangemaaktOp'] == null
           ? DateTime.now()

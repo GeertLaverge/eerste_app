@@ -11,9 +11,7 @@ enum AgendaSleepActie {
 class AgendaSleepKeuzeResultaat {
   final AgendaSleepActie actie;
 
-  const AgendaSleepKeuzeResultaat({
-    required this.actie,
-  });
+  const AgendaSleepKeuzeResultaat({required this.actie});
 }
 
 class AgendaSleepKeuzePopup {
@@ -34,9 +32,7 @@ class AgendaSleepKeuzePopup {
             borderRadius: BorderRadius.circular(22),
           ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 420,
-            ),
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Padding(
               padding: const EdgeInsets.all(18),
               child: Column(
@@ -44,10 +40,7 @@ class AgendaSleepKeuzePopup {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.open_with,
-                        color: Color(0xFF0B7A3B),
-                      ),
+                      const Icon(Icons.open_with, color: Color(0xFF0B7A3B)),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
@@ -104,9 +97,7 @@ class AgendaSleepKeuzePopup {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 52),
                         foregroundColor: const Color(0xFF0B7A3B),
-                        side: const BorderSide(
-                          color: Color(0xFF0B7A3B),
-                        ),
+                        side: const BorderSide(color: Color(0xFF0B7A3B)),
                       ),
                     ),
                   ),
@@ -127,9 +118,7 @@ class AgendaSleepKeuzePopup {
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 52),
                         foregroundColor: const Color(0xFF0B7A3B),
-                        side: const BorderSide(
-                          color: Color(0xFF0B7A3B),
-                        ),
+                        side: const BorderSide(color: Color(0xFF0B7A3B)),
                       ),
                     ),
                   ),
@@ -147,15 +136,11 @@ class AgendaSleepKeuzePopup {
                           );
                         },
                         icon: const Icon(Icons.playlist_add_check),
-                        label: const Text(
-                          'Zet in de lijst nog in te plannen',
-                        ),
+                        label: const Text('Zet in de lijst nog in te plannen'),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(0, 52),
                           foregroundColor: const Color(0xFF0B7A3B),
-                          side: const BorderSide(
-                            color: Color(0xFF0B7A3B),
-                          ),
+                          side: const BorderSide(color: Color(0xFF0B7A3B)),
                         ),
                       ),
                     ),

@@ -19,11 +19,8 @@ class AgendaDagCel extends StatelessWidget {
   final Function(AgendaItem item) onItemTap;
   final Function(AgendaItem item) onItemSleep;
 
-  final Function(
-    DateTime nieuweDag,
-    AgendaItem item,
-    DateTime oudeDag,
-  )? onItemDrop;
+  final Function(DateTime nieuweDag, AgendaItem item, DateTime oudeDag)?
+  onItemDrop;
 
   final AgendaWeergaveType weergave;
 
@@ -54,11 +51,7 @@ class AgendaDagCel extends StatelessWidget {
     return Expanded(
       child: DragTarget<AgendaSleepData>(
         onAcceptWithDetails: (details) {
-          onItemDrop?.call(
-            dag,
-            details.data.item,
-            details.data.oudeDag,
-          );
+          onItemDrop?.call(dag, details.data.item, details.data.oudeDag);
         },
         builder: (context, kandidaat, geweigerd) {
           final isDoel = kandidaat.isNotEmpty;
@@ -76,14 +69,11 @@ class AgendaDagCel extends StatelessWidget {
                 color: isDoel
                     ? const Color(0xFFE7F6EC)
                     : isWeekend
-                        ? const Color(0xFFEAEAEA)
-                        : Colors.white,
+                    ? const Color(0xFFEAEAEA)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: isDoel
-                    ? Border.all(
-                        color: const Color(0xFF0B7A3B),
-                        width: 2,
-                      )
+                    ? Border.all(color: const Color(0xFF0B7A3B), width: 2)
                     : null,
               ),
               child: Stack(
@@ -108,29 +98,25 @@ class AgendaDagCel extends StatelessWidget {
                               color: geselecteerd
                                   ? Colors.white
                                   : isVandaag
-                                      ? const Color(0xFF0B7A3B)
-                                      : andereMaand
-                                          ? Colors.grey
-                                          : Colors.black87,
+                                  ? const Color(0xFF0B7A3B)
+                                  : andereMaand
+                                  ? Colors.grey
+                                  : Colors.black87,
                               fontWeight: geselecteerd || isVandaag
                                   ? FontWeight.w800
                                   : FontWeight.w600,
                               fontSize: geselecteerd
                                   ? 16
                                   : isVandaag
-                                      ? 15
-                                      : 14,
+                                  ? 15
+                                  : 14,
                             ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 2),
                       if (weergave == AgendaWeergaveType.symbolen)
-                        Center(
-                          child: AgendaItemSymbolenRij(
-                            items: items,
-                          ),
-                        )
+                        Center(child: AgendaItemSymbolenRij(items: items))
                       else
                         ...items.map((item) {
                           final kleur = AgendaKleurService.kleur(item.type);
@@ -138,10 +124,7 @@ class AgendaDagCel extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 1),
                             child: LongPressDraggable<AgendaSleepData>(
-                              data: AgendaSleepData(
-                                oudeDag: dag,
-                                item: item,
-                              ),
+                              data: AgendaSleepData(oudeDag: dag, item: item),
                               feedback: Material(
                                 color: Colors.transparent,
                                 child: Container(
@@ -174,20 +157,14 @@ class AgendaDagCel extends StatelessWidget {
                               ),
                               childWhenDragging: Opacity(
                                 opacity: 0.35,
-                                child: itemBlok(
-                                  item: item,
-                                  kleur: kleur,
-                                ),
+                                child: itemBlok(item: item, kleur: kleur),
                               ),
                               child: InkWell(
                                 onTap: () {
                                   onItemTap(item);
                                 },
                                 borderRadius: BorderRadius.circular(8),
-                                child: itemBlok(
-                                  item: item,
-                                  kleur: kleur,
-                                ),
+                                child: itemBlok(item: item, kleur: kleur),
                               ),
                             ),
                           );
@@ -229,10 +206,7 @@ class AgendaDagCel extends StatelessWidget {
     );
   }
 
-  Widget titelMetKraan({
-    required AgendaItem item,
-    required Color kleur,
-  }) {
+  Widget titelMetKraan({required AgendaItem item, required Color kleur}) {
     return Row(
       children: [
         Expanded(
@@ -248,19 +222,15 @@ class AgendaDagCel extends StatelessWidget {
           ),
         ),
         if (item.kraanNodig && !item.kraanIngepland)
-          const KraanWaarschuwingIcon(
-            actief: true,
-          ),
+          const KraanWaarschuwingIcon(actief: true),
       ],
     );
   }
 
-  Widget itemBlok({
-    required AgendaItem item,
-    required Color kleur,
-  }) {
-    final tijd =
-        item.tijdTekst.isEmpty ? '' : item.tijdTekst.replaceAll('\n', ' - ');
+  Widget itemBlok({required AgendaItem item, required Color kleur}) {
+    final tijd = item.tijdTekst.isEmpty
+        ? ''
+        : item.tijdTekst.replaceAll('\n', ' - ');
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -283,10 +253,7 @@ class AgendaDagCel extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              titelMetKraan(
-                item: item,
-                kleur: kleur,
-              ),
+              titelMetKraan(item: item, kleur: kleur),
             ],
           );
         } else {
@@ -304,10 +271,7 @@ class AgendaDagCel extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-              titelMetKraan(
-                item: item,
-                kleur: kleur,
-              ),
+              titelMetKraan(item: item, kleur: kleur),
             ],
           );
         }

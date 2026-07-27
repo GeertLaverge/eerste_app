@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-OVEREENKOMST-HELPER-FASE-6-20260727
+// THIMACO-CONTROLE: OPGELADEN-KEUZE-EXACT-KOPIE-NIET-EXACT-FASE-5-20260727
+// THIMACO-CONTROLE: EXACTE-OVEREENKOMST-BEHOUDE-KEUZE-IDS-20260727
 // THIMACO-CONTROLE: GEKOPPELDE-TECHNISCHE-PRIJSREGELS-FASE-4-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJS-OVERNEMEN-FASE-3-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJSKEUZE-ANDERE-ARTIKELTYPES-FASE-2-20260727
@@ -7,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../../../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijs_eenheid.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
+import '../../../helpers/offerte/prijzen/offerte_technische_keuze_overeenkomst_helper.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import 'offerte_technische_prijs_overnemen_dialog.dart';
 
@@ -846,14 +850,20 @@ class _OfferteTechnischePrijskeuzeBoomState
         continue;
       }
 
-      final exacteSleutel = _gedeeldeSleutelVan(technischeKeuze);
+      final exacteSleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.exacteSleutelTussenArtikeltypesVan(
+            technischeKeuze,
+          );
       if (exacteSleutel.isNotEmpty) {
         anderePerExacteSleutel
             .putIfAbsent(exacteSleutel, () => <OffertePrijsregelModel>[])
             .add(prijsregel);
       }
 
-      final tekstSleutel = _tekstSleutelVan(technischeKeuze);
+      final tekstSleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.tekstSuggestieSleutelVan(
+            technischeKeuze,
+          );
       if (tekstSleutel.isNotEmpty) {
         anderePerTekstSleutel
             .putIfAbsent(tekstSleutel, () => <OffertePrijsregelModel>[])
@@ -868,11 +878,17 @@ class _OfferteTechnischePrijskeuzeBoomState
         continue;
       }
 
+      final lokaleSleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(
+            technischeKeuze,
+          );
+      if (lokaleSleutel.isEmpty) {
+        zonderGeldigeKeuze.add(prijsregel);
+        continue;
+      }
+
       prijsregelsPerSleutel
-          .putIfAbsent(
-            _sleutelVan(technischeKeuze),
-            () => <OffertePrijsregelModel>[],
-          )
+          .putIfAbsent(lokaleSleutel, () => <OffertePrijsregelModel>[])
           .add(prijsregel);
     }
 
@@ -880,10 +896,14 @@ class _OfferteTechnischePrijskeuzeBoomState
     final menusPerSleutel = <String, _TechnischMenuNode>{};
 
     for (final keuze in widget.keuzes) {
-      final keuzeSleutel = _sleutelVan(keuze);
-      final kandidaten =
-          prijsregelsPerSleutel[keuzeSleutel] ??
-          const <OffertePrijsregelModel>[];
+      final keuzeSleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(
+            keuze,
+          );
+      final kandidaten = keuzeSleutel.isEmpty
+          ? const <OffertePrijsregelModel>[]
+          : prijsregelsPerSleutel[keuzeSleutel] ??
+                const <OffertePrijsregelModel>[];
       final prijsregel = _bestePrijsregel(kandidaten);
       OffertePrijsregelModel? bronPrijsregel;
       var bronOvereenkomst = _BronOvereenkomst.geen;
@@ -892,7 +912,10 @@ class _OfferteTechnischePrijskeuzeBoomState
         gekozenPrijsregels.add(prijsregel);
       }
 
-      final exacteSleutel = _gedeeldeSleutelVan(keuze);
+      final exacteSleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.exacteSleutelTussenArtikeltypesVan(
+            keuze,
+          );
       final exacteKandidaten = exacteSleutel.isEmpty
           ? const <OffertePrijsregelModel>[]
           : anderePerExacteSleutel[exacteSleutel] ??
@@ -903,7 +926,10 @@ class _OfferteTechnischePrijskeuzeBoomState
       if (bronPrijsregel != null) {
         bronOvereenkomst = _BronOvereenkomst.exacteSleutel;
       } else {
-        final tekstSleutel = _tekstSleutelVan(keuze);
+        final tekstSleutel =
+            OfferteTechnischeKeuzeOvereenkomstHelper.tekstSuggestieSleutelVan(
+              keuze,
+            );
         final tekstKandidaten = tekstSleutel.isEmpty
             ? const <OffertePrijsregelModel>[]
             : anderePerTekstSleutel[tekstSleutel] ??
@@ -1062,49 +1088,8 @@ class _OfferteTechnischePrijskeuzeBoomState
     return '$prefix $formulierNaam · ${_prijsStatusTekst(bronPrijsregel)}';
   }
 
-  static String _gedeeldeSleutelVan(OfferteTechnischeKeuzeRef keuze) {
-    final menuId = keuze.menuId.trim();
-    final keuzeId = keuze.keuzeId.trim();
-
-    if (menuId.isEmpty || keuzeId.isEmpty) {
-      return '';
-    }
-
-    return <String>[menuId, keuze.submenuId.trim(), keuzeId].join('|');
-  }
-
-  static String _tekstSleutelVan(OfferteTechnischeKeuzeRef keuze) {
-    final keuzeTitel = keuze.keuzeTitelMomentopname.trim().isNotEmpty
-        ? keuze.keuzeTitelMomentopname.trim()
-        : keuze.hoeUitschrijven.trim();
-    final genormaliseerdeKeuze = _normaliseerTekst(keuzeTitel);
-
-    if (genormaliseerdeKeuze.isEmpty) {
-      return '';
-    }
-
-    return <String>[
-      _normaliseerTekst(keuze.menuTitelMomentopname),
-      _normaliseerTekst(keuze.submenuTitelMomentopname),
-      genormaliseerdeKeuze,
-    ].join('|');
-  }
-
-  static String _normaliseerTekst(String waarde) {
-    return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
-  }
-
   static String _eenheidBenaming(OffertePrijsEenheid eenheid) {
     return eenheid.benaming;
-  }
-
-  static String _sleutelVan(OfferteTechnischeKeuzeRef keuze) {
-    return <String>[
-      keuze.formulierType.trim(),
-      keuze.menuId.trim(),
-      keuze.submenuId.trim(),
-      keuze.keuzeId.trim(),
-    ].join('|');
   }
 
   static bool _isNieuwer(String eerste, String tweede) {

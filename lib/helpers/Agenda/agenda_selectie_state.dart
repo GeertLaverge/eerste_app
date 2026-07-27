@@ -11,10 +11,7 @@ class AgendaSelectieState {
     final nu = DateTime.now();
 
     return AgendaSelectieState(
-      focusMaand: DateTime(
-        nu.year,
-        nu.month,
-      ),
+      focusMaand: DateTime(nu.year, nu.month),
       geselecteerdeDag: nu,
     );
   }
@@ -32,28 +29,19 @@ class AgendaSelectieState {
   AgendaSelectieState kiesDag(DateTime dag) {
     return copyWith(
       geselecteerdeDag: dag,
-      focusMaand: DateTime(
-        dag.year,
-        dag.month,
-      ),
+      focusMaand: DateTime(dag.year, dag.month),
     );
   }
 
   AgendaSelectieState vorigeMaand() {
     return copyWith(
-      focusMaand: DateTime(
-        focusMaand.year,
-        focusMaand.month - 1,
-      ),
+      focusMaand: DateTime(focusMaand.year, focusMaand.month - 1),
     );
   }
 
   AgendaSelectieState volgendeMaand() {
     return copyWith(
-      focusMaand: DateTime(
-        focusMaand.year,
-        focusMaand.month + 1,
-      ),
+      focusMaand: DateTime(focusMaand.year, focusMaand.month + 1),
     );
   }
 }

@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class KraanWaarschuwingIcon extends StatelessWidget {
   final bool actief;
 
-  const KraanWaarschuwingIcon({
-    super.key,
-    required this.actief,
-  });
+  const KraanWaarschuwingIcon({super.key, required this.actief});
 
   @override
   Widget build(BuildContext context) {
@@ -18,18 +15,11 @@ class KraanWaarschuwingIcon extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Text(
-            '🏗️',
-            style: TextStyle(fontSize: 22),
-          ),
+          Text('🏗️', style: TextStyle(fontSize: 22)),
           Positioned(
             right: -1,
             top: -2,
-            child: Icon(
-              Icons.cancel,
-              color: Colors.red,
-              size: 22,
-            ),
+            child: Icon(Icons.cancel, color: Colors.red, size: 22),
           ),
         ],
       ),

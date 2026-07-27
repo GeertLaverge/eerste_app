@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-COMPILEFIX-20260727
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-VOORAF-GESELECTEERD-20260726
 // THIMACO-CONTROLE: GEDEELDE-VERDEELKOST-KEUZEMENU-20260723
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../../helpers/offerte/prijzen/offerte_prijs_uitschrijfmodus.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijs_verdeel_limietmodus.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
 import '../../../helpers/offerte/prijzen/offerte_prijsregel_weergave_service.dart';
+import '../../../helpers/offerte/prijzen/offerte_technische_keuze_overeenkomst_helper.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import 'offerte_technische_keuze_dropdown.dart';
 
@@ -306,22 +308,11 @@ class _OffertePrijsregelDialogState extends State<_OffertePrijsregelDialog> {
       return null;
     }
 
-    final bestaandeSleutel = <String>[
-      bestaandeKeuze.formulierType.trim(),
-      bestaandeKeuze.menuId.trim(),
-      bestaandeKeuze.submenuId.trim(),
-      bestaandeKeuze.keuzeId.trim(),
-    ].join('|');
-
     for (final keuze in widget.technischeKeuzes) {
-      final sleutel = <String>[
-        keuze.formulierType.trim(),
-        keuze.menuId.trim(),
-        keuze.submenuId.trim(),
-        keuze.keuzeId.trim(),
-      ].join('|');
-
-      if (sleutel == bestaandeSleutel) {
+      if (OfferteTechnischeKeuzeOvereenkomstHelper.zijnLokaalExact(
+        bestaandeKeuze,
+        keuze,
+      )) {
         return keuze;
       }
     }

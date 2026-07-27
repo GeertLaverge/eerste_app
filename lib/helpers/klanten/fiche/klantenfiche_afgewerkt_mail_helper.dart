@@ -22,9 +22,7 @@ class KlantenficheAfgewerktMailHelper {
     return '$uren u $rest min';
   }
 
-  static String _meerwerkenTekst(
-    List<KlantenficheExtraWerk> extraWerken,
-  ) {
+  static String _meerwerkenTekst(List<KlantenficheExtraWerk> extraWerken) {
     final ingevuld = extraWerken.where((werk) {
       return werk.omschrijving.trim().isNotEmpty ||
           werk.gebruikteMaterialen.trim().isNotEmpty ||
@@ -37,10 +35,7 @@ class KlantenficheAfgewerktMailHelper {
     }
 
     var totaalMinuten = 0;
-    final regels = <String>[
-      'Er zijn wel meerwerken:',
-      '',
-    ];
+    final regels = <String>['Er zijn wel meerwerken:', ''];
 
     for (var i = 0; i < ingevuld.length; i++) {
       final werk = ingevuld[i];
@@ -50,9 +45,11 @@ class KlantenficheAfgewerktMailHelper {
       regels.add('Datum: ${_datumTekst(werk.datum)}');
       regels.add('Tijd: ${werk.tijdTekst}');
       regels.add(
-          'Omschrijving: ${werk.omschrijving.trim().isEmpty ? 'Niet ingevuld' : werk.omschrijving.trim()}');
+        'Omschrijving: ${werk.omschrijving.trim().isEmpty ? 'Niet ingevuld' : werk.omschrijving.trim()}',
+      );
       regels.add(
-          'Gebruikte materialen: ${werk.gebruikteMaterialen.trim().isEmpty ? 'Niet ingevuld' : werk.gebruikteMaterialen.trim()}');
+        'Gebruikte materialen: ${werk.gebruikteMaterialen.trim().isEmpty ? 'Niet ingevuld' : werk.gebruikteMaterialen.trim()}',
+      );
       regels.add('Totaal: ${_duurTekst(werk.aantalMinuten)}');
       regels.add('');
     }
@@ -68,7 +65,8 @@ class KlantenficheAfgewerktMailHelper {
   }) async {
     final naam = klantNaam.trim().isEmpty ? 'Naamloos' : klantNaam.trim();
 
-    final bericht = '''
+    final bericht =
+        '''
 Klant '$naam' is afgewerkt.
 
 ${_meerwerkenTekst(extraWerken)}

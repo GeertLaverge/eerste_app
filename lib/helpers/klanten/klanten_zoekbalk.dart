@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class KlantenZoekbalk extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
-  const KlantenZoekbalk({
-    super.key,
-    required this.onChanged,
-  });
+  const KlantenZoekbalk({super.key, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +30,7 @@ class KlantenZoekbalk extends StatelessWidget {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Color(0xFF6BBF7B),
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: Color(0xFF6BBF7B), width: 1.5),
           ),
         ),
       ),

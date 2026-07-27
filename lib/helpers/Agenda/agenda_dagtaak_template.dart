@@ -42,9 +42,7 @@ class AgendaDagtaakTemplate {
     };
   }
 
-  factory AgendaDagtaakTemplate.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory AgendaDagtaakTemplate.fromJson(Map<String, dynamic> json) {
     return AgendaDagtaakTemplate(
       id: json['id'] ?? '',
       naam: json['naam'] ?? '',

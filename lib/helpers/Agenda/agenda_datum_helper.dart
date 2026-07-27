@@ -1,34 +1,18 @@
 class AgendaDatumHelper {
   static DateTime beginVanWeek(DateTime datum) {
-    return DateTime(
-      datum.year,
-      datum.month,
-      datum.day - datum.weekday + 1,
-    );
+    return DateTime(datum.year, datum.month, datum.day - datum.weekday + 1);
   }
 
   static DateTime beginVanMaand(DateTime datum) {
-    return DateTime(
-      datum.year,
-      datum.month,
-      1,
-    );
+    return DateTime(datum.year, datum.month, 1);
   }
 
   static DateTime vorigeMaand(DateTime datum) {
-    return DateTime(
-      datum.year,
-      datum.month - 1,
-      1,
-    );
+    return DateTime(datum.year, datum.month - 1, 1);
   }
 
   static DateTime volgendeMaand(DateTime datum) {
-    return DateTime(
-      datum.year,
-      datum.month + 1,
-      1,
-    );
+    return DateTime(datum.year, datum.month + 1, 1);
   }
 
   static bool zelfdeDag(DateTime a, DateTime b) {
@@ -44,9 +28,7 @@ class AgendaDatumHelper {
     final laatsteDag = DateTime(maand.year, maand.month + 1, 0);
 
     final start = beginVanWeek(eersteDag);
-    final einde = beginVanWeek(laatsteDag).add(
-      const Duration(days: 6),
-    );
+    final einde = beginVanWeek(laatsteDag).add(const Duration(days: 6));
 
     final aantalWeken = (einde.difference(start).inDays + 1) ~/ 7;
 

@@ -2,21 +2,13 @@ class KlantTaakItem {
   String tekst;
   bool isAfgewerkt;
 
-  KlantTaakItem({
-    this.tekst = '',
-    this.isAfgewerkt = false,
-  });
+  KlantTaakItem({this.tekst = '', this.isAfgewerkt = false});
 
   Map<String, dynamic> toJson() {
-    return {
-      'tekst': tekst,
-      'isAfgewerkt': isAfgewerkt,
-    };
+    return {'tekst': tekst, 'isAfgewerkt': isAfgewerkt};
   }
 
-  factory KlantTaakItem.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory KlantTaakItem.fromJson(Map<String, dynamic> json) {
     return KlantTaakItem(
       tekst: json['tekst'] ?? '',
       isAfgewerkt: json['isAfgewerkt'] ?? false,
@@ -103,9 +95,7 @@ class KlantenficheExtraWerk {
     };
   }
 
-  factory KlantenficheExtraWerk.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory KlantenficheExtraWerk.fromJson(Map<String, dynamic> json) {
     return KlantenficheExtraWerk(
       datum: json['datum'] != null ? DateTime.tryParse(json['datum']) : null,
       startUur: json['startUur'],
@@ -140,9 +130,7 @@ class KlantenficheArtikel {
     };
   }
 
-  factory KlantenficheArtikel.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory KlantenficheArtikel.fromJson(Map<String, dynamic> json) {
     return KlantenficheArtikel(
       leverancier: json['leverancier'] ?? '',
       artikel: json['artikel'] ?? '',
@@ -174,9 +162,7 @@ class KlantenficheFoto {
     };
   }
 
-  factory KlantenficheFoto.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory KlantenficheFoto.fromJson(Map<String, dynamic> json) {
     return KlantenficheFoto(
       id: json['id'] ?? '',
       bestandsNaam: json['bestandsNaam'] ?? '',
@@ -307,9 +293,7 @@ class KlantenficheModel {
     };
   }
 
-  factory KlantenficheModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory KlantenficheModel.fromJson(Map<String, dynamic> json) {
     return KlantenficheModel(
       id: json['id'] ?? '',
       naam: json['naam'] ?? '',
@@ -335,30 +319,25 @@ class KlantenficheModel {
       kraanEindMinuut: json['kraanEindMinuut'],
       klantTaken: (json['klantTaken'] as List<dynamic>? ?? [])
           .map(
-            (item) => KlantTaakItem.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) => KlantTaakItem.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       artikelen: (json['artikelen'] as List<dynamic>? ?? [])
           .map(
-            (item) => KlantenficheArtikel.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) =>
+                KlantenficheArtikel.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       extraWerken: (json['extraWerken'] as List<dynamic>? ?? [])
           .map(
-            (item) => KlantenficheExtraWerk.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) =>
+                KlantenficheExtraWerk.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       fotos: (json['fotos'] as List<dynamic>? ?? [])
           .map(
-            (item) => KlantenficheFoto.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            (item) =>
+                KlantenficheFoto.fromJson(Map<String, dynamic>.from(item)),
           )
           .toList(),
       opvolgTaken: json['opvolgTaken'] ?? '',

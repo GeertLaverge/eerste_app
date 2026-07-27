@@ -14,10 +14,7 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
   });
 
   int get totaalMinuten {
-    return extraWerken.fold(
-      0,
-      (totaal, werk) => totaal + werk.aantalMinuten,
-    );
+    return extraWerken.fold(0, (totaal, werk) => totaal + werk.aantalMinuten);
   }
 
   String get totaalTekst {
@@ -154,9 +151,7 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: const Color(0xFFE5E7EB),
-              ),
+              border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
             child: Column(
               children: [
@@ -166,20 +161,13 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF0B7A3B),
-                          side: const BorderSide(
-                            color: Color(0xFF0B7A3B),
-                          ),
+                          side: const BorderSide(color: Color(0xFF0B7A3B)),
                         ),
                         onPressed: () {
                           _kiesDatum(context, werk);
                         },
-                        icon: const Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                        ),
-                        label: Text(
-                          _datumTekst(werk.datum),
-                        ),
+                        icon: const Icon(Icons.calendar_today, size: 16),
+                        label: Text(_datumTekst(werk.datum)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -187,10 +175,7 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                       onPressed: () {
                         _extraWerkVerwijderen(index);
                       },
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.red,
-                      ),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
                     ),
                   ],
                 ),
@@ -201,18 +186,13 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF0B7A3B),
-                          side: const BorderSide(
-                            color: Color(0xFF0B7A3B),
-                          ),
+                          side: const BorderSide(color: Color(0xFF0B7A3B)),
                         ),
                         onPressed: () {
                           _kiesStartTijd(context, werk);
                         },
                         child: Text(
-                          _tijdTekst(
-                            werk.startUur,
-                            werk.startMinuut,
-                          ),
+                          _tijdTekst(werk.startUur, werk.startMinuut),
                         ),
                       ),
                     ),
@@ -220,37 +200,27 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                       padding: EdgeInsets.symmetric(horizontal: 8),
                       child: Text(
                         'tot',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ),
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF0B7A3B),
-                          side: const BorderSide(
-                            color: Color(0xFF0B7A3B),
-                          ),
+                          side: const BorderSide(color: Color(0xFF0B7A3B)),
                         ),
                         onPressed: () {
                           _kiesEindTijd(context, werk);
                         },
-                        child: Text(
-                          _tijdTekst(
-                            werk.eindUur,
-                            werk.eindMinuut,
-                          ),
-                        ),
+                        child: Text(_tijdTekst(werk.eindUur, werk.eindMinuut)),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: TextEditingController(
-                    text: werk.omschrijving,
-                  )..selection = TextSelection.collapsed(
+                  controller: TextEditingController(text: werk.omschrijving)
+                    ..selection = TextSelection.collapsed(
                       offset: werk.omschrijving.length,
                     ),
                   onChanged: (waarde) {
@@ -267,15 +237,11 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE5E7EB),
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE5E7EB),
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -288,11 +254,11 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: TextEditingController(
-                    text: werk.gebruikteMaterialen,
-                  )..selection = TextSelection.collapsed(
-                      offset: werk.gebruikteMaterialen.length,
-                    ),
+                  controller:
+                      TextEditingController(text: werk.gebruikteMaterialen)
+                        ..selection = TextSelection.collapsed(
+                          offset: werk.gebruikteMaterialen.length,
+                        ),
                   onChanged: (waarde) {
                     werk.gebruikteMaterialen = waarde;
                     onChanged?.call();
@@ -307,15 +273,11 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE5E7EB),
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE5E7EB),
-                      ),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -344,10 +306,7 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
         }),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
             color: const Color(0xFFE7F6EC),
@@ -369,9 +328,7 @@ class KlantenficheExtraWerkVeld extends StatelessWidget {
             label: const Text('Extra werk toevoegen'),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF0B7A3B),
-              side: const BorderSide(
-                color: Color(0xFF0B7A3B),
-              ),
+              side: const BorderSide(color: Color(0xFF0B7A3B)),
             ),
           ),
         ),

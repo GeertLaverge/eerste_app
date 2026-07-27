@@ -27,13 +27,9 @@ class AgendaToevoegService {
   }) {
     final datumKey = AgendaDatumHelper.datumKey(dag);
 
-    final kopie = <String, List<AgendaItem>>{
-      ...itemsPerDag,
-    };
+    final kopie = <String, List<AgendaItem>>{...itemsPerDag};
 
-    final bestaandeItems = List<AgendaItem>.from(
-      kopie[datumKey] ?? [],
-    );
+    final bestaandeItems = List<AgendaItem>.from(kopie[datumKey] ?? []);
 
     final nu = DateTime.now().toIso8601String();
 
@@ -41,8 +37,9 @@ class AgendaToevoegService {
       id: nieuwItem.id.trim().isNotEmpty
           ? nieuwItem.id
           : DateTime.now().microsecondsSinceEpoch.toString(),
-      updatedAt:
-          nieuwItem.updatedAt.trim().isNotEmpty ? nieuwItem.updatedAt : nu,
+      updatedAt: nieuwItem.updatedAt.trim().isNotEmpty
+          ? nieuwItem.updatedAt
+          : nu,
       deletedAt: '',
     );
 

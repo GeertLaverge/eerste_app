@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: EEN-KNOP-NAAR-ALLE-TECHNISCHE-TITELS-20260727
+// THIMACO-CONTROLE: OVERZICHT-ZONDER-OVERBODIGE-STRUCTUURKNOPPEN-20260727
+// THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
 import 'package:flutter/material.dart';
 
 import 'opmeting_raam_keuzemenu_model.dart';
@@ -23,6 +28,11 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
     required this.geselecteerdeOptieIdVoorMenu,
     required this.onOptieGekozen,
     required this.onMenuToevoegen,
+    this.onTitelOpladen,
+    required this.onKeuzeToevoegen,
+    required this.onSubmenuToevoegen,
+    required this.onMenuKopieren,
+    required this.onItemKopieren,
     required this.onBeheerSlotWisselen,
     required this.onMenuAanpassen,
     required this.onMenuOmhoog,
@@ -53,6 +63,23 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   onOptieGekozen;
 
   final VoidCallback onMenuToevoegen;
+  final Future<void> Function()? onTitelOpladen;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  )
+  onKeuzeToevoegen;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  )
+  onSubmenuToevoegen;
+  final Future<void> Function(OpmetingRaamKeuzeMenu menu) onMenuKopieren;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    OpmetingRaamKeuzeMenuItem item,
+  )
+  onItemKopieren;
   final VoidCallback onBeheerSlotWisselen;
   final ValueChanged<OpmetingRaamKeuzeMenu> onMenuAanpassen;
   final ValueChanged<OpmetingRaamKeuzeMenu> onMenuOmhoog;
@@ -134,7 +161,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                   alignment: Alignment.centerLeft,
                   child: Text(
                     widget.menuBeheerOntgrendeld
-                        ? 'Voeg een technisch item toe met +.'
+                        ? 'Beheer de technische titels via “Titels beheren”.'
                         : 'Nog geen technische keuzes toegevoegd.',
                     style: const TextStyle(color: tekstGrijs, fontSize: 11.5),
                   ),
@@ -236,15 +263,18 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               child: CircularProgressIndicator(strokeWidth: 2, color: groen),
             ),
           ),
-        SizedBox(
-          width: 30,
-          height: 30,
-          child: IconButton(
-            tooltip: 'Technisch item toevoegen',
-            padding: EdgeInsets.zero,
+        TextButton.icon(
+          onPressed: widget.onMenuToevoegen,
+          style: TextButton.styleFrom(
+            foregroundColor: groen,
             visualDensity: VisualDensity.compact,
-            onPressed: widget.onMenuToevoegen,
-            icon: const Icon(Icons.add_circle_outline, size: 20, color: groen),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+            minimumSize: const Size(0, 30),
+          ),
+          icon: const Icon(Icons.add_circle_outline, size: 18),
+          label: const Text(
+            'Titels beheren',
+            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
           ),
         ),
         SizedBox(
@@ -534,6 +564,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
     required bool geselecteerd,
     required int niveau,
     required VoidCallback onTap,
+    Widget? beheerKnop,
   }) {
     return Material(
       color: geselecteerd ? lichtGroen : Colors.transparent,
@@ -559,6 +590,7 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                   ),
                 ),
               ),
+              if (beheerKnop != null) ...[const SizedBox(width: 3), beheerKnop],
               if (geselecteerd)
                 const Icon(Icons.check_circle, size: 15, color: groen),
             ],
@@ -768,6 +800,10 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               widget.onMenuAanpassen(menu);
               break;
 
+            case 'kopieren':
+              widget.onMenuKopieren(menu);
+              break;
+
             case 'omhoog':
               widget.onMenuOmhoog(menu);
               break;
@@ -790,6 +826,15 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                 dense: true,
                 leading: Icon(Icons.edit_outlined, color: groen),
                 title: Text('Technische keuze aanpassen'),
+              ),
+            ),
+            PopupMenuItem<String>(
+              value: 'kopieren',
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: Icon(Icons.copy_outlined, color: groen),
+                title: Text('Titel kopiëren'),
               ),
             ),
             PopupMenuItem<String>(

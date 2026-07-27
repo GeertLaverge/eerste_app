@@ -3,10 +3,7 @@ import 'agenda_item.dart';
 import 'agenda_overlap_helper.dart';
 
 class AgendaVerplaatsService {
-  static bool zelfdeItem(
-    AgendaItem a,
-    AgendaItem b,
-  ) {
+  static bool zelfdeItem(AgendaItem a, AgendaItem b) {
     if (a.id.trim().isNotEmpty && b.id.trim().isNotEmpty) {
       return a.id == b.id;
     }
@@ -29,14 +26,10 @@ class AgendaVerplaatsService {
     final oudeKey = AgendaDatumHelper.datumKey(oudeDag);
     final nieuweKey = AgendaDatumHelper.datumKey(nieuweDag);
 
-    final bestaandeItems = List<AgendaItem>.from(
-      itemsPerDag[nieuweKey] ?? [],
-    );
+    final bestaandeItems = List<AgendaItem>.from(itemsPerDag[nieuweKey] ?? []);
 
     if (oudeKey == nieuweKey) {
-      bestaandeItems.removeWhere(
-        (bestaand) => zelfdeItem(bestaand, item),
-      );
+      bestaandeItems.removeWhere((bestaand) => zelfdeItem(bestaand, item));
     }
 
     return AgendaOverlapHelper.overlapMelding(
@@ -56,17 +49,11 @@ class AgendaVerplaatsService {
     final oudeKey = AgendaDatumHelper.datumKey(oudeDag);
     final nieuweKey = AgendaDatumHelper.datumKey(nieuweDag);
 
-    final kopie = <String, List<AgendaItem>>{
-      ...itemsPerDag,
-    };
+    final kopie = <String, List<AgendaItem>>{...itemsPerDag};
 
-    final oudeItems = List<AgendaItem>.from(
-      kopie[oudeKey] ?? [],
-    );
+    final oudeItems = List<AgendaItem>.from(kopie[oudeKey] ?? []);
 
-    oudeItems.removeWhere(
-      (bestaand) => zelfdeItem(bestaand, item),
-    );
+    oudeItems.removeWhere((bestaand) => zelfdeItem(bestaand, item));
 
     if (oudeItems.isEmpty) {
       kopie.remove(oudeKey);
@@ -74,9 +61,7 @@ class AgendaVerplaatsService {
       kopie[oudeKey] = oudeItems;
     }
 
-    final nieuweItems = List<AgendaItem>.from(
-      kopie[nieuweKey] ?? [],
-    );
+    final nieuweItems = List<AgendaItem>.from(kopie[nieuweKey] ?? []);
 
     final verplaatstItem = item.copyWith(
       updatedAt: DateTime.now().toIso8601String(),

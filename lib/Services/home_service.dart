@@ -86,17 +86,13 @@ class HomeService {
     }).toList();
 
     taken.sort((a, b) {
-      return a.klantnaam.toLowerCase().compareTo(
-            b.klantnaam.toLowerCase(),
-          );
+      return a.klantnaam.toLowerCase().compareTo(b.klantnaam.toLowerCase());
     });
 
     return taken;
   }
 
-  static List<KlantTaakVandaagItem> klantTaakItemsVandaag(
-    List<Klant> klanten,
-  ) {
+  static List<KlantTaakVandaagItem> klantTaakItemsVandaag(List<Klant> klanten) {
     final vandaag = zonderTijd(DateTime.now());
     final items = <KlantTaakVandaagItem>[];
 
@@ -109,12 +105,7 @@ class HomeService {
       for (final taak in klant.klantTaken) {
         if (taak.tekst.trim().isEmpty) continue;
 
-        items.add(
-          KlantTaakVandaagItem(
-            klant: klant,
-            taak: taak,
-          ),
-        );
+        items.add(KlantTaakVandaagItem(klant: klant, taak: taak));
       }
     }
 
@@ -124,8 +115,8 @@ class HomeService {
       }
 
       return a.klant.klantnaam.toLowerCase().compareTo(
-            b.klant.klantnaam.toLowerCase(),
-          );
+        b.klant.klantnaam.toLowerCase(),
+      );
     });
 
     return items;
@@ -178,8 +169,5 @@ class KlantTaakVandaagItem {
   final Klant klant;
   final KlantTaakItem taak;
 
-  KlantTaakVandaagItem({
-    required this.klant,
-    required this.taak,
-  });
+  KlantTaakVandaagItem({required this.klant, required this.taak});
 }

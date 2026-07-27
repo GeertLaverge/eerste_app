@@ -7,36 +7,28 @@ import '../../helpers/klanten/kraan_waarschuwing_icon.dart';
 class JaarItemBlok extends StatelessWidget {
   final AgendaItem item;
 
-  const JaarItemBlok({
-    super.key,
-    required this.item,
-  });
+  const JaarItemBlok({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
     final tekstKleur = item.type == 'planning'
         ? const Color(0xFF0B7A3B)
         : item.type == 'opvolging'
-            ? const Color(0xFFEAB308)
-            : item.type == 'nadienst'
-                ? Colors.purple
-                : item.type == 'verlof'
-                    ? Colors.red
-                    : item.type == 'dagtaak'
-                        ? Colors.orange
-                        : item.type == 'kraan'
-                            ? Colors.brown
-                            : Colors.blue;
+        ? const Color(0xFFEAB308)
+        : item.type == 'nadienst'
+        ? Colors.purple
+        : item.type == 'verlof'
+        ? Colors.red
+        : item.type == 'dagtaak'
+        ? Colors.orange
+        : item.type == 'kraan'
+        ? Colors.brown
+        : Colors.blue;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 6,
-        vertical: 3,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
-        color: AgendaKleurService.achtergrond(
-          item.type,
-        ),
+        color: AgendaKleurService.achtergrond(item.type),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -51,10 +43,7 @@ class JaarItemBlok extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-          if (item.tijdTekst.isNotEmpty)
-            const SizedBox(
-              width: 3,
-            ),
+          if (item.tijdTekst.isNotEmpty) const SizedBox(width: 3),
           Flexible(
             child: Text(
               item.titel,
@@ -68,9 +57,7 @@ class JaarItemBlok extends StatelessWidget {
             ),
           ),
           if (item.kraanNodig && !item.kraanIngepland)
-            const KraanWaarschuwingIcon(
-              actief: true,
-            ),
+            const KraanWaarschuwingIcon(actief: true),
         ],
       ),
     );

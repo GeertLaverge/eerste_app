@@ -4,9 +4,7 @@ import '../klanten_agenda_service.dart';
 import '../../Agenda/agenda_item.dart';
 
 class KlantenficheKlantkiezer {
-  static Future<AgendaItem?> toon(
-    BuildContext context,
-  ) async {
+  static Future<AgendaItem?> toon(BuildContext context) async {
     final klanten = await KlantenAgendaService.laadAfspraakKlantenUitAgenda();
 
     if (!context.mounted) return null;
@@ -44,15 +42,10 @@ class KlantenficheKlantkiezer {
                       return ListTile(
                         title: Text(
                           klant.naamKlant,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         onTap: () {
-                          Navigator.pop(
-                            context,
-                            klant,
-                          );
+                          Navigator.pop(context, klant);
                         },
                       );
                     },

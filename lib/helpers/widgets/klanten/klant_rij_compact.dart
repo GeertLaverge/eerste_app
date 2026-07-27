@@ -40,11 +40,7 @@ class KlantRijCompact extends StatelessWidget {
               CircleAvatar(
                 radius: 21,
                 backgroundColor: artikelKleur.withValues(alpha: 0.12),
-                child: Icon(
-                  Icons.business,
-                  color: artikelKleur,
-                  size: 22,
-                ),
+                child: Icon(Icons.business, color: artikelKleur, size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -64,10 +60,7 @@ class KlantRijCompact extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    _artikelStatusChip(
-                      artikelStatus,
-                      artikelKleur,
-                    ),
+                    _artikelStatusChip(artikelStatus, artikelKleur),
                   ],
                 ),
               ),

@@ -5,10 +5,7 @@ import '../klanten/fiche/klantenfiche_model.dart';
 import '../klanten/fiche/klantenfiche_repository.dart';
 
 class AgendaKraanSyncService {
-  static bool _zelfdeKlant(
-    AgendaItem item,
-    KlantenficheModel fiche,
-  ) {
+  static bool _zelfdeKlant(AgendaItem item, KlantenficheModel fiche) {
     final zelfdeKlantNr =
         fiche.klantNr.trim().isNotEmpty && fiche.klantNr == item.klantNr;
 
@@ -67,9 +64,7 @@ class AgendaKraanSyncService {
         kraanEindMinuut: kraanItem.eindMinuut,
       );
 
-      await KlantenficheRepository.bewaarKlantenFiche(
-        aangepasteFiche,
-      );
+      await KlantenficheRepository.bewaarKlantenFiche(aangepasteFiche);
 
       return;
     }
@@ -102,7 +97,8 @@ class AgendaKraanSyncService {
         final itemNaam = item.naamKlant.trim().toLowerCase();
         final itemTitel = item.titel.trim().toLowerCase();
 
-        final zelfdeKlant = itemNaam == klantNaam ||
+        final zelfdeKlant =
+            itemNaam == klantNaam ||
             itemNaam == klantTitel ||
             itemTitel.contains(klantNaam) ||
             itemTitel.contains(klantTitel);

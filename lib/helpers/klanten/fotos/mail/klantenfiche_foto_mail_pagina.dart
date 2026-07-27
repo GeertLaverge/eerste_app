@@ -58,11 +58,12 @@ class _KlantenficheFotoMailPaginaState
     final lijst = jsonDecode(tekst) as List;
 
     setState(() {
-      leveranciers = lijst
-          .map((e) => _MailLeverancier.fromJson(e))
-          .where((l) => l.email.trim().isNotEmpty)
-          .toList()
-        ..sort((a, b) => a.naam.compareTo(b.naam));
+      leveranciers =
+          lijst
+              .map((e) => _MailLeverancier.fromJson(e))
+              .where((l) => l.email.trim().isNotEmpty)
+              .toList()
+            ..sort((a, b) => a.naam.compareTo(b.naam));
     });
   }
 
@@ -99,18 +100,12 @@ class _KlantenficheFotoMailPaginaState
     }
 
     if (!_isGeldigEmail(ontvanger)) {
-      _melding(
-        'Vul een geldig e-mailadres in.',
-        fout: true,
-      );
+      _melding('Vul een geldig e-mailadres in.', fout: true);
       return;
     }
 
     if (geselecteerdeFotos.isEmpty) {
-      _melding(
-        'Selecteer minstens één foto.',
-        fout: true,
-      );
+      _melding('Selecteer minstens één foto.', fout: true);
       return;
     }
 
@@ -140,17 +135,11 @@ class _KlantenficheFotoMailPaginaState
       _melding('Mail verzonden.');
       Navigator.pop(context);
     } else {
-      _melding(
-        resultaat,
-        fout: true,
-      );
+      _melding(resultaat, fout: true);
     }
   }
 
-  void _melding(
-    String tekst, {
-    bool fout = false,
-  }) {
+  void _melding(String tekst, {bool fout = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(tekst),
@@ -175,10 +164,7 @@ class _KlantenficheFotoMailPaginaState
             onPressed: _versturen,
             child: const Text(
               'Versturen',
-              style: TextStyle(
-                color: groen,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(color: groen, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -188,9 +174,7 @@ class _KlantenficheFotoMailPaginaState
         children: [
           const Text(
             'Selecteer foto\'s',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           ...widget.fotos.map((foto) {
@@ -234,22 +218,14 @@ class _KlantenficheFotoMailPaginaState
                               fit: BoxFit.cover,
                             ),
                           )
-                        : const SizedBox(
-                            width: 52,
-                            height: 52,
-                          ),
+                        : const SizedBox(width: 52, height: 52),
                   ),
                 );
               },
             );
           }),
           const SizedBox(height: 14),
-          const Text(
-            'Bericht',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const Text('Bericht', style: TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
           TextField(
             controller: berichtController,
@@ -269,19 +245,14 @@ class _KlantenficheFotoMailPaginaState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: groen,
-                  width: 1.5,
-                ),
+                borderSide: const BorderSide(color: groen, width: 1.5),
               ),
             ),
           ),
           const SizedBox(height: 14),
           const Text(
             'Ontvanger',
-            style: TextStyle(
-              fontWeight: FontWeight.w800,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -309,10 +280,7 @@ class _KlantenficheFotoMailPaginaState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: groen,
-                  width: 1.5,
-                ),
+                borderSide: const BorderSide(color: groen, width: 1.5),
               ),
             ),
           ),
@@ -336,9 +304,7 @@ class _KlantenficheFotoMailPaginaState
                   gekozenLeverancier == null
                       ? 'Leverancier kiezen'
                       : gekozenLeverancier!.naam,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
                 subtitle: Text(
                   gekozenLeverancier == null
@@ -378,10 +344,7 @@ class _KlantenficheFotoMailPaginaState
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: groen,
-                          width: 1.5,
-                        ),
+                        borderSide: const BorderSide(color: groen, width: 1.5),
                       ),
                     ),
                   ),
@@ -454,10 +417,7 @@ class _MailLeverancier {
   final String naam;
   final String email;
 
-  const _MailLeverancier({
-    required this.naam,
-    required this.email,
-  });
+  const _MailLeverancier({required this.naam, required this.email});
 
   factory _MailLeverancier.fromJson(dynamic json) {
     return _MailLeverancier(

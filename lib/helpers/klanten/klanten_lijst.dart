@@ -25,12 +25,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
   static const groen = Color(0xFF0B7A3B);
   static const rand = Color(0xFFE5E7EB);
 
-  final statusVolgorde = const [
-    'Actief',
-    'Opvolgen',
-    'Nadienst',
-    'Afgewerkt',
-  ];
+  final statusVolgorde = const ['Actief', 'Opvolgen', 'Nadienst', 'Afgewerkt'];
 
   Color kleurVoorKlantStatus(String status) {
     switch (status) {
@@ -74,9 +69,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
     }
   }
 
-  List<KlantenficheModel> filterKlanten(
-    List<KlantenficheModel> alleKlanten,
-  ) {
+  List<KlantenficheModel> filterKlanten(List<KlantenficheModel> alleKlanten) {
     return alleKlanten.where((klant) {
       if (klant.archiefDatum.isNotEmpty) {
         return false;
@@ -86,12 +79,14 @@ class _KlantenLijstState extends State<KlantenLijst> {
           ? true
           : klant.klantStatus == widget.klantStatus;
 
-      final matchBestelStatus = widget.bestelStatus == 'Alle' ||
+      final matchBestelStatus =
+          widget.bestelStatus == 'Alle' ||
           klant.bestelStatus == widget.bestelStatus;
 
       final zoek = widget.zoekterm.trim().toLowerCase();
 
-      final matchZoek = zoek.isEmpty ||
+      final matchZoek =
+          zoek.isEmpty ||
           klant.naam.toLowerCase().contains(zoek) ||
           klant.straatnaam.toLowerCase().contains(zoek) ||
           klant.gemeente.toLowerCase().contains(zoek) ||
@@ -103,9 +98,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
     }).toList();
   }
 
-  List<KlantenficheModel> sorteerKlanten(
-    List<KlantenficheModel> klanten,
-  ) {
+  List<KlantenficheModel> sorteerKlanten(List<KlantenficheModel> klanten) {
     final lijst = List<KlantenficheModel>.from(klanten);
 
     lijst.sort((a, b) {
@@ -117,31 +110,25 @@ class _KlantenLijstState extends State<KlantenLijst> {
         return 1;
       }
 
-      final statusVergelijk = bestelStatusScore(a.bestelStatus).compareTo(
-        bestelStatusScore(b.bestelStatus),
-      );
+      final statusVergelijk = bestelStatusScore(
+        a.bestelStatus,
+      ).compareTo(bestelStatusScore(b.bestelStatus));
 
       if (statusVergelijk != 0) {
         return statusVergelijk;
       }
 
-      return a.naam.toLowerCase().compareTo(
-            b.naam.toLowerCase(),
-          );
+      return a.naam.toLowerCase().compareTo(b.naam.toLowerCase());
     });
 
     return lijst;
   }
 
-  Future<void> openFiche(
-    KlantenficheModel klant,
-  ) async {
+  Future<void> openFiche(KlantenficheModel klant) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => KlantenFichePagina(
-          bestaandeFiche: klant,
-        ),
+        builder: (_) => KlantenFichePagina(bestaandeFiche: klant),
       ),
     );
 
@@ -150,9 +137,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
     setState(() {});
   }
 
-  Future<void> verwijderFiche(
-    KlantenficheModel klant,
-  ) async {
+  Future<void> verwijderFiche(KlantenficheModel klant) async {
     final bevestigen = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -166,12 +151,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
               onPressed: () {
                 Navigator.pop(context, false);
               },
-              child: const Text(
-                'Annuleren',
-                style: TextStyle(
-                  color: groen,
-                ),
-              ),
+              child: const Text('Annuleren', style: TextStyle(color: groen)),
             ),
             TextButton(
               onPressed: () {
@@ -192,18 +172,14 @@ class _KlantenLijstState extends State<KlantenLijst> {
 
     if (bevestigen != true) return;
 
-    await KlantenficheRepository.verwijderKlantenFiche(
-      klant.id,
-    );
+    await KlantenficheRepository.verwijderKlantenFiche(klant.id);
 
     if (!mounted) return;
 
     setState(() {});
   }
 
-  Future<void> archiveerKlant(
-    KlantenficheModel klant,
-  ) async {
+  Future<void> archiveerKlant(KlantenficheModel klant) async {
     final bevestigen = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -268,9 +244,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
       afgewerktMailVerstuurd: klant.afgewerktMailVerstuurd,
     );
 
-    await KlantenficheRepository.bewaarKlantenFiche(
-      aangepasteFiche,
-    );
+    await KlantenficheRepository.bewaarKlantenFiche(aangepasteFiche);
 
     if (!mounted) return;
 
@@ -306,33 +280,25 @@ class _KlantenLijstState extends State<KlantenLijst> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: rand,
-                ),
+                border: Border.all(color: rand),
               ),
               child: Column(
-                children: List.generate(
-                  klanten.length,
-                  (index) {
-                    final klant = klanten[index];
+                children: List.generate(klanten.length, (index) {
+                  final klant = klanten[index];
 
-                    return Column(
-                      children: [
-                        klantRij(
-                          klant: klant,
-                          isTablet: isTablet,
+                  return Column(
+                    children: [
+                      klantRij(klant: klant, isTablet: isTablet),
+                      if (index != klanten.length - 1)
+                        const Divider(
+                          height: 1,
+                          indent: 12,
+                          endIndent: 12,
+                          color: Color(0xFFE5E7EB),
                         ),
-                        if (index != klanten.length - 1)
-                          const Divider(
-                            height: 1,
-                            indent: 12,
-                            endIndent: 12,
-                            color: Color(0xFFE5E7EB),
-                          ),
-                      ],
-                    );
-                  },
-                ),
+                    ],
+                  );
+                }),
               ),
             ),
         ],
@@ -344,16 +310,11 @@ class _KlantenLijstState extends State<KlantenLijst> {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 13,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: rand,
-        ),
+        border: Border.all(color: rand),
       ),
       child: const Text(
         'Geen klanten in deze categorie.',
@@ -366,10 +327,7 @@ class _KlantenLijstState extends State<KlantenLijst> {
     );
   }
 
-  Widget klantRij({
-    required KlantenficheModel klant,
-    required bool isTablet,
-  }) {
+  Widget klantRij({required KlantenficheModel klant, required bool isTablet}) {
     final naam = klant.naam.isEmpty ? 'Naamloos' : klant.naam;
     final bestelKleur = kleurVoorBestelStatus(klant.bestelStatus);
 
@@ -419,16 +377,12 @@ class _KlantenLijstState extends State<KlantenLijst> {
     );
   }
 
-  Widget actieKnoppen(
-    KlantenficheModel klant,
-  ) {
+  Widget actieKnoppen(KlantenficheModel klant) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (klant.kraanNodig)
-          KraanWaarschuwingIcon(
-            actief: klant.kraanDatum.isEmpty,
-          ),
+          KraanWaarschuwingIcon(actief: klant.kraanDatum.isEmpty),
         if (klant.klantStatus == 'Afgewerkt')
           SizedBox(
             width: 38,
@@ -449,30 +403,20 @@ class _KlantenLijstState extends State<KlantenLijst> {
             onPressed: () {
               verwijderFiche(klant);
             },
-            icon: const Icon(
-              Icons.delete_outline,
-              color: Colors.red,
-            ),
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
           ),
         ),
       ],
     );
   }
 
-  Widget statusTekstLabel({
-    required String tekst,
-    required Color kleur,
-  }) {
+  Widget statusTekstLabel({required String tekst, required Color kleur}) {
     return Text(
       tekst,
       textAlign: TextAlign.center,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: kleur,
-        fontSize: 13,
-        fontWeight: FontWeight.w900,
-      ),
+      style: TextStyle(color: kleur, fontSize: 13, fontWeight: FontWeight.w900),
     );
   }
 
@@ -502,18 +446,12 @@ class _KlantenLijstState extends State<KlantenLijst> {
           );
 
           children.add(
-            statusGroep(
-              titel: status,
-              klanten: groep,
-              isTablet: isTablet,
-            ),
+            statusGroep(titel: status, klanten: groep, isTablet: isTablet),
           );
         }
 
         return ListView(
-          padding: const EdgeInsets.only(
-            bottom: 16,
-          ),
+          padding: const EdgeInsets.only(bottom: 16),
           children: children,
         );
       },
@@ -533,9 +471,7 @@ class KlantenLegeLijst extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Color(0xFFE5E7EB),
-          ),
+          border: Border.all(color: Color(0xFFE5E7EB)),
         ),
         child: const Text(
           'Geen klanten gevonden.',

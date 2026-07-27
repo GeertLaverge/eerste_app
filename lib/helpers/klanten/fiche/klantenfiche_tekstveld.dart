@@ -29,9 +29,7 @@ class KlantenficheTekstveld extends StatelessWidget {
           suffixIcon: toonMenuKnop
               ? IconButton(
                   onPressed: onMenuTap,
-                  icon: const Icon(
-                    Icons.arrow_drop_down,
-                  ),
+                  icon: const Icon(Icons.arrow_drop_down),
                 )
               : null,
           floatingLabelBehavior: FloatingLabelBehavior.never,
@@ -40,15 +38,10 @@ class KlantenficheTekstveld extends StatelessWidget {
             vertical: 6,
           ),
           enabledBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: Color(0xFFBDBDBD),
-            ),
+            borderSide: BorderSide(color: Color(0xFFBDBDBD)),
           ),
           focusedBorder: const UnderlineInputBorder(
-            borderSide: BorderSide(
-              color: Color(0xFF0B7A3B),
-              width: 2,
-            ),
+            borderSide: BorderSide(color: Color(0xFF0B7A3B), width: 2),
           ),
         ),
       ),

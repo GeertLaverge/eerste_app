@@ -167,11 +167,7 @@ class _KlantTaakBlokState extends State<KlantTaakBlok> {
     widget.onMomentChanged('vrijeDatum');
 
     widget.onVrijeDatumChanged(
-      DateTime(
-        gekozen.year,
-        gekozen.month,
-        gekozen.day,
-      ),
+      DateTime(gekozen.year, gekozen.month, gekozen.day),
     );
   }
 
@@ -183,9 +179,7 @@ class _KlantTaakBlokState extends State<KlantTaakBlok> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey.shade200),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Row(
         children: [
@@ -222,11 +216,7 @@ class _KlantTaakBlokState extends State<KlantTaakBlok> {
           if (!isLaatsteLegeRij)
             IconButton(
               onPressed: () => _verwijderTaak(index),
-              icon: Icon(
-                Icons.close,
-                size: 18,
-                color: Colors.grey.shade500,
-              ),
+              icon: Icon(Icons.close, size: 18, color: Colors.grey.shade500),
             ),
         ],
       ),
@@ -272,10 +262,7 @@ class _KlantTaakBlokState extends State<KlantTaakBlok> {
                         color: Colors.green.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(
-                        Icons.task_alt,
-                        color: Colors.green,
-                      ),
+                      child: const Icon(Icons.task_alt, color: Colors.green),
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
@@ -359,17 +346,15 @@ class _MomentKeuze extends StatelessWidget {
     final actief = geselecteerdMoment == waarde;
 
     return Material(
-      color:
-          actief ? Colors.green.withValues(alpha: 0.10) : Colors.grey.shade50,
+      color: actief
+          ? Colors.green.withValues(alpha: 0.10)
+          : Colors.grey.shade50,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: () => onMomentChanged(waarde),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
@@ -413,17 +398,15 @@ class _VrijeDatumKeuze extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color:
-          actief ? Colors.green.withValues(alpha: 0.10) : Colors.grey.shade50,
+      color: actief
+          ? Colors.green.withValues(alpha: 0.10)
+          : Colors.grey.shade50,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
@@ -440,23 +423,16 @@ class _VrijeDatumKeuze extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Vrije datum kiezen',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 datumTekst,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 6),
-              const Icon(
-                Icons.calendar_month,
-                size: 20,
-              ),
+              const Icon(Icons.calendar_month, size: 20),
             ],
           ),
         ),

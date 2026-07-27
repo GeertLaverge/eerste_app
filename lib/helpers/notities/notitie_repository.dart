@@ -8,9 +8,7 @@ class NotitieRepository {
     return AppStorage.laadNotities();
   }
 
-  Future<void> bewaarNotities(
-    List<NotitieModel> notities,
-  ) async {
+  Future<void> bewaarNotities(List<NotitieModel> notities) async {
     await AppStorage.bewaarNotities(notities);
   }
 
@@ -18,9 +16,7 @@ class NotitieRepository {
     return AppStorage.laadNotitieActies();
   }
 
-  Future<void> bewaarActies(
-    List<NotitieActieModel> acties,
-  ) async {
+  Future<void> bewaarActies(List<NotitieActieModel> acties) async {
     await AppStorage.bewaarNotitieActies(acties);
   }
 }

@@ -16,11 +16,8 @@ class AgendaWeekRij extends StatelessWidget {
   final Function(DateTime dag, AgendaItem item) onItemTap;
   final Function(DateTime dag, AgendaItem item) onItemSleep;
 
-  final Function(
-    DateTime nieuweDag,
-    AgendaItem item,
-    DateTime oudeDag,
-  ) onItemDrop;
+  final Function(DateTime nieuweDag, AgendaItem item, DateTime oudeDag)
+  onItemDrop;
 
   const AgendaWeekRij({
     super.key,
@@ -39,9 +36,7 @@ class AgendaWeekRij extends StatelessWidget {
   Widget build(BuildContext context) {
     final dagen = List.generate(
       7,
-      (index) => weekStart.add(
-        Duration(days: index),
-      ),
+      (index) => weekStart.add(Duration(days: index)),
     );
 
     return Container(

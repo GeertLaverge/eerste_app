@@ -40,10 +40,7 @@ class DagplanningBlok extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Planning plaatsers',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
@@ -62,10 +59,7 @@ class DagplanningBlok extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
                 'Geen planning vandaag',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
             )
           else

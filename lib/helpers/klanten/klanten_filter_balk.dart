@@ -69,9 +69,7 @@ class KlantenFilterBalk extends StatelessWidget {
               splashColor: Colors.transparent,
               highlightColor: Colors.transparent,
               focusColor: Colors.transparent,
-              overlayColor: WidgetStateProperty.all(
-                Colors.transparent,
-              ),
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
               child: Column(
                 children: [
                   Expanded(
@@ -81,11 +79,7 @@ class KlantenFilterBalk extends StatelessWidget {
                         if (actief)
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
-                            child: Icon(
-                              Icons.check,
-                              size: 14,
-                              color: kleur,
-                            ),
+                            child: Icon(Icons.check, size: 14, color: kleur),
                           ),
                         Flexible(
                           child: Text(

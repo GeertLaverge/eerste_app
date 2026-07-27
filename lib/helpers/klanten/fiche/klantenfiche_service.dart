@@ -2,20 +2,14 @@ import 'klantenfiche_model.dart';
 import 'klantenfiche_repository.dart';
 
 class KlantenficheService {
-  static String berekenBestelStatus(
-    List<KlantenficheArtikel> artikelen,
-  ) {
+  static String berekenBestelStatus(List<KlantenficheArtikel> artikelen) {
     if (artikelen.isEmpty) {
       return 'Geen artikelen';
     }
 
-    final allesGeleverd = artikelen.every(
-      (artikel) => artikel.geleverd,
-    );
+    final allesGeleverd = artikelen.every((artikel) => artikel.geleverd);
 
-    final allesBesteld = artikelen.every(
-      (artikel) => artikel.besteld,
-    );
+    final allesBesteld = artikelen.every((artikel) => artikel.besteld);
 
     if (allesGeleverd) {
       return 'Geleverd';
@@ -28,9 +22,7 @@ class KlantenficheService {
     return 'Te bestellen';
   }
 
-  static Future<KlantenficheModel?> bestaandeFiche(
-    String ficheId,
-  ) async {
+  static Future<KlantenficheModel?> bestaandeFiche(String ficheId) async {
     final fiches = await KlantenficheRepository.laadKlantenFiches();
 
     for (final fiche in fiches) {
@@ -84,13 +76,9 @@ class KlantenficheService {
       return;
     }
 
-    final bestaand = await bestaandeFiche(
-      ficheId,
-    );
+    final bestaand = await bestaandeFiche(ficheId);
 
-    final bestelStatus = berekenBestelStatus(
-      artikelen,
-    );
+    final bestelStatus = berekenBestelStatus(artikelen);
 
     final fiche = KlantenficheModel(
       id: ficheId,
@@ -120,14 +108,15 @@ class KlantenficheService {
       opvolgFicheVerstuurdNaarBureau: opvolgFicheVerstuurdNaarBureau,
       klaarVoorNieuwePlanning: klaarVoorNieuwePlanning,
       afgewerktMailVerstuurd: afgewerktMailVerstuurd,
-      inTePlannenType: bestaand?.inTePlannenType ??
+      inTePlannenType:
+          bestaand?.inTePlannenType ??
           (klantStatus == 'Nadienst'
               ? 'nadienst'
               : klantStatus == 'Opvolgen'
-                  ? 'opvolging'
-                  : klantStatus == 'Actief'
-                      ? 'planning'
-                      : ''),
+              ? 'opvolging'
+              : klantStatus == 'Actief'
+              ? 'planning'
+              : ''),
       kraanNodig: kraanNodig,
       kraanDatum: kraanDatum,
       kraanStartUur: kraanStartUur,
@@ -136,8 +125,6 @@ class KlantenficheService {
       kraanEindMinuut: kraanEindMinuut,
     );
 
-    await KlantenficheRepository.bewaarKlantenFiche(
-      fiche,
-    );
+    await KlantenficheRepository.bewaarKlantenFiche(fiche);
   }
 }

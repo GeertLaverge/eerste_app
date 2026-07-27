@@ -39,12 +39,7 @@ class OpmetingRaamKeuzeveld extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (actief)
-                  const Icon(
-                    Icons.check,
-                    size: 18,
-                    color: groen,
-                  ),
+                if (actief) const Icon(Icons.check, size: 18, color: groen),
               ],
             ),
           );
@@ -56,9 +51,7 @@ class OpmetingRaamKeuzeveld extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFFE5E7EB),
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: const Color(0xFFD1D5DB),
-          ),
+          border: Border.all(color: const Color(0xFFD1D5DB)),
         ),
         child: Row(
           children: [
@@ -84,10 +77,7 @@ class OpmetingRaamKeuzeveld extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(
-              Icons.keyboard_arrow_down,
-              size: 18,
-            ),
+            const Icon(Icons.keyboard_arrow_down, size: 18),
           ],
         ),
       ),

@@ -23,10 +23,7 @@ class AgendaFilterPopup {
             borderRadius: BorderRadius.circular(22),
           ),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 460,
-              maxHeight: 600,
-            ),
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: StatefulBuilder(
@@ -58,10 +55,7 @@ class AgendaFilterPopup {
                           ),
                           IconButton(
                             onPressed: () {
-                              Navigator.pop(
-                                context,
-                                tijdelijkeFilters,
-                              );
+                              Navigator.pop(context, tijdelijkeFilters);
                             },
                             icon: const Icon(Icons.close),
                           ),
@@ -108,23 +102,17 @@ class AgendaFilterPopup {
                             },
                             onDagtaakChanged: (waarde) {
                               wijzigFilters(
-                                tijdelijkeFilters.copyWith(
-                                  toonDagtaak: waarde,
-                                ),
+                                tijdelijkeFilters.copyWith(toonDagtaak: waarde),
                               );
                             },
                             onVerlofChanged: (waarde) {
                               wijzigFilters(
-                                tijdelijkeFilters.copyWith(
-                                  toonVerlof: waarde,
-                                ),
+                                tijdelijkeFilters.copyWith(toonVerlof: waarde),
                               );
                             },
                             onKraanChanged: (waarde) {
                               wijzigFilters(
-                                tijdelijkeFilters.copyWith(
-                                  toonKraan: waarde,
-                                ),
+                                tijdelijkeFilters.copyWith(toonKraan: waarde),
                               );
                             },
                           ),

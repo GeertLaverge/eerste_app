@@ -62,10 +62,7 @@ class AgendaFilterHelper {
 
         final sleutel = klantSleutel(item);
 
-        eersteDatumPerKlant.putIfAbsent(
-          sleutel,
-          () => datumKey,
-        );
+        eersteDatumPerKlant.putIfAbsent(sleutel, () => datumKey);
       }
     }
 
@@ -83,52 +80,51 @@ class AgendaFilterHelper {
     required bool toonKraan,
   }) {
     final resultaat = <String, List<AgendaItem>>{};
-    final eersteKraanDatum = eersteKraanWaarschuwingPerKlant(
-      itemsPerDag,
-    );
+    final eersteKraanDatum = eersteKraanWaarschuwingPerKlant(itemsPerDag);
 
     itemsPerDag.forEach((datumKey, items) {
-      final zichtbareItems = items.where((item) {
-        return itemMagTonen(
-          item: item,
-          toonPlanning: toonPlanning,
-          toonOpvolging: toonOpvolging,
-          toonNadienst: toonNadienst,
-          toonAfspraak: toonAfspraak,
-          toonDagtaak: toonDagtaak,
-          toonVerlof: toonVerlof,
-          toonKraan: toonKraan,
-        );
-      }).map((item) {
-        final sleutel = klantSleutel(item);
-        final magKraanWaarschuwingTonen = item.kraanNodig &&
-            !item.kraanIngepland &&
-            item.type != 'kraan' &&
-            eersteKraanDatum[sleutel] == datumKey;
+      final zichtbareItems = items
+          .where((item) {
+            return itemMagTonen(
+              item: item,
+              toonPlanning: toonPlanning,
+              toonOpvolging: toonOpvolging,
+              toonNadienst: toonNadienst,
+              toonAfspraak: toonAfspraak,
+              toonDagtaak: toonDagtaak,
+              toonVerlof: toonVerlof,
+              toonKraan: toonKraan,
+            );
+          })
+          .map((item) {
+            final sleutel = klantSleutel(item);
+            final magKraanWaarschuwingTonen =
+                item.kraanNodig &&
+                !item.kraanIngepland &&
+                item.type != 'kraan' &&
+                eersteKraanDatum[sleutel] == datumKey;
 
-        return item.copyWith(
-          kraanNodig: magKraanWaarschuwingTonen,
-          kraanIngepland: item.kraanIngepland,
-        );
-      }).toList();
+            return item.copyWith(
+              kraanNodig: magKraanWaarschuwingTonen,
+              kraanIngepland: item.kraanIngepland,
+            );
+          })
+          .toList();
 
       final itemsMetOverlap = zichtbareItems.map((huidig) {
-        final andereItems =
-            zichtbareItems.where((item) => item != huidig).toList();
+        final andereItems = zichtbareItems
+            .where((item) => item != huidig)
+            .toList();
 
         final overlap = AgendaOverlapHelper.heeftOverlap(
           nieuwItem: huidig,
           bestaandeItems: andereItems,
         );
 
-        return huidig.copyWith(
-          heeftOverlap: overlap,
-        );
+        return huidig.copyWith(heeftOverlap: overlap);
       }).toList();
 
-      itemsMetOverlap.sort(
-        (a, b) => a.startMinuten.compareTo(b.startMinuten),
-      );
+      itemsMetOverlap.sort((a, b) => a.startMinuten.compareTo(b.startMinuten));
 
       if (itemsMetOverlap.isNotEmpty) {
         resultaat[datumKey] = itemsMetOverlap;

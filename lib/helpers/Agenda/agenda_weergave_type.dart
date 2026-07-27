@@ -1,4 +1,1 @@
-enum AgendaWeergaveType {
-  symbolen,
-  details,
-}
+enum AgendaWeergaveType { symbolen, details }

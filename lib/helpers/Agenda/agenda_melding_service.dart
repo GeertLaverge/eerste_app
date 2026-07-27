@@ -13,26 +13,18 @@ class AgendaMeldingService {
 
     const ios = DarwinInitializationSettings();
 
-    const settings = InitializationSettings(
-      iOS: ios,
-    );
+    const settings = InitializationSettings(iOS: ios);
 
     await _meldingen.initialize(settings);
 
     await _meldingen
         .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
-        );
+          IOSFlutterLocalNotificationsPlugin
+        >()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  static int meldingId({
-    required DateTime dag,
-    required AgendaItem item,
-  }) {
+  static int meldingId({required DateTime dag, required AgendaItem item}) {
     return '${dag.year}${dag.month}${dag.day}${item.titel}${item.startUur}${item.startMinuut}'
         .hashCode
         .abs();
@@ -55,30 +47,20 @@ class AgendaMeldingService {
     );
 
     final meldingTijd = afspraakTijd.subtract(
-      Duration(
-        minutes: item.meldingVoorafMinuten,
-      ),
+      Duration(minutes: item.meldingVoorafMinuten),
     );
 
     if (meldingTijd.isBefore(DateTime.now())) return;
 
     const iosDetails = DarwinNotificationDetails();
 
-    const details = NotificationDetails(
-      iOS: iosDetails,
-    );
+    const details = NotificationDetails(iOS: iosDetails);
 
     await _meldingen.zonedSchedule(
-      meldingId(
-        dag: dag,
-        item: item,
-      ),
+      meldingId(dag: dag, item: item),
       'Thimaco afspraak',
       '${item.titel} om ${item.tijdTekst.replaceAll('\n', ' - ')}',
-      tz.TZDateTime.from(
-        meldingTijd,
-        tz.local,
-      ),
+      tz.TZDateTime.from(meldingTijd, tz.local),
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
@@ -90,26 +72,14 @@ class AgendaMeldingService {
     required DateTime dag,
     required AgendaItem item,
   }) async {
-    await _meldingen.cancel(
-      meldingId(
-        dag: dag,
-        item: item,
-      ),
-    );
+    await _meldingen.cancel(meldingId(dag: dag, item: item));
   }
 
   static Future<void> toonTestMelding() async {
     const iosDetails = DarwinNotificationDetails();
 
-    const details = NotificationDetails(
-      iOS: iosDetails,
-    );
+    const details = NotificationDetails(iOS: iosDetails);
 
-    await _meldingen.show(
-      999,
-      'Thimaco',
-      'Testmelding werkt correct',
-      details,
-    );
+    await _meldingen.show(999, 'Thimaco', 'Testmelding werkt correct', details);
   }
 }

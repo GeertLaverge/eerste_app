@@ -4,10 +4,7 @@ class AgendaVerplaatsState {
   final DateTime? oudeDag;
   final AgendaItem? item;
 
-  const AgendaVerplaatsState({
-    this.oudeDag,
-    this.item,
-  });
+  const AgendaVerplaatsState({this.oudeDag, this.item});
 
   bool get actief => oudeDag != null && item != null;
 
@@ -15,10 +12,7 @@ class AgendaVerplaatsState {
     required DateTime oudeDag,
     required AgendaItem item,
   }) {
-    return AgendaVerplaatsState(
-      oudeDag: oudeDag,
-      item: item,
-    );
+    return AgendaVerplaatsState(oudeDag: oudeDag, item: item);
   }
 
   AgendaVerplaatsState stop() {

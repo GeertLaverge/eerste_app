@@ -13,9 +13,7 @@ class AgendaRepository {
   static Future<void> bewaarItems(
     Map<String, List<AgendaItem>> itemsPerDag,
   ) async {
-    await AppStorage.bewaarAgendaItemsNieuw(
-      itemsPerDag,
-    );
+    await AppStorage.bewaarAgendaItemsNieuw(itemsPerDag);
   }
 
   static Future<Map<String, List<AgendaItem>>> voegToe({

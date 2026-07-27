@@ -30,15 +30,17 @@ class StatusHelper {
       return 'Nog niet alles besteld';
     }
 
-    final allesGeleverd =
-        alleArtikelen.every((artikel) => artikel.geleverd == true);
+    final allesGeleverd = alleArtikelen.every(
+      (artikel) => artikel.geleverd == true,
+    );
 
     if (allesGeleverd) {
       return 'Alles geleverd';
     }
 
-    final allesBesteld =
-        alleArtikelen.every((artikel) => artikel.besteld == true);
+    final allesBesteld = alleArtikelen.every(
+      (artikel) => artikel.besteld == true,
+    );
 
     if (allesBesteld) {
       return 'Alles besteld';

@@ -11,16 +11,10 @@ class NotitieActieModel {
   int kleurWaarde;
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'naam': naam,
-      'kleurWaarde': kleurWaarde,
-    };
+    return {'id': id, 'naam': naam, 'kleurWaarde': kleurWaarde};
   }
 
-  factory NotitieActieModel.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory NotitieActieModel.fromJson(Map<String, dynamic> json) {
     return NotitieActieModel(
       id: json['id'] ?? '',
       naam: json['naam'] ?? '',

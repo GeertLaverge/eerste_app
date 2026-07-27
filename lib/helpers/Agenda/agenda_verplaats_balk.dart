@@ -5,10 +5,7 @@ import 'agenda_item.dart';
 class AgendaVerplaatsBalk extends StatelessWidget {
   final AgendaItem item;
 
-  const AgendaVerplaatsBalk({
-    super.key,
-    required this.item,
-  });
+  const AgendaVerplaatsBalk({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {

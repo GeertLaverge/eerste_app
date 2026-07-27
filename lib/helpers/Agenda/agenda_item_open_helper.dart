@@ -15,15 +15,11 @@ class AgendaItemOpenHelper {
       context: context,
       builder: (context) {
         if (item.type == 'dagtaak') {
-          return AgendaDagtaakPopup(
-            bestaandItem: item,
-          );
+          return AgendaDagtaakPopup(bestaandItem: item);
         }
 
         if (item.type == 'verlof') {
-          return AgendaVerlofPopup(
-            bestaandItem: item,
-          );
+          return AgendaVerlofPopup(bestaandItem: item);
         }
 
         return AgendaToevoegPopup(

@@ -15,29 +15,18 @@ class AgendaJaarMaandBreedte {
 
     double breedsteDag = minimum;
 
-    final aantalDagen = DateTime(
-      jaar,
-      maand + 1,
-      0,
-    ).day;
+    final aantalDagen = DateTime(jaar, maand + 1, 0).day;
 
     for (int dag = 1; dag <= aantalDagen; dag++) {
-      final datum = DateTime(
-        jaar,
-        maand,
-        dag,
-      );
+      final datum = DateTime(jaar, maand, dag);
 
-      final key = AgendaDatumHelper.datumKey(
-        datum,
-      );
+      final key = AgendaDatumHelper.datumKey(datum);
 
       final items = agendaItemsData[key] ?? [];
 
-      final zichtbaar = AgendaFilterHelper.gefilterdeItems(
-            itemsPerDag: {
-              key: items,
-            },
+      final zichtbaar =
+          AgendaFilterHelper.gefilterdeItems(
+            itemsPerDag: {key: items},
             toonPlanning: actieveFilters.toonPlanning,
             toonOpvolging: actieveFilters.toonOpvolging,
             toonNadienst: actieveFilters.toonNadienst,
@@ -59,9 +48,6 @@ class AgendaJaarMaandBreedte {
       }
     }
 
-    return breedsteDag.clamp(
-      minimum,
-      maximum,
-    );
+    return breedsteDag.clamp(minimum, maximum);
   }
 }

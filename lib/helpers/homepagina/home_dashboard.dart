@@ -24,17 +24,12 @@ class HomeDashboard extends StatefulWidget {
 }
 
 class _HomeDashboardState extends State<HomeDashboard> {
-  Future<void> taakAanpassen(
-    dynamic klant,
-    dynamic taak,
-  ) async {
+  Future<void> taakAanpassen(dynamic klant, dynamic taak) async {
     setState(() {
       taak.isAfgewerkt = !taak.isAfgewerkt;
     });
 
-    await KlantenficheRepository.bewaarKlantenFiche(
-      klant,
-    );
+    await KlantenficheRepository.bewaarKlantenFiche(klant);
   }
 
   @override
@@ -58,12 +53,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
         widget.dagTakenVandaag.isEmpty &&
         widget.klantTakenVandaag.isEmpty &&
         widget.kraanReservatiesVandaag.isEmpty) {
-      return const _TaakSectie(
-        titel: 'Vandaag',
-        taken: [
-          _LegeTaakRij(),
-        ],
-      );
+      return const _TaakSectie(titel: 'Vandaag', taken: [_LegeTaakRij()]);
     }
 
     return Column(
@@ -91,8 +81,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   kleur: planning.type == 'nadienst'
                       ? Colors.purple
                       : planning.type == 'opvolging'
-                          ? Colors.amber
-                          : const Color(0xFF0B7A3B),
+                      ? Colors.amber
+                      : const Color(0xFF0B7A3B),
                   titel: planning.titel,
                   straat: planning.straatnaam,
                   huisNr: planning.huisNr,
@@ -116,18 +106,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
 
                 takenWidgets.add(
                   Container(
-                    margin: const EdgeInsets.only(
-                      left: 22,
-                      top: 4,
-                      bottom: 8,
-                    ),
+                    margin: const EdgeInsets.only(left: 22, top: 4, bottom: 8),
                     padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF9FAFB),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: HomeDashboard.rand,
-                      ),
+                      border: Border.all(color: HomeDashboard.rand),
                     ),
                     child: Column(
                       children: taken.map<Widget>((taak) {
@@ -286,24 +270,13 @@ class _TaakSectie extends StatelessWidget {
   final String titel;
   final List<Widget> taken;
 
-  const _TaakSectie({
-    required this.titel,
-    required this.taken,
-  });
+  const _TaakSectie({required this.titel, required this.taken});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 2,
-        vertical: 2,
-      ),
-      padding: const EdgeInsets.fromLTRB(
-        10,
-        8,
-        10,
-        8,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -436,20 +409,14 @@ class _TaakRij extends StatelessWidget {
               maxLines: 1,
               softWrap: false,
               overflow: TextOverflow.visible,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
             ),
           ),
           const SizedBox(width: 8),
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(
-              color: kleur,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: kleur, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Expanded(

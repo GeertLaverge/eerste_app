@@ -10,10 +10,7 @@ import 'package:flutter/rendering.dart';
 class KlantenficheFotoEditor extends StatefulWidget {
   final File bestand;
 
-  const KlantenficheFotoEditor({
-    super.key,
-    required this.bestand,
-  });
+  const KlantenficheFotoEditor({super.key, required this.bestand});
 
   @override
   State<KlantenficheFotoEditor> createState() => _KlantenficheFotoEditorState();
@@ -58,26 +55,19 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           content: TextField(
             controller: tekstController,
             autofocus: true,
-            decoration: const InputDecoration(
-              hintText: 'Typ tekst...',
-            ),
+            decoration: const InputDecoration(hintText: 'Typ tekst...'),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text(
                 'Annuleren',
-                style: TextStyle(
-                  color: Color(0xFF0B7A3B),
-                ),
+                style: TextStyle(color: Color(0xFF0B7A3B)),
               ),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  context,
-                  tekstController.text.trim(),
-                );
+                Navigator.pop(context, tekstController.text.trim());
               },
               child: const Text(
                 'Toevoegen',
@@ -97,10 +87,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
     if (tekst == null || tekst.isEmpty) return;
 
     setState(() {
-      controller.voegTekstToe(
-        positie: positie,
-        tekst: tekst,
-      );
+      controller.voegTekstToe(positie: positie, tekst: tekst);
 
       controller.actieveTool = FotoEditorTool.tekenen;
     });
@@ -111,28 +98,20 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
       setState(() {
         controller.deselecteerAlles();
       });
-      await Future.delayed(
-        const Duration(milliseconds: 50),
-      );
-      final boundary = repaintKey.currentContext!.findRenderObject()
-          as RenderRepaintBoundary;
+      await Future.delayed(const Duration(milliseconds: 50));
+      final boundary =
+          repaintKey.currentContext!.findRenderObject()
+              as RenderRepaintBoundary;
 
-      final image = await boundary.toImage(
-        pixelRatio: 3,
-      );
+      final image = await boundary.toImage(pixelRatio: 3);
 
-      final byteData = await image.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
       if (byteData == null) return;
 
       final bytes = byteData.buffer.asUint8List();
 
-      await widget.bestand.writeAsBytes(
-        bytes,
-        flush: true,
-      );
+      await widget.bestand.writeAsBytes(bytes, flush: true);
 
       await FileImage(widget.bestand).evict();
 
@@ -140,9 +119,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Foto opgeslagen',
-          ),
+          content: Text('Foto opgeslagen'),
           backgroundColor: Color(0xFF0B7A3B),
         ),
       );
@@ -164,12 +141,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
         actions: [
           TextButton(
             onPressed: () => _opslaanFoto(),
-            child: const Text(
-              'Opslaan',
-              style: TextStyle(
-                color: Colors.white,
-              ),
-            ),
+            child: const Text('Opslaan', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -187,21 +159,15 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
 
             if (vormHandleGevonden) return;
 
-            controller.selecteerVormOpPunt(
-              details.localPosition,
-            );
+            controller.selecteerVormOpPunt(details.localPosition);
 
             if (controller.geselecteerdeVorm != null) return;
 
-            controller.selecteerTekstOpPunt(
-              details.localPosition,
-            );
+            controller.selecteerTekstOpPunt(details.localPosition);
 
             if (controller.geselecteerdeTekst != null) return;
 
-            controller.selecteerLijnOpPunt(
-              details.localPosition,
-            );
+            controller.selecteerLijnOpPunt(details.localPosition);
 
             if (controller.geselecteerdeLijn != null) return;
           });
@@ -224,23 +190,17 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             if (vormHandleGevonden) return;
 
             if (controller.geselecteerdeVorm != null) {
-              controller.startVormVerplaatsen(
-                details.localPosition,
-              );
+              controller.startVormVerplaatsen(details.localPosition);
               return;
             }
 
             if (controller.geselecteerdeTekst != null) {
-              controller.startTekstVerplaatsen(
-                details.localPosition,
-              );
+              controller.startTekstVerplaatsen(details.localPosition);
               return;
             }
 
             if (controller.geselecteerdeLijn != null) {
-              controller.startVerplaatsen(
-                details.localPosition,
-              );
+              controller.startVerplaatsen(details.localPosition);
               return;
             }
 
@@ -262,50 +222,38 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
               return;
             }
 
-            controller.startNieuweLijn(
-              details.localPosition,
-            );
+            controller.startNieuweLijn(details.localPosition);
           });
         },
         onPanUpdate: (details) {
           if (controller.geselecteerdeVormHandleIndex != null) {
             setState(() {
-              controller.verplaatsVormHandle(
-                details.localPosition,
-              );
+              controller.verplaatsVormHandle(details.localPosition);
             });
             return;
           }
           if (controller.vormWordtVerplaatst) {
             setState(() {
-              controller.verplaatsGeselecteerdeVorm(
-                details.localPosition,
-              );
+              controller.verplaatsGeselecteerdeVorm(details.localPosition);
             });
             return;
           }
           if (controller.tekstWordtVerplaatst) {
             setState(() {
-              controller.verplaatsGeselecteerdeTekst(
-                details.localPosition,
-              );
+              controller.verplaatsGeselecteerdeTekst(details.localPosition);
             });
             return;
           }
           if (controller.geselecteerdHandleIndex != null) {
             setState(() {
-              controller.verplaatsHandle(
-                details.localPosition,
-              );
+              controller.verplaatsHandle(details.localPosition);
             });
             return;
           }
 
           if (controller.lijnWordtVerplaatst) {
             setState(() {
-              controller.verplaatsGeselecteerdeLijn(
-                details.localPosition,
-              );
+              controller.verplaatsGeselecteerdeLijn(details.localPosition);
             });
             return;
           }
@@ -315,9 +263,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
           }
 
           setState(() {
-            controller.voegPuntToe(
-              details.localPosition,
-            );
+            controller.voegPuntToe(details.localPosition);
           });
         },
         onPanEnd: (details) {
@@ -347,10 +293,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
 
               controller.lijnen.add(
                 TekenLijn(
-                  punten: [
-                    controller.rechteLijnStart!,
-                    eindPunt,
-                  ],
+                  punten: [controller.rechteLijnStart!, eindPunt],
                   kleur: controller.actieveKleur,
                   type: controller.actieveTool,
                 ),
@@ -380,10 +323,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
             key: repaintKey,
             child: Stack(
               children: [
-                Image.file(
-                  widget.bestand,
-                  fit: BoxFit.contain,
-                ),
+                Image.file(widget.bestand, fit: BoxFit.contain),
                 CustomPaint(
                   size: Size.infinite,
                   painter: KlantenficheFotoTekeningPainter(
@@ -400,9 +340,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
       bottomNavigationBar: SafeArea(
         child: Container(
           color: Colors.white,
-          padding: const EdgeInsets.symmetric(
-            vertical: 6,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -541,9 +479,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                                 },
                                 child: const Text(
                                   'Wissen',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                  ),
+                                  style: TextStyle(color: Colors.red),
                                 ),
                               ),
                             ],
@@ -551,10 +487,7 @@ class _KlantenficheFotoEditorState extends State<KlantenficheFotoEditor> {
                         },
                       );
                     },
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      color: Colors.red,
-                    ),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
                   ),
                 ],
               ),

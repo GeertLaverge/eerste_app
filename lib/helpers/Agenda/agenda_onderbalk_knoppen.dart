@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AgendaOnderbalkKnoppen {
-  static Widget actie({
-    required IconData icoon,
-    required VoidCallback onTap,
-  }) {
+  static Widget actie({required IconData icoon, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(99),
@@ -15,11 +12,7 @@ class AgendaOnderbalkKnoppen {
           color: Color(0xFF0B7A3B),
           shape: BoxShape.circle,
         ),
-        child: Icon(
-          icoon,
-          color: Colors.white,
-          size: 22,
-        ),
+        child: Icon(icoon, color: Colors.white, size: 22),
       ),
     );
   }

@@ -7,11 +7,7 @@ class PlanningRij extends StatelessWidget {
   final DagPlanningItem item;
   final void Function(Klant klant) onTapKlant;
 
-  const PlanningRij({
-    super.key,
-    required this.item,
-    required this.onTapKlant,
-  });
+  const PlanningRij({super.key, required this.item, required this.onTapKlant});
 
   static const Color donkerTekst = Color(0xFF111827);
 
@@ -36,9 +32,7 @@ class PlanningRij extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade200),
-          ),
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
         ),
         child: Row(
           children: [
@@ -67,11 +61,7 @@ class PlanningRij extends StatelessWidget {
                 ),
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey.shade400,
-              size: 18,
-            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18),
           ],
         ),
       ),

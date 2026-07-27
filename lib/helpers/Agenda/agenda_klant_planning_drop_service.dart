@@ -34,16 +34,15 @@ class AgendaKlantPlanningDropService {
     return nieuweItems;
   }
 
-  static Future<void> verwijderUitWachtrijNaInplannen(
-    AgendaItem item,
-  ) async {
+  static Future<void> verwijderUitWachtrijNaInplannen(AgendaItem item) async {
     final fiches = await KlantenficheRepository.laadKlantenFiches();
 
     for (final fiche in fiches) {
       final zelfdeKlantNr =
           fiche.klantNr.trim().isNotEmpty && fiche.klantNr == item.klantNr;
 
-      final zelfdeNaam = fiche.naam.trim().toLowerCase() ==
+      final zelfdeNaam =
+          fiche.naam.trim().toLowerCase() ==
           item.naamKlant.trim().toLowerCase();
 
       if (!zelfdeKlantNr && !zelfdeNaam) continue;
@@ -85,17 +84,13 @@ class AgendaKlantPlanningDropService {
         kraanEindMinuut: fiche.kraanEindMinuut,
       );
 
-      await KlantenficheRepository.bewaarKlantenFiche(
-        aangepasteFiche,
-      );
+      await KlantenficheRepository.bewaarKlantenFiche(aangepasteFiche);
 
       return;
     }
   }
 
-  static Future<void> zetOpvolgKlantTerugInWachtrij(
-    AgendaItem item,
-  ) async {
+  static Future<void> zetOpvolgKlantTerugInWachtrij(AgendaItem item) async {
     final fiches = await KlantenficheRepository.laadKlantenFiches();
 
     KlantenficheModel? gevonden;
@@ -104,7 +99,8 @@ class AgendaKlantPlanningDropService {
       final zelfdeKlantNr =
           fiche.klantNr.trim().isNotEmpty && fiche.klantNr == item.klantNr;
 
-      final zelfdeNaam = fiche.naam.trim().toLowerCase() ==
+      final zelfdeNaam =
+          fiche.naam.trim().toLowerCase() ==
           item.naamKlant.trim().toLowerCase();
 
       if (zelfdeKlantNr || zelfdeNaam) {
@@ -116,17 +112,19 @@ class AgendaKlantPlanningDropService {
     final nieuweStatus = item.type == 'afspraak'
         ? 'Afspraak'
         : item.type == 'nadienst'
-            ? 'Nadienst'
-            : item.type == 'opvolging'
-                ? 'Opvolgen'
-                : 'Actief';
+        ? 'Nadienst'
+        : item.type == 'opvolging'
+        ? 'Opvolgen'
+        : 'Actief';
 
-    final klaarVoorNieuwePlanning = item.type == 'planning' ||
+    final klaarVoorNieuwePlanning =
+        item.type == 'planning' ||
         item.type == 'opvolging' ||
         item.type == 'nadienst' ||
         item.type == 'afspraak';
 
-    final basisFiche = gevonden ??
+    final basisFiche =
+        gevonden ??
         KlantenficheModel(
           id: DateTime.now().microsecondsSinceEpoch.toString(),
           naam: item.naamKlant.trim().isNotEmpty
@@ -179,8 +177,6 @@ class AgendaKlantPlanningDropService {
       kraanEindMinuut: basisFiche.kraanEindMinuut,
     );
 
-    await KlantenficheRepository.bewaarKlantenFiche(
-      aangepasteFiche,
-    );
+    await KlantenficheRepository.bewaarKlantenFiche(aangepasteFiche);
   }
 }

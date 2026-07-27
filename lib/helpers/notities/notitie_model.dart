@@ -8,8 +8,8 @@ class NotitieModel {
     this.afgewerkt = false,
     DateTime? aangemaaktOp,
     DateTime? gewijzigdOp,
-  })  : aangemaaktOp = aangemaaktOp ?? DateTime.now(),
-        gewijzigdOp = gewijzigdOp ?? DateTime.now();
+  }) : aangemaaktOp = aangemaaktOp ?? DateTime.now(),
+       gewijzigdOp = gewijzigdOp ?? DateTime.now();
 
   final String id;
 
@@ -44,12 +44,8 @@ class NotitieModel {
       detail: json['detail'] ?? '',
       actieId: json['actieId'] ?? '',
       afgewerkt: json['afgewerkt'] ?? false,
-      aangemaaktOp: DateTime.tryParse(
-        json['aangemaaktOp'] ?? '',
-      ),
-      gewijzigdOp: DateTime.tryParse(
-        json['gewijzigdOp'] ?? '',
-      ),
+      aangemaaktOp: DateTime.tryParse(json['aangemaaktOp'] ?? ''),
+      gewijzigdOp: DateTime.tryParse(json['gewijzigdOp'] ?? ''),
     );
   }
 }

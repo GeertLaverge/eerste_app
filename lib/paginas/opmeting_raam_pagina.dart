@@ -1,3 +1,7 @@
+// THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
+// THIMACO-CONTROLE: FORMULIER-LAYOUT-RELATIEVE-IMPORT-FIX-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -20,7 +24,7 @@ import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_menu_beheer_helpe
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_maten_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_conflict_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_selectie_helper.dart';
-import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_formulier_layout.dart';
+import '../helpers/opmeting/raam/opmeting_raam_formulier_layout.dart';
 import 'package:eerste_app/helpers/opmeting/raam/overzicht/opmeting_raam_overzicht_builder.dart';
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_layout_helper.dart';
@@ -1381,6 +1385,89 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     await _bewaarKeuzemenus(nieuweMenus);
   }
 
+  Future<void> _laadOntbrekendeTitel() async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.laadOntbrekendeTitel(
+      context: context,
+      huidigFormulierType: _formulierType,
+      keuzemenus: _keuzemenus,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _voegKeuzeToeAanMenu(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  ) async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.voegKeuzeToeAanMenu(
+      context: context,
+      keuzemenus: _keuzemenus,
+      menu: menu,
+      ouderSubmenuId: ouderSubmenuId,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _voegSubmenuToeAanMenu(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  ) async {
+    final nieuweMenus =
+        await OpmetingRaamMenuBeheerHelper.voegSubmenuToeAanMenu(
+          context: context,
+          keuzemenus: _keuzemenus,
+          menu: menu,
+          ouderSubmenuId: ouderSubmenuId,
+        );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _kopieerTechnischMenu(OpmetingRaamKeuzeMenu menu) async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.kopieerMenu(
+      context: context,
+      keuzemenus: _keuzemenus,
+      menu: menu,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _kopieerTechnischMenuItem(
+    OpmetingRaamKeuzeMenu menu,
+    OpmetingRaamKeuzeMenuItem item,
+  ) async {
+    final nieuweMenus = await OpmetingRaamMenuBeheerHelper.kopieerItemInMenu(
+      context: context,
+      keuzemenus: _keuzemenus,
+      menu: menu,
+      item: item,
+    );
+
+    if (nieuweMenus == null || !mounted) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
   Future<void> _bewerkTechnischMenu(OpmetingRaamKeuzeMenu menu) async {
     final nieuweMenus = await OpmetingRaamMenuBeheerHelper.bewerkTechnischMenu(
       context: context,
@@ -1731,6 +1818,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       },
       onOptieGekozen: _kiesOptie,
       onMenuToevoegen: _voegMenuToe,
+      onTitelOpladen: _laadOntbrekendeTitel,
+      onKeuzeToevoegen: _voegKeuzeToeAanMenu,
+      onSubmenuToevoegen: _voegSubmenuToeAanMenu,
+      onMenuKopieren: _kopieerTechnischMenu,
+      onItemKopieren: _kopieerTechnischMenuItem,
       onBeheerSlotWisselen: _wisselBeheerSlot,
       onMenuAanpassen: _bewerkTechnischMenu,
       onMenuOmhoog: (menu) {

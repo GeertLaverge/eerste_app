@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
+// THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
 import 'package:flutter/material.dart';
 
 import '../fotos/opmeting_foto_model.dart';
@@ -86,6 +89,11 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
     required this.geselecteerdeOptieIdVoorMenu,
     required this.onOptieGekozen,
     required this.onMenuToevoegen,
+    this.onTitelOpladen,
+    required this.onKeuzeToevoegen,
+    required this.onSubmenuToevoegen,
+    required this.onMenuKopieren,
+    required this.onItemKopieren,
     required this.onBeheerSlotWisselen,
     required this.onMenuAanpassen,
     required this.onMenuOmhoog,
@@ -177,6 +185,23 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
   final Future<void> Function(OpmetingRaamKeuzeMenu menu, String optieId)
   onOptieGekozen;
   final Future<void> Function() onMenuToevoegen;
+  final Future<void> Function()? onTitelOpladen;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  )
+  onKeuzeToevoegen;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    String? ouderSubmenuId,
+  )
+  onSubmenuToevoegen;
+  final Future<void> Function(OpmetingRaamKeuzeMenu menu) onMenuKopieren;
+  final Future<void> Function(
+    OpmetingRaamKeuzeMenu menu,
+    OpmetingRaamKeuzeMenuItem item,
+  )
+  onItemKopieren;
   final Future<void> Function() onBeheerSlotWisselen;
   final Future<void> Function(OpmetingRaamKeuzeMenu menu) onMenuAanpassen;
   final void Function(OpmetingRaamKeuzeMenu menu) onMenuOmhoog;
@@ -366,6 +391,15 @@ class OpmetingRaamFormulierLayout extends StatelessWidget {
                       onMenuToevoegen: () {
                         onMenuToevoegen();
                       },
+                      onTitelOpladen: onTitelOpladen,
+                      onKeuzeToevoegen: (menu, ouderSubmenuId) {
+                        return onKeuzeToevoegen(menu, ouderSubmenuId);
+                      },
+                      onSubmenuToevoegen: (menu, ouderSubmenuId) {
+                        return onSubmenuToevoegen(menu, ouderSubmenuId);
+                      },
+                      onMenuKopieren: onMenuKopieren,
+                      onItemKopieren: onItemKopieren,
                       onBeheerSlotWisselen: () {
                         onBeheerSlotWisselen();
                       },

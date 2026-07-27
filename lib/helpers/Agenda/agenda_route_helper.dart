@@ -19,9 +19,7 @@ class AgendaRouteHelper {
         'https://maps.apple.com/?saddr=Current%20Location&daddr=$encodedAdres&dirflg=d',
       );
     } else if (Platform.isAndroid) {
-      uri = Uri.parse(
-        'google.navigation:q=$encodedAdres&mode=d',
-      );
+      uri = Uri.parse('google.navigation:q=$encodedAdres&mode=d');
     } else {
       uri = Uri.parse(
         'https://www.google.com/maps/dir/?api=1&origin=Current%20Location&destination=$encodedAdres&travelmode=driving',
@@ -34,9 +32,6 @@ class AgendaRouteHelper {
       );
     }
 
-    await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

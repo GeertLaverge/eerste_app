@@ -5,11 +5,7 @@ class KlantenficheRepository {
   static Future<List<KlantenficheModel>> _laadAlleKlantenFiches() async {
     final lijst = await AppStorage.laadKlantenFiches();
 
-    return lijst
-        .map(
-          (item) => KlantenficheModel.fromJson(item),
-        )
-        .toList();
+    return lijst.map((item) => KlantenficheModel.fromJson(item)).toList();
   }
 
   static Future<List<KlantenficheModel>> laadKlantenFiches() async {
@@ -20,27 +16,19 @@ class KlantenficheRepository {
     }).toList();
   }
 
-  static Future<void> bewaarKlantenFiche(
-    KlantenficheModel fiche,
-  ) async {
+  static Future<void> bewaarKlantenFiche(KlantenficheModel fiche) async {
     final fiches = await _laadAlleKlantenFiches();
 
-    final index = fiches.indexWhere(
-      (f) => f.id == fiche.id,
-    );
+    final index = fiches.indexWhere((f) => f.id == fiche.id);
 
     if (index == -1) {
       fiches.add(fiche);
     } else {
       final bestaandeFiche = fiches[index];
 
-      final bestaandeDatum = DateTime.tryParse(
-        bestaandeFiche.updatedAt,
-      );
+      final bestaandeDatum = DateTime.tryParse(bestaandeFiche.updatedAt);
 
-      final nieuweDatum = DateTime.tryParse(
-        fiche.updatedAt,
-      );
+      final nieuweDatum = DateTime.tryParse(fiche.updatedAt);
 
       if (bestaandeDatum != null &&
           nieuweDatum != null &&
@@ -56,14 +44,10 @@ class KlantenficheRepository {
     );
   }
 
-  static Future<void> verwijderKlantenFiche(
-    String id,
-  ) async {
+  static Future<void> verwijderKlantenFiche(String id) async {
     final fiches = await _laadAlleKlantenFiches();
 
-    final index = fiches.indexWhere(
-      (f) => f.id == id,
-    );
+    final index = fiches.indexWhere((f) => f.id == id);
 
     if (index == -1) return;
 

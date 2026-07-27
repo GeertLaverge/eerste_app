@@ -1,7 +1,9 @@
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-COMPILEFIX-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJSKEUZES-BOOMVOLGORDE-20260726
 // THIMACO-CONTROLE: PRIJSKEUZE-GEBRUIKT-EFFECTIEVE-UITSCHRIJFTEKST-20260720
 import '../../app_storage.dart';
 import '../../opmeting/raam/opmeting_raam_keuzemenu_model.dart';
+import 'offerte_technische_keuze_overeenkomst_helper.dart';
 import 'offerte_technische_keuze_ref.dart';
 
 /// Laadt de zelf samengestelde technische keuzes uit de centrale opmetingsopslag
@@ -194,7 +196,11 @@ class OfferteTechnischeKeuzeLaadHelper {
       hoeUitschrijvenMomentopname: hoeUitschrijven,
     );
 
-    resultaatPerSleutel[_sleutelVan(keuze)] = keuze;
+    final sleutel =
+        OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(keuze);
+    if (sleutel.isNotEmpty) {
+      resultaatPerSleutel[sleutel] = keuze;
+    }
   }
 
   static OpmetingRaamKeuzeOptie _meestActueleOptieVoorId({
@@ -234,15 +240,6 @@ class OfferteTechnischeKeuzeLaadHelper {
     }
 
     return standaardKeuzeTitel.trim();
-  }
-
-  static String _sleutelVan(OfferteTechnischeKeuzeRef keuze) {
-    return <String>[
-      keuze.formulierType.trim(),
-      keuze.menuId.trim(),
-      keuze.submenuId.trim(),
-      keuze.keuzeId.trim(),
-    ].join('|');
   }
 
   static String _zichtbaarLabel(OfferteTechnischeKeuzeRef keuze) {

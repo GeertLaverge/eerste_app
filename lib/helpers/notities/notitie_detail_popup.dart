@@ -21,9 +21,7 @@ class _NotitieDetailPopupState extends State<NotitieDetailPopup> {
   void initState() {
     super.initState();
 
-    _controller = TextEditingController(
-      text: widget.detail,
-    );
+    _controller = TextEditingController(text: widget.detail);
   }
 
   @override
@@ -45,18 +43,14 @@ class _NotitieDetailPopupState extends State<NotitieDetailPopup> {
             hintText: 'Extra informatie voor deze notitie...',
             border: OutlineInputBorder(),
             focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0xFF0B7A3B),
-              ),
+              borderSide: BorderSide(color: Color(0xFF0B7A3B)),
             ),
           ),
         ),
       ),
       actions: [
         TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF0B7A3B),
-          ),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF0B7A3B)),
           onPressed: () {
             Navigator.pop(context);
           },
@@ -68,10 +62,7 @@ class _NotitieDetailPopupState extends State<NotitieDetailPopup> {
             foregroundColor: Colors.white,
           ),
           onPressed: () {
-            Navigator.pop(
-              context,
-              _controller.text.trim(),
-            );
+            Navigator.pop(context, _controller.text.trim());
           },
           child: const Text('Opslaan'),
         ),

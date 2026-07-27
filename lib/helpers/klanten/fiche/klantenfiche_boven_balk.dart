@@ -40,9 +40,7 @@ class KlantenficheBovenBalk extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(
-            width: 48,
-          ),
+          const SizedBox(width: 48),
         ],
       ),
     );

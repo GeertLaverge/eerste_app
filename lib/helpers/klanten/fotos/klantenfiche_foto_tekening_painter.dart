@@ -16,10 +16,7 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
   });
 
   @override
-  void paint(
-    Canvas canvas,
-    Size size,
-  ) {
+  void paint(Canvas canvas, Size size) {
     for (final lijn in lijnen) {
       if (lijn.punten.length < 2) continue;
 
@@ -30,21 +27,14 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
         ..style = PaintingStyle.stroke;
 
       for (int i = 0; i < lijn.punten.length - 1; i++) {
-        canvas.drawLine(
-          lijn.punten[i],
-          lijn.punten[i + 1],
-          paintLijn,
-        );
+        canvas.drawLine(lijn.punten[i], lijn.punten[i + 1], paintLijn);
       }
 
       if (lijn.type == FotoEditorTool.pijl && lijn.punten.length >= 2) {
         final start = lijn.punten[lijn.punten.length - 2];
         final einde = lijn.punten.last;
 
-        final hoek = math.atan2(
-          einde.dy - start.dy,
-          einde.dx - start.dx,
-        );
+        final hoek = math.atan2(einde.dy - start.dy, einde.dx - start.dx);
 
         const pijlLengte = 18.0;
         const pijlHoek = math.pi / 6;
@@ -59,17 +49,9 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
           einde.dy - pijlLengte * math.sin(hoek + pijlHoek),
         );
 
-        canvas.drawLine(
-          einde,
-          punt1,
-          paintLijn,
-        );
+        canvas.drawLine(einde, punt1, paintLijn);
 
-        canvas.drawLine(
-          einde,
-          punt2,
-          paintLijn,
-        );
+        canvas.drawLine(einde, punt2, paintLijn);
       }
 
       if (lijn.geselecteerd && lijn.punten.length == 2) {
@@ -99,25 +81,13 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
           height: grootte,
         );
 
-        canvas.drawRect(
-          startRect,
-          handlePaint,
-        );
+        canvas.drawRect(startRect, handlePaint);
 
-        canvas.drawRect(
-          startRect,
-          borderPaint,
-        );
+        canvas.drawRect(startRect, borderPaint);
 
-        canvas.drawRect(
-          eindRect,
-          handlePaint,
-        );
+        canvas.drawRect(eindRect, handlePaint);
 
-        canvas.drawRect(
-          eindRect,
-          borderPaint,
-        );
+        canvas.drawRect(eindRect, borderPaint);
       }
     }
     for (final vorm in vormen) {
@@ -137,23 +107,14 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
             ..lineTo(hoeken[3].dx, hoeken[3].dy)
             ..close();
 
-          canvas.drawPath(
-            path,
-            paintVorm,
-          );
+          canvas.drawPath(path, paintVorm);
         } else {
-          canvas.drawRect(
-            vorm.rect,
-            paintVorm,
-          );
+          canvas.drawRect(vorm.rect, paintVorm);
         }
       }
 
       if (vorm.type == FotoEditorTool.cirkel) {
-        canvas.drawOval(
-          vorm.rect,
-          paintVorm,
-        );
+        canvas.drawOval(vorm.rect, paintVorm);
       }
 
       if (vorm.geselecteerd) {
@@ -170,13 +131,13 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
 
         final punten =
             vorm.type == FotoEditorTool.rechthoek && vorm.hoeken != null
-                ? vorm.hoeken!
-                : [
-                    vorm.rect.topLeft,
-                    vorm.rect.topRight,
-                    vorm.rect.bottomRight,
-                    vorm.rect.bottomLeft,
-                  ];
+            ? vorm.hoeken!
+            : [
+                vorm.rect.topLeft,
+                vorm.rect.topRight,
+                vorm.rect.bottomRight,
+                vorm.rect.bottomLeft,
+              ];
 
         for (final punt in punten) {
           final rect = Rect.fromCenter(
@@ -206,10 +167,7 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
 
       textPainter.layout();
 
-      textPainter.paint(
-        canvas,
-        tekstItem.positie,
-      );
+      textPainter.paint(canvas, tekstItem.positie);
 
       if (tekstItem.geselecteerd) {
         final rect = Rect.fromLTWH(
@@ -224,18 +182,13 @@ class KlantenficheFotoTekeningPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2;
 
-        canvas.drawRect(
-          rect,
-          borderPaint,
-        );
+        canvas.drawRect(rect, borderPaint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(
-    covariant KlantenficheFotoTekeningPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant KlantenficheFotoTekeningPainter oldDelegate) {
     return true;
   }
 }

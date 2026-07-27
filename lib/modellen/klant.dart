@@ -45,16 +45,10 @@ class KlantTaakItem {
   String tekst;
   bool isAfgewerkt;
 
-  KlantTaakItem({
-    this.tekst = '',
-    this.isAfgewerkt = false,
-  });
+  KlantTaakItem({this.tekst = '', this.isAfgewerkt = false});
 
   Map<String, dynamic> toMap() {
-    return {
-      'tekst': tekst,
-      'isAfgewerkt': isAfgewerkt,
-    };
+    return {'tekst': tekst, 'isAfgewerkt': isAfgewerkt};
   }
 
   factory KlantTaakItem.fromMap(Map<String, dynamic> map) {
@@ -157,8 +151,8 @@ class Klant {
     required this.planningDagen,
     List<ExtraWerkItem>? extraWerkItems,
     this.kraanReservering,
-  })  : klantTaken = klantTaken ?? [],
-        extraWerkItems = extraWerkItems ?? [];
+  }) : klantTaken = klantTaken ?? [],
+       extraWerkItems = extraWerkItems ?? [];
 
   Map<String, dynamic> toMap() {
     return {

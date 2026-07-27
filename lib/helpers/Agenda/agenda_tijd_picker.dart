@@ -16,19 +16,12 @@ class AgendaTijdPicker {
     int gekozenUur = beginTijd.hour;
     int gekozenMinuut = afgerondeMinuut;
 
-    final minuten = List.generate(
-      12,
-      (index) => index * 5,
-    );
+    final minuten = List.generate(12, (index) => index * 5);
 
-    final uurController = FixedExtentScrollController(
-      initialItem: gekozenUur,
-    );
+    final uurController = FixedExtentScrollController(initialItem: gekozenUur);
 
     final minuutController = FixedExtentScrollController(
-      initialItem: minuten.indexOf(
-        gekozenMinuut,
-      ),
+      initialItem: minuten.indexOf(gekozenMinuut),
     );
 
     return showDialog<TimeOfDay>(
@@ -91,9 +84,7 @@ class AgendaTijdPicker {
                     children: [
                       Container(
                         height: 48,
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 22,
-                        ),
+                        margin: const EdgeInsets.symmetric(horizontal: 22),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE7F6EC),
                           borderRadius: BorderRadius.circular(13),
@@ -166,12 +157,7 @@ class AgendaTijdPicker {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    14,
-                    0,
-                    14,
-                    14,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                   child: Row(
                     children: [
                       Expanded(
@@ -195,9 +181,7 @@ class AgendaTijdPicker {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0B7A3B),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 13,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
                           child: const Text('Kiezen'),
                         ),

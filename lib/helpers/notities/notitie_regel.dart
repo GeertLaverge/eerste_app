@@ -56,8 +56,9 @@ class _NotitieRegelState extends State<NotitieRegel> {
       context: context,
       builder: (context) {
         return NotitieDetailPopup(
-          titel:
-              widget.notitie.titel.isEmpty ? 'Notitie' : widget.notitie.titel,
+          titel: widget.notitie.titel.isEmpty
+              ? 'Notitie'
+              : widget.notitie.titel,
           detail: widget.notitie.detail,
         );
       },
@@ -161,9 +162,7 @@ class _NotitieRegelState extends State<NotitieRegel> {
                 tooltip: 'Actie kiezen',
                 padding: EdgeInsets.zero,
                 color: Colors.white,
-                constraints: const BoxConstraints(
-                  minWidth: 160,
-                ),
+                constraints: const BoxConstraints(minWidth: 160),
                 onOpened: () {
                   _titelFocusNode.unfocus();
                 },

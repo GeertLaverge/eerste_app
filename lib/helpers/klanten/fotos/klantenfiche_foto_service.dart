@@ -14,14 +14,10 @@ class KlantenficheFotoService {
   }) async {
     final appMap = await getApplicationDocumentsDirectory();
 
-    return File(
-      '${appMap.path}/klanten_fotos/$ficheId/${foto.bestandsNaam}',
-    );
+    return File('${appMap.path}/klanten_fotos/$ficheId/${foto.bestandsNaam}');
   }
 
-  static Future<KlantenficheFoto?> neemFoto({
-    required String ficheId,
-  }) async {
+  static Future<KlantenficheFoto?> neemFoto({required String ficheId}) async {
     final gekozenFoto = await _picker.pickImage(
       source: ImageSource.camera,
       imageQuality: 80,
@@ -31,14 +27,10 @@ class KlantenficheFotoService {
 
     final appMap = await getApplicationDocumentsDirectory();
 
-    final klantMap = Directory(
-      '${appMap.path}/klanten_fotos/$ficheId',
-    );
+    final klantMap = Directory('${appMap.path}/klanten_fotos/$ficheId');
 
     if (!await klantMap.exists()) {
-      await klantMap.create(
-        recursive: true,
-      );
+      await klantMap.create(recursive: true);
     }
 
     final nu = DateTime.now();
@@ -48,7 +40,8 @@ class KlantenficheFotoService {
 
     await File(gekozenFoto.path).copy(nieuwPad);
 
-    final datum = '${nu.day.toString().padLeft(2, '0')}/'
+    final datum =
+        '${nu.day.toString().padLeft(2, '0')}/'
         '${nu.month.toString().padLeft(2, '0')}/'
         '${nu.year}';
 
@@ -63,19 +56,14 @@ class KlantenficheFotoService {
     required String ficheId,
     required KlantenficheFoto foto,
   }) async {
-    final bestand = await fotoBestand(
-      ficheId: ficheId,
-      foto: foto,
-    );
+    final bestand = await fotoBestand(ficheId: ficheId, foto: foto);
 
     if (await bestand.exists()) {
       await bestand.delete();
     }
   }
 
-  static Future<KlantenficheFoto?> kiesFoto({
-    required String ficheId,
-  }) async {
+  static Future<KlantenficheFoto?> kiesFoto({required String ficheId}) async {
     final gekozenFoto = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
@@ -85,14 +73,10 @@ class KlantenficheFotoService {
 
     final appMap = await getApplicationDocumentsDirectory();
 
-    final klantMap = Directory(
-      '${appMap.path}/klanten_fotos/$ficheId',
-    );
+    final klantMap = Directory('${appMap.path}/klanten_fotos/$ficheId');
 
     if (!await klantMap.exists()) {
-      await klantMap.create(
-        recursive: true,
-      );
+      await klantMap.create(recursive: true);
     }
 
     final nu = DateTime.now();
@@ -102,7 +86,8 @@ class KlantenficheFotoService {
 
     await File(gekozenFoto.path).copy(nieuwPad);
 
-    final datum = '${nu.day.toString().padLeft(2, '0')}/'
+    final datum =
+        '${nu.day.toString().padLeft(2, '0')}/'
         '${nu.month.toString().padLeft(2, '0')}/'
         '${nu.year}';
 

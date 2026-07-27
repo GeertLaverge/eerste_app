@@ -5,21 +5,11 @@ class AgendaWeekdagBalk extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const dagNamen = [
-      'Ma',
-      'Di',
-      'Wo',
-      'Do',
-      'Vr',
-      'Za',
-      'Zo',
-    ];
+    const dagNamen = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 
     return Container(
       color: const Color(0xFFE7F6EC),
-      padding: const EdgeInsets.symmetric(
-        vertical: 8,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: dagNamen.map((dag) {
           return Expanded(

@@ -4,8 +4,5 @@ class AgendaSleepData {
   final DateTime oudeDag;
   final AgendaItem item;
 
-  const AgendaSleepData({
-    required this.oudeDag,
-    required this.item,
-  });
+  const AgendaSleepData({required this.oudeDag, required this.item});
 }

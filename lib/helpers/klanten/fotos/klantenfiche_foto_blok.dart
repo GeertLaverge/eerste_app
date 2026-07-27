@@ -20,9 +20,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
   });
 
   Future<void> _fotoNemen(BuildContext context) async {
-    final nieuweFoto = await KlantenficheFotoService.neemFoto(
-      ficheId: ficheId,
-    );
+    final nieuweFoto = await KlantenficheFotoService.neemFoto(ficheId: ficheId);
 
     if (nieuweFoto == null) return;
 
@@ -41,9 +39,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
   }
 
   Future<void> _fotoKiezen(BuildContext context) async {
-    final nieuweFoto = await KlantenficheFotoService.kiesFoto(
-      ficheId: ficheId,
-    );
+    final nieuweFoto = await KlantenficheFotoService.kiesFoto(ficheId: ficheId);
 
     if (nieuweFoto == null) return;
 
@@ -61,9 +57,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
     );
   }
 
-  Future<void> _openMailScherm(
-    BuildContext context,
-  ) async {
+  Future<void> _openMailScherm(BuildContext context) async {
     if (fotos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -77,10 +71,8 @@ class KlantenficheFotoBlok extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => KlantenficheFotoMailPagina(
-          ficheId: ficheId,
-          fotos: fotos,
-        ),
+        builder: (_) =>
+            KlantenficheFotoMailPagina(ficheId: ficheId, fotos: fotos),
       ),
     );
   }
@@ -110,9 +102,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
               },
               child: const Text(
                 'Verwijderen',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
+                style: TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -122,10 +112,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
 
     if (bevestigen != true) return;
 
-    await KlantenficheFotoService.verwijderFoto(
-      ficheId: ficheId,
-      foto: foto,
-    );
+    await KlantenficheFotoService.verwijderFoto(ficheId: ficheId, foto: foto);
 
     final nieuweFotos = List<KlantenficheFoto>.from(fotos)..remove(foto);
 
@@ -170,10 +157,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
               onPressed: () {
                 _openMailScherm(context);
               },
-              icon: const Icon(
-                Icons.email_outlined,
-                color: Color(0xFF0B7A3B),
-              ),
+              icon: const Icon(Icons.email_outlined, color: Color(0xFF0B7A3B)),
             ),
           ],
         ),
@@ -196,9 +180,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                  ),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 child: Row(
                   children: [
@@ -249,9 +231,7 @@ class KlantenficheFotoBlok extends StatelessWidget {
                         children: [
                           Text(
                             foto.bestandsNaam,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w600),
                           ),
                           Text(
                             foto.datum,
@@ -265,15 +245,9 @@ class KlantenficheFotoBlok extends StatelessWidget {
                     ),
                     IconButton(
                       onPressed: () {
-                        _verwijderFoto(
-                          context,
-                          foto,
-                        );
+                        _verwijderFoto(context, foto);
                       },
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.red,
-                      ),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
                     ),
                   ],
                 ),

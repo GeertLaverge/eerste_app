@@ -29,10 +29,7 @@ class AgendaOverlapHelper {
     return null;
   }
 
-  static bool tijdenOverlappen(
-    AgendaItem a,
-    AgendaItem b,
-  ) {
+  static bool tijdenOverlappen(AgendaItem a, AgendaItem b) {
     if (a.volledigeDag || b.volledigeDag) {
       return true;
     }
@@ -50,10 +47,7 @@ class AgendaOverlapHelper {
     return startA < eindeB && startB < eindeA;
   }
 
-  static bool magOverlappen(
-    String typeA,
-    String typeB,
-  ) {
+  static bool magOverlappen(String typeA, String typeB) {
     // Zelfde type mag nooit overlappen.
     if (typeA == typeB) {
       return false;
@@ -67,11 +61,7 @@ class AgendaOverlapHelper {
     }
 
     // Deze drie mogen onderling niet overlappen.
-    const vasteTypes = [
-      'planning',
-      'opvolging',
-      'nadienst',
-    ];
+    const vasteTypes = ['planning', 'opvolging', 'nadienst'];
 
     final aIsVast = vasteTypes.contains(typeA);
     final bIsVast = vasteTypes.contains(typeB);

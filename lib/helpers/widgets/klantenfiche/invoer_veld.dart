@@ -26,9 +26,7 @@ class InvoerVeld extends StatelessWidget {
           labelText: label,
           filled: true,
           fillColor: Colors.grey.shade50,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );

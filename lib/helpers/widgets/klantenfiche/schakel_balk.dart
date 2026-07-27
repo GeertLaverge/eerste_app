@@ -21,8 +21,9 @@ class SchakelBalk extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color:
-            waarde ? Colors.green.withValues(alpha: 0.08) : Colors.grey.shade50,
+        color: waarde
+            ? Colors.green.withValues(alpha: 0.08)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: waarde
@@ -37,10 +38,7 @@ class SchakelBalk extends StatelessWidget {
           icoon,
           color: waarde ? Colors.green : Colors.grey.shade600,
         ),
-        title: Text(
-          titel,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: Text(titel, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(subtitel),
       ),
     );

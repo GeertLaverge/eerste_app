@@ -6,16 +6,10 @@ class KlantenficheTaakveld extends StatelessWidget {
   final List<KlantTaakItem> taken;
   final VoidCallback? onChanged;
 
-  const KlantenficheTaakveld({
-    super.key,
-    required this.taken,
-    this.onChanged,
-  });
+  const KlantenficheTaakveld({super.key, required this.taken, this.onChanged});
 
   void _taakToevoegen() {
-    taken.add(
-      KlantTaakItem(),
-    );
+    taken.add(KlantTaakItem());
 
     onChanged?.call();
   }
@@ -51,9 +45,8 @@ class KlantenficheTaakveld extends StatelessWidget {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: TextEditingController(
-                      text: taak.tekst,
-                    )..selection = TextSelection.collapsed(
+                    controller: TextEditingController(text: taak.tekst)
+                      ..selection = TextSelection.collapsed(
                         offset: taak.tekst.length,
                       ),
                     onChanged: (waarde) {
@@ -70,15 +63,11 @@ class KlantenficheTaakveld extends StatelessWidget {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFE5E7EB),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFE5E7EB),
-                        ),
+                        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -95,10 +84,7 @@ class KlantenficheTaakveld extends StatelessWidget {
                   onPressed: () {
                     _taakVerwijderen(index);
                   },
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.red,
-                  ),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
                 ),
               ],
             ),
@@ -112,9 +98,7 @@ class KlantenficheTaakveld extends StatelessWidget {
             label: const Text('Taak toevoegen'),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF0B7A3B),
-              side: const BorderSide(
-                color: Color(0xFF0B7A3B),
-              ),
+              side: const BorderSide(color: Color(0xFF0B7A3B)),
             ),
           ),
         ),

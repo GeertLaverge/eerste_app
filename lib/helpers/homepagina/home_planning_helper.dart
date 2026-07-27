@@ -39,9 +39,7 @@ class HomePlanningHelper {
       return item.type == 'kraan';
     }).toList();
 
-    kraanItems.sort(
-      (a, b) => a.startMinuten.compareTo(b.startMinuten),
-    );
+    kraanItems.sort((a, b) => a.startMinuten.compareTo(b.startMinuten));
 
     return kraanItems;
   }
@@ -136,11 +134,7 @@ class HomePlanningHelper {
         return agendaDatumKey;
       }
 
-      final homeDatum = agendaDatum.subtract(
-        Duration(
-          days: item.dagenVooraf,
-        ),
-      );
+      final homeDatum = agendaDatum.subtract(Duration(days: item.dagenVooraf));
 
       return _datumKey(homeDatum);
     }

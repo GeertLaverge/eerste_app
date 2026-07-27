@@ -40,19 +40,14 @@ class DagtaakRij extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade200),
-          ),
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
         ),
         child: Row(
           children: [
             IconButton(
               onPressed: onAfvinken,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                minWidth: 30,
-                minHeight: 30,
-              ),
+              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
               icon: Icon(
                 afgewerkt ? Icons.check_circle : Icons.radio_button_unchecked,
                 color: afgewerkt ? Colors.green : Colors.grey.shade500,
@@ -89,11 +84,7 @@ class DagtaakRij extends StatelessWidget {
               ),
             ],
             const SizedBox(width: 4),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey.shade400,
-              size: 18,
-            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400, size: 18),
           ],
         ),
       ),

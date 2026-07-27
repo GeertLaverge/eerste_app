@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-20260727
 import 'dart:convert';
 
 import 'offerte_prijs_categorie.dart';
@@ -6,6 +7,7 @@ import 'offerte_prijs_uitschrijfmodus.dart';
 import 'offerte_prijs_verdeel_limietmodus.dart';
 import 'offerte_prijsprofiel_model.dart';
 import 'offerte_prijsregel_model.dart';
+import 'offerte_technische_keuze_overeenkomst_helper.dart';
 import 'offerte_technische_keuze_ref.dart';
 
 enum OffertePrijsinstellingenWijzigingType { toegevoegd, verwijderd, gewijzigd }
@@ -168,8 +170,7 @@ class OffertePrijsregelMomentopname {
         'Aankooplimiet: ${_euro(verdeelLimietBedragExclBtw)} → ${_euro(nieuw.verdeelLimietBedragExclBtw)}',
       );
     }
-    if (_technischeKeuzeSleutel(technischeKeuze) !=
-        _technischeKeuzeSleutel(nieuw.technischeKeuze)) {
+    if (!_zijnZelfdeTechnischeKeuze(technischeKeuze, nieuw.technischeKeuze)) {
       verschillen.add('Gekoppelde technische keuze gewijzigd');
     }
     if (categorie != nieuw.categorie) {
@@ -197,17 +198,18 @@ class OffertePrijsregelMomentopname {
     return delen.join(' · ');
   }
 
-  static String _technischeKeuzeSleutel(OfferteTechnischeKeuzeRef? keuze) {
-    if (keuze == null) {
-      return '';
+  static bool _zijnZelfdeTechnischeKeuze(
+    OfferteTechnischeKeuzeRef? eerste,
+    OfferteTechnischeKeuzeRef? tweede,
+  ) {
+    if (eerste == null || tweede == null) {
+      return eerste == null && tweede == null;
     }
 
-    return <String>[
-      keuze.formulierType,
-      keuze.menuId,
-      keuze.submenuId,
-      keuze.keuzeId,
-    ].join('|');
+    return OfferteTechnischeKeuzeOvereenkomstHelper.zijnLokaalExact(
+      eerste,
+      tweede,
+    );
   }
 }
 

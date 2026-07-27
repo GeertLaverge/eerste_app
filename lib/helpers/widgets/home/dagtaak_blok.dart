@@ -22,10 +22,7 @@ class DagtaakBlok extends StatelessWidget {
     final openTaken = taken.where((actie) => !actie.isAfgewerkt).toList();
     final afgewerkteTaken = taken.where((actie) => actie.isAfgewerkt).toList();
 
-    final gesorteerdeTaken = [
-      ...openTaken,
-      ...afgewerkteTaken,
-    ];
+    final gesorteerdeTaken = [...openTaken, ...afgewerkteTaken];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
@@ -50,10 +47,7 @@ class DagtaakBlok extends StatelessWidget {
               const Expanded(
                 child: Text(
                   'Dagtaak',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
@@ -72,10 +66,7 @@ class DagtaakBlok extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
                 'Geen dagtaken vandaag',
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
             )
           else

@@ -30,11 +30,7 @@ class KlantenficheStatusBalk extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const opties = [
-      'Actief',
-      'Opvolgen',
-      'Afgewerkt',
-    ];
+    const opties = ['Actief', 'Opvolgen', 'Afgewerkt'];
 
     return Container(
       color: Colors.white,
@@ -61,11 +57,7 @@ class KlantenficheStatusBalk extends StatelessWidget {
                           if (actief)
                             Padding(
                               padding: const EdgeInsets.only(right: 4),
-                              child: Icon(
-                                Icons.check,
-                                size: 14,
-                                color: kleur,
-                              ),
+                              child: Icon(Icons.check, size: 14, color: kleur),
                             ),
                           Flexible(
                             child: Text(

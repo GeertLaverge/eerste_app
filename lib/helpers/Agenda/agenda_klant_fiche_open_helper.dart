@@ -28,9 +28,7 @@ class AgendaKlantFicheOpenHelper {
         await Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => KlantenFichePagina(
-              bestaandeFiche: fiche,
-            ),
+            builder: (_) => KlantenFichePagina(bestaandeFiche: fiche),
           ),
         );
 

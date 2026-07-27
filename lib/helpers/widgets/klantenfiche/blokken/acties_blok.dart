@@ -105,10 +105,7 @@ class ActiesBlok extends StatelessWidget {
             children: [
               const Text(
                 'Projectstatus',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               SizedBox(

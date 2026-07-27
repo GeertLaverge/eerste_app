@@ -15,11 +15,8 @@ class AgendaMaandBlok extends StatelessWidget {
   final Function(DateTime dag, AgendaItem item) onItemTap;
   final Function(DateTime dag, AgendaItem item) onItemSleep;
 
-  final Function(
-    DateTime nieuweDag,
-    AgendaItem item,
-    DateTime oudeDag,
-  ) onItemDrop;
+  final Function(DateTime nieuweDag, AgendaItem item, DateTime oudeDag)
+  onItemDrop;
 
   const AgendaMaandBlok({
     super.key,
@@ -40,18 +37,12 @@ class AgendaMaandBlok extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(
-            top: 8,
-            bottom: 8,
-          ),
+          padding: const EdgeInsets.only(top: 8, bottom: 8),
           child: Align(
             alignment: Alignment.centerLeft,
             child: Text(
               AgendaDatumHelper.maandTitel(maand),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),

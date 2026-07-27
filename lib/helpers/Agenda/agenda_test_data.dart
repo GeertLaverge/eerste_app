@@ -41,11 +41,7 @@ class AgendaTestData {
           type: 'nadienst',
           volledigeDag: true,
         ),
-        AgendaItem(
-          titel: 'Kraan hele dag',
-          type: 'kraan',
-          volledigeDag: true,
-        ),
+        AgendaItem(titel: 'Kraan hele dag', type: 'kraan', volledigeDag: true),
       ],
       AgendaDatumHelper.datumKey(dag4): [
         AgendaItem(
