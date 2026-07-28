@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: GEKOPPELDE-TECHNISCHE-PRIJSREGELS-FASE-4-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJS-OVERNEMEN-FASE-3-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJSKEUZE-ANDERE-ARTIKELTYPES-FASE-2-20260727
@@ -75,8 +76,13 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
     return formulierType == 'vliegendeur' || formulierType == 'vliegdeur';
   }
 
+  bool get _isSchuifvliegendeur {
+    return _normaliseerFormulierType(widget.formulierType) ==
+        _normaliseerFormulierType('schuifvliegendeur');
+  }
+
   bool get _heeftGeenTechnischeKeuzes {
-    return _isVasteInzethor || _isVliegendeur;
+    return _isVasteInzethor || _isVliegendeur || _isSchuifvliegendeur;
   }
 
   String get _paginaTitel {

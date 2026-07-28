@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: TECHNISCHE-STAMBOOM-VOLGORDE-BINNEN-ZELFDE-NIVEAU-20260728
+// THIMACO-CONTROLE: TECHNISCHE-STAMBOOM-HERNOEMEN-KOPIEREN-VERPLAATSEN-20260728
 // THIMACO-CONTROLE: STAMBOOM-WISSEN-INKLAPPEN-KEUZE-KOPIEREN-20260727
 // THIMACO-CONTROLE: ALLE-TITELS-OP-EEN-BLAD-EN-STABIELE-INVOEGDIALOOG-20260727
 // THIMACO-CONTROLE: RUSTIGE-STAMBOOM-EERST-STRUCTUUR-DAN-INVULLEN-20260727
@@ -2254,6 +2256,260 @@ toonOpmetingRaamTechnischeMenusBeheerDialoog({
   );
 }
 
+enum _BeheerStructuurActie { nieuweKeuze, nieuwSubmenu, naamWijzigen, kopieren }
+
+enum _VolgordeVerplaatsActie { omhoog, omlaag }
+
+class _BoomBestemming {
+  const _BoomBestemming({
+    required this.menuId,
+    required this.label,
+    this.ouderSubmenuId,
+  });
+
+  final String menuId;
+  final String? ouderSubmenuId;
+  final String label;
+}
+
+class _BeheerStructuurActieDialoog extends StatelessWidget {
+  const _BeheerStructuurActieDialoog({
+    required this.doelNaam,
+    required this.isTitel,
+  });
+
+  final String doelNaam;
+  final bool isTitel;
+
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+
+  @override
+  Widget build(BuildContext context) {
+    final netteNaam = doelNaam.trim();
+
+    Widget actieTegel({
+      required IconData icoon,
+      required String titel,
+      required String uitleg,
+      required _BeheerStructuurActie actie,
+    }) {
+      return ListTile(
+        leading: Icon(icoon, color: _groen),
+        title: Text(titel, style: const TextStyle(fontWeight: FontWeight.w900)),
+        subtitle: Text(uitleg),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        onTap: () => Navigator.pop(context, actie),
+      );
+    }
+
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      titlePadding: EdgeInsets.zero,
+      title: Container(
+        padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+        decoration: const BoxDecoration(
+          color: _lichtGroen,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.account_tree_outlined, color: _groen),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                isTitel ? 'Titel beheren' : 'Submenu beheren',
+                style: const TextStyle(
+                  color: _groen,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      content: SizedBox(
+        width: 470,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (netteNaam.isNotEmpty) ...[
+                Text(
+                  netteNaam,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              actieTegel(
+                icoon: Icons.radio_button_checked,
+                titel: 'Nieuwe keuze',
+                uitleg: 'Voeg een nieuwe technische keuze op deze plaats toe.',
+                actie: _BeheerStructuurActie.nieuweKeuze,
+              ),
+              actieTegel(
+                icoon: Icons.account_tree_outlined,
+                titel: 'Nieuw submenu',
+                uitleg: 'Maak een nieuwe onderliggende tak in de stamboom.',
+                actie: _BeheerStructuurActie.nieuwSubmenu,
+              ),
+              const Divider(height: 18),
+              actieTegel(
+                icoon: Icons.edit_outlined,
+                titel: 'Naam wijzigen',
+                uitleg: isTitel
+                    ? 'Wijzig alleen de naam van deze titel; alle ID’s en inhoud blijven behouden.'
+                    : 'Wijzig alleen de naam van dit submenu; alle onderliggende inhoud blijft behouden.',
+                actie: _BeheerStructuurActie.naamWijzigen,
+              ),
+              actieTegel(
+                icoon: Icons.content_copy_rounded,
+                titel: 'Kopiëren',
+                uitleg: isTitel
+                    ? 'Kopieer de volledige titel met alle submenu’s en keuzes naar een gekozen positie.'
+                    : 'Kopieer dit submenu met alle onderliggende submenu’s en keuzes naar een gekozen plaats.',
+                actie: _BeheerStructuurActie.kopieren,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuleren'),
+        ),
+      ],
+    );
+  }
+}
+
+class _NaamWijzigenDialoog extends StatefulWidget {
+  const _NaamWijzigenDialoog({
+    required this.titel,
+    required this.label,
+    required this.beginWaarde,
+  });
+
+  final String titel;
+  final String label;
+  final String beginWaarde;
+
+  @override
+  State<_NaamWijzigenDialoog> createState() {
+    return _NaamWijzigenDialoogState();
+  }
+}
+
+class _NaamWijzigenDialoogState extends State<_NaamWijzigenDialoog> {
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+
+  late final TextEditingController _controller;
+  String? _foutmelding;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.beginWaarde);
+    _controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _controller.text.length,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _bewaar() {
+    final waarde = _controller.text.trim();
+
+    if (waarde.isEmpty) {
+      setState(() {
+        _foutmelding = 'Vul een naam in.';
+      });
+      return;
+    }
+
+    Navigator.pop(context, waarde);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      titlePadding: EdgeInsets.zero,
+      title: Container(
+        padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+        decoration: const BoxDecoration(
+          color: _lichtGroen,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.edit_outlined, color: _groen),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                widget.titel,
+                style: const TextStyle(
+                  color: _groen,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      content: SizedBox(
+        width: 430,
+        child: TextField(
+          controller: _controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.sentences,
+          onSubmitted: (_) => _bewaar(),
+          onChanged: (_) {
+            if (_foutmelding != null) {
+              setState(() {
+                _foutmelding = null;
+              });
+            }
+          },
+          decoration: InputDecoration(
+            labelText: widget.label,
+            errorText: _foutmelding,
+            border: const OutlineInputBorder(),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuleren'),
+        ),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: _groen),
+          onPressed: _bewaar,
+          icon: const Icon(Icons.check, size: 18),
+          label: const Text('Bewaren'),
+        ),
+      ],
+    );
+  }
+}
+
 class OpmetingRaamTechnischeMenusBeheerDialoog extends StatefulWidget {
   const OpmetingRaamTechnischeMenusBeheerDialoog({
     super.key,
@@ -2505,6 +2761,682 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
       _menus = _menus.map((menu) {
         return menu.id == bijgewerktMenu.id ? bijgewerktMenu : menu;
       }).toList();
+      _foutmelding = null;
+    });
+  }
+
+  OpmetingRaamKeuzeMenuItem? _zoekBoomItem({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required String itemId,
+  }) {
+    for (final item in items) {
+      if (item.id == itemId) {
+        return item;
+      }
+
+      if (item.isSubmenu) {
+        final gevonden = _zoekBoomItem(items: item.kinderen, itemId: itemId);
+
+        if (gevonden != null) {
+          return gevonden;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  List<String>? _vindBoomItemPad({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required String itemId,
+  }) {
+    for (final item in items) {
+      if (item.id == itemId) {
+        return <String>[item.id];
+      }
+
+      if (!item.isSubmenu) {
+        continue;
+      }
+
+      final onderliggendPad = _vindBoomItemPad(
+        items: item.kinderen,
+        itemId: itemId,
+      );
+
+      if (onderliggendPad != null) {
+        return <String>[item.id, ...onderliggendPad];
+      }
+    }
+
+    return null;
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> _kinderenVanOuder({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    String? ouderSubmenuId,
+  }) {
+    if (ouderSubmenuId == null || ouderSubmenuId.trim().isEmpty) {
+      return items;
+    }
+
+    final ouder = _zoekBoomItem(items: items, itemId: ouderSubmenuId);
+
+    if (ouder == null || !ouder.isSubmenu) {
+      return const <OpmetingRaamKeuzeMenuItem>[];
+    }
+
+    return ouder.kinderen;
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> _voegItemToeAanOuder({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required OpmetingRaamKeuzeMenuItem nieuwItem,
+    String? ouderSubmenuId,
+    int? invoegIndex,
+  }) {
+    if (ouderSubmenuId == null || ouderSubmenuId.trim().isEmpty) {
+      final resultaat = List<OpmetingRaamKeuzeMenuItem>.from(items);
+      final doelIndex = (invoegIndex ?? resultaat.length)
+          .clamp(0, resultaat.length)
+          .toInt();
+      resultaat.insert(doelIndex, nieuwItem);
+      return resultaat;
+    }
+
+    var toegevoegd = false;
+
+    List<OpmetingRaamKeuzeMenuItem> verwerk(
+      List<OpmetingRaamKeuzeMenuItem> lijst,
+    ) {
+      return lijst.map((item) {
+        if (item.isSubmenu && item.id == ouderSubmenuId) {
+          final nieuweKinderen = List<OpmetingRaamKeuzeMenuItem>.from(
+            item.kinderen,
+          );
+          final doelIndex = (invoegIndex ?? nieuweKinderen.length)
+              .clamp(0, nieuweKinderen.length)
+              .toInt();
+          nieuweKinderen.insert(doelIndex, nieuwItem);
+          toegevoegd = true;
+          return item.copyWith(kinderen: nieuweKinderen);
+        }
+
+        if (!item.isSubmenu || item.kinderen.isEmpty) {
+          return item;
+        }
+
+        return item.copyWith(kinderen: verwerk(item.kinderen));
+      }).toList();
+    }
+
+    final resultaat = verwerk(items);
+    return toegevoegd ? resultaat : items;
+  }
+
+  List<OpmetingRaamKeuzeMenuItem> _hernoemBoomItem({
+    required List<OpmetingRaamKeuzeMenuItem> items,
+    required String itemId,
+    required String nieuweNaam,
+  }) {
+    return items.map((item) {
+      if (item.id == itemId) {
+        return item.copyWith(naam: nieuweNaam);
+      }
+
+      if (!item.isSubmenu || item.kinderen.isEmpty) {
+        return item;
+      }
+
+      return item.copyWith(
+        kinderen: _hernoemBoomItem(
+          items: item.kinderen,
+          itemId: itemId,
+          nieuweNaam: nieuweNaam,
+        ),
+      );
+    }).toList();
+  }
+
+  Set<String> _verzamelSubmenuIds(OpmetingRaamKeuzeMenuItem item) {
+    final resultaat = <String>{};
+
+    void verzamel(OpmetingRaamKeuzeMenuItem huidig) {
+      if (huidig.isSubmenu) {
+        resultaat.add(huidig.id);
+      }
+
+      for (final kind in huidig.kinderen) {
+        verzamel(kind);
+      }
+    }
+
+    verzamel(item);
+    return resultaat;
+  }
+
+  void _verzamelNieuweBoomIds({
+    required OpmetingRaamKeuzeMenuItem item,
+    required Map<String, String> idKoppeling,
+  }) {
+    final nieuwId = _nieuwId(item.isSubmenu ? 'submenu' : 'soort');
+    idKoppeling[item.id] = nieuwId;
+
+    final optieId = item.optie?.id.trim() ?? '';
+    if (optieId.isNotEmpty) {
+      idKoppeling[optieId] = nieuwId;
+    }
+
+    for (final kind in item.kinderen) {
+      _verzamelNieuweBoomIds(item: kind, idKoppeling: idKoppeling);
+    }
+  }
+
+  OpmetingRaamKeuzeMenuItem _kopieerBoomItemMetNieuweIds({
+    required OpmetingRaamKeuzeMenuItem item,
+    required Map<String, String> idKoppeling,
+    required String doelMenuId,
+    bool voegKopieToeAanNaam = false,
+  }) {
+    final nieuwId =
+        idKoppeling[item.id] ?? _nieuwId(item.isSubmenu ? 'submenu' : 'soort');
+    final basisNaam = item.weergaveNaam.trim();
+    final nieuweNaam = voegKopieToeAanNaam && basisNaam.isNotEmpty
+        ? '$basisNaam kopie'
+        : basisNaam;
+
+    if (item.isSubmenu) {
+      return OpmetingRaamKeuzeMenuItem.submenu(
+        id: nieuwId,
+        naam: nieuweNaam,
+        actief: item.actief,
+        kinderen: item.kinderen.map((kind) {
+          return _kopieerBoomItemMetNieuweIds(
+            item: kind,
+            idKoppeling: idKoppeling,
+            doelMenuId: doelMenuId,
+          );
+        }).toList(),
+      );
+    }
+
+    final optie = item.optie;
+
+    if (optie == null) {
+      return OpmetingRaamKeuzeMenuItem.keuze(
+        optie: OpmetingRaamKeuzeOptie(
+          id: nieuwId,
+          naam: nieuweNaam,
+          uitvoerTekst: '',
+          isGeenKeuze: false,
+          tekenfunctie: OpmetingRaamTekenfunctie.geen,
+        ),
+        actief: item.actief,
+      );
+    }
+
+    final nieuweNietCombineerbaarMet = optie.nietCombineerbaarMet.map((ref) {
+      final nieuwOptieId = idKoppeling[ref.optieId];
+
+      if (nieuwOptieId == null) {
+        return ref;
+      }
+
+      return OpmetingRaamNietCombineerbareKeuze(
+        menuId: doelMenuId,
+        optieId: nieuwOptieId,
+      );
+    }).toList();
+
+    final nieuweOptie = optie.copyWith(
+      id: nieuwId,
+      naam: nieuweNaam,
+      nietCombineerbaarMet: nieuweNietCombineerbaarMet,
+    );
+
+    return OpmetingRaamKeuzeMenuItem.keuze(
+      optie: nieuweOptie,
+      actief: item.actief,
+    );
+  }
+
+  void _openPadNaarSubmenu({
+    required OpmetingRaamKeuzeMenu menu,
+    String? submenuId,
+  }) {
+    _openMenuIds.add(menu.id);
+
+    if (submenuId == null || submenuId.trim().isEmpty) {
+      return;
+    }
+
+    final pad = _vindBoomItemPad(
+      items: _bewerkbareItems(menu),
+      itemId: submenuId,
+    );
+
+    if (pad == null) {
+      return;
+    }
+
+    for (final id in pad) {
+      _openSubmenuSleutels.add(_submenuSleutel(menu.id, id));
+    }
+  }
+
+  Future<String?> _vraagGewijzigdeNaam({
+    required String titel,
+    required String label,
+    required String beginWaarde,
+  }) {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _NaamWijzigenDialoog(
+        titel: titel,
+        label: label,
+        beginWaarde: beginWaarde,
+      ),
+    );
+  }
+
+  Future<void> _wijzigTitelNaam(OpmetingRaamKeuzeMenu menu) async {
+    final nieuweNaam = await _vraagGewijzigdeNaam(
+      titel: 'Naam titel wijzigen',
+      label: 'Naam titel',
+      beginWaarde: menu.titel,
+    );
+
+    if (!mounted || nieuweNaam == null) {
+      return;
+    }
+
+    final bestaatAl = _menus.any((huidigMenu) {
+      return huidigMenu.id != menu.id &&
+          _titelSleutel(huidigMenu.titel) == _titelSleutel(nieuweNaam);
+    });
+
+    if (bestaatAl) {
+      setState(() {
+        _foutmelding = 'Er bestaat al een technische titel met deze naam.';
+      });
+      return;
+    }
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == menu.id
+            ? huidigMenu.copyWith(titel: nieuweNaam)
+            : huidigMenu;
+      }).toList();
+      _dropdownVersie++;
+      _foutmelding = null;
+    });
+  }
+
+  Future<void> _wijzigSubmenuNaam({
+    required OpmetingRaamKeuzeMenu menu,
+    required OpmetingRaamKeuzeMenuItem submenu,
+  }) async {
+    final nieuweNaam = await _vraagGewijzigdeNaam(
+      titel: 'Naam submenu wijzigen',
+      label: 'Naam submenu',
+      beginWaarde: submenu.weergaveNaam,
+    );
+
+    if (!mounted || nieuweNaam == null) {
+      return;
+    }
+
+    final items = _bewerkbareItems(menu);
+    final pad = _vindBoomItemPad(items: items, itemId: submenu.id);
+    final ouderSubmenuId = pad != null && pad.length > 1
+        ? pad[pad.length - 2]
+        : null;
+    final broersEnZussen = _kinderenVanOuder(
+      items: items,
+      ouderSubmenuId: ouderSubmenuId,
+    );
+    final bestaatAl = broersEnZussen.any((item) {
+      return item.id != submenu.id &&
+          item.weergaveNaam.trim().toLowerCase() ==
+              nieuweNaam.trim().toLowerCase();
+    });
+
+    if (bestaatAl) {
+      setState(() {
+        _foutmelding = 'Op dit niveau bestaat al een item met deze naam.';
+      });
+      return;
+    }
+
+    final bijgewerktMenu = _menuMetItems(
+      menu,
+      _hernoemBoomItem(
+        items: items,
+        itemId: submenu.id,
+        nieuweNaam: nieuweNaam,
+      ),
+    );
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == bijgewerktMenu.id ? bijgewerktMenu : huidigMenu;
+      }).toList();
+      _openPadNaarSubmenu(menu: bijgewerktMenu, submenuId: submenu.id);
+      _foutmelding = null;
+    });
+  }
+
+  Future<int?> _kiesTitelKopiePositie(OpmetingRaamKeuzeMenu bronMenu) {
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: const Text('Plaats van gekopieerde titel'),
+          content: SizedBox(
+            width: 460,
+            height: 360,
+            child: ListView.builder(
+              itemCount: _menus.length + 1,
+              itemBuilder: (_, index) {
+                final label = index == 0
+                    ? 'Bovenaan'
+                    : 'Na “${_menus[index - 1].titel}”';
+
+                return ListTile(
+                  leading: const Icon(
+                    Icons.vertical_align_center_rounded,
+                    color: _groen,
+                  ),
+                  title: Text(label),
+                  selected: index == _menus.indexOf(bronMenu) + 1,
+                  onTap: () => Navigator.pop(dialogContext, index),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _kopieerVolledigeTitel(OpmetingRaamKeuzeMenu bronMenu) async {
+    final invoegIndex = await _kiesTitelKopiePositie(bronMenu);
+
+    if (!mounted || invoegIndex == null) {
+      return;
+    }
+
+    final nieuwMenuId = _nieuwId('menu');
+    final idKoppeling = <String, String>{};
+    final bronItems = _bewerkbareItems(bronMenu);
+
+    for (final item in bronItems) {
+      _verzamelNieuweBoomIds(item: item, idKoppeling: idKoppeling);
+    }
+
+    final gekopieerdeItems = bronItems.map((item) {
+      return _kopieerBoomItemMetNieuweIds(
+        item: item,
+        idKoppeling: idKoppeling,
+        doelMenuId: nieuwMenuId,
+      );
+    }).toList();
+    final basisMenu = OpmetingRaamKeuzeMenu.nieuw(
+      id: nieuwMenuId,
+      titel: '${bronMenu.titel.trim()} kopie',
+      volgorde: invoegIndex,
+    ).copyWith(actief: bronMenu.actief);
+    final gekopieerdMenu = _menuMetItems(basisMenu, gekopieerdeItems);
+
+    setState(() {
+      final nieuweMenus = List<OpmetingRaamKeuzeMenu>.from(_menus);
+      nieuweMenus.insert(
+        invoegIndex.clamp(0, nieuweMenus.length).toInt(),
+        gekopieerdMenu,
+      );
+      _menus = _normaliseerVolgorde(nieuweMenus);
+      _openMenuIds.add(nieuwMenuId);
+      _dropdownVersie++;
+      _foutmelding = null;
+    });
+  }
+
+  List<_BoomBestemming> _maakKopieBestemmingen({
+    required OpmetingRaamKeuzeMenu bronMenu,
+    required OpmetingRaamKeuzeMenuItem bronSubmenu,
+  }) {
+    final uitgeslotenSubmenuIds = _verzamelSubmenuIds(bronSubmenu);
+    final resultaat = <_BoomBestemming>[];
+
+    void verzamelSubmenus({
+      required OpmetingRaamKeuzeMenu menu,
+      required List<OpmetingRaamKeuzeMenuItem> items,
+      required List<String> padNamen,
+    }) {
+      for (final item in items) {
+        if (!item.isSubmenu) {
+          continue;
+        }
+
+        final isUitgesloten =
+            menu.id == bronMenu.id && uitgeslotenSubmenuIds.contains(item.id);
+        final nieuwPad = <String>[...padNamen, item.weergaveNaam.trim()];
+
+        if (!isUitgesloten) {
+          resultaat.add(
+            _BoomBestemming(
+              menuId: menu.id,
+              ouderSubmenuId: item.id,
+              label: '${menu.titel} > ${nieuwPad.join(' > ')}',
+            ),
+          );
+        }
+
+        verzamelSubmenus(menu: menu, items: item.kinderen, padNamen: nieuwPad);
+      }
+    }
+
+    for (final menu in _menus) {
+      resultaat.add(
+        _BoomBestemming(
+          menuId: menu.id,
+          label: '${menu.titel} · rechtstreeks onder titel',
+        ),
+      );
+      verzamelSubmenus(
+        menu: menu,
+        items: _bewerkbareItems(menu),
+        padNamen: const <String>[],
+      );
+    }
+
+    return resultaat;
+  }
+
+  Future<_BoomBestemming?> _kiesBoomBestemming({
+    required String titel,
+    required List<_BoomBestemming> bestemmingen,
+  }) {
+    return showDialog<_BoomBestemming>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          title: Text(titel),
+          content: SizedBox(
+            width: 520,
+            height: 420,
+            child: ListView.separated(
+              itemCount: bestemmingen.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, index) {
+                final bestemming = bestemmingen[index];
+                return ListTile(
+                  leading: Icon(
+                    bestemming.ouderSubmenuId == null
+                        ? Icons.account_tree_outlined
+                        : Icons.subdirectory_arrow_right_rounded,
+                    color: _groen,
+                  ),
+                  title: Text(bestemming.label),
+                  onTap: () => Navigator.pop(dialogContext, bestemming),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _kopieerVolledigSubmenu({
+    required OpmetingRaamKeuzeMenu bronMenu,
+    required OpmetingRaamKeuzeMenuItem bronSubmenu,
+  }) async {
+    final bestemmingen = _maakKopieBestemmingen(
+      bronMenu: bronMenu,
+      bronSubmenu: bronSubmenu,
+    );
+    final bestemming = await _kiesBoomBestemming(
+      titel: 'Waar moet het submenu worden gekopieerd?',
+      bestemmingen: bestemmingen,
+    );
+
+    if (!mounted || bestemming == null) {
+      return;
+    }
+
+    final doelMenuIndex = _menus.indexWhere(
+      (menu) => menu.id == bestemming.menuId,
+    );
+
+    if (doelMenuIndex < 0) {
+      setState(() {
+        _foutmelding = 'De gekozen bestemming bestaat niet meer.';
+      });
+      return;
+    }
+
+    final doelMenu = _menus[doelMenuIndex];
+    final idKoppeling = <String, String>{};
+    _verzamelNieuweBoomIds(item: bronSubmenu, idKoppeling: idKoppeling);
+    final kopie = _kopieerBoomItemMetNieuweIds(
+      item: bronSubmenu,
+      idKoppeling: idKoppeling,
+      doelMenuId: doelMenu.id,
+      voegKopieToeAanNaam: true,
+    );
+    final nieuweItems = _voegItemToeAanOuder(
+      items: _bewerkbareItems(doelMenu),
+      ouderSubmenuId: bestemming.ouderSubmenuId,
+      nieuwItem: kopie,
+    );
+    final bijgewerktMenu = _menuMetItems(doelMenu, nieuweItems);
+
+    setState(() {
+      _menus = _menus.map((menu) {
+        return menu.id == bijgewerktMenu.id ? bijgewerktMenu : menu;
+      }).toList();
+      _openPadNaarSubmenu(
+        menu: bijgewerktMenu,
+        submenuId: bestemming.ouderSubmenuId,
+      );
+      _foutmelding = null;
+    });
+  }
+
+  bool _kanBinnenZelfdeNiveauVerplaatsen({
+    required OpmetingRaamKeuzeMenu menu,
+    required OpmetingRaamKeuzeMenuItem item,
+    required int richting,
+  }) {
+    final items = _bewerkbareItems(menu);
+    final pad = _vindBoomItemPad(items: items, itemId: item.id);
+
+    if (pad == null) {
+      return false;
+    }
+
+    final ouderSubmenuId = pad.length > 1 ? pad[pad.length - 2] : null;
+    final broersEnZussen = _kinderenVanOuder(
+      items: items,
+      ouderSubmenuId: ouderSubmenuId,
+    );
+    final huidigeIndex = broersEnZussen.indexWhere(
+      (kandidaat) => kandidaat.id == item.id,
+    );
+
+    if (huidigeIndex < 0) {
+      return false;
+    }
+
+    final nieuweIndex = huidigeIndex + richting;
+    return nieuweIndex >= 0 && nieuweIndex < broersEnZussen.length;
+  }
+
+  void _verplaatsBinnenZelfdeNiveau({
+    required OpmetingRaamKeuzeMenu menu,
+    required OpmetingRaamKeuzeMenuItem item,
+    required int richting,
+  }) {
+    final items = _bewerkbareItems(menu);
+    final pad = _vindBoomItemPad(items: items, itemId: item.id);
+
+    if (pad == null) {
+      return;
+    }
+
+    final ouderSubmenuId = pad.length > 1 ? pad[pad.length - 2] : null;
+    final broersEnZussen = _kinderenVanOuder(
+      items: items,
+      ouderSubmenuId: ouderSubmenuId,
+    );
+    final huidigeIndex = broersEnZussen.indexWhere(
+      (kandidaat) => kandidaat.id == item.id,
+    );
+    final nieuweIndex = huidigeIndex + richting;
+
+    if (huidigeIndex < 0 ||
+        nieuweIndex < 0 ||
+        nieuweIndex >= broersEnZussen.length) {
+      return;
+    }
+
+    final zonderItem = _verwijderItemUitBoom(items: items, itemId: item.id);
+    final nieuweItems = _voegItemToeAanOuder(
+      items: zonderItem,
+      ouderSubmenuId: ouderSubmenuId,
+      nieuwItem: item,
+      invoegIndex: nieuweIndex,
+    );
+    final bijgewerktMenu = _menuMetItems(menu, nieuweItems);
+
+    setState(() {
+      _menus = _menus.map((huidigMenu) {
+        return huidigMenu.id == bijgewerktMenu.id ? bijgewerktMenu : huidigMenu;
+      }).toList();
+      _openPadNaarSubmenu(menu: bijgewerktMenu, submenuId: ouderSubmenuId);
       _foutmelding = null;
     });
   }
@@ -2763,25 +3695,79 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
     String? ouderSubmenuId,
     required String doelNaam,
   }) async {
-    final resultaat = await showDialog<_StructuurToevoegingResultaat>(
+    final isTitel = ouderSubmenuId == null;
+    final actie = await showDialog<_BeheerStructuurActie>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _StructuurToevoegingDialoog(doelNaam: doelNaam),
+      builder: (_) =>
+          _BeheerStructuurActieDialoog(doelNaam: doelNaam, isTitel: isTitel),
     );
 
-    if (!mounted || resultaat == null) {
+    if (!mounted || actie == null) {
       return;
     }
 
-    final nieuwItem = resultaat.isSubmenu
-        ? OpmetingRaamKeuzeMenuItem.submenu(
-            id: _nieuwId('submenu'),
-            naam: resultaat.naam,
-          )
+    if (actie == _BeheerStructuurActie.naamWijzigen) {
+      if (isTitel) {
+        await _wijzigTitelNaam(menu);
+        return;
+      }
+
+      final submenu = _zoekBoomItem(
+        items: _bewerkbareItems(menu),
+        itemId: ouderSubmenuId,
+      );
+
+      if (submenu == null || !submenu.isSubmenu) {
+        setState(() {
+          _foutmelding = 'Het gekozen submenu bestaat niet meer.';
+        });
+        return;
+      }
+
+      await _wijzigSubmenuNaam(menu: menu, submenu: submenu);
+      return;
+    }
+
+    if (actie == _BeheerStructuurActie.kopieren) {
+      if (isTitel) {
+        await _kopieerVolledigeTitel(menu);
+        return;
+      }
+
+      final submenu = _zoekBoomItem(
+        items: _bewerkbareItems(menu),
+        itemId: ouderSubmenuId,
+      );
+
+      if (submenu == null || !submenu.isSubmenu) {
+        setState(() {
+          _foutmelding = 'Het gekozen submenu bestaat niet meer.';
+        });
+        return;
+      }
+
+      await _kopieerVolledigSubmenu(bronMenu: menu, bronSubmenu: submenu);
+      return;
+    }
+
+    final isSubmenu = actie == _BeheerStructuurActie.nieuwSubmenu;
+    final naam = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _NaamStructuurItemDialoog(isSubmenu: isSubmenu),
+    );
+
+    if (!mounted || naam == null) {
+      return;
+    }
+
+    final nieuwItem = isSubmenu
+        ? OpmetingRaamKeuzeMenuItem.submenu(id: _nieuwId('submenu'), naam: naam)
         : OpmetingRaamKeuzeMenuItem.keuze(
             optie: OpmetingRaamKeuzeOptie(
               id: _nieuwId('soort'),
-              naam: resultaat.naam,
+              naam: naam,
               uitvoerTekst: '',
               isGeenKeuze: false,
               tekenfunctie: OpmetingRaamTekenfunctie.geen,
@@ -2810,7 +3796,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
       _openMenuIds.add(menu.id);
 
       if (ouderSubmenuId != null) {
-        _openSubmenuSleutels.add(_submenuSleutel(menu.id, ouderSubmenuId));
+        _openPadNaarSubmenu(menu: bijgewerktMenu, submenuId: ouderSubmenuId);
       }
 
       _foutmelding = null;
@@ -3200,7 +4186,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Keuze of submenu toevoegen',
+                    tooltip: 'Toevoegen, naam wijzigen of kopiëren',
                     visualDensity: VisualDensity.compact,
                     onPressed: () =>
                         _toonToevoegenAan(menu: menu, doelNaam: menu.titel),
@@ -3353,7 +4339,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
                   ),
                   if (item.isSubmenu)
                     IconButton(
-                      tooltip: 'Keuze of submenu toevoegen',
+                      tooltip: 'Toevoegen, naam wijzigen of kopiëren',
                       visualDensity: VisualDensity.compact,
                       onPressed: () => _toonToevoegenAan(
                         menu: menu,
@@ -3387,6 +4373,80 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
                         ),
                       ),
                     ),
+                  PopupMenuButton<_VolgordeVerplaatsActie>(
+                    tooltip: 'Volgorde wijzigen binnen hetzelfde niveau',
+                    enabled:
+                        _kanBinnenZelfdeNiveauVerplaatsen(
+                          menu: menu,
+                          item: item,
+                          richting: -1,
+                        ) ||
+                        _kanBinnenZelfdeNiveauVerplaatsen(
+                          menu: menu,
+                          item: item,
+                          richting: 1,
+                        ),
+                    onSelected: (actie) {
+                      switch (actie) {
+                        case _VolgordeVerplaatsActie.omhoog:
+                          _verplaatsBinnenZelfdeNiveau(
+                            menu: menu,
+                            item: item,
+                            richting: -1,
+                          );
+                          break;
+                        case _VolgordeVerplaatsActie.omlaag:
+                          _verplaatsBinnenZelfdeNiveau(
+                            menu: menu,
+                            item: item,
+                            richting: 1,
+                          );
+                          break;
+                      }
+                    },
+                    itemBuilder: (_) =>
+                        <PopupMenuEntry<_VolgordeVerplaatsActie>>[
+                          PopupMenuItem<_VolgordeVerplaatsActie>(
+                            value: _VolgordeVerplaatsActie.omhoog,
+                            enabled: _kanBinnenZelfdeNiveauVerplaatsen(
+                              menu: menu,
+                              item: item,
+                              richting: -1,
+                            ),
+                            child: const ListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              leading: Icon(Icons.arrow_upward_rounded),
+                              title: Text('Eén plaats omhoog'),
+                              subtitle: Text(
+                                'Blijft onder dezelfde titel of submenu',
+                              ),
+                            ),
+                          ),
+                          PopupMenuItem<_VolgordeVerplaatsActie>(
+                            value: _VolgordeVerplaatsActie.omlaag,
+                            enabled: _kanBinnenZelfdeNiveauVerplaatsen(
+                              menu: menu,
+                              item: item,
+                              richting: 1,
+                            ),
+                            child: const ListTile(
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                              leading: Icon(Icons.arrow_downward_rounded),
+                              title: Text('Eén plaats omlaag'),
+                              subtitle: Text(
+                                'Blijft onder dezelfde titel of submenu',
+                              ),
+                            ),
+                          ),
+                        ],
+                    icon: const Icon(
+                      Icons.swap_vert_rounded,
+                      color: _groen,
+                      size: 19,
+                    ),
+                  ),
                   IconButton(
                     tooltip: item.isSubmenu
                         ? 'Submenu verwijderen'

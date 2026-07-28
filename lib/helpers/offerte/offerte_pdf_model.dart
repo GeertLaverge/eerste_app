@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OFFERTE-PDF-MODEL-20260728
 import 'dart:typed_data';
 
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
@@ -134,10 +135,16 @@ class OfferteDocumentData {
         positie.formulierTypeGenormaliseerd == 'vliegendeur';
   }
 
+  bool isSchuifvliegendeurPositie(OpmetingOverzichtRaamItem positie) {
+    return positie.schuifvliegendeurData != null ||
+        positie.formulierTypeGenormaliseerd == 'schuifvliegendeur';
+  }
+
   bool isOndersteundeOffertePositie(OpmetingOverzichtRaamItem positie) {
     if (positie.isVerwijderd) return false;
 
     return isVliegendeurPositie(positie) ||
+        isSchuifvliegendeurPositie(positie) ||
         OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
   }
 
@@ -219,6 +226,32 @@ class OfferteDocumentData {
   List<OpmetingOverzichtRaamItem> get vliegendeurOptiePosities {
     return List<OpmetingOverzichtRaamItem>.unmodifiable(
       offerteOptiePosities.where(isVliegendeurPositie),
+    );
+  }
+
+  /// Afzonderlijke selectie voor Schuifvliegendeur-posities. Zo blijven deze
+  /// posities ook zichtbaar wanneer een toekomstige prijsfilter wijzigt.
+  List<OpmetingOverzichtRaamItem> get schuifvliegendeurPosities {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      hoofdoffertePosities.where(isSchuifvliegendeurPositie),
+    );
+  }
+
+  List<OpmetingOverzichtRaamItem> get schuifvliegendeurPositiesVoorWeergave {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      posities.where((positie) {
+        if (positie.isVerwijderd || !isSchuifvliegendeurPositie(positie)) {
+          return false;
+        }
+
+        return positie.teltMeeInHoofdofferte || positie.isOfferteOptieOpPositie;
+      }),
+    );
+  }
+
+  List<OpmetingOverzichtRaamItem> get schuifvliegendeurOptiePosities {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      offerteOptiePosities.where(isSchuifvliegendeurPositie),
     );
   }
 

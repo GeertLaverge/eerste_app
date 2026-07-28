@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: VRIJE-PRIJS-PER-ARTIKEL-CENTRAAL-HERSTELD-20260726
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
 import 'package:flutter/material.dart';
 
@@ -40,6 +40,12 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           formulierType: 'vliegendeur',
           naam: 'Vliegendeur',
           icoon: Icons.door_front_door_outlined,
+          actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'schuifvliegendeur',
+          naam: 'Schuifvliegendeur',
+          icoon: Icons.view_week_outlined,
           actief: true,
         ),
         _OffertePrijsFicheKeuze(
@@ -86,7 +92,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
       ];
 
   bool _projectPrijsregelsBezig = false;
-  bool _vrijePrijsPerArtikelBezig = false;
 
   List<_OffertePrijsFicheKeuze> get _actieveFiches {
     return _fiches.where((fiche) => fiche.actief).toList(growable: false);
@@ -104,13 +109,8 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
       return eersteDatum.isAfter(tweedeDatum);
     }
 
-    if (eersteDatum != null) {
-      return true;
-    }
-
-    if (tweedeDatum != null) {
-      return false;
-    }
+    if (eersteDatum != null) return true;
+    if (tweedeDatum != null) return false;
 
     return eerste.compareTo(tweede) > 0;
   }
@@ -119,7 +119,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
     if (regel.isVerdeeldeProjectkost) {
       final verdeelSleutel =
           OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(regel);
-
       if (verdeelSleutel.isNotEmpty) {
         return 'verdeelkost::$verdeelSleutel';
       }
@@ -139,9 +138,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         regel,
       );
 
-      if (sleutel.isEmpty) {
-        continue;
-      }
+      if (sleutel.isEmpty) continue;
 
       perSleutel
           .putIfAbsent(sleutel, () => <OffertePrijsregelModel>[])
@@ -171,12 +168,10 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
 
     for (final regel in prijsregels) {
       final groepSleutel = _projectPrijsregelGroepSleutel(regel);
-
       final bestaandIndex = indexPerGroepSleutel[groepSleutel];
 
       if (bestaandIndex == null) {
         indexPerGroepSleutel[groepSleutel] = resultaat.length;
-
         resultaat.add(regel);
         continue;
       }
@@ -191,9 +186,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
     resultaat.sort((eerste, tweede) {
       final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
 
-      if (volgorde != 0) {
-        return volgorde;
-      }
+      if (volgorde != 0) return volgorde;
 
       return eerste.omschrijving.toLowerCase().compareTo(
         tweede.omschrijving.toLowerCase(),
@@ -210,9 +203,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
     final formulierTypesPerGroep = <String, Set<String>>{};
 
     for (final regel in allePrijsregels) {
-      if (regel.id.trim().isEmpty) {
-        continue;
-      }
+      if (regel.id.trim().isEmpty) continue;
 
       formulierTypesPerGroep
           .putIfAbsent(_projectPrijsregelGroepSleutel(regel), () => <String>{})
@@ -237,7 +228,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
     gekoppeldeBronnenPerRegelId,
   }) {
     final resultaat = <OffertePrijsregelModel>[];
-
     final fichePerSleutel = <String, _OffertePrijsFicheKeuze>{
       for (final fiche in _actieveFiches)
         _normaliseerFormulierType(fiche.formulierType): fiche,
@@ -247,16 +237,13 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
       final geselecteerdeFormulierTypes =
           formulierTypesPerPrijsregelId[regel.id] ??
           <String>{regel.formulierType};
-
       final gekoppeldeBronnen =
           gekoppeldeBronnenPerRegelId[regel.id] ??
           const <OffertePrijsregelModel>[];
-
       final toegevoegdeSleutels = <String>{};
 
       for (final formulierType in geselecteerdeFormulierTypes) {
         final sleutel = _normaliseerFormulierType(formulierType);
-
         final fiche = fichePerSleutel[sleutel];
 
         if (fiche == null || !toegevoegdeSleutels.add(sleutel)) {
@@ -264,7 +251,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         }
 
         OffertePrijsregelModel? bestaandeVerdeelkostBron;
-
         if (regel.isVerdeeldeProjectkost) {
           for (final bron in gekoppeldeBronnen) {
             if (_normaliseerFormulierType(bron.formulierType) == sleutel) {
@@ -289,9 +275,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
   }
 
   Future<void> _openProjectPrijsregelsVenster() async {
-    if (_projectPrijsregelsBezig) {
-      return;
-    }
+    if (_projectPrijsregelsBezig) return;
 
     setState(() {
       _projectPrijsregelsBezig = true;
@@ -299,7 +283,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
 
     try {
       final profielenPerFormulierType = <String, OffertePrijsprofielModel>{};
-
       final beginRegels = <OffertePrijsregelModel>[];
 
       for (final fiche in _actieveFiches) {
@@ -328,9 +311,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         );
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       final gekoppeldeBronnenPerRegelId =
           _maakGekoppeldeVerdeelkostBronnenPerRegelId(beginRegels);
@@ -370,9 +351,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         toonFormulierTypeBijRegel: true,
       );
 
-      if (resultaat == null || !mounted) {
-        return;
-      }
+      if (resultaat == null || !mounted) return;
 
       if (resultaat.actie !=
           OffertePrijsregelsVensterActie.bewarenInInstellingen) {
@@ -419,9 +398,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         await AppStorage.bewaarOffertePrijsProfiel(bijgewerkt);
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       _toonMelding('Prijsregels bewaard bij alle gekozen opmeetfiches.');
     } catch (e) {
@@ -440,177 +417,8 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
     }
   }
 
-  Future<void> _openVrijePrijsPerArtikelFicheKeuze() async {
-    if (_vrijePrijsPerArtikelBezig) {
-      return;
-    }
-
-    setState(() {
-      _vrijePrijsPerArtikelBezig = true;
-    });
-
-    final gekozenFiche = await showDialog<_OffertePrijsFicheKeuze>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          titlePadding: const EdgeInsets.fromLTRB(20, 18, 12, 0),
-          contentPadding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
-          actionsPadding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-          title: Row(
-            children: <Widget>[
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _lichtGroen,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.euro_rounded, color: _groen, size: 21),
-              ),
-              const SizedBox(width: 11),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'Vrije prijs per artikel',
-                      style: TextStyle(
-                        color: _tekstDonker,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Kies de artikelgroep waarvan u de vrije prijsregels wilt beheren.',
-                      style: TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 11.5,
-                        height: 1.3,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: 'Sluiten',
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                },
-                icon: const Icon(Icons.close_rounded),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 480,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 500),
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: _actieveFiches.length,
-                separatorBuilder: (_, __) {
-                  return const SizedBox(height: 8);
-                },
-                itemBuilder: (context, index) {
-                  final fiche = _actieveFiches[index];
-
-                  return Material(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.pop(dialogContext, fiche);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 11,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _rand),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Container(
-                              width: 38,
-                              height: 38,
-                              decoration: BoxDecoration(
-                                color: _lichtGroen,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(fiche.icoon, color: _groen, size: 21),
-                            ),
-                            const SizedBox(width: 11),
-                            Expanded(
-                              child: Text(
-                                fiche.naam,
-                                style: const TextStyle(
-                                  color: _tekstDonker,
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _groen,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Annuleren'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _vrijePrijsPerArtikelBezig = false;
-    });
-
-    if (gekozenFiche == null) {
-      return;
-    }
-
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) {
-          return OffertePrijzenFichePagina(
-            formulierType: gekozenFiche.formulierType,
-            formulierNaam: gekozenFiche.naam,
-            alleenVrijePrijsPerArtikel: true,
-          );
-        },
-      ),
-    );
-  }
-
   void _toonMelding(String tekst, {bool fout = false}) {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -622,8 +430,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
 
   @override
   Widget build(BuildContext context) {
-    final bezig = _projectPrijsregelsBezig || _vrijePrijsPerArtikelBezig;
-
     return Scaffold(
       backgroundColor: _achtergrond,
       appBar: AppBar(
@@ -635,7 +441,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         foregroundColor: Colors.black87,
         elevation: 0,
         actions: <Widget>[
-          if (bezig)
+          if (_projectPrijsregelsBezig)
             const Padding(
               padding: EdgeInsets.only(right: 16),
               child: Center(
@@ -668,12 +474,12 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
                 child: const Text(
                   'Beheer bovenaan de algemene prijsregels die op één of '
                   'meerdere soorten opmeetfiches kunnen worden toegepast. '
-                  'Beheer vrije prijsregels per artikel via de afzonderlijke '
-                  'centrale tegel. Daaronder staan de prijsregels die aan een '
-                  'technische keuze van een specifieke opmeetfiche worden '
-                  'gekoppeld. Vaste inzethor, Vliegendeur, PVC en ALU raam, '
-                  'PVC en ALU schuifraam en PVC en ALU deur zijn actief. '
-                  'Zonwering wordt later gekoppeld.',
+                  'Daaronder beheert u de artikelspecifieke offerteprijzen '
+                  'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
+                  'Schuifvliegendeur, PVC en ALU raam, PVC en ALU schuifraam '
+                  'en PVC en ALU deur zijn actief. Technische-keuzeprijzen '
+                  'zijn niet van toepassing op Vaste inzethor, Vliegendeur en '
+                  'Schuifvliegendeur. Zonwering wordt later gekoppeld.',
                   style: TextStyle(
                     color: _tekstGrijs,
                     fontSize: 13,
@@ -684,13 +490,11 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
               ),
               const SizedBox(height: 14),
               _bouwProjectPrijsregelsTegel(),
-              const SizedBox(height: 12),
-              _bouwVrijePrijsPerArtikelTegel(),
               const SizedBox(height: 18),
               const _SectieTitel(
-                titel: 'Prijs volgens technische keuze per fiche',
+                titel: 'Prijzen per artikel',
                 subtitel:
-                    'Open een artikelgroep om de prijsregels te beheren die automatisch aan technische keuzes worden gekoppeld.',
+                    'Technische keuzeprijzen en vrije prijzen per artikel.',
               ),
               const SizedBox(height: 10),
               ..._fiches.map((fiche) {
@@ -765,73 +569,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
             icon: const Icon(Icons.checklist_rounded, size: 18),
             label: const Text(
               'Prijsregel toepassen op…',
-              style: TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwVrijePrijsPerArtikelTegel() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _groen, width: 1.2),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: const Color(0xFFBBE6CA)),
-            ),
-            child: const Icon(Icons.euro_rounded, color: _groen),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Vrije prijs per artikel',
-                  style: TextStyle(
-                    color: _tekstDonker,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  'Beheer de vrije bijkomende kosten die later handmatig bij '
-                  'één afzonderlijke offertepositie kunnen worden ingevuld.',
-                  style: TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 12.2,
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: _groen,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-            ),
-            onPressed: _vrijePrijsPerArtikelBezig
-                ? null
-                : _openVrijePrijsPerArtikelFicheKeuze,
-            icon: const Icon(Icons.category_outlined, size: 18),
-            label: const Text(
-              'Artikelgroep kiezen',
               style: TextStyle(fontWeight: FontWeight.w800),
             ),
           ),

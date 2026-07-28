@@ -10,6 +10,7 @@ import '../raam/opmeting_raam_vulling_helper.dart';
 import '../schuifraam/opmeting_schuifraam_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
+import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -365,6 +366,7 @@ class OpmetingOverzichtRaamItem {
     this.offertePrijsData = const OfferteArtikelPrijsDataModel(),
     this.vasteInzethorData,
     this.vliegendeurData,
+    this.schuifvliegendeurData,
   });
 
   final String id;
@@ -418,6 +420,7 @@ class OpmetingOverzichtRaamItem {
   final OfferteArtikelPrijsDataModel offertePrijsData;
   final OpmetingVasteInzethorModel? vasteInzethorData;
   final OpmetingVliegendeurModel? vliegendeurData;
+  final OpmetingSchuifvliegendeurModel? schuifvliegendeurData;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -469,6 +472,12 @@ class OpmetingOverzichtRaamItem {
       case 'Vliegen deur':
         return 'vliegendeur';
 
+      case 'schuifvliegendeur':
+      case 'schuif_vliegendeur':
+      case 'Schuifvliegendeur':
+      case 'Schuifvliegendeuren':
+        return 'schuifvliegendeur';
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -503,6 +512,9 @@ class OpmetingOverzichtRaamItem {
 
       case 'vliegendeur':
         return 'Vliegendeur';
+
+      case 'schuifvliegendeur':
+        return 'Schuifvliegendeur';
 
       case 'pvcRaam':
         return 'PVC Raam';
@@ -539,6 +551,7 @@ class OpmetingOverzichtRaamItem {
     OfferteArtikelPrijsDataModel? offertePrijsData,
     OpmetingVasteInzethorModel? vasteInzethorData,
     OpmetingVliegendeurModel? vliegendeurData,
+    OpmetingSchuifvliegendeurModel? schuifvliegendeurData,
   }) {
     return OpmetingOverzichtRaamItem(
       id: id ?? this.id,
@@ -572,6 +585,8 @@ class OpmetingOverzichtRaamItem {
       offertePrijsData: offertePrijsData ?? this.offertePrijsData,
       vasteInzethorData: vasteInzethorData ?? this.vasteInzethorData,
       vliegendeurData: vliegendeurData ?? this.vliegendeurData,
+      schuifvliegendeurData:
+          schuifvliegendeurData ?? this.schuifvliegendeurData,
     );
   }
 
@@ -624,6 +639,8 @@ class OpmetingOverzichtRaamItem {
       if (vasteInzethorData != null)
         'vasteInzethorData': vasteInzethorData!.toJson(),
       if (vliegendeurData != null) 'vliegendeurData': vliegendeurData!.toJson(),
+      if (schuifvliegendeurData != null)
+        'schuifvliegendeurData': schuifvliegendeurData!.toJson(),
     };
   }
 
@@ -706,6 +723,11 @@ class OpmetingOverzichtRaamItem {
       vliegendeurData: json['vliegendeurData'] is Map
           ? OpmetingVliegendeurModel.fromJson(
               Map<String, dynamic>.from(json['vliegendeurData'] as Map),
+            )
+          : null,
+      schuifvliegendeurData: json['schuifvliegendeurData'] is Map
+          ? OpmetingSchuifvliegendeurModel.fromJson(
+              Map<String, dynamic>.from(json['schuifvliegendeurData'] as Map),
             )
           : null,
     );

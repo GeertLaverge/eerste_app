@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-PRIJS-MUTATIE-ADAPTER-20260728
 // THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-MUTATIE-SERVICE-20260721
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_artikel_prijs_koppeling_service.dart';
@@ -64,6 +65,8 @@ class OfferteArtikelPrijsMutatieService {
       _VasteInzethorPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter vliegendeur =
       _VliegendeurPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter schuifvliegendeur =
+      _SchuifvliegendeurPrijsMutatieAdapter();
 
   static const List<OfferteArtikelPrijsMutatieAdapter> _adapters =
       <OfferteArtikelPrijsMutatieAdapter>[
@@ -75,6 +78,7 @@ class OfferteArtikelPrijsMutatieService {
         aluDeur,
         vasteInzethor,
         vliegendeur,
+        schuifvliegendeur,
       ];
 
   static OfferteArtikelPrijsMutatieAdapter? adapterVoor(
@@ -271,6 +275,64 @@ class _VliegendeurPrijsMutatieAdapter
 
   @override
   String get id => 'vliegendeur';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return koppeling?.adapterId == id;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _SchuifvliegendeurPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _SchuifvliegendeurPrijsMutatieAdapter();
+
+  @override
+  String get id => 'schuifvliegendeur';
 
   @override
   bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {

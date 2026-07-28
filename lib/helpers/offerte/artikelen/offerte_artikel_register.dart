@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-REGISTER-KOPPELING-20260728
 import 'package:flutter/material.dart';
 
 enum OfferteArtikelCategorie {
@@ -10,7 +11,12 @@ enum OfferteArtikelCategorie {
   final String label;
 }
 
-enum OfferteArtikelOpenType { raamopmeting, vasteInzethor, vliegendeur }
+enum OfferteArtikelOpenType {
+  raamopmeting,
+  vasteInzethor,
+  vliegendeur,
+  schuifvliegendeur,
+}
 
 class OfferteArtikelRegistratie {
   const OfferteArtikelRegistratie({
@@ -98,6 +104,14 @@ class OfferteArtikelRegister {
           categorie: OfferteArtikelCategorie.toebehoren,
           icoon: Icons.door_front_door_outlined,
           openType: OfferteArtikelOpenType.vliegendeur,
+        ),
+        OfferteArtikelRegistratie(
+          menuWaarde: 'schuifvliegendeur',
+          formulierType: 'schuifvliegendeur',
+          formulierNaam: 'Schuifvliegendeur',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.view_week_outlined,
+          openType: OfferteArtikelOpenType.schuifvliegendeur,
         ),
       ];
 

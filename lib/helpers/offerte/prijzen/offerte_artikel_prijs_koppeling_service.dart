@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-KOPPELING-SERVICE-20260723
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_artikel_prijs_data_model.dart';
@@ -13,9 +14,10 @@ import 'offerte_toegepaste_prijsregel_model.dart';
 /// eigen aantal, maatvoering en prijsdata. De zes raam- en deurtypes gebruiken
 /// de bestaande `offertePrijsData` van het overzichtsitem.
 ///
-/// De Vliegendeur gebruikt eveneens de bestaande `offertePrijsData`. Zij heeft
-/// een eigen prijsprofiel voor vrije artikelprijzen en prijzen voor alle
-/// artikelen, maar ondersteunt bewust geen technische-keuzeprijzen.
+/// Vliegendeur en Schuifvliegendeur gebruiken eveneens de bestaande
+/// `offertePrijsData`. Beide hebben een eigen prijsprofiel voor vrije
+/// artikelprijzen en prijzen voor alle artikelen, maar ondersteunen bewust geen
+/// technische-keuzeprijzen.
 ///
 /// Er is geen wijziging aan prijsmodellen of JSON-opslag nodig.
 class OfferteArtikelPrijsKoppeling {
@@ -25,6 +27,7 @@ class OfferteArtikelPrijsKoppeling {
     required this.formulierNaam,
     required this.isVasteInzethor,
     required this.ondersteuntTechnischeKeuzeprijzen,
+    this.isHandmatigGeprijsdArtikel = false,
   });
 
   final String adapterId;
@@ -32,10 +35,11 @@ class OfferteArtikelPrijsKoppeling {
   final String formulierNaam;
   final bool isVasteInzethor;
   final bool ondersteuntTechnischeKeuzeprijzen;
+  final bool isHandmatigGeprijsdArtikel;
 
-  bool get isHandmatigGeprijsdArtikel => adapterId == 'vliegendeur';
-
-  bool get isAlgemeenArtikel => !isVasteInzethor && !isHandmatigGeprijsdArtikel;
+  bool get isAlgemeenArtikel {
+    return !isVasteInzethor && !isHandmatigGeprijsdArtikel;
+  }
 }
 
 class OfferteArtikelPrijsKoppelingService {
@@ -57,6 +61,17 @@ class OfferteArtikelPrijsKoppelingService {
         formulierNaam: 'Vliegendeur',
         isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling schuifvliegendeur =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'schuifvliegendeur',
+        formulierType: 'schuifvliegendeur',
+        formulierNaam: 'Schuifvliegendeur',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
       );
 
   static const OfferteArtikelPrijsKoppeling pvcRaam =
@@ -125,13 +140,15 @@ class OfferteArtikelPrijsKoppelingService {
 
   /// Alle artikelgroepen die in Instellingen → Offerteprijzen voorkomen.
   ///
-  /// De Vliegendeur heeft een eigen prijsprofiel, maar de eigenschap
+  /// Vliegendeur en Schuifvliegendeur hebben een eigen prijsprofiel, maar de
+  /// eigenschap
   /// [OfferteArtikelPrijsKoppeling.ondersteuntTechnischeKeuzeprijzen] blijft
   /// voor deze koppeling false.
   static const List<OfferteArtikelPrijsKoppeling> alleKoppelingen =
       <OfferteArtikelPrijsKoppeling>[
         vasteInzethor,
         vliegendeur,
+        schuifvliegendeur,
         ...algemeneKoppelingen,
       ];
 
@@ -140,7 +157,10 @@ class OfferteArtikelPrijsKoppelingService {
   /// Deze artikelen kunnen daarnaast vrije artikelprijzen en prijzen voor alle
   /// artikelen uit hun eigen prijsprofiel ontvangen.
   static const List<OfferteArtikelPrijsKoppeling>
-  handmatigGeprijsdeKoppelingen = <OfferteArtikelPrijsKoppeling>[vliegendeur];
+  handmatigGeprijsdeKoppelingen = <OfferteArtikelPrijsKoppeling>[
+    vliegendeur,
+    schuifvliegendeur,
+  ];
 
   /// Volledige lijst voor artikelprijsverwerking, prijsinstellingen, totalen en
   /// prijsoverzichten.
@@ -160,6 +180,7 @@ class OfferteArtikelPrijsKoppelingService {
   static const List<String> ondersteundeFormulierTypes = <String>[
     'vasteInzethor',
     'vliegendeur',
+    'schuifvliegendeur',
     ...algemeneFormulierTypes,
   ];
 
@@ -174,14 +195,19 @@ class OfferteArtikelPrijsKoppelingService {
       return vliegendeur;
     }
 
+    if (artikel.schuifvliegendeurData != null) {
+      return schuifvliegendeur;
+    }
+
     final koppeling = koppelingVoorFormulierType(
       artikel.formulierTypeGenormaliseerd,
     );
 
-    // Een Vliegendeur wordt alleen als dusdanig behandeld wanneer de positie
-    // werkelijk Vliegendeur-data bevat. Zo wordt een fout formulierlabel niet
-    // onbedoeld als volledig Vliegendeur-artikel verwerkt.
-    if (koppeling?.adapterId == vliegendeur.adapterId) {
+    // Een handmatig geprijsd artikel wordt alleen als dusdanig behandeld
+    // wanneer de positie werkelijk de bijbehorende modeldata bevat. Zo wordt
+    // een fout formulierlabel niet onbedoeld als volledig toebehorenartikel
+    // verwerkt.
+    if (koppeling?.isHandmatigGeprijsdArtikel == true) {
       return null;
     }
 
@@ -236,8 +262,8 @@ class OfferteArtikelPrijsKoppelingService {
   /// Geeft aan of het artikel een eigen profiel heeft onder
   /// Instellingen → Offerteprijzen.
   ///
-  /// Dit is voor de Vliegendeur true. Dat betekent niet dat technische
-  /// keuzeprijzen ondersteund worden; daarvoor moet afzonderlijk
+  /// Dit is voor Vliegendeur en Schuifvliegendeur true. Dat betekent niet
+  /// dat technische keuzeprijzen ondersteund worden; daarvoor moet afzonderlijk
   /// [ondersteuntTechnischeKeuzeprijzen] worden gecontroleerd.
   static bool ondersteuntPrijsinstellingenVoorArtikel(
     OpmetingOverzichtRaamItem artikel,
@@ -347,12 +373,13 @@ class OfferteArtikelPrijsKoppelingService {
   ///
   /// Algemene raam-, deur- en schuifraamposities stellen telkens één stuk voor.
   /// Artikeltypes met een eigen aantalveld, zoals vaste inzethorren en
-  /// vliegendeuren, gebruiken dat opgeslagen aantal. Een ongeldig of leeg
+  /// vliegendeuren en schuifvliegendeuren, gebruiken dat opgeslagen aantal. Een ongeldig of leeg
   /// aantal wordt altijd veilig als één stuk behandeld.
   static int aantalVoorArtikel(OpmetingOverzichtRaamItem artikel) {
     final aantal =
         artikel.vasteInzethorData?.aantal ??
         artikel.vliegendeurData?.aantal ??
+        artikel.schuifvliegendeurData?.aantal ??
         1;
 
     return aantal < 1 ? 1 : aantal;
@@ -361,12 +388,14 @@ class OfferteArtikelPrijsKoppelingService {
   static int breedteMmVoorArtikel(OpmetingOverzichtRaamItem artikel) {
     return artikel.vasteInzethorData?.breedteMm ??
         artikel.vliegendeurData?.breedteMm ??
+        artikel.schuifvliegendeurData?.breedteMm ??
         artikel.raammaatBreedteMm;
   }
 
   static int hoogteMmVoorArtikel(OpmetingOverzichtRaamItem artikel) {
     return artikel.vasteInzethorData?.hoogteMm ??
         artikel.vliegendeurData?.hoogteMm ??
+        artikel.schuifvliegendeurData?.hoogteMm ??
         artikel.raammaatHoogteMm;
   }
 
@@ -389,15 +418,12 @@ class OfferteArtikelPrijsKoppelingService {
       );
     }
 
-    final vliegendeurModel = artikel.vliegendeurData;
-
-    if (koppeling.adapterId == vliegendeur.adapterId &&
-        vliegendeurModel != null) {
+    if (koppeling.isHandmatigGeprijsdArtikel) {
       return OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
         prijsData: artikel.offertePrijsData,
-        aantal: vliegendeurModel.aantal,
-        breedteMm: vliegendeurModel.breedteMm,
-        hoogteMm: vliegendeurModel.hoogteMm,
+        aantal: aantalVoorArtikel(artikel),
+        breedteMm: breedteMmVoorArtikel(artikel),
+        hoogteMm: hoogteMmVoorArtikel(artikel),
         kortingToestaan: kortingToestaan,
       );
     }

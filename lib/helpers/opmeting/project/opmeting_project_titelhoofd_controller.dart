@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: HORDEUR-PROJECTKLEUR-SYNC-20260726
+// THIMACO-CONTROLE: TOEBEHOREN-PROJECTKLEUR-SYNC-SCHUIFVLIEGENDEUR-20260728
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,6 +7,7 @@ import '../../app_storage.dart';
 import '../../sync/onedrive_sync_service.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
+import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_technische_regels_helpers.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import 'opmeting_project_titelhoofd_kaart.dart';
 import 'opmeting_project_titelhoofd_model.dart';
@@ -227,6 +228,34 @@ class OpmetingProjectTitelhoofdController {
         }
       }
 
+      final schuifvliegendeur = bijgewerktItem.schuifvliegendeurData;
+      if (schuifvliegendeur?.gebruiktProjectKleur == true) {
+        final bijgewerktModel =
+            schuifvliegendeur!.ralKleurToebehorenWaarde.trim() ==
+                netteProjectkleur
+            ? schuifvliegendeur
+            : schuifvliegendeur.copyWith(
+                ralKleurToebehorenWaarde: netteProjectkleur,
+              );
+        final bijgewerkteTechnischeRegels =
+            OpmetingSchuifvliegendeurTechnischeRegelsHelper.bouw(
+              bijgewerktModel,
+            );
+        final technischeRegelsGewijzigd = !_zijnTechnischeRegelsGelijk(
+          bijgewerktItem.technischeRegels,
+          bijgewerkteTechnischeRegels,
+        );
+
+        if (!identical(bijgewerktModel, schuifvliegendeur) ||
+            technischeRegelsGewijzigd) {
+          bijgewerktItem = bijgewerktItem.copyWith(
+            schuifvliegendeurData: bijgewerktModel,
+            technischeRegels: bijgewerkteTechnischeRegels,
+          );
+          itemGewijzigd = true;
+        }
+      }
+
       if (!itemGewijzigd) {
         resultaat.add(item);
         continue;
@@ -371,7 +400,8 @@ class OpmetingProjectTitelhoofdController {
     final bijgewerktPerId = <String, OpmetingOverzichtRaamItem>{
       for (final item in leesOpmetingen())
         if (item.vasteInzethorData?.isRalKleurToebehoren == true ||
-            item.vliegendeurData?.isProjectKleur == true)
+            item.vliegendeurData?.isProjectKleur == true ||
+            item.schuifvliegendeurData?.gebruiktProjectKleur == true)
           item.id: item,
     };
 
@@ -394,12 +424,19 @@ class OpmetingProjectTitelhoofdController {
           final nieuweVasteInzethorWaarde =
               bijgewerkt.vasteInzethorData?.ralKleurToebehorenWaarde.trim() ??
               '';
+          final oudeSchuifvliegendeurWaarde =
+              item.schuifvliegendeurData?.ralKleurToebehorenWaarde.trim() ?? '';
+          final nieuweSchuifvliegendeurWaarde =
+              bijgewerkt.schuifvliegendeurData?.ralKleurToebehorenWaarde
+                  .trim() ??
+              '';
           final technischeRegelsZijnGelijk = _zijnTechnischeRegelsGelijk(
             item.technischeRegels,
             bijgewerkt.technischeRegels,
           );
 
           if (oudeVasteInzethorWaarde == nieuweVasteInzethorWaarde &&
+              oudeSchuifvliegendeurWaarde == nieuweSchuifvliegendeurWaarde &&
               technischeRegelsZijnGelijk) {
             return item;
           }

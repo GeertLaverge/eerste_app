@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-ARTIKELOMSCHRIJVING-20260728
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_model.dart';
 import 'opmeting_overzicht_model.dart';
@@ -16,6 +17,8 @@ class OpmetingArtikelTypeOmschrijvingHelper {
       case 'pvcDeur':
       case 'aluDeur':
         return _deurOmschrijvingRegels(item).join(' - ');
+      case 'schuifvliegendeur':
+        return _schuifvliegendeurOmschrijving(item);
       default:
         return '';
     }
@@ -316,6 +319,15 @@ class OpmetingArtikelTypeOmschrijvingHelper {
         : '$krukNaam binnen $zijdeVoluit';
 
     return '$aantal $richting - $krukOmschrijving';
+  }
+
+  static String _schuifvliegendeurOmschrijving(OpmetingOverzichtRaamItem item) {
+    final model = item.schuifvliegendeurData;
+    if (model != null && model.soort.trim().isNotEmpty) {
+      return model.soort.trim();
+    }
+
+    return _oudeTechnischeWaarde(item, const <String>{'soort'});
   }
 
   static String _oudeTechnischeWaarde(

@@ -1,13 +1,12 @@
-// THIMACO-CONTROLE: VLIEGENDEUR-CENTRALE-PDF-ARTIKELWIDGET-20260726
-// THIMACO-CONTROLE: VLIEGENDEUR-AFZONDERLIJKE-PDF-WIDGET-20260723
+// THIMACO-CONTROLE: VLIEGENDEUR-PDF-FIJN-GAAS-VASTE-STAP-20260728-1215
 import 'dart:math' as math;
 
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
-import 'offerte_pdf_artikel_widget.dart';
 import 'prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import 'prijzen/offerte_berekening_resultaat.dart';
 import 'prijzen/offerte_prijsregel_weergave_service.dart';
@@ -17,43 +16,31 @@ class OffertePdfVliegendeurWidget {
 
   static double berekenKolomHoogte(OpmetingOverzichtRaamItem positie) {
     final model = positie.vliegendeurData;
-
     if (model == null) {
       return OffertePdfArtikelLayoutHelper.minimumKolomHoogte;
     }
 
-    final technischeRegels = _technischeRegelsVoorOfferte(positie, model);
-
-    return OffertePdfArtikelWidget.berekenKolomHoogte(
-      technischeRegels: technischeRegels,
+    return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
+      regels: _technischeRegelsVoorOfferte(positie, model),
       notities: positie.notities,
     );
   }
+
+  static const double _basisPrijsRegelHoogte = 34;
+  static const double _basisOptiePrijsRegelHoogte = 78;
 
   static double berekenTotalePositieHoogte(
     OpmetingOverzichtRaamItem positie, {
     bool kortingToestaan = true,
     bool isOptie = false,
   }) {
-    final model = positie.vliegendeurData;
-    final bovenMelding = isOptie ? 'Niet meegerekend in het eindtotaal' : '';
-
-    if (model == null) {
-      return OffertePdfArtikelWidget.berekenTotalePositieHoogte(
-        technischeRegels: const <OffertePdfTechnischeRegel>[],
+    return OffertePdfArtikelLayoutHelper.berekenTotalePositieHoogte(
+      kolomHoogte: berekenKolomHoogte(positie),
+      prijsHoogte: _berekenPrijsSectieHoogte(
+        positie,
+        kortingToestaan: kortingToestaan && !isOptie,
         isOptie: isOptie,
-        notities: positie.notities,
-        bovenMelding: bovenMelding,
-      );
-    }
-
-    final technischeRegels = _technischeRegelsVoorOfferte(positie, model);
-
-    return OffertePdfArtikelWidget.berekenTotalePositieHoogte(
-      technischeRegels: technischeRegels,
-      isOptie: isOptie,
-      notities: positie.notities,
-      bovenMelding: bovenMelding,
+      ),
     );
   }
 
@@ -65,43 +52,38 @@ class OffertePdfVliegendeurWidget {
     String btwRegelLabel = 'BTW',
   }) {
     final model = positie.vliegendeurData;
+    if (model == null) return pw.SizedBox();
 
-    if (model == null) {
-      return pw.SizedBox();
-    }
+    final hoogte = berekenKolomHoogte(positie);
+    final regels = _technischeRegelsVoorOfferte(positie, model);
 
-    final technischeRegels = _technischeRegelsVoorOfferte(positie, model);
-
-    final bovenMelding = isOptie ? 'Niet meegerekend in het eindtotaal' : '';
-
-    final prijsData = _maakPrijsData(
-      positie,
-      kortingToestaan: kortingToestaan,
-      isOptie: isOptie,
-      btwPercentage: btwPercentage,
-      btwRegelLabel: btwRegelLabel,
-    );
-
-    return OffertePdfArtikelWidget.bouw(
-      maatTitel: 'Afmetingen',
-      maatWaarde: model.maatSamenvatting,
-      technischeRegels: technischeRegels,
-      notities: positie.notities,
-      bovenMelding: bovenMelding,
-      legeTechnischeTekst: 'Geen technische keuzes ingevuld.',
-      prijsData: prijsData,
-      tekeningBouwer: (kolomHoogte) {
-        return _bouwVliegendeurTekening(
+    return OffertePdfArtikelLayoutHelper.bouwArtikelLayout(
+      kolomHoogte: hoogte,
+      tekenvlak: OffertePdfArtikelLayoutHelper.bouwTekenvlak(
+        hoogte: hoogte,
+        maatTitel: 'Afmetingen',
+        maatWaarde: model.maatSamenvatting,
+        tekening: _bouwVliegendeurTekening(
           model,
           canvasBreedte: OffertePdfArtikelLayoutHelper.tekenInhoudBreedte,
           canvasHoogte: math
-              .max(
-                120.0,
-                kolomHoogte - OffertePdfArtikelLayoutHelper.kopHoogte - 10,
-              )
+              .max(120.0, hoogte - OffertePdfArtikelLayoutHelper.kopHoogte - 10)
               .toDouble(),
-        );
-      },
+        ),
+      ),
+      technischeKolom: OffertePdfArtikelLayoutHelper.bouwTechnischeKolom(
+        hoogte: hoogte,
+        regels: regels,
+        notities: positie.notities,
+        legeTekst: 'Geen technische keuzes ingevuld.',
+      ),
+      prijsBlok: _bouwPrijsBlok(
+        positie,
+        kortingToestaan: kortingToestaan && !isOptie,
+        isOptie: isOptie,
+        btwPercentage: btwPercentage,
+        btwRegelLabel: btwRegelLabel,
+      ),
     );
   }
 
@@ -115,7 +97,15 @@ class OffertePdfVliegendeurWidget {
     );
   }
 
-  static OffertePdfArtikelPrijsData _maakPrijsData(
+  static double _berekenPrijsSectieHoogte(
+    OpmetingOverzichtRaamItem positie, {
+    required bool kortingToestaan,
+    required bool isOptie,
+  }) {
+    return isOptie ? _basisOptiePrijsRegelHoogte : _basisPrijsRegelHoogte;
+  }
+
+  static pw.Widget _bouwPrijsBlok(
     OpmetingOverzichtRaamItem positie, {
     required bool kortingToestaan,
     required bool isOptie,
@@ -123,44 +113,162 @@ class OffertePdfVliegendeurWidget {
     required String btwRegelLabel,
   }) {
     final kortingToestaanEffectief = kortingToestaan && !isOptie;
-
     final resultaat = _prijsResultaatVoor(
       positie,
       kortingToestaan: kortingToestaanEffectief,
     );
-
     final totaalVoorKorting = resultaat == null
         ? 0.0
         : resultaat.offerteTotaalExclBtw +
               (kortingToestaanEffectief ? resultaat.kortingBedragExclBtw : 0.0);
-
     final optieTotaalExclBtw = resultaat?.offerteTotaalExclBtw ?? 0.0;
-
     final optieBtw = _rondBedragAf(optieTotaalExclBtw * btwPercentage);
-
     final optieTotaalInclBtw = _rondBedragAf(optieTotaalExclBtw + optieBtw);
-
     final heeftPrijsInvoer =
         resultaat != null &&
         (resultaat.basisTotaalExclBtw > 0.0 ||
             resultaat.prijsregelsVoorOfferte.isNotEmpty);
 
-    return OffertePdfArtikelPrijsData(
-      isOptie: isOptie,
-      heeftPrijsInvoer: heeftPrijsInvoer,
-      totaalVoorKorting: totaalVoorKorting,
-      optieTotaalExclBtw: optieTotaalExclBtw,
-      optieBtw: optieBtw,
-      optieTotaalInclBtw: optieTotaalInclBtw,
-      btwRegelLabel: btwRegelLabel,
+    pw.Widget bedragRegel({
+      required String omschrijving,
+      required double bedrag,
+      bool benadrukt = false,
+      bool laatste = false,
+    }) {
+      return pw.Container(
+        padding: pw.EdgeInsets.symmetric(vertical: benadrukt ? 5 : 4),
+        decoration: pw.BoxDecoration(
+          color: benadrukt
+              ? const PdfColor.fromInt(0xFFFFF7ED)
+              : PdfColors.white,
+          border: laatste
+              ? null
+              : const pw.Border(
+                  bottom: pw.BorderSide(
+                    color: OffertePdfArtikelLayoutHelper.rand,
+                    width: 0.5,
+                  ),
+                ),
+        ),
+        child: pw.Row(
+          children: <pw.Widget>[
+            pw.Expanded(
+              child: pw.Text(
+                omschrijving,
+                maxLines: 2,
+                style: pw.TextStyle(
+                  color: benadrukt
+                      ? OffertePdfArtikelLayoutHelper.tekstDonker
+                      : OffertePdfArtikelLayoutHelper.tekstGrijs,
+                  fontSize: benadrukt ? 8.4 : 7.2,
+                  fontWeight: benadrukt
+                      ? pw.FontWeight.bold
+                      : pw.FontWeight.normal,
+                ),
+              ),
+            ),
+            pw.SizedBox(width: 8),
+            pw.Text(
+              '€ ${_bedragMetPunt(bedrag)}',
+              style: pw.TextStyle(
+                color: benadrukt
+                    ? OffertePdfArtikelLayoutHelper.oranje
+                    : OffertePdfArtikelLayoutHelper.tekstDonker,
+                fontSize: benadrukt ? 10.8 : 7.6,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return pw.Container(
+      height: _berekenPrijsSectieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      ),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.white,
+        borderRadius: pw.BorderRadius.circular(7),
+        border: pw.Border.all(
+          color: OffertePdfArtikelLayoutHelper.rand,
+          width: 0.8,
+        ),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        children: <pw.Widget>[
+          if (isOptie) ...<pw.Widget>[
+            bedragRegel(
+              omschrijving: 'Totaal optie excl. btw',
+              bedrag: optieTotaalExclBtw,
+            ),
+            bedragRegel(omschrijving: btwRegelLabel, bedrag: optieBtw),
+            bedragRegel(
+              omschrijving: 'Totaal optie incl. btw',
+              bedrag: optieTotaalInclBtw,
+              benadrukt: true,
+              laatste: true,
+            ),
+          ] else
+            pw.Row(
+              children: <pw.Widget>[
+                pw.Expanded(
+                  child: pw.Text(
+                    'Totaal positie',
+                    style: pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                      fontSize: 8.4,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 8),
+                if (totaalVoorKorting <= 0.0 && !heeftPrijsInvoer)
+                  pw.Text(
+                    'Prijs nog in te vullen',
+                    textAlign: pw.TextAlign.right,
+                    style: const pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                      fontSize: 7.4,
+                    ),
+                  )
+                else
+                  pw.RichText(
+                    textAlign: pw.TextAlign.right,
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(
+                          text: '€ ${_bedragMetPunt(totaalVoorKorting)}',
+                          style: pw.TextStyle(
+                            color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                            fontSize: 12.2,
+                            fontWeight: pw.FontWeight.bold,
+                          ),
+                        ),
+                        const pw.TextSpan(
+                          text: ' excl. btw',
+                          style: pw.TextStyle(
+                            color: OffertePdfArtikelLayoutHelper.tekstGrijs,
+                            fontSize: 6.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 
   static double _rondBedragAf(double waarde) {
-    if (!waarde.isFinite || waarde <= 0.0) {
-      return 0.0;
-    }
-
+    if (!waarde.isFinite || waarde <= 0.0) return 0.0;
     return (waarde * 100.0).roundToDouble() / 100.0;
   }
 
@@ -175,26 +283,18 @@ class OffertePdfVliegendeurWidget {
     final bronRegels = positie.zichtbareTechnischeRegels.isNotEmpty
         ? positie.zichtbareTechnischeRegels
         : _maakRegelsUitModel(model);
-
     final resultaat = <OffertePdfTechnischeRegel>[];
 
     for (final regel in bronRegels) {
       final titel = regel.titel.trim();
       final waarde = regel.waarde.trim();
-
-      if (titel.isEmpty && waarde.isEmpty) {
-        continue;
-      }
-
-      if (_isAfmetingsRegel(titel)) {
-        continue;
-      }
+      if (titel.isEmpty && waarde.isEmpty) continue;
+      if (_isAfmetingsRegel(titel)) continue;
 
       resultaat.add(OffertePdfTechnischeRegel(titel: titel, waarde: waarde));
     }
 
     final prijsResultaat = _prijsResultaatVoor(positie, kortingToestaan: false);
-
     if (prijsResultaat != null) {
       _voegVrijeArtikelPrijsregelsToe(
         resultaat: resultaat,
@@ -213,16 +313,13 @@ class OffertePdfVliegendeurWidget {
       if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
         continue;
       }
-
       if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
         continue;
       }
 
       final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-
       final toonAlleenOmschrijving =
           prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-
       if (!toonPrijs && !toonAlleenOmschrijving) {
         continue;
       }
@@ -231,7 +328,6 @@ class OffertePdfVliegendeurWidget {
           OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
             prijsregel,
           ).trim();
-
       if (omschrijving.isEmpty) {
         continue;
       }
@@ -273,11 +369,7 @@ class OffertePdfVliegendeurWidget {
 
     void voegToe(String titel, String waarde) {
       final netteWaarde = waarde.trim();
-
-      if (netteWaarde.isEmpty) {
-        return;
-      }
-
+      if (netteWaarde.isEmpty) return;
       regels.add(
         OpmetingOverzichtTechnischeRegel(titel: titel, waarde: netteWaarde),
       );
@@ -285,18 +377,13 @@ class OffertePdfVliegendeurWidget {
 
     voegToe('Stuk referentie', model.stukReferentie);
     voegToe('Aantal', '${model.aantal}');
-
     voegToe('Breedte buitenmaat', '${model.breedteMm} mm');
-
     voegToe('Hoogte buitenmaat', '${model.hoogteMm} mm');
-
     voegToe('Soort', model.soort);
     voegToe('Traverse', model.traverseType);
-
     voegToe('Aantal traversen', '${model.aantalTraversen}');
 
     final doorgangHoogtes = model.actieveDoorgangHoogtesMm;
-
     for (var index = 0; index < doorgangHoogtes.length; index++) {
       voegToe('Doorganghoogte ${index + 1}', '${doorgangHoogtes[index]} mm');
     }
@@ -320,7 +407,6 @@ class OffertePdfVliegendeurWidget {
     voegToe('Afdekkappen', model.afdekkappen);
     voegToe('Kleur pees', model.kleurPees);
     voegToe('Kleur borstel', model.kleurBorstel);
-
     return regels;
   }
 
@@ -330,7 +416,6 @@ class OffertePdfVliegendeurWidget {
     required double canvasHoogte,
   }) {
     final veiligeCanvasBreedte = math.max(150.0, canvasBreedte).toDouble();
-
     final veiligeCanvasHoogte = math.max(150.0, canvasHoogte).toDouble();
 
     const margeBoven = 18.0;
@@ -339,30 +424,22 @@ class OffertePdfVliegendeurWidget {
     const margeLinks = 55.0;
 
     final buitenBreedte = model.breedteMm.clamp(1, 100000).toDouble();
-
     final buitenHoogte = model.hoogteMm.clamp(1, 100000).toDouble();
-
     final beschikbareBreedte = math
         .max(40.0, veiligeCanvasBreedte - margeLinks - margeRechts)
         .toDouble();
-
     final beschikbareHoogte = math
         .max(40.0, veiligeCanvasHoogte - margeBoven - margeOnder)
         .toDouble();
-
     final schaal = math.min(
       beschikbareBreedte / buitenBreedte,
       beschikbareHoogte / buitenHoogte,
     );
 
     final getekendeBreedte = buitenBreedte * schaal;
-
     final getekendeHoogte = buitenHoogte * schaal;
-
     final links = margeLinks + ((beschikbareBreedte - getekendeBreedte) / 2);
-
     final boven = margeBoven + ((beschikbareHoogte - getekendeHoogte) / 2);
-
     final rechts = links + getekendeBreedte;
     final onder = boven + getekendeHoogte;
 
@@ -371,38 +448,26 @@ class OffertePdfVliegendeurWidget {
         : model.isSmalleKader
         ? 11
         : OpmetingVliegendeurModel.buitenStijlAanzichtMm;
-
     final buitenStijl = math.max(0.0, buitenStijlMm * schaal).toDouble();
-
     final deurProfiel = math
         .max(1.4, OpmetingVliegendeurModel.deurProfielAanzichtMm * schaal)
         .toDouble();
-
     final traverseHoogte = math
         .max(2.2, OpmetingVliegendeurModel.middenregelAanzichtMm * schaal)
         .toDouble();
 
     final deurLinks = links + buitenStijl;
     final deurRechts = rechts - buitenStijl;
-
     final deurBreedte = math.max(4.0, deurRechts - deurLinks).toDouble();
-
     final binnenLinks = deurLinks + deurProfiel;
-
     final binnenRechts = deurRechts - deurProfiel;
-
     final binnenBoven = boven + deurProfiel;
-
     final binnenOnder = onder - deurProfiel;
-
     final binnenBreedte = math.max(2.0, binnenRechts - binnenLinks).toDouble();
-
     final binnenHoogte = math.max(2.0, binnenOnder - binnenBoven).toDouble();
 
-    final rasterStap = math.max(3.5, 12 * schaal).toDouble();
-
+    final traverseYPosities = <double>[];
     final traversen = StringBuffer();
-
     for (final doorgangHoogte in model.actieveDoorgangHoogtesMm) {
       final bovenkantVanafOnder =
           (doorgangHoogte +
@@ -416,9 +481,8 @@ class OffertePdfVliegendeurWidget {
                     1,
               )
               .toDouble();
-
       final y = onder - (bovenkantVanafOnder * schaal);
-
+      traverseYPosities.add(y);
       traversen.write('''
   <rect x="$deurLinks" y="$y" width="$deurBreedte"
     height="$traverseHoogte" fill="#F3F4F6"
@@ -426,10 +490,32 @@ class OffertePdfVliegendeurWidget {
 ''');
     }
 
+    traverseYPosities.sort();
+    final ondersteTraverseY = traverseYPosities.isEmpty
+        ? null
+        : traverseYPosities.last;
+    final hoofdGaas = _bouwGaasRasterSvg(
+      gaas: model.gaas,
+      x: binnenLinks,
+      y: binnenBoven,
+      breedte: binnenBreedte,
+      hoogte: binnenHoogte,
+    );
+    final onderGaas = ondersteTraverseY == null
+        ? ''
+        : _bouwGaasRasterSvg(
+            gaas: model.gaasOnderT1,
+            x: binnenLinks,
+            y: ondersteTraverseY + traverseHoogte,
+            breedte: binnenBreedte,
+            hoogte: math
+                .max(0.0, binnenOnder - ondersteTraverseY - traverseHoogte)
+                .toDouble(),
+          );
+
     final schopplaatHoogte = math
         .max(0.0, model.schopplaatBovenkantVanafOnderMm * schaal)
         .toDouble();
-
     final schopplaat = model.heeftSchopplaat && schopplaatHoogte > 0
         ? '''
   <rect x="$binnenLinks" y="${binnenOnder - schopplaatHoogte}"
@@ -470,14 +556,10 @@ class OffertePdfVliegendeurWidget {
     final scharnierLinks =
         model.scharnierkant.trim().toLowerCase() ==
         OpmetingVliegendeurModel.scharnierLinks.toLowerCase();
-
     final scharnierX = scharnierLinks ? deurLinks : deurRechts;
-
     final scharnieren = StringBuffer();
-
     for (final verhouding in const <double>[0.18, 0.5, 0.82]) {
       final y = boven + (getekendeHoogte * verhouding);
-
       scharnieren.write('''
   <circle cx="$scharnierX" cy="$y" r="2.2"
     fill="#FFFFFF" stroke="#111827" stroke-width="0.9"/>
@@ -520,15 +602,8 @@ class OffertePdfVliegendeurWidget {
 <svg xmlns="http://www.w3.org/2000/svg"
   width="$veiligeCanvasBreedte" height="$veiligeCanvasHoogte"
   viewBox="0 0 $veiligeCanvasBreedte $veiligeCanvasHoogte">
-  <defs>
-    <pattern id="mesh" width="$rasterStap" height="$rasterStap"
-      patternUnits="userSpaceOnUse">
-      <path d="M 0 0 L $rasterStap 0 M 0 0 L 0 $rasterStap"
-        fill="none" stroke="#CBD5E1" stroke-width="0.45"/>
-    </pattern>
-  </defs>
-  <rect x="$binnenLinks" y="$binnenBoven" width="$binnenBreedte"
-    height="$binnenHoogte" fill="url(#mesh)"/>
+  $hoofdGaas
+  $onderGaas
   <rect x="$deurLinks" y="$boven" width="$deurBreedte"
     height="$deurProfiel" fill="#F3F4F6" stroke="#111827"
     stroke-width="1.0"/>
@@ -557,14 +632,12 @@ class OffertePdfVliegendeurWidget {
 ''';
 
     final breedteLabelX = (links + rechts) / 2;
-
     final breedteLabelY = onder + 30;
     final hoogteLabelX = links - 38;
-
     final hoogteLabelY = (boven + onder) / 2;
 
     final maatLabelsSvg =
-        '''
+        """
   <g>
     <rect x="${breedteLabelX - 31}" y="${breedteLabelY - 6}"
       width="62" height="12" rx="2" ry="2" fill="#FFFFFF"/>
@@ -579,20 +652,75 @@ class OffertePdfVliegendeurWidget {
       font-size="7.2" font-weight="bold"
       fill="#22272D">${model.hoogteMm} mm</text>
   </g>
-''';
-
+""";
     final svgMetMaatLabels = svg.replaceFirst(
       '</svg>',
       '$maatLabelsSvg\n</svg>',
     );
 
-    // Eén SVG voor de tekening en maatlabels. Zo blijven alle
-    // onderdelen binnen dezelfde canvasconstraints.
+    // Gebruik één SVG zonder pw.Stack/pw.Positioned. Zo blijven de tekening
+    // en maatlabels binnen exact dezelfde canvasconstraints.
     return pw.SizedBox(
       width: veiligeCanvasBreedte,
       height: veiligeCanvasHoogte,
       child: pw.SvgImage(svg: svgMetMaatLabels),
     );
+  }
+
+  static String _bouwGaasRasterSvg({
+    required String gaas,
+    required double x,
+    required double y,
+    required double breedte,
+    required double hoogte,
+  }) {
+    if (breedte <= 0.0 || hoogte <= 0.0) {
+      return '';
+    }
+
+    final buffer = StringBuffer()
+      ..writeln(
+        '  <rect x="$x" y="$y" width="$breedte" height="$hoogte" '
+        'fill="#FFFFFF"/>',
+      );
+
+    // Zelfde fijne visuele maas als bij de Vaste inzethor. De stap is bewust
+    // vast in SVG-eenheden en wordt niet uit de deurmaat of tekenschaal
+    // berekend. Daardoor blijft het raster op iedere PDF even fijn.
+    final stap = switch (gaas) {
+      OpmetingVliegendeurModel.gaasPetscreenGrijs => 3.0,
+      OpmetingVliegendeurModel.gaasPetscreenZwart => 3.0,
+      _ => 3.5,
+    };
+    final kleur = switch (gaas) {
+      OpmetingVliegendeurModel.gaasClearview => '#D6DEE7',
+      OpmetingVliegendeurModel.gaasPetscreenGrijs => '#9CA3AF',
+      OpmetingVliegendeurModel.gaasPetscreenZwart => '#66707C',
+      _ => '#CBD5E1',
+    };
+    final lijnDikte = switch (gaas) {
+      OpmetingVliegendeurModel.gaasClearview => 0.20,
+      OpmetingVliegendeurModel.gaasPetscreenGrijs => 0.34,
+      OpmetingVliegendeurModel.gaasPetscreenZwart => 0.38,
+      _ => 0.28,
+    };
+    final rechts = x + breedte;
+    final onder = y + hoogte;
+
+    for (var lijnX = x + stap; lijnX < rechts; lijnX += stap) {
+      buffer.writeln(
+        '  <line x1="$lijnX" y1="$y" x2="$lijnX" y2="$onder" '
+        'stroke="$kleur" stroke-width="$lijnDikte"/>',
+      );
+    }
+    for (var lijnY = y + stap; lijnY < onder; lijnY += stap) {
+      buffer.writeln(
+        '  <line x1="$x" y1="$lijnY" x2="$rechts" y2="$lijnY" '
+        'stroke="$kleur" stroke-width="$lijnDikte"/>',
+      );
+    }
+
+    return buffer.toString();
   }
 
   static String _buitenmaatSvg({

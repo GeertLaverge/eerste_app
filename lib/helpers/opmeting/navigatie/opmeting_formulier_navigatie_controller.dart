@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: NAVIGATIE-CONTEXT-MOUNTED-20260728
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-NAVIGATIE-KOPPELING-20260728
 // THIMACO-CONTROLE: HORDEUR-PROJECTKLEUR-NAVIGATIE-20260726
 import 'package:flutter/material.dart';
 
@@ -6,6 +8,7 @@ import '../overzicht/opmeting_overzicht_model.dart';
 import '../project/opmeting_project_titelhoofd_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_fiche.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_fiche.dart';
+import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_fiche.dart';
 import '../../../paginas/opmeting_raam_pagina.dart';
 
 class OpmetingFormulierNavigatieController {
@@ -46,11 +49,7 @@ class OpmetingFormulierNavigatieController {
 
       await _wachtTotPopupEnDialogGeslotenZijn();
 
-      if (!isMounted()) {
-        return;
-      }
-
-      if (!context.mounted) {
+      if (!isMounted() || !context.mounted) {
         return;
       }
 
@@ -104,11 +103,7 @@ class OpmetingFormulierNavigatieController {
 
       await _wachtTotPopupEnDialogGeslotenZijn();
 
-      if (!isMounted()) {
-        return;
-      }
-
-      if (!context.mounted) {
+      if (!isMounted() || !context.mounted) {
         return;
       }
 
@@ -161,11 +156,7 @@ class OpmetingFormulierNavigatieController {
 
       await _wachtTotPopupEnDialogGeslotenZijn();
 
-      if (!isMounted()) {
-        return;
-      }
-
-      if (!context.mounted) {
+      if (!isMounted() || !context.mounted) {
         return;
       }
 
@@ -192,6 +183,54 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
+  Future<void> openSchuifvliegendeur({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) async {
+    if (_formulierOpenenBezig) {
+      return;
+    }
+
+    _formulierOpenenBezig = true;
+
+    try {
+      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
+          ? bestaandeOpmeting!.klantNaam.trim()
+          : leesKlantNaam().trim();
+
+      if (klantNaam.isEmpty || !isMounted()) {
+        return;
+      }
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+
+      if (!isMounted() || !context.mounted) {
+        return;
+      }
+
+      final resultaat = await Navigator.of(context)
+          .push<OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingSchuifvliegendeurFiche(
+                  klantNaam: klantNaam,
+                  bestaandeOpmeting: bestaandeOpmeting,
+                  ralKleurToebehoren: leesTitelhoofd().ralKleurToebehoren
+                      .trim(),
+                );
+              },
+            ),
+          );
+
+      if (resultaat == null || !isMounted()) {
+        return;
+      }
+
+      await herlaadOpmetingen(klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
+    }
+  }
+
   Future<void> bewerkOpmeting(OpmetingOverzichtRaamItem item) async {
     if (item.formulierTypeGenormaliseerd == 'vasteInzethor') {
       await openVasteInzethor(bestaandeOpmeting: item);
@@ -200,6 +239,11 @@ class OpmetingFormulierNavigatieController {
 
     if (item.formulierTypeGenormaliseerd == 'vliegendeur') {
       await openVliegendeur(bestaandeOpmeting: item);
+      return;
+    }
+
+    if (item.formulierTypeGenormaliseerd == 'schuifvliegendeur') {
+      await openSchuifvliegendeur(bestaandeOpmeting: item);
       return;
     }
 

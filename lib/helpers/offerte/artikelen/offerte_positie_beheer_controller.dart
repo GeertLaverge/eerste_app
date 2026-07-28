@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: POSITIEBEHEER-MET-WISSEL-NIET-REKENEN-20260728
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -31,6 +32,7 @@ class OffertePositieBeheerController {
   final Future<void> Function(String klantNaam) herberekenPrijsMomentopnames;
   final void Function(int huidigeIndex, int nieuweIndex) verplaatsArtikelLokaal;
   final void Function(String tekst) toonMelding;
+
   bool _blokkeerActieVoorNietRekenen(OpmetingOverzichtRaamItem item) {
     if (!item.isNietRekenen) {
       return false;
@@ -156,26 +158,21 @@ class OffertePositieBeheerController {
     if (bronIndex < 0) return;
 
     final nieuweId = DateTime.now().microsecondsSinceEpoch.toString();
-    final bestaandModel = item.vasteInzethorData;
-    final kopieModel = item.isOfferteOptie && bestaandModel != null
-        ? bestaandModel.copyWithPrijsData(
-            OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
-              prijsData: bestaandModel.prijsData,
-              artikelKortingPercentage: 0.0,
-            ),
-          )
-        : bestaandModel;
     final kopieBronId =
         item.isOfferteOptie && item.offerteOptieHoofdpositieId.trim().isNotEmpty
         ? item.offerteOptieHoofdpositieId.trim()
         : item.id;
-    final kopie = item.copyWith(
+
+    var kopie = item.copyWith(
       id: nieuweId,
       gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       isVerwijderd: false,
       gekopieerdVanPositieId: kopieBronId,
-      vasteInzethorData: kopieModel,
     );
+
+    if (kopie.isOfferteOptie) {
+      kopie = _wisOptiePrijsgegevens(kopie, wisVerdeeldePrijsregels: false);
+    }
 
     var invoegIndex = bronIndex + 1;
     if (plaats == _PositieKopiePlaats.boven) {
@@ -315,27 +312,22 @@ class OffertePositieBeheerController {
       _OfferteOptieActie.hoofdofferte => item.offerteOptiePlaatsing,
     };
 
-    final model = item.vasteInzethorData;
     final hoofdpositieId = wordtOptie ? _bepaalOptieHoofdpositieId(item) : '';
-    final bijgewerkt = item
-        .copyWith(
-          isOfferteOptie: wordtOptie,
-          isNietRekenen: false,
-          offerteOptiePlaatsing: plaatsing,
-          offerteOptieHoofdpositieId: hoofdpositieId,
-          vasteInzethorData: wordtOptie && model != null
-              ? model.copyWithPrijsData(
-                  OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
-                    prijsData: model.prijsData,
-                    artikelKortingPercentage: 0.0,
-                    toegepasteVerdeeldePrijsregels:
-                        const <OfferteToegepastePrijsregelModel>[],
-                    verdeeldePrijsSignatuur: '',
-                  ),
-                )
-              : model,
-        )
-        .metNieuweWijzigingsDatum();
+    var bijgewerkt = item.copyWith(
+      isOfferteOptie: wordtOptie,
+      isNietRekenen: false,
+      offerteOptiePlaatsing: plaatsing,
+      offerteOptieHoofdpositieId: hoofdpositieId,
+    );
+
+    if (wordtOptie) {
+      bijgewerkt = _wisOptiePrijsgegevens(
+        bijgewerkt,
+        wisVerdeeldePrijsregels: true,
+      );
+    }
+
+    bijgewerkt = bijgewerkt.metNieuweWijzigingsDatum();
 
     await AppStorage.werkOpmetingBij(bijgewerkt);
     await OneDriveSyncService.registreerLokaleWijziging();
@@ -355,6 +347,34 @@ class OffertePositieBeheerController {
         'Positie opnieuw in de hoofdofferte geplaatst.',
     };
     toonMelding(melding);
+  }
+
+  OpmetingOverzichtRaamItem _wisOptiePrijsgegevens(
+    OpmetingOverzichtRaamItem item, {
+    required bool wisVerdeeldePrijsregels,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      item,
+    );
+
+    if (prijsData == null) {
+      return item;
+    }
+
+    final bijgewerktePrijsData =
+        OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+          prijsData: prijsData,
+          artikelKortingPercentage: 0.0,
+          toegepasteVerdeeldePrijsregels: wisVerdeeldePrijsregels
+              ? const <OfferteToegepastePrijsregelModel>[]
+              : null,
+          verdeeldePrijsSignatuur: wisVerdeeldePrijsregels ? '' : null,
+        );
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: item,
+      prijsData: bijgewerktePrijsData,
+    );
   }
 
   Future<void> wisselNietRekenen(OpmetingOverzichtRaamItem item) async {

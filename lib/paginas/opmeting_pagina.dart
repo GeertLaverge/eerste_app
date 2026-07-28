@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-CENTRALE-PAGINA-KOPPELING-20260728
 // THIMACO-CONTROLE: BESTAANDE-PROJECTPRIJSREGEL-ROUTE-20260725
 import 'package:flutter/material.dart';
 
@@ -328,6 +329,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
     return _formulierNavigatieController.openVliegendeur(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
+  Future<void> _openSchuifvliegendeur({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openSchuifvliegendeur(
       bestaandeOpmeting: bestaandeOpmeting,
     );
   }
@@ -845,6 +854,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.vliegendeur:
         await _openVliegendeur();
+        break;
+
+      case OfferteArtikelOpenType.schuifvliegendeur:
+        await _openSchuifvliegendeur();
         break;
     }
   }
