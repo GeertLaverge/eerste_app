@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-VOLLEDIGE-RECHTERKOLOM-20260728-2205
+// THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-TEKENVLAK-MODEL-HERSTEL-20260728
+// THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OVERZICHT-PRIJSBLOK-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OVERZICHT-KOPPELING-20260728
 // THIMACO-CONTROLE: OVERZICHT-ARTIKEL-OMSCHRIJVING-GELIJK-OFFERTE-20260727
@@ -14,6 +17,9 @@ import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_tekenvlak.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_tekenvlak.dart';
+import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
+import '../toebehoren/plooiwerken/opmeting_plooiwerken_technische_regels_helper.dart';
+import '../toebehoren/plooiwerken/opmeting_plooiwerken_tekenvlak.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_tekenvlak.dart';
 import 'opmeting_artikel_type_omschrijving_helper.dart';
@@ -82,6 +88,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     final vasteInzethor = item.vasteInzethorData;
     final vliegendeur = item.vliegendeurData;
     final schuifvliegendeur = item.schuifvliegendeurData;
+    final plooiwerken = item.plooiwerkenData;
     final vliegendeurTechnischeRegels = vliegendeur == null
         ? const <OpmetingOverzichtTechnischeRegel>[]
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
@@ -92,6 +99,13 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
             _schuifvliegendeurRegelsVoorOverzicht(
               item.zichtbareTechnischeRegels,
+            ),
+          );
+    final plooiwerkenTechnischeRegels = plooiwerken == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            _plooiwerkenRegelsVoorOverzicht(
+              OpmetingPlooiwerkenTechnischeRegelsHelper.bouw(plooiwerken),
             ),
           );
     final uitvoeringsRegels =
@@ -249,6 +263,8 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
               schuifvliegendeur,
               schuifvliegendeurTechnischeRegels,
             )
+          else if (plooiwerken != null)
+            _bouwPlooiwerkenOverzicht(plooiwerken, plooiwerkenTechnischeRegels)
           else if (OfferteArtikelPrijsKoppelingService.isAlgemeenArtikel(item))
             _bouwAlgemeenArtikelOverzicht(technischeRegels)
           else ...[
@@ -398,6 +414,50 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       maatTitel: 'Afmetingen',
       maatWaarde: model.maatSamenvatting,
       tekening: OpmetingSchuifvliegendeurTekenvlak(model: model),
+    );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen technische keuzes ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
+    );
+  }
+
+  Widget _bouwPlooiwerkenOverzicht(
+    OpmetingPlooiwerkenModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Totale Lengte',
+      maatWaarde: '${model.totaleLengteMm} mm',
+      tekening: OpmetingPlooiwerkenTekenvlak(model: model),
     );
     final prijsResultaat =
         OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
@@ -594,6 +654,26 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         toonPrijsZone: toonTechnischePrijsZone,
       ),
     );
+  }
+
+  List<OpmetingOverzichtTechnischeRegel> _plooiwerkenRegelsVoorOverzicht(
+    List<OpmetingOverzichtTechnischeRegel> regels,
+  ) {
+    return regels
+        .where((regel) {
+          final sleutel = regel.titel.trim().toLowerCase().replaceAll(
+            RegExp(r'\s+'),
+            ' ',
+          );
+          final waarde = regel.waarde.trim();
+
+          if (sleutel.isEmpty && waarde.isEmpty) {
+            return false;
+          }
+
+          return !const <String>{'totale lengte', 'lengte'}.contains(sleutel);
+        })
+        .toList(growable: false);
   }
 
   List<OpmetingOverzichtTechnischeRegel> _vliegendeurRegelsZonderAfmetingen(

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PLOOIWERKEN-REGISTER-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-REGISTER-KOPPELING-20260728
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,7 @@ enum OfferteArtikelOpenType {
   vasteInzethor,
   vliegendeur,
   schuifvliegendeur,
+  plooiwerken,
 }
 
 class OfferteArtikelRegistratie {
@@ -112,6 +114,14 @@ class OfferteArtikelRegister {
           categorie: OfferteArtikelCategorie.toebehoren,
           icoon: Icons.view_week_outlined,
           openType: OfferteArtikelOpenType.schuifvliegendeur,
+        ),
+        OfferteArtikelRegistratie(
+          menuWaarde: 'plooiwerken',
+          formulierType: 'plooiwerken',
+          formulierNaam: 'Plooiwerken',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.straighten_outlined,
+          openType: OfferteArtikelOpenType.plooiwerken,
         ),
       ];
 

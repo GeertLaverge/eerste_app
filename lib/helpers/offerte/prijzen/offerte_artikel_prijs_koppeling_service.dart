@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PLOOIWERKEN-PRIJS-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-KOPPELING-SERVICE-20260723
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
@@ -69,6 +70,16 @@ class OfferteArtikelPrijsKoppelingService {
         adapterId: 'schuifvliegendeur',
         formulierType: 'schuifvliegendeur',
         formulierNaam: 'Schuifvliegendeur',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling plooiwerken =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'plooiwerken',
+        formulierType: 'plooiwerken',
+        formulierNaam: 'Plooiwerken',
         isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: false,
         isHandmatigGeprijsdArtikel: true,
@@ -149,6 +160,7 @@ class OfferteArtikelPrijsKoppelingService {
         vasteInzethor,
         vliegendeur,
         schuifvliegendeur,
+        plooiwerken,
         ...algemeneKoppelingen,
       ];
 
@@ -160,6 +172,7 @@ class OfferteArtikelPrijsKoppelingService {
   handmatigGeprijsdeKoppelingen = <OfferteArtikelPrijsKoppeling>[
     vliegendeur,
     schuifvliegendeur,
+    plooiwerken,
   ];
 
   /// Volledige lijst voor artikelprijsverwerking, prijsinstellingen, totalen en
@@ -181,6 +194,7 @@ class OfferteArtikelPrijsKoppelingService {
     'vasteInzethor',
     'vliegendeur',
     'schuifvliegendeur',
+    'plooiwerken',
     ...algemeneFormulierTypes,
   ];
 
@@ -197,6 +211,10 @@ class OfferteArtikelPrijsKoppelingService {
 
     if (artikel.schuifvliegendeurData != null) {
       return schuifvliegendeur;
+    }
+
+    if (artikel.plooiwerkenData != null) {
+      return plooiwerken;
     }
 
     final koppeling = koppelingVoorFormulierType(
@@ -380,6 +398,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.vasteInzethorData?.aantal ??
         artikel.vliegendeurData?.aantal ??
         artikel.schuifvliegendeurData?.aantal ??
+        artikel.plooiwerkenData?.aantal ??
         1;
 
     return aantal < 1 ? 1 : aantal;

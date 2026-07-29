@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PLOOIWERKEN-CENTRALE-OFFERTE-PDF-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-CENTRALE-OFFERTE-PDF-20260728
 // THIMACO-CONTROLE: VOORBLAD-ONDERBLOK-VAST-ONDERAAN-EN-ARTIKELSPATIE-20260726
 // THIMACO-CONTROLE: VOORBLAD-WELKOM-TERUG-ONDERAAN-20260726
@@ -9,6 +10,7 @@ import 'package:printing/printing.dart';
 import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
+import 'offerte_pdf_plooiwerken_widget.dart';
 import 'offerte_pdf_pvc_raam_widget.dart';
 import 'offerte_pdf_schuifvliegendeur_widget.dart';
 import 'offerte_pdf_vliegendeur_widget.dart';
@@ -699,6 +701,14 @@ class OffertePdfService {
               btwPercentage: data.btwPercentage,
               btwRegelLabel: data.btwRegelLabel,
             )
+          else if (artikel.positie.plooiwerkenData != null)
+            OffertePdfPlooiwerkenWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
           else
             OffertePdfPvcRaamWidget.bouwPositie(
               positie: artikel.positie,
@@ -940,6 +950,12 @@ class OffertePdfService {
             kortingToestaan: kortingToestaanEffectief,
             isOptie: isOptie,
           );
+    } else if (positie.plooiwerkenData != null) {
+      inhoudHoogte = OffertePdfPlooiwerkenWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
     } else {
       inhoudHoogte = OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(
         positie,

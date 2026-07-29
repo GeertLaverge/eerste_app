@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-MODEL-KOPPELING-20260728
 // THIMACO-CONTROLE: OVERZICHT-MODEL-PRIJSdata-BEHOUDEN-TECHNISCHE-REGEL-ZICHTBAAR-20260720
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
@@ -11,6 +12,7 @@ import '../schuifraam/opmeting_schuifraam_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
+import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -367,6 +369,7 @@ class OpmetingOverzichtRaamItem {
     this.vasteInzethorData,
     this.vliegendeurData,
     this.schuifvliegendeurData,
+    this.plooiwerkenData,
   });
 
   final String id;
@@ -421,6 +424,7 @@ class OpmetingOverzichtRaamItem {
   final OpmetingVasteInzethorModel? vasteInzethorData;
   final OpmetingVliegendeurModel? vliegendeurData;
   final OpmetingSchuifvliegendeurModel? schuifvliegendeurData;
+  final OpmetingPlooiwerkenModel? plooiwerkenData;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -478,6 +482,12 @@ class OpmetingOverzichtRaamItem {
       case 'Schuifvliegendeuren':
         return 'schuifvliegendeur';
 
+      case 'plooiwerken':
+      case 'plooiwerk':
+      case 'Plooiwerken':
+      case 'Plooiwerk':
+        return 'plooiwerken';
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -516,6 +526,9 @@ class OpmetingOverzichtRaamItem {
       case 'schuifvliegendeur':
         return 'Schuifvliegendeur';
 
+      case 'plooiwerken':
+        return 'Plooiwerken';
+
       case 'pvcRaam':
         return 'PVC Raam';
 
@@ -552,6 +565,7 @@ class OpmetingOverzichtRaamItem {
     OpmetingVasteInzethorModel? vasteInzethorData,
     OpmetingVliegendeurModel? vliegendeurData,
     OpmetingSchuifvliegendeurModel? schuifvliegendeurData,
+    OpmetingPlooiwerkenModel? plooiwerkenData,
   }) {
     return OpmetingOverzichtRaamItem(
       id: id ?? this.id,
@@ -587,6 +601,7 @@ class OpmetingOverzichtRaamItem {
       vliegendeurData: vliegendeurData ?? this.vliegendeurData,
       schuifvliegendeurData:
           schuifvliegendeurData ?? this.schuifvliegendeurData,
+      plooiwerkenData: plooiwerkenData ?? this.plooiwerkenData,
     );
   }
 
@@ -641,6 +656,7 @@ class OpmetingOverzichtRaamItem {
       if (vliegendeurData != null) 'vliegendeurData': vliegendeurData!.toJson(),
       if (schuifvliegendeurData != null)
         'schuifvliegendeurData': schuifvliegendeurData!.toJson(),
+      if (plooiwerkenData != null) 'plooiwerkenData': plooiwerkenData!.toJson(),
     };
   }
 
@@ -728,6 +744,11 @@ class OpmetingOverzichtRaamItem {
       schuifvliegendeurData: json['schuifvliegendeurData'] is Map
           ? OpmetingSchuifvliegendeurModel.fromJson(
               Map<String, dynamic>.from(json['schuifvliegendeurData'] as Map),
+            )
+          : null,
+      plooiwerkenData: json['plooiwerkenData'] is Map
+          ? OpmetingPlooiwerkenModel.fromJson(
+              Map<String, dynamic>.from(json['plooiwerkenData'] as Map),
             )
           : null,
     );

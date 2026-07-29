@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: APP-STORAGE-PLOOIWERKEN-KLEURLIJSTEN-DEFINITIEF-20260728-2110
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,6 +15,7 @@ import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
+import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
@@ -67,6 +69,9 @@ class AppStorage {
 
   static const String _opmetingProjectKleurenSyncMetaKey =
       'thimaco_opmeting_project_kleuren_sync_meta';
+
+  static const String _opmetingPlooiwerkenInstellingenKey =
+      'thimaco_opmeting_plooiwerken_instellingen';
 
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
@@ -957,6 +962,74 @@ class AppStorage {
     await prefs.setString(
       _opmetingProjectKleurenKey,
       encodeOpmetingProjectKleurenVoorSync(kleuren),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN PLOOIWERKEN
+  // ------------------------------------------------------------
+
+  static OpmetingPlooiwerkenInstellingen _decodeOpmetingPlooiwerkenInstellingen(
+    String? jsonString,
+  ) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingPlooiwerkenInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is! Map) {
+        return const OpmetingPlooiwerkenInstellingen();
+      }
+
+      return OpmetingPlooiwerkenInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingPlooiwerkenInstellingen();
+    }
+  }
+
+  static String encodeOpmetingPlooiwerkenInstellingenVoorSync(
+    OpmetingPlooiwerkenInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingPlooiwerkenInstellingen>
+  laadOpmetingPlooiwerkenInstellingen() async {
+    final prefs = await openBox();
+
+    return _decodeOpmetingPlooiwerkenInstellingen(
+      prefs.getString(_opmetingPlooiwerkenInstellingenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingPlooiwerkenInstellingen(
+    OpmetingPlooiwerkenInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+
+    await prefs.setString(
+      _opmetingPlooiwerkenInstellingenKey,
+      encodeOpmetingPlooiwerkenInstellingenVoorSync(voorOpslag),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingPlooiwerkenInstellingenVoorSync(
+    OpmetingPlooiwerkenInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+
+    await prefs.setString(
+      _opmetingPlooiwerkenInstellingenKey,
+      encodeOpmetingPlooiwerkenInstellingenVoorSync(instellingen),
     );
   }
 

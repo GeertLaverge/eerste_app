@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: INSTELLINGEN-KNOP-PLOOIWERKEN-20260728-2110
 import 'package:flutter/material.dart';
 
 import 'leveranciers_pagina.dart';
@@ -9,6 +10,7 @@ import '../helpers/notities/notitie_acties_pagina.dart';
 import '../helpers/opmeting/raam/opmeting_raam_opvullingen_pagina.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_beheer_dialog.dart';
 import '../helpers/opmeting/project/opmeting_project_kleuren_pagina.dart';
+import 'instellingen/plooiwerken/opmeting_plooiwerken_instellingen_pagina.dart';
 import 'instellingen/offerte_prijzen/offerte_prijzen_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
@@ -254,6 +256,22 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.palette_outlined),
                 label: const Text('Kleuren raamleverancier'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OpmetingPlooiwerkenInstellingenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.architecture_outlined),
+                label: const Text('Plooiwerken'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),
