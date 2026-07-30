@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: VELUX-CENTRALE-OFFERTE-PDF-20260729-2212
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-PDF-SERVICE-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-CENTRALE-OFFERTE-PDF-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-CENTRALE-OFFERTE-PDF-20260728
 // THIMACO-CONTROLE: VOORBLAD-ONDERBLOK-VAST-ONDERAAN-EN-ARTIKELSPATIE-20260726
@@ -11,8 +13,10 @@ import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
 import 'offerte_pdf_plooiwerken_widget.dart';
+import 'offerte_pdf_sektionale_poort_widget.dart';
 import 'offerte_pdf_pvc_raam_widget.dart';
 import 'offerte_pdf_schuifvliegendeur_widget.dart';
+import 'offerte_pdf_velux_dakraam_widget.dart';
 import 'offerte_pdf_vliegendeur_widget.dart';
 import 'offerte_pdf_model.dart';
 
@@ -583,11 +587,15 @@ class OffertePdfService {
     final isOptie = artikel.positie.isOfferteOptie;
     final kortingToestaanEffectief = kortingToestaan ?? !isOptie;
     final positieOpties = data.positiePrijsOptiesVoor(artikel.positie);
-    final artikelType = artikel.positie.formulierTypeLabel;
-    final uitvoeringsRegels =
-        OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(
-          artikel.positie,
-        );
+    final isVelux = artikel.positie.veluxDakraamData != null;
+    final artikelType = isVelux
+        ? OffertePdfVeluxDakraamWidget.titelVoorPositie(artikel.positie)
+        : artikel.positie.formulierTypeLabel;
+    final uitvoeringsRegels = isVelux
+        ? const <String>[]
+        : OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(
+            artikel.positie,
+          );
     final artikelKopHoogte = _artikelKopHoogteVoor(artikel.positie);
 
     return pw.SizedBox(
@@ -703,6 +711,22 @@ class OffertePdfService {
             )
           else if (artikel.positie.plooiwerkenData != null)
             OffertePdfPlooiwerkenWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
+          else if (artikel.positie.sektionalePoortData != null)
+            OffertePdfSektionalePoortWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
+          else if (artikel.positie.veluxDakraamData != null)
+            OffertePdfVeluxDakraamWidget.bouwPositie(
               positie: artikel.positie,
               kortingToestaan: kortingToestaanEffectief,
               isOptie: isOptie,
@@ -956,6 +980,18 @@ class OffertePdfService {
         kortingToestaan: kortingToestaanEffectief,
         isOptie: isOptie,
       );
+    } else if (positie.sektionalePoortData != null) {
+      inhoudHoogte = OffertePdfSektionalePoortWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
+    } else if (positie.veluxDakraamData != null) {
+      inhoudHoogte = OffertePdfVeluxDakraamWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
     } else {
       inhoudHoogte = OffertePdfPvcRaamWidget.berekenTotalePositieHoogte(
         positie,
@@ -968,8 +1004,9 @@ class OffertePdfService {
   }
 
   static double _artikelKopHoogteVoor(OpmetingOverzichtRaamItem positie) {
-    final uitvoeringsRegels =
-        OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(positie);
+    final uitvoeringsRegels = positie.veluxDakraamData != null
+        ? const <String>[]
+        : OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(positie);
     final extraRegels = uitvoeringsRegels.length > 1
         ? uitvoeringsRegels.length - 1
         : 0;

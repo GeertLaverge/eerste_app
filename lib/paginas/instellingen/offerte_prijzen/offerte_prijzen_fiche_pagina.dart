@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: VELUX-TECHNISCHE-PRIJSBOOM-ACTIEF-20260730
+// THIMACO-CONTROLE: VELUX-GEEN-TECHNISCHE-PRIJSKEUZES-FASE-4-20260729-2257
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: GEKOPPELDE-TECHNISCHE-PRIJSREGELS-FASE-4-20260727
 // THIMACO-CONTROLE: TECHNISCHE-PRIJS-OVERNEMEN-FASE-3-20260727
@@ -132,7 +134,8 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
             formulierNaam: widget.formulierNaam,
           );
 
-      final technischeKeuzes = widget.alleenVrijePrijsPerArtikel
+      final technischeKeuzes =
+          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
           ? const <OfferteTechnischeKeuzeRef>[]
           : await OfferteTechnischeKeuzeLaadHelper.laadVoorFormulierTypeInBoomVolgorde(
               widget.formulierType,

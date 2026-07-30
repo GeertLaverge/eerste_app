@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: ONEDRIVE-SYNC-VELUX-DAKRAMEN-CATALOGUS-20260729
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-ONEDRIVE-SYNC-20260729
+// THIMACO-CONTROLE: ONEDRIVE-PLOOIWERKEN-INSTELLINGEN-DEFINITIEF-20260728-2110
 import 'dart:convert';
 import 'dart:io';
 
@@ -70,6 +73,15 @@ class OneDriveSyncService {
 
   static const String _opmetingSchuifraamOpbouwTypesKey =
       'opmeting_schuifraam_opbouw_types';
+
+  static const String _opmetingPlooiwerkenInstellingenKey =
+      'thimaco_opmeting_plooiwerken_instellingen';
+
+  static const String _opmetingSektionalePoortInstellingenKey =
+      'thimaco_opmeting_sektionale_poort_instellingen';
+
+  static const String _opmetingVeluxDakraamInstellingenKey =
+      'thimaco_opmeting_velux_dakraam_instellingen';
 
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
@@ -562,6 +574,21 @@ class OneDriveSyncService {
             prefs.getString(_opmetingSchuifraamOpbouwTypesKey) ??
             (cloudBackup['opmetingSchuifraamOpbouwTypes'] is String
                 ? cloudBackup['opmetingSchuifraamOpbouwTypes'] as String
+                : null),
+        'opmetingPlooiwerkenInstellingen':
+            prefs.getString(_opmetingPlooiwerkenInstellingenKey) ??
+            (cloudBackup['opmetingPlooiwerkenInstellingen'] is String
+                ? cloudBackup['opmetingPlooiwerkenInstellingen'] as String
+                : null),
+        'opmetingSektionalePoortInstellingen':
+            prefs.getString(_opmetingSektionalePoortInstellingenKey) ??
+            (cloudBackup['opmetingSektionalePoortInstellingen'] is String
+                ? cloudBackup['opmetingSektionalePoortInstellingen'] as String
+                : null),
+        'opmetingVeluxDakraamInstellingen':
+            prefs.getString(_opmetingVeluxDakraamInstellingenKey) ??
+            (cloudBackup['opmetingVeluxDakraamInstellingen'] is String
+                ? cloudBackup['opmetingVeluxDakraamInstellingen'] as String
                 : null),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
         'opmetingProjectTitelhoofden':
@@ -1327,6 +1354,27 @@ class OneDriveSyncService {
         await prefs.setString(
           _opmetingSchuifraamOpbouwTypesKey,
           data['opmetingSchuifraamOpbouwTypes'],
+        );
+      }
+
+      if (data['opmetingPlooiwerkenInstellingen'] is String) {
+        await prefs.setString(
+          _opmetingPlooiwerkenInstellingenKey,
+          data['opmetingPlooiwerkenInstellingen'],
+        );
+      }
+
+      if (data['opmetingSektionalePoortInstellingen'] is String) {
+        await prefs.setString(
+          _opmetingSektionalePoortInstellingenKey,
+          data['opmetingSektionalePoortInstellingen'],
+        );
+      }
+
+      if (data['opmetingVeluxDakraamInstellingen'] is String) {
+        await prefs.setString(
+          _opmetingVeluxDakraamInstellingenKey,
+          data['opmetingVeluxDakraamInstellingen'],
         );
       }
 

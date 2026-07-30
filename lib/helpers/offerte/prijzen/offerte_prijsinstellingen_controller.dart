@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKING-MOMENTOPNAME-20260730
 // THIMACO-CONTROLE: EERSTE-PRIJS-SNAPSHOT-STIL-20260724
 import 'dart:async';
 import 'dart:convert';
@@ -14,6 +15,7 @@ import 'offerte_prijs_categorie.dart';
 import 'offerte_prijsinstellingen_momentopname.dart';
 import 'offerte_prijsprofiel_model.dart';
 import 'offerte_prijsregel_model.dart';
+import 'offerte_technische_prijs_momentopname_service.dart';
 import 'offerte_verdeelkost_service.dart';
 import 'offerte_gekoppelde_verdeelkost_service.dart';
 
@@ -319,7 +321,45 @@ class OffertePrijsinstellingenController {
           var prijsData = opmeting.offertePrijsData;
           var prijsDataGewijzigd = false;
 
+          final veluxModel = opmeting.veluxDakraamData;
           if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
+              veluxModel != null) {
+            final artikelSignatuur = jsonEncode(<String, Object>{
+              'formulierType': 'veluxDakraam',
+              'productCode': veluxModel.productCode,
+              'maatCode': veluxModel.maatCode,
+              'breedteMm': veluxModel.breedteMm,
+              'hoogteMm': veluxModel.hoogteMm,
+              'aantal': veluxModel.veiligAantal,
+              'afwerkingType': veluxModel.afwerkingType.name,
+            });
+
+            if (OfferteTechnischePrijsMomentopnameService.moetMomentopnameBijwerken(
+              prijsData: prijsData,
+              profiel: profiel,
+              artikelSignatuur: artikelSignatuur,
+              forceer: forceerPrijsinstellingen,
+            )) {
+              prijsData =
+                  OfferteTechnischePrijsMomentopnameService.maakMomentopname(
+                    prijsData: prijsData,
+                    profiel: profiel,
+                    breedteMm: veluxModel.breedteMm,
+                    hoogteMm: veluxModel.hoogteMm,
+                    aantal: veluxModel.veiligAantal,
+                    artikelSignatuur: artikelSignatuur,
+                    keuzeIsGeselecteerd: (keuze) {
+                      return _normaliseerFormulierType(keuze.formulierType) ==
+                              'veluxdakraam' &&
+                          keuze.menuId.trim() == 'veluxAfwerking' &&
+                          keuze.keuzeId.trim() ==
+                              veluxModel.afwerkingType.name &&
+                          veluxModel.afwerkingType.name != 'geen';
+                    },
+                  );
+              prijsDataGewijzigd = true;
+            }
+          } else if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
               OfferteAlgemeenArtikelPrijsService.moetTechnischeMomentopnameBijwerken(
                 prijsData: prijsData,
                 profiel: profiel,

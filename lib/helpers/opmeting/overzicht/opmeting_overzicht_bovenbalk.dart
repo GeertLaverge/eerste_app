@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: MENU-TEKST-ZWART-NORMAAL-20260730
+// THIMACO-CONTROLE: UNIFORM-BESTAND-EN-TOEVOEGMENU-20260730
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _zachteGroeneRand = Color(0xFFB9E1C6);
+  static const Color _groeneScheiding = Color(0xFF73B98B);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
 
@@ -55,7 +59,7 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
         border: Border(bottom: BorderSide(color: _rand)),
       ),
       child: Row(
-        children: [
+        children: <Widget>[
           _bouwBestandMenu(),
           const SizedBox(width: 12),
           Expanded(
@@ -72,7 +76,7 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          if (heeftOpenBestand && heeftOndersteundeOffertePosities) ...[
+          if (heeftOpenBestand && heeftOndersteundeOffertePosities) ...<Widget>[
             if (berekenPrijzen) ...<Widget>[
               _bouwHerberekenKnop(),
               const SizedBox(width: 8),
@@ -80,12 +84,12 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
             _bouwPrijsOverzichtKnop(),
             const SizedBox(width: 8),
             _bouwOfferteKnop(),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
           ],
           if (heeftOpenBestand)
             _bouwFormulierMenu()
           else
-            const SizedBox(width: 42, height: 42),
+            const SizedBox(width: 118, height: 42),
         ],
       ),
     );
@@ -94,6 +98,18 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
   Widget _bouwBestandMenu() {
     return PopupMenuButton<String>(
       tooltip: 'Bestand',
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 14,
+      shadowColor: const Color(0x33000000),
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      constraints: const BoxConstraints(minWidth: 226, maxWidth: 226),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: _rand),
+      ),
       onSelected: (waarde) {
         switch (waarde) {
           case 'nieuw':
@@ -114,19 +130,38 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
         }
       },
       itemBuilder: (context) {
-        return const [
-          PopupMenuItem(value: 'nieuw', child: Text('Nieuw bestand')),
-          PopupMenuItem(value: 'open', child: Text('Open bestand')),
-          PopupMenuItem(value: 'opslaan', child: Text('Opslaan bestand')),
-          PopupMenuItem(
-            value: 'wissen',
-            child: Text(
-              'Bestand wissen',
-              style: TextStyle(color: Color(0xFFDC2626)),
-            ),
+        return <PopupMenuEntry<String>>[
+          _bouwBestandMenuItem(
+            waarde: 'nieuw',
+            icoon: Icons.note_add_outlined,
+            tekst: 'Nieuw opmeetbestand',
           ),
-          PopupMenuDivider(),
-          PopupMenuItem(value: 'einde', child: Text('Einde')),
+          _bouwBestandMenuItem(
+            waarde: 'open',
+            icoon: Icons.folder_open_outlined,
+            tekst: 'Opmeetbestand openen',
+          ),
+          _bouwBestandMenuItem(
+            waarde: 'opslaan',
+            icoon: Icons.save_outlined,
+            tekst: 'Opmeetbestand opslaan',
+          ),
+          const PopupMenuItem<String>(
+            enabled: false,
+            height: 9,
+            padding: EdgeInsets.symmetric(horizontal: 9),
+            child: Divider(height: 1, thickness: 1, color: _groeneScheiding),
+          ),
+          _bouwBestandMenuItem(
+            waarde: 'wissen',
+            icoon: Icons.delete_outline_rounded,
+            tekst: 'Opmeetbestand wissen',
+          ),
+          _bouwBestandMenuItem(
+            waarde: 'einde',
+            icoon: Icons.home_outlined,
+            tekst: 'Opmeting beëindigen',
+          ),
         ];
       },
       child: Container(
@@ -138,19 +173,61 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
           border: Border.all(color: const Color(0xFFCDEBD6)),
         ),
         child: const Row(
-          children: [
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
             Icon(Icons.folder_open_rounded, color: _groen, size: 20),
             SizedBox(width: 8),
             Text(
               'Bestand',
               style: TextStyle(
-                color: _groen,
+                color: _tekstDonker,
                 fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.normal,
               ),
             ),
             SizedBox(width: 4),
             Icon(Icons.keyboard_arrow_down, color: _groen, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _bouwBestandMenuItem({
+    required String waarde,
+    required IconData icoon,
+    required String tekst,
+  }) {
+    return PopupMenuItem<String>(
+      value: waarde,
+      height: 42,
+      padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: _zachteGroeneRand),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icoon, color: _groen, size: 17),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                tekst,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded, color: _groen, size: 16),
           ],
         ),
       ),
@@ -214,7 +291,19 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
 
   Widget _bouwFormulierMenu() {
     return PopupMenuButton<String>(
-      tooltip: 'Formulier toevoegen',
+      tooltip: 'Opmeetfiche toevoegen',
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 14,
+      shadowColor: const Color(0x33000000),
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      constraints: const BoxConstraints(minWidth: 250, maxWidth: 250),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: _rand),
+      ),
       onSelected: (waarde) {
         final registratie = OfferteArtikelRegister.voorMenuWaarde(waarde);
         if (registratie != null) {
@@ -223,55 +312,92 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
       },
       itemBuilder: (context) => _bouwFormulierMenuItems(),
       child: Container(
-        width: 42,
         height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
         decoration: BoxDecoration(
-          color: _groen,
-          borderRadius: BorderRadius.circular(12),
+          color: _lichtGroen,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFCDEBD6)),
         ),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.add_rounded, color: _groen, size: 20),
+            SizedBox(width: 7),
+            Text(
+              'Toevoegen',
+              style: TextStyle(
+                color: _tekstDonker,
+                fontSize: 13.5,
+                fontWeight: FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   List<PopupMenuEntry<String>> _bouwFormulierMenuItems() {
     final items = <PopupMenuEntry<String>>[];
+    final groepen = OfferteArtikelRegister.menuGroepen;
 
-    for (
-      var categorieIndex = 0;
-      categorieIndex < OfferteArtikelCategorie.values.length;
-      categorieIndex++
-    ) {
-      final categorie = OfferteArtikelCategorie.values[categorieIndex];
-      final registraties = OfferteArtikelRegister.voorCategorie(categorie);
-      if (registraties.isEmpty) continue;
+    for (var groepIndex = 0; groepIndex < groepen.length; groepIndex++) {
+      final groep = groepen[groepIndex];
+      final registraties = OfferteArtikelRegister.voorMenuGroep(groep);
+      if (registraties.isEmpty) {
+        continue;
+      }
 
-      items.add(
-        PopupMenuItem<String>(
-          enabled: false,
-          child: Padding(
-            padding: EdgeInsets.only(top: categorieIndex == 0 ? 0 : 8),
-            child: Text(
-              categorie.label,
-              style: const TextStyle(
-                color: _groen,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+      if (items.isNotEmpty) {
+        items.add(
+          const PopupMenuItem<String>(
+            enabled: false,
+            height: 9,
+            padding: EdgeInsets.symmetric(horizontal: 9),
+            child: Divider(height: 1, thickness: 1, color: _groeneScheiding),
           ),
-        ),
-      );
+        );
+      }
 
       for (final registratie in registraties) {
         items.add(
           PopupMenuItem<String>(
             value: registratie.menuWaarde,
-            child: Row(
-              children: [
-                Icon(registratie.icoon, color: _groen, size: 20),
-                const SizedBox(width: 10),
-                Text(registratie.formulierNaam),
-              ],
+            height: 42,
+            padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: _zachteGroeneRand),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(registratie.icoon, color: _groen, size: 17),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      registratie.formulierNaam,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _groen,
+                    size: 16,
+                  ),
+                ],
+              ),
             ),
           ),
         );

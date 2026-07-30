@@ -2,9 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+219
-
-
+version: 1.0.0+220
 
 environment:
   sdk: '^3.11.0'
@@ -53,8 +51,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/thimaco_logo_icon.png
+    - assets/images/
     - "assets/data/zipcodes_num_nl_2025 (1).csv"
     - assets/deurpanelen/dxf/
     - assets/offerte/
-   

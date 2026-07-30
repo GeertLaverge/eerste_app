@@ -1,6 +1,9 @@
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-ANALYZER-HERSTEL-20260729-1045
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-ARTIKELOMSCHRIJVING-20260729
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-ARTIKELOMSCHRIJVING-20260728
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_model.dart';
+import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
 import 'opmeting_overzicht_model.dart';
 
 class OpmetingArtikelTypeOmschrijvingHelper {
@@ -19,6 +22,10 @@ class OpmetingArtikelTypeOmschrijvingHelper {
         return _deurOmschrijvingRegels(item).join(' - ');
       case 'schuifvliegendeur':
         return _schuifvliegendeurOmschrijving(item);
+      case 'sektionalePoort':
+        final model = item.sektionalePoortData;
+        if (model == null) return '';
+        return 'Type ${model.modelType.label} · ${model.serie.label}';
       default:
         return '';
     }

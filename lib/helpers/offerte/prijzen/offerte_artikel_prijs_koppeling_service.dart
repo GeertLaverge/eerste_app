@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKINGSPRIJZEN-20260730
+// THIMACO-CONTROLE: VELUX-PARTICULIERE-VERKOOPPRIJS-ZONDER-CORRECTIES-20260730
+// THIMACO-CONTROLE: VELUX-PRIJSKOPPELING-FASE-3-20260729-2212
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-TECHNISCHE-PRIJSKOPPELING-FINAAL-20260729-1214
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-TECHNISCHE-STOPCONTACTPRIJS-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-PRIJS-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: OFFERTE-ARTIKEL-PRIJS-KOPPELING-SERVICE-20260723
@@ -15,10 +20,11 @@ import 'offerte_toegepaste_prijsregel_model.dart';
 /// eigen aantal, maatvoering en prijsdata. De zes raam- en deurtypes gebruiken
 /// de bestaande `offertePrijsData` van het overzichtsitem.
 ///
-/// Vliegendeur en Schuifvliegendeur gebruiken eveneens de bestaande
-/// `offertePrijsData`. Beide hebben een eigen prijsprofiel voor vrije
-/// artikelprijzen en prijzen voor alle artikelen, maar ondersteunen bewust geen
-/// technische-keuzeprijzen.
+/// Vliegendeur, Schuifvliegendeur en Velux gebruiken eveneens de bestaande
+/// `offertePrijsData`. Ze hebben een eigen prijsprofiel voor vrije
+/// artikelprijzen en prijzen voor alle artikelen. Velux bewaart zijn berekende
+/// catalogustotaal als basisprijs. Alleen de gekozen Velux-binnenafwerking
+/// wordt aanvullend via de centrale technische-keuzeprijzen berekend.
 ///
 /// Er is geen wijziging aan prijsmodellen of JSON-opslag nodig.
 class OfferteArtikelPrijsKoppeling {
@@ -82,6 +88,26 @@ class OfferteArtikelPrijsKoppelingService {
         formulierNaam: 'Plooiwerken',
         isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling sektionalePoort =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'sektionalePoort',
+        formulierType: 'sektionalePoort',
+        formulierNaam: 'Sektionale poorten',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: true,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling veluxDakraam =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'veluxDakraam',
+        formulierType: 'veluxDakraam',
+        formulierNaam: 'Velux dakramen',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: true,
         isHandmatigGeprijsdArtikel: true,
       );
 
@@ -161,6 +187,8 @@ class OfferteArtikelPrijsKoppelingService {
         vliegendeur,
         schuifvliegendeur,
         plooiwerken,
+        sektionalePoort,
+        veluxDakraam,
         ...algemeneKoppelingen,
       ];
 
@@ -173,6 +201,8 @@ class OfferteArtikelPrijsKoppelingService {
     vliegendeur,
     schuifvliegendeur,
     plooiwerken,
+    sektionalePoort,
+    veluxDakraam,
   ];
 
   /// Volledige lijst voor artikelprijsverwerking, prijsinstellingen, totalen en
@@ -195,6 +225,8 @@ class OfferteArtikelPrijsKoppelingService {
     'vliegendeur',
     'schuifvliegendeur',
     'plooiwerken',
+    'sektionalePoort',
+    'veluxDakraam',
     ...algemeneFormulierTypes,
   ];
 
@@ -215,6 +247,14 @@ class OfferteArtikelPrijsKoppelingService {
 
     if (artikel.plooiwerkenData != null) {
       return plooiwerken;
+    }
+
+    if (artikel.sektionalePoortData != null) {
+      return sektionalePoort;
+    }
+
+    if (artikel.veluxDakraamData != null) {
+      return veluxDakraam;
     }
 
     final koppeling = koppelingVoorFormulierType(
@@ -399,6 +439,8 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.vliegendeurData?.aantal ??
         artikel.schuifvliegendeurData?.aantal ??
         artikel.plooiwerkenData?.aantal ??
+        artikel.sektionalePoortData?.aantal ??
+        artikel.veluxDakraamData?.veiligAantal ??
         1;
 
     return aantal < 1 ? 1 : aantal;
@@ -408,6 +450,8 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.vasteInzethorData?.breedteMm ??
         artikel.vliegendeurData?.breedteMm ??
         artikel.schuifvliegendeurData?.breedteMm ??
+        artikel.sektionalePoortData?.breedteMm ??
+        artikel.veluxDakraamData?.breedteMm ??
         artikel.raammaatBreedteMm;
   }
 
@@ -415,6 +459,8 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.vasteInzethorData?.hoogteMm ??
         artikel.vliegendeurData?.hoogteMm ??
         artikel.schuifvliegendeurData?.hoogteMm ??
+        artikel.sektionalePoortData?.hoogteMm ??
+        artikel.veluxDakraamData?.hoogteMm ??
         artikel.raammaatHoogteMm;
   }
 
@@ -434,6 +480,22 @@ class OfferteArtikelPrijsKoppelingService {
       return OffertePrijsBerekeningService.resultaatUitMomentopname(
         vasteModel,
         kortingToestaan: kortingToestaan,
+      );
+    }
+
+    if (artikel.veluxDakraamData != null) {
+      final verkoopPrijsData = wijzigPrijsData(
+        prijsData: artikel.offertePrijsData,
+        artikelWinstmargePercentage: 0.0,
+        artikelKortingPercentage: 0.0,
+      );
+
+      return OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
+        prijsData: verkoopPrijsData,
+        aantal: aantalVoorArtikel(artikel),
+        breedteMm: breedteMmVoorArtikel(artikel),
+        hoogteMm: hoogteMmVoorArtikel(artikel),
+        kortingToestaan: false,
       );
     }
 

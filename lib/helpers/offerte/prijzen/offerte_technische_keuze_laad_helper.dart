@@ -1,4 +1,6 @@
-// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-COMPILEFIX-20260727
+// THIMACO-CONTROLE: VELUX-INGEBOUWDE-AFWERKINGSKEUZES-20260730
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-STOPCONTACT-PRIJSKEUZE-FINAAL-20260729-1214
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-INGEBOUWDE-STOPCONTACT-PRIJSKEUZE-20260729
 // THIMACO-CONTROLE: TECHNISCHE-PRIJSKEUZES-BOOMVOLGORDE-20260726
 // THIMACO-CONTROLE: PRIJSKEUZE-GEBRUIKT-EFFECTIEVE-UITSCHRIJFTEKST-20260720
 import '../../app_storage.dart';
@@ -11,6 +13,39 @@ import 'offerte_technische_keuze_ref.dart';
 class OfferteTechnischeKeuzeLaadHelper {
   const OfferteTechnischeKeuzeLaadHelper._();
 
+  static const OfferteTechnischeKeuzeRef
+  sektionalePoortPlaatsenEnAansluitenStopcontact = OfferteTechnischeKeuzeRef(
+    formulierType: 'sektionalePoort',
+    menuId: 'sektionalePoortInstallatie',
+    keuzeId: 'plaatsenEnAansluitenStopcontact',
+    menuTitelMomentopname: 'Installatie',
+    keuzeTitelMomentopname: 'Plaatsen en aansluiten stopcontact',
+    hoeUitschrijvenMomentopname: 'Plaatsen en aansluiten stopcontact',
+  );
+
+  static const OfferteTechnischeKeuzeRef veluxAfwerkingMdfWaterwerend =
+      OfferteTechnischeKeuzeRef(
+        formulierType: 'veluxDakraam',
+        menuId: 'veluxAfwerking',
+        keuzeId: 'mdfWaterwerend',
+        menuTitelMomentopname: 'Afwerken Velux',
+        keuzeTitelMomentopname: 'Chambrangs en binnenkasten in MDF waterwerend',
+        hoeUitschrijvenMomentopname:
+            'Chambrangs en binnenkasten in MDF waterwerend',
+      );
+
+  static const OfferteTechnischeKeuzeRef veluxAfwerkingKunststofWit =
+      OfferteTechnischeKeuzeRef(
+        formulierType: 'veluxDakraam',
+        menuId: 'veluxAfwerking',
+        keuzeId: 'kunststofWit',
+        menuTitelMomentopname: 'Afwerken Velux',
+        keuzeTitelMomentopname:
+            'Chambrangs en binnenkasten in kunststof kleur wit',
+        hoeUitschrijvenMomentopname:
+            'Chambrangs en binnenkasten in kunststof kleur wit',
+      );
+
   /// Bestaande laadroute voor dropdowns en andere schermen.
   ///
   /// Het resultaat blijft alfabetisch gesorteerd, zodat bestaande gebruikers
@@ -18,16 +53,22 @@ class OfferteTechnischeKeuzeLaadHelper {
   static Future<List<OfferteTechnischeKeuzeRef>> laadVoorFormulierType(
     String formulierType,
   ) async {
-    final gegevens = await _laadGegevens(formulierType);
-
-    if (gegevens == null) {
-      return const <OfferteTechnischeKeuzeRef>[];
-    }
-
-    return bouwUitKeuzemenus(
-      formulierType: gegevens.formulierType,
-      menus: gegevens.menus,
-    );
+    final canoniek = _canoniekFormulierType(formulierType);
+    final ingebouwdeKeuzes = _ingebouwdeKeuzesVoor(canoniek);
+    final gegevens = await _laadGegevens(canoniek);
+    final menuKeuzes = gegevens == null
+        ? const <OfferteTechnischeKeuzeRef>[]
+        : bouwUitKeuzemenus(
+            formulierType: gegevens.formulierType,
+            menus: gegevens.menus,
+          );
+    final resultaat = _combineerKeuzes(ingebouwdeKeuzes, menuKeuzes)
+      ..sort(
+        (eerste, tweede) => _zichtbaarLabel(
+          eerste,
+        ).toLowerCase().compareTo(_zichtbaarLabel(tweede).toLowerCase()),
+      );
+    return List<OfferteTechnischeKeuzeRef>.unmodifiable(resultaat);
   }
 
   /// Aanvullende laadroute voor de ingeklapte technische prijsboom.
@@ -36,15 +77,17 @@ class OfferteTechnischeKeuzeLaadHelper {
   /// ingestelde volgorde in “Nieuwe technische keuze”.
   static Future<List<OfferteTechnischeKeuzeRef>>
   laadVoorFormulierTypeInBoomVolgorde(String formulierType) async {
-    final gegevens = await _laadGegevens(formulierType);
-
-    if (gegevens == null) {
-      return const <OfferteTechnischeKeuzeRef>[];
-    }
-
-    return bouwUitKeuzemenusInBoomVolgorde(
-      formulierType: gegevens.formulierType,
-      menus: gegevens.menus,
+    final canoniek = _canoniekFormulierType(formulierType);
+    final ingebouwdeKeuzes = _ingebouwdeKeuzesVoor(canoniek);
+    final gegevens = await _laadGegevens(canoniek);
+    final menuKeuzes = gegevens == null
+        ? const <OfferteTechnischeKeuzeRef>[]
+        : bouwUitKeuzemenusInBoomVolgorde(
+            formulierType: gegevens.formulierType,
+            menus: gegevens.menus,
+          );
+    return List<OfferteTechnischeKeuzeRef>.unmodifiable(
+      _combineerKeuzes(ingebouwdeKeuzes, menuKeuzes),
     );
   }
 
@@ -72,6 +115,38 @@ class OfferteTechnischeKeuzeLaadHelper {
     return List<OfferteTechnischeKeuzeRef>.unmodifiable(
       _bouwUitKeuzemenus(formulierType: formulierType, menus: menus),
     );
+  }
+
+  static List<OfferteTechnischeKeuzeRef> _ingebouwdeKeuzesVoor(
+    String formulierType,
+  ) {
+    if (formulierType == 'sektionalePoort') {
+      return const <OfferteTechnischeKeuzeRef>[
+        sektionalePoortPlaatsenEnAansluitenStopcontact,
+      ];
+    }
+    if (formulierType == 'veluxDakraam') {
+      return const <OfferteTechnischeKeuzeRef>[
+        veluxAfwerkingMdfWaterwerend,
+        veluxAfwerkingKunststofWit,
+      ];
+    }
+    return const <OfferteTechnischeKeuzeRef>[];
+  }
+
+  static List<OfferteTechnischeKeuzeRef> _combineerKeuzes(
+    List<OfferteTechnischeKeuzeRef> eerste,
+    List<OfferteTechnischeKeuzeRef> tweede,
+  ) {
+    final perSleutel = <String, OfferteTechnischeKeuzeRef>{};
+    for (final keuze in <OfferteTechnischeKeuzeRef>[...eerste, ...tweede]) {
+      final sleutel =
+          OfferteTechnischeKeuzeOvereenkomstHelper.lokaleExacteSleutelVan(
+            keuze,
+          );
+      if (sleutel.isNotEmpty) perSleutel[sleutel] = keuze;
+    }
+    return perSleutel.values.toList(growable: false);
   }
 
   static Future<_TechnischeKeuzeLaadGegevens?> _laadGegevens(
@@ -265,6 +340,8 @@ class OfferteTechnischeKeuzeLaadHelper {
       'aluschuifraam' => 'aluSchuifraam',
       'pvcdeur' => 'pvcDeur',
       'aludeur' => 'aluDeur',
+      'sektionalepoort' => 'sektionalePoort',
+      'veluxdakraam' => 'veluxDakraam',
       _ => '',
     };
   }

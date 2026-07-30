@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: VELUX-DAKRAMEN-OVERZICHT-MODEL-FASE-1-2-20260729-2030
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-OVERZICHT-MODEL-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-MODEL-KOPPELING-20260728
 // THIMACO-CONTROLE: OVERZICHT-MODEL-PRIJSdata-BEHOUDEN-TECHNISCHE-REGEL-ZICHTBAAR-20260720
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
@@ -13,6 +15,8 @@ import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
+import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
+import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_model.dart';
 
 class OpmetingOverzichtTechnischeRegel {
   const OpmetingOverzichtTechnischeRegel({
@@ -370,6 +374,8 @@ class OpmetingOverzichtRaamItem {
     this.vliegendeurData,
     this.schuifvliegendeurData,
     this.plooiwerkenData,
+    this.sektionalePoortData,
+    this.veluxDakraamData,
   });
 
   final String id;
@@ -425,6 +431,8 @@ class OpmetingOverzichtRaamItem {
   final OpmetingVliegendeurModel? vliegendeurData;
   final OpmetingSchuifvliegendeurModel? schuifvliegendeurData;
   final OpmetingPlooiwerkenModel? plooiwerkenData;
+  final OpmetingSektionalePoortModel? sektionalePoortData;
+  final OpmetingVeluxDakraamModel? veluxDakraamData;
 
   List<OpmetingOverzichtTechnischeRegel> get zichtbareTechnischeRegels {
     return technischeRegels.where((regel) => regel.isZichtbaar).toList();
@@ -488,6 +496,22 @@ class OpmetingOverzichtRaamItem {
       case 'Plooiwerk':
         return 'plooiwerken';
 
+      case 'sektionalePoort':
+      case 'sektionale_poort':
+      case 'Sektionale poort':
+      case 'Sektionale poorten':
+      case 'sectionalePoort':
+      case 'sectionale_poort':
+        return 'sektionalePoort';
+
+      case 'veluxDakraam':
+      case 'velux_dakraam':
+      case 'Velux dakraam':
+      case 'Velux dakramen':
+      case 'VELUX dakraam':
+      case 'VELUX dakramen':
+        return 'veluxDakraam';
+
       case 'pvcRaam':
       case 'pvc_raam':
       case 'PVC Raam':
@@ -529,6 +553,12 @@ class OpmetingOverzichtRaamItem {
       case 'plooiwerken':
         return 'Plooiwerken';
 
+      case 'sektionalePoort':
+        return 'Sektionale poorten';
+
+      case 'veluxDakraam':
+        return 'Velux dakramen';
+
       case 'pvcRaam':
         return 'PVC Raam';
 
@@ -566,6 +596,8 @@ class OpmetingOverzichtRaamItem {
     OpmetingVliegendeurModel? vliegendeurData,
     OpmetingSchuifvliegendeurModel? schuifvliegendeurData,
     OpmetingPlooiwerkenModel? plooiwerkenData,
+    OpmetingSektionalePoortModel? sektionalePoortData,
+    OpmetingVeluxDakraamModel? veluxDakraamData,
   }) {
     return OpmetingOverzichtRaamItem(
       id: id ?? this.id,
@@ -602,6 +634,8 @@ class OpmetingOverzichtRaamItem {
       schuifvliegendeurData:
           schuifvliegendeurData ?? this.schuifvliegendeurData,
       plooiwerkenData: plooiwerkenData ?? this.plooiwerkenData,
+      sektionalePoortData: sektionalePoortData ?? this.sektionalePoortData,
+      veluxDakraamData: veluxDakraamData ?? this.veluxDakraamData,
     );
   }
 
@@ -657,6 +691,10 @@ class OpmetingOverzichtRaamItem {
       if (schuifvliegendeurData != null)
         'schuifvliegendeurData': schuifvliegendeurData!.toJson(),
       if (plooiwerkenData != null) 'plooiwerkenData': plooiwerkenData!.toJson(),
+      if (sektionalePoortData != null)
+        'sektionalePoortData': sektionalePoortData!.toJson(),
+      if (veluxDakraamData != null)
+        'veluxDakraamData': veluxDakraamData!.toJson(),
     };
   }
 
@@ -749,6 +787,16 @@ class OpmetingOverzichtRaamItem {
       plooiwerkenData: json['plooiwerkenData'] is Map
           ? OpmetingPlooiwerkenModel.fromJson(
               Map<String, dynamic>.from(json['plooiwerkenData'] as Map),
+            )
+          : null,
+      sektionalePoortData: json['sektionalePoortData'] is Map
+          ? OpmetingSektionalePoortModel.fromJson(
+              Map<String, dynamic>.from(json['sektionalePoortData'] as Map),
+            )
+          : null,
+      veluxDakraamData: json['veluxDakraamData'] is Map
+          ? OpmetingVeluxDakraamModel.fromJson(
+              Map<String, dynamic>.from(json['veluxDakraamData'] as Map),
             )
           : null,
     );

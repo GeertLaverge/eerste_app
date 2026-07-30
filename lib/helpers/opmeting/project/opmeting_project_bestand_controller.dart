@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UNIFORME-OPMEETBESTAND-DIALOGEN-20260730
 // THIMACO-CONTROLE: OPENEN-ZONDER-ONTERECHTE-PRIJSVRAAG-20260724
 import 'package:flutter/material.dart';
 
@@ -31,6 +32,9 @@ class OpmetingProjectBestandController {
   });
 
   static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
   static const Color _rood = Color(0xFFDC2626);
 
@@ -423,7 +427,7 @@ class OpmetingProjectBestandController {
     final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
     final klantNamen = _gesorteerdeKlantNamen(klanten);
     final gekozenKlant = await _kiesKlantBestand(
-      titel: 'Klant openen',
+      titel: 'Opmeetbestand openen',
       klantNamen: klantNamen,
       klanten: klanten,
       wissen: false,
@@ -440,6 +444,60 @@ class OpmetingProjectBestandController {
     toonMelding('Opmeetbestand “$gekozenKlant” is geopend.', false);
   }
 
+  Widget _bouwBestandDialoogKop({
+    required String titel,
+    required IconData icoon,
+    Color kleur = _groen,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: const BoxDecoration(
+        color: _lichtGroen,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(bottom: BorderSide(color: Color(0xFFCDEBD6))),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(icoon, color: kleur, size: 20),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              titel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: kleur,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  ButtonStyle _secundaireDialoogKnopStijl() {
+    return OutlinedButton.styleFrom(
+      foregroundColor: _groen,
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: Color(0xFFB9E1C6)),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w800),
+    );
+  }
+
+  ButtonStyle _primaireDialoogKnopStijl({Color kleur = _groen}) {
+    return FilledButton.styleFrom(
+      backgroundColor: kleur,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w800),
+    );
+  }
+
   Future<String?> _kiesKlantBestand({
     required String titel,
     required List<String> klantNamen,
@@ -450,51 +508,105 @@ class OpmetingProjectBestandController {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
           ),
-          title: Text(
-            titel,
-            style: TextStyle(
-              color: wissen ? _rood : _groen,
-              fontWeight: FontWeight.w900,
-            ),
+          titlePadding: EdgeInsets.zero,
+          title: _bouwBestandDialoogKop(
+            titel: titel,
+            icoon: wissen
+                ? Icons.delete_outline_rounded
+                : Icons.folder_open_outlined,
           ),
+          contentPadding: const EdgeInsets.fromLTRB(14, 14, 14, 4),
           content: SizedBox(
-            width: 430,
+            width: 440,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 420),
-              child: ListView(
+              constraints: const BoxConstraints(maxHeight: 410),
+              child: ListView.separated(
                 shrinkWrap: true,
-                children: [
-                  ...klantNamen.map((klantNaam) {
-                    final aantal = klanten[klantNaam]?.length ?? 0;
-                    return ListTile(
-                      leading: Icon(
-                        wissen
-                            ? Icons.delete_outline
-                            : Icons.description_outlined,
-                        color: wissen ? _rood : _groen,
-                      ),
-                      title: Text(
-                        klantNaam,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text('$aantal opmeting(en)'),
+                itemCount: klantNamen.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 7),
+                itemBuilder: (context, index) {
+                  final klantNaam = klantNamen[index];
+                  final aantal = klanten[klantNaam]?.length ?? 0;
+
+                  return Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         Navigator.pop(dialogContext, klantNaam);
                       },
-                    );
-                  }),
-                ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFB9E1C6)),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: _lichtGroen,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.description_outlined,
+                                color: _groen,
+                                size: 17,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                klantNaam,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _groen,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '$aantal positie${aantal == 1 ? '' : 's'}',
+                              style: const TextStyle(
+                                color: _tekstGrijs,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: _groen,
+                              size: 17,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
+          actionsPadding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+          actions: <Widget>[
+            OutlinedButton(
+              style: _secundaireDialoogKnopStijl(),
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
@@ -523,7 +635,7 @@ class OpmetingProjectBestandController {
     final klanten = _groepeerOpmetingenPerKlant(alleOpmetingen);
     final klantNamen = _gesorteerdeKlantNamen(klanten);
     final gekozenKlant = await _kiesKlantBestand(
-      titel: 'Bestand wissen',
+      titel: 'Opmeetbestand wissen',
       klantNamen: klantNamen,
       klanten: klanten,
       wissen: true,
@@ -543,28 +655,65 @@ class OpmetingProjectBestandController {
       context: huidigeContext,
       builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
           ),
-          title: const Text('Bestand definitief wissen?'),
-          content: Text(
-            'Bent u zeker dat u het volledige opmeetbestand “$gekozenKlant” wilt wissen? '
-            'Alle ${teWissenOpmetingen.length} positie(s) van deze klant worden verwijderd.',
+          titlePadding: EdgeInsets.zero,
+          title: _bouwBestandDialoogKop(
+            titel: 'Bestand definitief wissen?',
+            icoon: Icons.warning_amber_rounded,
+            kleur: _rood,
           ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
+          contentPadding: const EdgeInsets.fromLTRB(16, 15, 16, 4),
+          content: SizedBox(
+            width: 430,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7F7),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFECACA)),
+              ),
+              child: Text.rich(
+                TextSpan(
+                  style: const TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
+                  children: <InlineSpan>[
+                    const TextSpan(text: 'Het volledige opmeetbestand '),
+                    TextSpan(
+                      text: '“$gekozenKlant”',
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    TextSpan(
+                      text:
+                          ' en alle ${teWissenOpmetingen.length} positie(s) worden definitief verwijderd.',
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+          actions: <Widget>[
+            OutlinedButton(
+              style: _secundaireDialoogKnopStijl(),
               onPressed: () {
                 Navigator.pop(dialogContext, false);
               },
               child: const Text('Annuleren'),
             ),
             FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _rood),
+              style: _primaireDialoogKnopStijl(kleur: _rood),
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              child: const Text('Wissen'),
+              child: const Text('Definitief wissen'),
             ),
           ],
         );
@@ -673,33 +822,61 @@ class OpmetingProjectBestandController {
       context: huidigeContext,
       builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
           ),
-          title: const Text('Bestand opslaan?'),
-          content: const Text(
-            'Wilt u het bestand opslaan en synchroniseren voordat u terugkeert naar Home?',
+          titlePadding: EdgeInsets.zero,
+          title: _bouwBestandDialoogKop(
+            titel: 'Opmeting beëindigen',
+            icoon: Icons.home_outlined,
           ),
-          actions: [
+          contentPadding: const EdgeInsets.fromLTRB(16, 15, 16, 4),
+          content: SizedBox(
+            width: 430,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAFAFA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _rand),
+              ),
+              child: const Text(
+                'Wil je het opmeetbestand opslaan en synchroniseren voordat je terugkeert naar Home?',
+                style: TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12.5,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+          actions: <Widget>[
             TextButton(
-              style: TextButton.styleFrom(foregroundColor: _tekstGrijs),
+              style: TextButton.styleFrom(
+                foregroundColor: _tekstGrijs,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800),
+              ),
               onPressed: () {
                 Navigator.pop(dialogContext, 'annuleren');
               },
               child: const Text('Annuleren'),
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
+            OutlinedButton(
+              style: _secundaireDialoogKnopStijl(),
               onPressed: () {
                 Navigator.pop(dialogContext, 'niet_opslaan');
               },
               child: const Text('Niet opslaan'),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _groen,
-                foregroundColor: Colors.white,
-              ),
+            FilledButton(
+              style: _primaireDialoogKnopStijl(),
               onPressed: () {
                 Navigator.pop(dialogContext, 'opslaan');
               },
@@ -747,7 +924,11 @@ class _KlantNaamDialog extends StatefulWidget {
 class _KlantNaamDialogState extends State<_KlantNaamDialog> {
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _zachteGroeneRand = Color(0xFFB9E1C6);
   static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _veldAchtergrond = Color(0xFFF8FAF9);
+  static const Color _tekstDonker = Color(0xFF111827);
+  static const Color _tekstGrijs = Color(0xFF6B7280);
 
   late final TextEditingController _controller;
   late final FocusNode _naamFocusNode;
@@ -878,6 +1059,52 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
     );
   }
 
+  InputDecoration _compacteVeldDecoratie({
+    required String hintText,
+    required IconData icoon,
+  }) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: const TextStyle(
+        color: _tekstGrijs,
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+      prefixIcon: Icon(icoon, color: _tekstGrijs, size: 17),
+      prefixIconConstraints: const BoxConstraints(minWidth: 37, minHeight: 38),
+      isDense: true,
+      filled: true,
+      fillColor: _veldAchtergrond,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _rand),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _groen, width: 1.5),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(9),
+        borderSide: const BorderSide(color: _rand),
+      ),
+    );
+  }
+
+  Widget _veldTitel(String tekst) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 2, bottom: 5),
+      child: Text(
+        tekst,
+        style: const TextStyle(
+          color: _groen,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final basisTheme = Theme.of(context);
@@ -900,64 +1127,68 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
           cursorColor: _groen,
           selectionHandleColor: _groen,
         ),
-        inputDecorationTheme: basisTheme.inputDecorationTheme.copyWith(
-          floatingLabelStyle: const TextStyle(
-            color: _groen,
-            fontWeight: FontWeight.w700,
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: _groen, width: 2),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(foregroundColor: _groen),
-        ),
       ),
       child: AlertDialog(
         backgroundColor: Colors.white,
         surfaceTintColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: _rand),
+        ),
         titlePadding: EdgeInsets.zero,
         title: Container(
-          padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
+          padding: const EdgeInsets.fromLTRB(16, 11, 12, 11),
           decoration: const BoxDecoration(
             color: _lichtGroen,
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+            border: Border(bottom: BorderSide(color: Color(0xFFCDEBD6))),
           ),
           child: const Row(
-            children: [
-              Icon(Icons.note_add_outlined, color: _groen),
-              SizedBox(width: 10),
+            children: <Widget>[
+              Icon(Icons.note_add_outlined, color: _groen, size: 20),
+              SizedBox(width: 9),
               Expanded(
                 child: Text(
                   'Nieuw opmeetbestand',
-                  style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: _groen,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
           ),
         ),
+        contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
         content: SizedBox(
-          width: 520,
+          width: 500,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+            children: <Widget>[
+              _veldTitel('Klant uit klantenfiche of blauwe agenda'),
               DropdownButtonFormField<String>(
                 initialValue: geselecteerde == null
                     ? null
                     : _klantWaarde(geselecteerde),
                 isExpanded: true,
                 menuMaxHeight: 420,
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
                 hint: Text(
                   widget.klanten.isEmpty
                       ? 'Geen klanten gevonden'
                       : 'Selecteer een klant',
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Klant uit klantenfiche of blauwe agenda',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
+                decoration: _compacteVeldDecoratie(
+                  hintText: widget.klanten.isEmpty
+                      ? 'Geen klanten gevonden'
+                      : 'Selecteer een klant',
+                  icoon: Icons.badge_outlined,
                 ),
                 items: widget.klanten
                     .map<DropdownMenuItem<String>>((klant) {
@@ -982,7 +1213,8 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                         _selecteerKlant(klant);
                       },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 11),
+              _veldTitel('Naam klant'),
               LayoutBuilder(
                 builder: (context, constraints) {
                   return RawAutocomplete<OpmetingAgendaKlantInfo>(
@@ -999,13 +1231,16 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                             autofocus: true,
                             cursorColor: _groen,
                             textCapitalization: TextCapitalization.words,
-                            decoration: InputDecoration(
-                              labelText: 'Naam klant',
+                            style: const TextStyle(
+                              color: _tekstDonker,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            decoration: _compacteVeldDecoratie(
                               hintText: widget.klanten.isEmpty
                                   ? 'Typ een nieuwe klantnaam'
                                   : 'Typ enkele letters voor suggesties',
-                              prefixIcon: const Icon(Icons.search_outlined),
-                              border: const OutlineInputBorder(),
+                              icoon: Icons.search_outlined,
                             ),
                             onChanged: _verwerkNaamWijziging,
                             onSubmitted: (_) {
@@ -1021,18 +1256,18 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                         child: Material(
                           elevation: 8,
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           clipBehavior: Clip.antiAlias,
                           child: SizedBox(
                             width: constraints.maxWidth,
                             child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 300),
+                              constraints: const BoxConstraints(maxHeight: 280),
                               child: ListView.separated(
-                                padding: EdgeInsets.zero,
+                                padding: const EdgeInsets.all(5),
                                 shrinkWrap: true,
                                 itemCount: suggesties.length,
                                 separatorBuilder: (_, __) =>
-                                    const Divider(height: 1),
+                                    const SizedBox(height: 4),
                                 itemBuilder: (context, index) {
                                   final klant = suggesties[index];
                                   final gemarkeerd =
@@ -1043,41 +1278,51 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                                   final subtitel = _klantSubtitel(klant);
 
                                   return InkWell(
+                                    borderRadius: BorderRadius.circular(8),
                                     onTap: () => onSelected(klant),
                                     child: Container(
-                                      color: gemarkeerd ? _lichtGroen : null,
+                                      decoration: BoxDecoration(
+                                        color: gemarkeerd
+                                            ? _lichtGroen
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: _rand),
+                                      ),
                                       padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 10,
+                                        horizontal: 10,
+                                        vertical: 8,
                                       ),
                                       child: Row(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
-                                        children: [
+                                        children: <Widget>[
                                           const Padding(
-                                            padding: EdgeInsets.only(top: 2),
+                                            padding: EdgeInsets.only(top: 1),
                                             child: Icon(
                                               Icons.person_outline,
                                               color: _groen,
-                                              size: 20,
+                                              size: 17,
                                             ),
                                           ),
-                                          const SizedBox(width: 10),
+                                          const SizedBox(width: 8),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
-                                              children: [
+                                              children: <Widget>[
                                                 Text(
                                                   klant.klantNaamMetAanspreking,
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                   style: const TextStyle(
+                                                    color: _tekstDonker,
+                                                    fontSize: 12.5,
                                                     fontWeight: FontWeight.w800,
                                                   ),
                                                 ),
-                                                if (subtitel.isNotEmpty) ...[
+                                                if (subtitel
+                                                    .isNotEmpty) ...<Widget>[
                                                   const SizedBox(height: 2),
                                                   Text(
                                                     subtitel,
@@ -1085,8 +1330,8 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                                                     overflow:
                                                         TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                      color: Color(0xFF6B7280),
-                                                      fontSize: 12,
+                                                      color: _tekstGrijs,
+                                                      fontSize: 11,
                                                     ),
                                                   ),
                                                 ],
@@ -1107,41 +1352,70 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                   );
                 },
               ),
-              if (geselecteerde != null) ...[
-                const SizedBox(height: 12),
+              if (geselecteerde != null) ...<Widget>[
+                const SizedBox(height: 11),
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 9,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFAFAFA),
-                    borderRadius: BorderRadius.circular(12),
+                    color: _veldAchtergrond,
+                    borderRadius: BorderRadius.circular(9),
                     border: Border.all(color: _rand),
                   ),
-                  child: Column(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        geselecteerde.klantNaamMetAanspreking,
-                        style: const TextStyle(
-                          color: _groen,
-                          fontWeight: FontWeight.w900,
+                    children: <Widget>[
+                      const Icon(Icons.person_outline, color: _groen, size: 17),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              geselecteerde.klantNaamMetAanspreking,
+                              style: const TextStyle(
+                                color: _groen,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            if (geselecteerde.klantnummer.trim().isNotEmpty)
+                              Text(
+                                'Klantnr. ${geselecteerde.klantnummer.trim()}',
+                                style: const TextStyle(
+                                  color: _tekstGrijs,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            if (adres.isNotEmpty)
+                              Text(
+                                adres,
+                                style: const TextStyle(
+                                  color: _tekstGrijs,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            if (geselecteerde.gsm.trim().isNotEmpty)
+                              Text(
+                                geselecteerde.gsm.trim(),
+                                style: const TextStyle(
+                                  color: _tekstGrijs,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            if (geselecteerde.email.trim().isNotEmpty)
+                              Text(
+                                geselecteerde.email.trim(),
+                                style: const TextStyle(
+                                  color: _tekstGrijs,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                      if (geselecteerde.klantnummer.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text('Klantnr. ${geselecteerde.klantnummer.trim()}'),
-                      ],
-                      if (adres.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(adres),
-                      ],
-                      if (geselecteerde.gsm.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(geselecteerde.gsm.trim()),
-                      ],
-                      if (geselecteerde.email.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(geselecteerde.email.trim()),
-                      ],
                     ],
                   ),
                 ),
@@ -1149,8 +1423,19 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
             ],
           ),
         ),
-        actions: [
-          TextButton(
+        actionsPadding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+        actions: <Widget>[
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _groen,
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: _zachteGroeneRand),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w800),
+            ),
             onPressed: () {
               Navigator.of(context).pop();
             },
@@ -1160,6 +1445,11 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
             style: FilledButton.styleFrom(
               backgroundColor: _groen,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              textStyle: const TextStyle(fontWeight: FontWeight.w800),
             ),
             onPressed: _aanmaken,
             child: const Text('Aanmaken'),

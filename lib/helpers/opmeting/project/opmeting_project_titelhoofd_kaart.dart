@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: FINALE-OPSCHONING-VOOR-VELUX-TITELHOOFD-20260729-1535
+// THIMACO-CONTROLE: KLANTNUMMER-IPAD-NUMERIEK-EN-LEEGMAKEN-20260729-1455
 // THIMACO-CONTROLE: OFFERTEVOLGNUMMER-VELDEN-LEEG-BIJ-FOCUS-20260726
 // THIMACO-CONTROLE: KLANTVELDEN-VISUEEL-ALLEMAAL-27PX-20260720
 // THIMACO-CONTROLE: COMPACTE-KLANTGEGEVENS-PROJECTKLEUR-ZONDER-ZWEVENDE-LABELS-20260720
@@ -108,6 +110,7 @@ class _OpmetingProjectTitelhoofdKaartState
   late final List<TextEditingController> _offerteJaarControllers;
   late final List<TextEditingController> _klantnummerControllers;
   late final List<TextEditingController> _offerteVolgnummerControllers;
+  late final List<FocusNode> _klantnummerFocusNodes;
   late final List<FocusNode> _offerteVolgnummerFocusNodes;
   late String _btwTarief;
 
@@ -148,6 +151,21 @@ class _OpmetingProjectTitelhoofdKaartState
     _offerteVolgnummerControllers = List<TextEditingController>.generate(
       2,
       (_) => TextEditingController(),
+    );
+    _klantnummerFocusNodes = List<FocusNode>.generate(
+      _klantnummerControllers.length,
+      (index) {
+        final focusNode = FocusNode();
+        focusNode.addListener(() {
+          if (!focusNode.hasFocus) return;
+
+          // Het klantnummer bestaat uit afzonderlijke cijfervakken. Maak het
+          // actieve vak leeg zodra het focus krijgt, zodat een bestaand cijfer
+          // op iPad rechtstreeks vervangen kan worden.
+          _klantnummerControllers[index].clear();
+        });
+        return focusNode;
+      },
     );
     _offerteVolgnummerFocusNodes = List<FocusNode>.generate(
       _offerteVolgnummerControllers.length,
@@ -208,7 +226,10 @@ class _OpmetingProjectTitelhoofdKaartState
       controller.dispose();
     }
 
-    for (final focusNode in _offerteVolgnummerFocusNodes) {
+    for (final focusNode in <FocusNode>[
+      ..._klantnummerFocusNodes,
+      ..._offerteVolgnummerFocusNodes,
+    ]) {
       focusNode.dispose();
     }
 
@@ -782,6 +803,7 @@ class _OpmetingProjectTitelhoofdKaartState
     return SizedBox(
       height: hoogte,
       child: DropdownButtonFormField<String>(
+        key: ValueKey<String>('aanspreking-$_aanspreking'),
         initialValue: _aanspreking,
         isExpanded: true,
         iconSize: 14,
@@ -951,6 +973,7 @@ class _OpmetingProjectTitelhoofdKaartState
         SizedBox(
           width: 122,
           child: DropdownButtonFormField<String>(
+            key: ValueKey<String>('btw-$_btwTarief'),
             initialValue: _btwTarief,
             isExpanded: true,
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
@@ -1121,10 +1144,17 @@ class _OpmetingProjectTitelhoofdKaartState
   }
 
   Widget _bouwCijferVak(TextEditingController controller) {
+    final klantnummerIndex = _klantnummerControllers.indexOf(controller);
     final volgnummerIndex = _offerteVolgnummerControllers.indexOf(controller);
-    final focusNode = volgnummerIndex < 0
-        ? null
-        : _offerteVolgnummerFocusNodes[volgnummerIndex];
+    final maaktLeegBijFocus = klantnummerIndex >= 0 || volgnummerIndex >= 0;
+    final FocusNode? focusNode;
+    if (klantnummerIndex >= 0) {
+      focusNode = _klantnummerFocusNodes[klantnummerIndex];
+    } else if (volgnummerIndex >= 0) {
+      focusNode = _offerteVolgnummerFocusNodes[volgnummerIndex];
+    } else {
+      focusNode = null;
+    }
 
     final alleControllers = <TextEditingController>[
       ..._offerteJaarControllers,
@@ -1148,13 +1178,18 @@ class _OpmetingProjectTitelhoofdKaartState
       child: TextField(
         controller: controller,
         focusNode: focusNode,
-        keyboardType: TextInputType.number,
+        keyboardType: const TextInputType.numberWithOptions(
+          decimal: false,
+          signed: false,
+        ),
+        autocorrect: false,
+        enableSuggestions: false,
         textInputAction: heeftVolgendVak
             ? TextInputAction.next
             : TextInputAction.done,
         textAlign: TextAlign.center,
         maxLines: 1,
-        selectAllOnFocus: volgnummerIndex < 0,
+        selectAllOnFocus: !maaktLeegBijFocus,
         inputFormatters: <TextInputFormatter>[
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(1),
@@ -1183,7 +1218,7 @@ class _OpmetingProjectTitelhoofdKaartState
             borderSide: const BorderSide(color: _groen, width: 1.4),
           ),
         ),
-        onTap: volgnummerIndex < 0 ? selecteerBestaandCijfer : null,
+        onTap: maaktLeegBijFocus ? null : selecteerBestaandCijfer,
         onChanged: (waarde) {
           if (waarde.isNotEmpty && heeftVolgendVak) {
             FocusScope.of(context).nextFocus();

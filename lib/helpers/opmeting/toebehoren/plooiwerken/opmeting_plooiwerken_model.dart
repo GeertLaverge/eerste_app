@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: FINALE-OPSCHONING-VOOR-VELUX-PLOOIWERKEN-20260729-1535
+// THIMACO-CONTROLE: PROJECT-OPSCHONING-VOOR-VELUX-20260729-1510
 // THIMACO-CONTROLE: PLOOIWERKEN-OPHANGING-VOLGENS-LEVERANCIER-20260728
 import '../../fotos/opmeting_foto_model.dart';
 
@@ -395,9 +397,7 @@ class OpmetingPlooiwerkenModel {
     if (index < 0 || index >= aantalZijden) return this;
 
     final nieuw = List<int?>.from(actieveLengtesMm);
-    nieuw[index] = waarde == null
-        ? null
-        : waarde.clamp(lengteMinimumMm, lengteMaximumMm).toInt();
+    nieuw[index] = waarde?.clamp(lengteMinimumMm, lengteMaximumMm).toInt();
     return copyWith(lengtesMm: List<int?>.unmodifiable(nieuw));
   }
 
@@ -405,9 +405,7 @@ class OpmetingPlooiwerkenModel {
     if (index < 0 || index >= aantalPlooien) return this;
 
     final nieuw = List<int?>.from(actieveHoekenGraden);
-    nieuw[index] = waarde == null
-        ? null
-        : waarde.clamp(hoekMinimumGraden, hoekMaximumGraden).toInt();
+    nieuw[index] = waarde?.clamp(hoekMinimumGraden, hoekMaximumGraden).toInt();
     return copyWith(hoekenGraden: List<int?>.unmodifiable(nieuw));
   }
 
@@ -613,9 +611,7 @@ class OpmetingPlooiwerkenModel {
 
     for (var index = 0; index < lengte && index < bron.length; index++) {
       final waarde = bron[index];
-      resultaat[index] = waarde == null
-          ? null
-          : waarde.clamp(minimum, maximum).toInt();
+      resultaat[index] = waarde?.clamp(minimum, maximum).toInt();
     }
 
     return resultaat;

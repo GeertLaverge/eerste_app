@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: VELUX-GEEN-ONTERECHTE-PRIJSWAARSCHUWING-20260730
+// THIMACO-CONTROLE: VELUX-DAKRAMEN-OPMETING-PAGINA-FASE-1-2-20260729-2030
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-HOOFDPAGINA-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-CENTRALE-PAGINA-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-CENTRALE-PAGINA-KOPPELING-20260728
 // THIMACO-CONTROLE: BESTAANDE-PROJECTPRIJSREGEL-ROUTE-20260725
@@ -350,6 +353,22 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  Future<void> _openSektionalePoort({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openSektionalePoort(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
+  Future<void> _openVeluxDakraam({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openVeluxDakraam(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
   Future<void> _openVrijePrijsPerArtikelVenster(
     OpmetingOverzichtRaamItem item, {
     required String positieLabel,
@@ -537,7 +556,17 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return true;
     }
 
-    final validatie = _offerteController.valideerPrijsgegevens(offertePosities);
+    final teValiderenPosities = offertePosities
+        .where((positie) => positie.veluxDakraamData == null)
+        .toList(growable: false);
+
+    if (teValiderenPosities.isEmpty) {
+      return true;
+    }
+
+    final validatie = _offerteController.valideerPrijsgegevens(
+      teValiderenPosities,
+    );
 
     if (validatie.isGeldig) {
       return true;
@@ -871,6 +900,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.plooiwerken:
         await _openPlooiwerken();
+        break;
+
+      case OfferteArtikelOpenType.sektionalePoort:
+        await _openSektionalePoort();
+        break;
+
+      case OfferteArtikelOpenType.veluxDakraam:
+        await _openVeluxDakraam();
         break;
     }
   }

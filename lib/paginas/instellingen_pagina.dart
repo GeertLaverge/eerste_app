@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: INSTELLINGEN-KNOP-VELUX-DAKRAMEN-20260729
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-INSTELLINGEN-KNOP-20260729
 // THIMACO-CONTROLE: INSTELLINGEN-KNOP-PLOOIWERKEN-20260728-2110
 import 'package:flutter/material.dart';
 
@@ -11,6 +13,8 @@ import '../helpers/opmeting/raam/opmeting_raam_opvullingen_pagina.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_beheer_dialog.dart';
 import '../helpers/opmeting/project/opmeting_project_kleuren_pagina.dart';
 import 'instellingen/plooiwerken/opmeting_plooiwerken_instellingen_pagina.dart';
+import 'instellingen/sektionale_poorten/opmeting_sektionale_poort_instellingen_pagina.dart';
+import 'instellingen/velux_dakramen/opmeting_velux_dakraam_instellingen_pagina.dart';
 import 'instellingen/offerte_prijzen/offerte_prijzen_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
@@ -272,6 +276,38 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.architecture_outlined),
                 label: const Text('Plooiwerken'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OpmetingSektionalePoortInstellingenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.garage_outlined),
+                label: const Text('Sektionale poorten'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OpmetingVeluxDakraamInstellingenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.roofing_outlined),
+                label: const Text('Velux dakramen'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),

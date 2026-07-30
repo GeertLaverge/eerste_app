@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: OPMEETFICHE-MENU-GROEPEN-20260730
+// THIMACO-CONTROLE: VELUX-DAKRAMEN-REGISTER-FASE-1-2-20260729-2030
+// THIMACO-CONTROLE: SEKTIONALE-POORTEN-REGISTER-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-REGISTER-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-REGISTER-KOPPELING-20260728
 import 'package:flutter/material.dart';
@@ -18,6 +21,8 @@ enum OfferteArtikelOpenType {
   vliegendeur,
   schuifvliegendeur,
   plooiwerken,
+  sektionalePoort,
+  veluxDakraam,
 }
 
 class OfferteArtikelRegistratie {
@@ -36,6 +41,16 @@ class OfferteArtikelRegistratie {
   final OfferteArtikelCategorie categorie;
   final IconData icoon;
   final OfferteArtikelOpenType openType;
+}
+
+class OfferteArtikelMenuGroep {
+  const OfferteArtikelMenuGroep({
+    required this.label,
+    required this.menuWaarden,
+  });
+
+  final String label;
+  final List<String> menuWaarden;
 }
 
 class OfferteArtikelRegister {
@@ -123,6 +138,55 @@ class OfferteArtikelRegister {
           icoon: Icons.straighten_outlined,
           openType: OfferteArtikelOpenType.plooiwerken,
         ),
+        OfferteArtikelRegistratie(
+          menuWaarde: 'sektionale_poort',
+          formulierType: 'sektionalePoort',
+          formulierNaam: 'Sektionale poorten',
+          categorie: OfferteArtikelCategorie.deuren,
+          icoon: Icons.garage_outlined,
+          openType: OfferteArtikelOpenType.sektionalePoort,
+        ),
+        OfferteArtikelRegistratie(
+          menuWaarde: 'velux_dakraam',
+          formulierType: 'veluxDakraam',
+          formulierNaam: 'Velux dakramen',
+          categorie: OfferteArtikelCategorie.ramen,
+          icoon: Icons.roofing_outlined,
+          openType: OfferteArtikelOpenType.veluxDakraam,
+        ),
+      ];
+
+  /// De professionele volgorde van het menu in de opmetingbovenbalk.
+  ///
+  /// Nieuwe formulieren kunnen later eenvoudig aan de juiste groep worden
+  /// toegevoegd zodra hun registratie en navigatie beschikbaar zijn.
+  static const List<OfferteArtikelMenuGroep> menuGroepen =
+      <OfferteArtikelMenuGroep>[
+        OfferteArtikelMenuGroep(
+          label: 'PVC',
+          menuWaarden: <String>['pvc_raam', 'pvc_schuifraam', 'pvc_deur'],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'ALU',
+          menuWaarden: <String>['alu_raam', 'alu_schuifraam', 'alu_deur'],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'Toebehoren',
+          menuWaarden: <String>[
+            'vaste_inzethor',
+            'vliegendeur',
+            'schuifvliegendeur',
+            'plooiwerken',
+          ],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'Poorten',
+          menuWaarden: <String>['sektionale_poort'],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'Dakramen',
+          menuWaarden: <String>['velux_dakraam'],
+        ),
       ];
 
   static OfferteArtikelRegistratie? voorMenuWaarde(String menuWaarde) {
@@ -140,5 +204,20 @@ class OfferteArtikelRegister {
     return List<OfferteArtikelRegistratie>.unmodifiable(
       registraties.where((registratie) => registratie.categorie == categorie),
     );
+  }
+
+  static List<OfferteArtikelRegistratie> voorMenuGroep(
+    OfferteArtikelMenuGroep groep,
+  ) {
+    final resultaat = <OfferteArtikelRegistratie>[];
+
+    for (final menuWaarde in groep.menuWaarden) {
+      final registratie = voorMenuWaarde(menuWaarde);
+      if (registratie != null) {
+        resultaat.add(registratie);
+      }
+    }
+
+    return List<OfferteArtikelRegistratie>.unmodifiable(resultaat);
   }
 }

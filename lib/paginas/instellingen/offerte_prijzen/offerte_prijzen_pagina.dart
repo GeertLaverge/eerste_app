@@ -1,3 +1,7 @@
+// THIMACO-CONTROLE: VELUX-ZICHTBAAR-BIJ-TECHNISCHE-PRIJSKEUZES-20260730
+// THIMACO-CONTROLE: VELUX-OFFERTEPRIJZEN-VRIJE-PRIJZEN-FASE-4-20260729-2257
+// THIMACO-CONTROLE: VRIJE-PRIJZEN-TEGEL-ALTIJD-ZICHTBAAR-20260729-1415
+// THIMACO-CONTROLE: OFFERTEPRIJZEN-VRIJE-PRIJS-EN-SEKTIONALE-POORTEN-20260729-1313
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
 // THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
 import 'package:flutter/material.dart';
@@ -47,6 +51,25 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           naam: 'Schuifvliegendeur',
           icoon: Icons.view_week_outlined,
           actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'plooiwerken',
+          naam: 'Plooiwerken',
+          icoon: Icons.polyline_outlined,
+          actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'sektionalePoort',
+          naam: 'Sektionale poorten',
+          icoon: Icons.garage_outlined,
+          actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'veluxDakraam',
+          naam: 'Velux dakramen',
+          icoon: Icons.roofing_outlined,
+          actief: true,
+          toonBijTechnischeKeuzes: true,
         ),
         _OffertePrijsFicheKeuze(
           formulierType: 'pvcRaam',
@@ -476,10 +499,12 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
                   'meerdere soorten opmeetfiches kunnen worden toegepast. '
                   'Daaronder beheert u de artikelspecifieke offerteprijzen '
                   'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
-                  'Schuifvliegendeur, PVC en ALU raam, PVC en ALU schuifraam '
-                  'en PVC en ALU deur zijn actief. Technische-keuzeprijzen '
-                  'zijn niet van toepassing op Vaste inzethor, Vliegendeur en '
-                  'Schuifvliegendeur. Zonwering wordt later gekoppeld.',
+                  'Schuifvliegendeur, Plooiwerken, Sektionale poorten, Velux '
+                  'dakramen, PVC en ALU raam, PVC en ALU schuifraam en PVC en '
+                  'ALU deur zijn actief. Technische-keuzeprijzen zijn onder meer '
+                  'beschikbaar voor Sektionale poorten en Velux dakramen. Bij '
+                  'Velux worden de prijzen voor MDF- en kunststofbinnenafwerking '
+                  'hier centraal ingesteld. Zonwering wordt later gekoppeld.',
                   style: TextStyle(
                     color: _tekstGrijs,
                     fontSize: 13,
@@ -490,14 +515,20 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
               ),
               const SizedBox(height: 14),
               _bouwProjectPrijsregelsTegel(),
+              const SizedBox(height: 12),
+              // Bewust onvoorwaardelijk: deze ingang mag nooit afhangen van
+              // laden, technische keuzes of het aantal actieve prijsfiches.
+              _bouwVrijePrijsPerArtikelTegel(),
               const SizedBox(height: 18),
               const _SectieTitel(
-                titel: 'Prijzen per artikel',
+                titel: 'Prijs volgens technische keuze',
                 subtitel:
-                    'Technische keuzeprijzen en vrije prijzen per artikel.',
+                    'Open een artikeltype en stel prijzen in bij de technische keuzes.',
               ),
               const SizedBox(height: 10),
-              ..._fiches.map((fiche) {
+              ..._fiches.where((fiche) => fiche.toonBijTechnischeKeuzes).map((
+                fiche,
+              ) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _bouwFicheTegel(context, fiche),
@@ -573,6 +604,127 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _bouwVrijePrijsPerArtikelTegel() {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _openVrijePrijsPerArtikelKeuze,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _groen, width: 1.1),
+          ),
+          child: const Row(
+            children: <Widget>[
+              _VrijePrijsIcoon(),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'Vrije prijzen per artikel',
+                      style: TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Beheer handmatig kiesbare prijsregels per artikeltype.',
+                      style: TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 12.2,
+                        height: 1.35,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 10),
+              Icon(Icons.chevron_right_rounded, color: _groen),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openVrijePrijsPerArtikelKeuze() async {
+    final gekozen = await showDialog<_OffertePrijsFicheKeuze>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Vrije prijzen per artikel',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: SizedBox(
+            width: 460,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: _actieveFiches.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final fiche = _actieveFiches[index];
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                  leading: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: _lichtGroen,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(fiche.icoon, color: _groen, size: 21),
+                  ),
+                  title: Text(
+                    fiche.naam,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _groen,
+                  ),
+                  onTap: () => Navigator.pop(dialogContext, fiche),
+                );
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Annuleren'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (gekozen == null || !mounted) return;
+
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) {
+          return OffertePrijzenFichePagina(
+            formulierType: gekozen.formulierType,
+            formulierNaam: gekozen.naam,
+            alleenVrijePrijsPerArtikel: true,
+          );
+        },
       ),
     );
   }
@@ -658,6 +810,26 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
   }
 }
 
+class _VrijePrijsIcoon extends StatelessWidget {
+  const _VrijePrijsIcoon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: _OffertePrijzenPaginaState._lichtGroen,
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: const Icon(
+        Icons.price_change_outlined,
+        color: _OffertePrijzenPaginaState._groen,
+      ),
+    );
+  }
+}
+
 class _SectieTitel extends StatelessWidget {
   const _SectieTitel({required this.titel, required this.subtitel});
 
@@ -701,10 +873,12 @@ class _OffertePrijsFicheKeuze {
     required this.naam,
     required this.icoon,
     this.actief = false,
+    this.toonBijTechnischeKeuzes = true,
   });
 
   final String formulierType;
   final String naam;
   final IconData icoon;
   final bool actief;
+  final bool toonBijTechnischeKeuzes;
 }

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: APP-STORAGE-VELUX-DAKRAMEN-CATALOGUS-20260729
+// THIMACO-CONTROLE: APP-STORAGE-SEKTIONALE-POORTEN-20260729
 // THIMACO-CONTROLE: APP-STORAGE-PLOOIWERKEN-KLEURLIJSTEN-DEFINITIEF-20260728-2110
 import 'dart:convert';
 
@@ -16,6 +18,8 @@ import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
+import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
+import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
@@ -72,6 +76,12 @@ class AppStorage {
 
   static const String _opmetingPlooiwerkenInstellingenKey =
       'thimaco_opmeting_plooiwerken_instellingen';
+
+  static const String _opmetingSektionalePoortInstellingenKey =
+      'thimaco_opmeting_sektionale_poort_instellingen';
+
+  static const String _opmetingVeluxDakraamInstellingenKey =
+      'thimaco_opmeting_velux_dakraam_instellingen';
 
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
@@ -1030,6 +1040,128 @@ class AppStorage {
     await prefs.setString(
       _opmetingPlooiwerkenInstellingenKey,
       encodeOpmetingPlooiwerkenInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN SEKTIONALE POORTEN
+  // ------------------------------------------------------------
+
+  static OpmetingSektionalePoortInstellingen
+  _decodeOpmetingSektionalePoortInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingSektionalePoortInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return const OpmetingSektionalePoortInstellingen();
+      }
+      return OpmetingSektionalePoortInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingSektionalePoortInstellingen();
+    }
+  }
+
+  static String encodeOpmetingSektionalePoortInstellingenVoorSync(
+    OpmetingSektionalePoortInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingSektionalePoortInstellingen>
+  laadOpmetingSektionalePoortInstellingen() async {
+    final prefs = await openBox();
+    return _decodeOpmetingSektionalePoortInstellingen(
+      prefs.getString(_opmetingSektionalePoortInstellingenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingSektionalePoortInstellingen(
+    OpmetingSektionalePoortInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+    await prefs.setString(
+      _opmetingSektionalePoortInstellingenKey,
+      encodeOpmetingSektionalePoortInstellingenVoorSync(voorOpslag),
+    );
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingSektionalePoortInstellingenVoorSync(
+    OpmetingSektionalePoortInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingSektionalePoortInstellingenKey,
+      encodeOpmetingSektionalePoortInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN VELUX DAKRAMEN
+  // ------------------------------------------------------------
+
+  static OpmetingVeluxDakraamInstellingen
+  _decodeOpmetingVeluxDakraamInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return OpmetingVeluxDakraamInstellingen.standaard2026();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return OpmetingVeluxDakraamInstellingen.standaard2026();
+      }
+      return OpmetingVeluxDakraamInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return OpmetingVeluxDakraamInstellingen.standaard2026();
+    }
+  }
+
+  static String encodeOpmetingVeluxDakraamInstellingenVoorSync(
+    OpmetingVeluxDakraamInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingVeluxDakraamInstellingen>
+  laadOpmetingVeluxDakraamInstellingen() async {
+    final prefs = await openBox();
+    return _decodeOpmetingVeluxDakraamInstellingen(
+      prefs.getString(_opmetingVeluxDakraamInstellingenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingVeluxDakraamInstellingen(
+    OpmetingVeluxDakraamInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+    await prefs.setString(
+      _opmetingVeluxDakraamInstellingenKey,
+      encodeOpmetingVeluxDakraamInstellingenVoorSync(voorOpslag),
+    );
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingVeluxDakraamInstellingenVoorSync(
+    OpmetingVeluxDakraamInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingVeluxDakraamInstellingenKey,
+      encodeOpmetingVeluxDakraamInstellingenVoorSync(instellingen),
     );
   }
 
