@@ -83,8 +83,16 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
         _normaliseerFormulierType('schuifvliegendeur');
   }
 
+  bool get _isVoorzetscreen {
+    return _normaliseerFormulierType(widget.formulierType) ==
+        _normaliseerFormulierType('voorzetscreen');
+  }
+
   bool get _heeftGeenTechnischeKeuzes {
-    return _isVasteInzethor || _isVliegendeur || _isSchuifvliegendeur;
+    return _isVasteInzethor ||
+        _isVliegendeur ||
+        _isSchuifvliegendeur ||
+        _isVoorzetscreen;
   }
 
   String get _paginaTitel {

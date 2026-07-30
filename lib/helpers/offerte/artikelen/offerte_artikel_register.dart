@@ -21,6 +21,7 @@ enum OfferteArtikelOpenType {
   vliegendeur,
   schuifvliegendeur,
   plooiwerken,
+  voorzetscreen,
   sektionalePoort,
   veluxDakraam,
 }
@@ -139,6 +140,14 @@ class OfferteArtikelRegister {
           openType: OfferteArtikelOpenType.plooiwerken,
         ),
         OfferteArtikelRegistratie(
+          menuWaarde: 'voorzetscreen',
+          formulierType: 'voorzetscreen',
+          formulierNaam: 'Voorzetscreen',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.blinds_outlined,
+          openType: OfferteArtikelOpenType.voorzetscreen,
+        ),
+        OfferteArtikelRegistratie(
           menuWaarde: 'sektionale_poort',
           formulierType: 'sektionalePoort',
           formulierNaam: 'Sektionale poorten',
@@ -177,6 +186,7 @@ class OfferteArtikelRegister {
             'vliegendeur',
             'schuifvliegendeur',
             'plooiwerken',
+            'voorzetscreen',
           ],
         ),
         OfferteArtikelMenuGroep(

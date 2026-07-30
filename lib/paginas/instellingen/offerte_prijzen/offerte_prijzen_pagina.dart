@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260730-2205
 // THIMACO-CONTROLE: VELUX-ZICHTBAAR-BIJ-TECHNISCHE-PRIJSKEUZES-20260730
 // THIMACO-CONTROLE: VELUX-OFFERTEPRIJZEN-VRIJE-PRIJZEN-FASE-4-20260729-2257
 // THIMACO-CONTROLE: VRIJE-PRIJZEN-TEGEL-ALTIJD-ZICHTBAAR-20260729-1415
@@ -57,6 +58,13 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           naam: 'Plooiwerken',
           icoon: Icons.polyline_outlined,
           actief: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'voorzetscreen',
+          naam: 'Voorzetscreen',
+          icoon: Icons.blinds_outlined,
+          actief: true,
+          toonBijTechnischeKeuzes: true,
         ),
         _OffertePrijsFicheKeuze(
           formulierType: 'sektionalePoort',
@@ -499,12 +507,14 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
                   'meerdere soorten opmeetfiches kunnen worden toegepast. '
                   'Daaronder beheert u de artikelspecifieke offerteprijzen '
                   'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
-                  'Schuifvliegendeur, Plooiwerken, Sektionale poorten, Velux '
+                  'Schuifvliegendeur, Plooiwerken, Voorzetscreen, Sektionale poorten, Velux '
                   'dakramen, PVC en ALU raam, PVC en ALU schuifraam en PVC en '
                   'ALU deur zijn actief. Technische-keuzeprijzen zijn onder meer '
-                  'beschikbaar voor Sektionale poorten en Velux dakramen. Bij '
-                  'Velux worden de prijzen voor MDF- en kunststofbinnenafwerking '
-                  'hier centraal ingesteld. Zonwering wordt later gekoppeld.',
+                  'beschikbaar voor Voorzetscreen, Sektionale poorten en Velux '
+                  'dakramen. Bij Voorzetscreen wordt alleen Inbouwschakelaar '
+                  'afzonderlijk geprijsd; de overige bediening blijft inbegrepen '
+                  'in de prijs per stuk. Bij Velux worden de prijzen voor MDF- en '
+                  'kunststofbinnenafwerking hier centraal ingesteld.',
                   style: TextStyle(
                     color: _tekstGrijs,
                     fontSize: 13,

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-MOMENTOPNAME-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKING-MOMENTOPNAME-20260730
 // THIMACO-CONTROLE: EERSTE-PRIJS-SNAPSHOT-STIL-20260724
 import 'dart:async';
@@ -321,8 +322,44 @@ class OffertePrijsinstellingenController {
           var prijsData = opmeting.offertePrijsData;
           var prijsDataGewijzigd = false;
 
+          final voorzetscreenModel = opmeting.voorzetscreenData;
           final veluxModel = opmeting.veluxDakraamData;
           if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
+              voorzetscreenModel != null) {
+            final artikelSignatuur = jsonEncode(<String, Object>{
+              'formulierType': 'voorzetscreen',
+              'breedteMm': voorzetscreenModel.breedteMm,
+              'hoogteMm': voorzetscreenModel.hoogteMm,
+              'aantal': voorzetscreenModel.aantal,
+              'bediening': voorzetscreenModel.bediening,
+            });
+
+            if (OfferteTechnischePrijsMomentopnameService.moetMomentopnameBijwerken(
+              prijsData: prijsData,
+              profiel: profiel,
+              artikelSignatuur: artikelSignatuur,
+              forceer: forceerPrijsinstellingen,
+            )) {
+              prijsData =
+                  OfferteTechnischePrijsMomentopnameService.maakMomentopname(
+                    prijsData: prijsData,
+                    profiel: profiel,
+                    breedteMm: voorzetscreenModel.breedteMm,
+                    hoogteMm: voorzetscreenModel.hoogteMm,
+                    aantal: voorzetscreenModel.aantal,
+                    artikelSignatuur: artikelSignatuur,
+                    keuzeIsGeselecteerd: (keuze) {
+                      return _normaliseerFormulierType(keuze.formulierType) ==
+                              'voorzetscreen' &&
+                          keuze.menuId.trim() == 'voorzetscreenBediening' &&
+                          keuze.keuzeId.trim() == 'inbouwschakelaar' &&
+                          voorzetscreenModel.bediening.trim().toLowerCase() ==
+                              'inbouwschakelaar';
+                    },
+                  );
+              prijsDataGewijzigd = true;
+            }
+          } else if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
               veluxModel != null) {
             final artikelSignatuur = jsonEncode(<String, Object>{
               'formulierType': 'veluxDakraam',

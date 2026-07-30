@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-INGEBOUWDE-INBOUWSCHAKELAAR-PRIJSKEUZE-20260730-2205
 // THIMACO-CONTROLE: VELUX-INGEBOUWDE-AFWERKINGSKEUZES-20260730
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-STOPCONTACT-PRIJSKEUZE-FINAAL-20260729-1214
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-INGEBOUWDE-STOPCONTACT-PRIJSKEUZE-20260729
@@ -44,6 +45,16 @@ class OfferteTechnischeKeuzeLaadHelper {
             'Chambrangs en binnenkasten in kunststof kleur wit',
         hoeUitschrijvenMomentopname:
             'Chambrangs en binnenkasten in kunststof kleur wit',
+      );
+
+  static const OfferteTechnischeKeuzeRef voorzetscreenInbouwschakelaar =
+      OfferteTechnischeKeuzeRef(
+        formulierType: 'voorzetscreen',
+        menuId: 'voorzetscreenBediening',
+        keuzeId: 'inbouwschakelaar',
+        menuTitelMomentopname: 'Bediening',
+        keuzeTitelMomentopname: 'Inbouwschakelaar',
+        hoeUitschrijvenMomentopname: 'Inbouwschakelaar',
       );
 
   /// Bestaande laadroute voor dropdowns en andere schermen.
@@ -131,6 +142,9 @@ class OfferteTechnischeKeuzeLaadHelper {
         veluxAfwerkingKunststofWit,
       ];
     }
+    if (formulierType == 'voorzetscreen') {
+      return const <OfferteTechnischeKeuzeRef>[voorzetscreenInbouwschakelaar];
+    }
     return const <OfferteTechnischeKeuzeRef>[];
   }
 
@@ -155,7 +169,8 @@ class OfferteTechnischeKeuzeLaadHelper {
     final canoniekFormulierType = _canoniekFormulierType(formulierType);
 
     if (canoniekFormulierType.isEmpty ||
-        canoniekFormulierType == 'vasteInzethor') {
+        canoniekFormulierType == 'vasteInzethor' ||
+        canoniekFormulierType == 'voorzetscreen') {
       return null;
     }
 
@@ -342,6 +357,7 @@ class OfferteTechnischeKeuzeLaadHelper {
       'aludeur' => 'aluDeur',
       'sektionalepoort' => 'sektionalePoort',
       'veluxdakraam' => 'veluxDakraam',
+      'voorzetscreen' => 'voorzetscreen',
       _ => '',
     };
   }

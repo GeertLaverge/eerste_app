@@ -26,6 +26,9 @@ import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_tekenvlak.dar
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_technische_regels_helper.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_tekenvlak.dart';
+import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
+import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_technische_regels_helper.dart';
+import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_tekenvlak.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_technische_regels_helper.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_tekenvlak.dart';
@@ -101,6 +104,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     final vliegendeur = item.vliegendeurData;
     final schuifvliegendeur = item.schuifvliegendeurData;
     final plooiwerken = item.plooiwerkenData;
+    final voorzetscreen = item.voorzetscreenData;
     final sektionalePoort = item.sektionalePoortData;
     final veluxDakraam = item.veluxDakraamData;
     final vliegendeurTechnischeRegels = vliegendeur == null
@@ -121,6 +125,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             _plooiwerkenRegelsVoorOverzicht(
               OpmetingPlooiwerkenTechnischeRegelsHelper.bouw(plooiwerken),
             ),
+          );
+    final voorzetscreenTechnischeRegels = voorzetscreen == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            OpmetingVoorzetscreenTechnischeRegelsHelper.bouw(voorzetscreen),
           );
     final sektionalePoortTechnischeRegels = sektionalePoort == null
         ? const <OpmetingOverzichtTechnischeRegel>[]
@@ -290,6 +299,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             )
           else if (plooiwerken != null)
             _bouwPlooiwerkenOverzicht(plooiwerken, plooiwerkenTechnischeRegels)
+          else if (voorzetscreen != null)
+            _bouwVoorzetscreenOverzicht(
+              voorzetscreen,
+              voorzetscreenTechnischeRegels,
+            )
           else if (sektionalePoort != null)
             _bouwSektionalePoortOverzicht(
               sektionalePoort,
@@ -566,6 +580,50 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       prijsData: prijsData,
       prijsResultaat: prijsResultaat,
       aantal: OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(item),
+    );
+  }
+
+  Widget _bouwVoorzetscreenOverzicht(
+    OpmetingVoorzetscreenModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Afmetingen',
+      maatWaarde: model.maatSamenvatting,
+      tekening: OpmetingVoorzetscreenTekenvlak(model: model),
+    );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen gegevens ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
     );
   }
 

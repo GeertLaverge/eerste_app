@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-APP-STORAGE-BEDIENINGEN-20260730-2115
 // THIMACO-CONTROLE: APP-STORAGE-VELUX-DAKRAMEN-CATALOGUS-20260729
 // THIMACO-CONTROLE: APP-STORAGE-SEKTIONALE-POORTEN-20260729
 // THIMACO-CONTROLE: APP-STORAGE-PLOOIWERKEN-KLEURLIJSTEN-DEFINITIEF-20260728-2110
@@ -18,6 +19,7 @@ import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
+import 'opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
@@ -76,6 +78,9 @@ class AppStorage {
 
   static const String _opmetingPlooiwerkenInstellingenKey =
       'thimaco_opmeting_plooiwerken_instellingen';
+
+  static const String _opmetingVoorzetscreenInstellingenKey =
+      'thimaco_opmeting_voorzetscreen_instellingen';
 
   static const String _opmetingSektionalePoortInstellingenKey =
       'thimaco_opmeting_sektionale_poort_instellingen';
@@ -1040,6 +1045,88 @@ class AppStorage {
     await prefs.setString(
       _opmetingPlooiwerkenInstellingenKey,
       encodeOpmetingPlooiwerkenInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN VOORZETSCREENS
+  // ------------------------------------------------------------
+
+  static OpmetingVoorzetscreenInstellingen
+  _decodeOpmetingVoorzetscreenInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingVoorzetscreenInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return const OpmetingVoorzetscreenInstellingen();
+      }
+
+      return OpmetingVoorzetscreenInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingVoorzetscreenInstellingen();
+    }
+  }
+
+  static String encodeOpmetingVoorzetscreenInstellingenVoorSync(
+    OpmetingVoorzetscreenInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingVoorzetscreenInstellingen>
+  laadOpmetingVoorzetscreenInstellingen() async {
+    final prefs = await openBox();
+    final instellingen = _decodeOpmetingVoorzetscreenInstellingen(
+      prefs.getString(_opmetingVoorzetscreenInstellingenKey),
+    );
+
+    return instellingen.copyWith(
+      poederkleuren: instellingen.poederkleuren.isEmpty
+          ? OpmetingVoorzetscreenInstellingen.standaardPoederkleuren
+          : instellingen.poederkleuren,
+      screendoeken: instellingen.screendoeken.isEmpty
+          ? OpmetingVoorzetscreenInstellingen.standaardScreendoeken
+          : instellingen.screendoeken,
+      motoren: instellingen.motoren.isEmpty
+          ? OpmetingVoorzetscreenInstellingen.standaardMotoren
+          : instellingen.motoren,
+      zonnecelMotoren: instellingen.zonnecelMotoren.isEmpty
+          ? OpmetingVoorzetscreenInstellingen.standaardZonnecelMotoren
+          : instellingen.zonnecelMotoren,
+      bedieningen: instellingen.bedieningen.isEmpty
+          ? OpmetingVoorzetscreenInstellingen.standaardBedieningen
+          : instellingen.bedieningen,
+    );
+  }
+
+  static Future<void> bewaarOpmetingVoorzetscreenInstellingen(
+    OpmetingVoorzetscreenInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+
+    await prefs.setString(
+      _opmetingVoorzetscreenInstellingenKey,
+      encodeOpmetingVoorzetscreenInstellingenVoorSync(voorOpslag),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingVoorzetscreenInstellingenVoorSync(
+    OpmetingVoorzetscreenInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingVoorzetscreenInstellingenKey,
+      encodeOpmetingVoorzetscreenInstellingenVoorSync(instellingen),
     );
   }
 

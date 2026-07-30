@@ -353,6 +353,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  Future<void> _openVoorzetscreen({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openVoorzetscreen(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
   Future<void> _openSektionalePoort({
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
@@ -900,6 +908,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.plooiwerken:
         await _openPlooiwerken();
+        break;
+
+      case OfferteArtikelOpenType.voorzetscreen:
+        await _openVoorzetscreen();
         break;
 
       case OfferteArtikelOpenType.sektionalePoort:

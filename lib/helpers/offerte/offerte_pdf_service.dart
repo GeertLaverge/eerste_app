@@ -13,6 +13,7 @@ import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
 import 'offerte_pdf_plooiwerken_widget.dart';
+import 'offerte_pdf_voorzetscreen_widget.dart';
 import 'offerte_pdf_sektionale_poort_widget.dart';
 import 'offerte_pdf_pvc_raam_widget.dart';
 import 'offerte_pdf_schuifvliegendeur_widget.dart';
@@ -717,6 +718,14 @@ class OffertePdfService {
               btwPercentage: data.btwPercentage,
               btwRegelLabel: data.btwRegelLabel,
             )
+          else if (artikel.positie.voorzetscreenData != null)
+            OffertePdfVoorzetscreenWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
           else if (artikel.positie.sektionalePoortData != null)
             OffertePdfSektionalePoortWidget.bouwPositie(
               positie: artikel.positie,
@@ -976,6 +985,12 @@ class OffertePdfService {
           );
     } else if (positie.plooiwerkenData != null) {
       inhoudHoogte = OffertePdfPlooiwerkenWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
+    } else if (positie.voorzetscreenData != null) {
+      inhoudHoogte = OffertePdfVoorzetscreenWidget.berekenTotalePositieHoogte(
         positie,
         kortingToestaan: kortingToestaanEffectief,
         isOptie: isOptie,

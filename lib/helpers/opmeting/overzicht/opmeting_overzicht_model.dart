@@ -15,6 +15,7 @@ import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
+import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
 import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_model.dart';
 
@@ -374,6 +375,7 @@ class OpmetingOverzichtRaamItem {
     this.vliegendeurData,
     this.schuifvliegendeurData,
     this.plooiwerkenData,
+    this.voorzetscreenData,
     this.sektionalePoortData,
     this.veluxDakraamData,
   });
@@ -431,6 +433,7 @@ class OpmetingOverzichtRaamItem {
   final OpmetingVliegendeurModel? vliegendeurData;
   final OpmetingSchuifvliegendeurModel? schuifvliegendeurData;
   final OpmetingPlooiwerkenModel? plooiwerkenData;
+  final OpmetingVoorzetscreenModel? voorzetscreenData;
   final OpmetingSektionalePoortModel? sektionalePoortData;
   final OpmetingVeluxDakraamModel? veluxDakraamData;
 
@@ -496,6 +499,12 @@ class OpmetingOverzichtRaamItem {
       case 'Plooiwerk':
         return 'plooiwerken';
 
+      case 'voorzetscreen':
+      case 'voorzet_screen':
+      case 'Voorzetscreen':
+      case 'Voorzetscreens':
+        return 'voorzetscreen';
+
       case 'sektionalePoort':
       case 'sektionale_poort':
       case 'Sektionale poort':
@@ -553,6 +562,9 @@ class OpmetingOverzichtRaamItem {
       case 'plooiwerken':
         return 'Plooiwerken';
 
+      case 'voorzetscreen':
+        return 'Voorzetscreen';
+
       case 'sektionalePoort':
         return 'Sektionale poorten';
 
@@ -596,6 +608,7 @@ class OpmetingOverzichtRaamItem {
     OpmetingVliegendeurModel? vliegendeurData,
     OpmetingSchuifvliegendeurModel? schuifvliegendeurData,
     OpmetingPlooiwerkenModel? plooiwerkenData,
+    OpmetingVoorzetscreenModel? voorzetscreenData,
     OpmetingSektionalePoortModel? sektionalePoortData,
     OpmetingVeluxDakraamModel? veluxDakraamData,
   }) {
@@ -634,6 +647,7 @@ class OpmetingOverzichtRaamItem {
       schuifvliegendeurData:
           schuifvliegendeurData ?? this.schuifvliegendeurData,
       plooiwerkenData: plooiwerkenData ?? this.plooiwerkenData,
+      voorzetscreenData: voorzetscreenData ?? this.voorzetscreenData,
       sektionalePoortData: sektionalePoortData ?? this.sektionalePoortData,
       veluxDakraamData: veluxDakraamData ?? this.veluxDakraamData,
     );
@@ -691,6 +705,8 @@ class OpmetingOverzichtRaamItem {
       if (schuifvliegendeurData != null)
         'schuifvliegendeurData': schuifvliegendeurData!.toJson(),
       if (plooiwerkenData != null) 'plooiwerkenData': plooiwerkenData!.toJson(),
+      if (voorzetscreenData != null)
+        'voorzetscreenData': voorzetscreenData!.toJson(),
       if (sektionalePoortData != null)
         'sektionalePoortData': sektionalePoortData!.toJson(),
       if (veluxDakraamData != null)
@@ -787,6 +803,11 @@ class OpmetingOverzichtRaamItem {
       plooiwerkenData: json['plooiwerkenData'] is Map
           ? OpmetingPlooiwerkenModel.fromJson(
               Map<String, dynamic>.from(json['plooiwerkenData'] as Map),
+            )
+          : null,
+      voorzetscreenData: json['voorzetscreenData'] is Map
+          ? OpmetingVoorzetscreenModel.fromJson(
+              Map<String, dynamic>.from(json['voorzetscreenData'] as Map),
             )
           : null,
       sektionalePoortData: json['sektionalePoortData'] is Map

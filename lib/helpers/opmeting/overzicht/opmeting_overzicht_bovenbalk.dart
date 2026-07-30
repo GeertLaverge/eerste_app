@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: KORTE-BESTANDSLABELS-EN-FICHEKNOP-ZONDER-RAND-20260730
 // THIMACO-CONTROLE: MENU-TEKST-ZWART-NORMAAL-20260730
 // THIMACO-CONTROLE: UNIFORM-BESTAND-EN-TOEVOEGMENU-20260730
 import 'dart:async';
@@ -134,17 +135,17 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
           _bouwBestandMenuItem(
             waarde: 'nieuw',
             icoon: Icons.note_add_outlined,
-            tekst: 'Nieuw opmeetbestand',
+            tekst: 'Nieuw',
           ),
           _bouwBestandMenuItem(
             waarde: 'open',
             icoon: Icons.folder_open_outlined,
-            tekst: 'Opmeetbestand openen',
+            tekst: 'Openen',
           ),
           _bouwBestandMenuItem(
             waarde: 'opslaan',
             icoon: Icons.save_outlined,
-            tekst: 'Opmeetbestand opslaan',
+            tekst: 'Opslaan',
           ),
           const PopupMenuItem<String>(
             enabled: false,
@@ -155,12 +156,12 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
           _bouwBestandMenuItem(
             waarde: 'wissen',
             icoon: Icons.delete_outline_rounded,
-            tekst: 'Opmeetbestand wissen',
+            tekst: 'Wissen',
           ),
           _bouwBestandMenuItem(
             waarde: 'einde',
             icoon: Icons.home_outlined,
-            tekst: 'Opmeting beëindigen',
+            tekst: 'Beëindigen',
           ),
         ];
       },
@@ -372,7 +373,6 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: _zachteGroeneRand),
               ),
               child: Row(
                 children: <Widget>[

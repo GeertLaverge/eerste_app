@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-PRIJS-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKINGSPRIJZEN-20260730
 // THIMACO-CONTROLE: VELUX-PARTICULIERE-VERKOOPPRIJS-ZONDER-CORRECTIES-20260730
 // THIMACO-CONTROLE: VELUX-PRIJSKOPPELING-FASE-3-20260729-2212
@@ -88,6 +89,16 @@ class OfferteArtikelPrijsKoppelingService {
         formulierNaam: 'Plooiwerken',
         isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling voorzetscreen =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'voorzetscreen',
+        formulierType: 'voorzetscreen',
+        formulierNaam: 'Voorzetscreen',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: true,
         isHandmatigGeprijsdArtikel: true,
       );
 
@@ -187,6 +198,7 @@ class OfferteArtikelPrijsKoppelingService {
         vliegendeur,
         schuifvliegendeur,
         plooiwerken,
+        voorzetscreen,
         sektionalePoort,
         veluxDakraam,
         ...algemeneKoppelingen,
@@ -201,6 +213,7 @@ class OfferteArtikelPrijsKoppelingService {
     vliegendeur,
     schuifvliegendeur,
     plooiwerken,
+    voorzetscreen,
     sektionalePoort,
     veluxDakraam,
   ];
@@ -225,6 +238,7 @@ class OfferteArtikelPrijsKoppelingService {
     'vliegendeur',
     'schuifvliegendeur',
     'plooiwerken',
+    'voorzetscreen',
     'sektionalePoort',
     'veluxDakraam',
     ...algemeneFormulierTypes,
@@ -247,6 +261,10 @@ class OfferteArtikelPrijsKoppelingService {
 
     if (artikel.plooiwerkenData != null) {
       return plooiwerken;
+    }
+
+    if (artikel.voorzetscreenData != null) {
+      return voorzetscreen;
     }
 
     if (artikel.sektionalePoortData != null) {
@@ -439,6 +457,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.vliegendeurData?.aantal ??
         artikel.schuifvliegendeurData?.aantal ??
         artikel.plooiwerkenData?.aantal ??
+        artikel.voorzetscreenData?.aantal ??
         artikel.sektionalePoortData?.aantal ??
         artikel.veluxDakraamData?.veiligAantal ??
         1;
@@ -450,6 +469,7 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.vasteInzethorData?.breedteMm ??
         artikel.vliegendeurData?.breedteMm ??
         artikel.schuifvliegendeurData?.breedteMm ??
+        artikel.voorzetscreenData?.breedteMm ??
         artikel.sektionalePoortData?.breedteMm ??
         artikel.veluxDakraamData?.breedteMm ??
         artikel.raammaatBreedteMm;
@@ -459,6 +479,7 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.vasteInzethorData?.hoogteMm ??
         artikel.vliegendeurData?.hoogteMm ??
         artikel.schuifvliegendeurData?.hoogteMm ??
+        artikel.voorzetscreenData?.hoogteMm ??
         artikel.sektionalePoortData?.hoogteMm ??
         artikel.veluxDakraamData?.hoogteMm ??
         artikel.raammaatHoogteMm;
