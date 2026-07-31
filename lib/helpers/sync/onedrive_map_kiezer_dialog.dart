@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: ONEDRIVE-MAP-KIEZER-KLANTEN-20260731
+// THIMACO-CONTROLE: ONEDRIVE-MAP-KIEZER-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'package:flutter/material.dart';
 
 import 'onedrive_klantdocument_service.dart';
@@ -9,17 +9,20 @@ class OneDriveMapKiezerDialog extends StatefulWidget {
     required this.service,
     required this.klantNaam,
     required this.klantnummer,
+    required this.initieleBestandsnaam,
   });
 
   final OneDriveKlantdocumentService service;
   final String klantNaam;
   final String klantnummer;
+  final String initieleBestandsnaam;
 
   static Future<OneDriveGekozenMap?> toon({
     required BuildContext context,
     required OneDriveKlantdocumentService service,
     required String klantNaam,
     required String klantnummer,
+    required String initieleBestandsnaam,
   }) {
     return showDialog<OneDriveGekozenMap>(
       context: context,
@@ -29,6 +32,7 @@ class OneDriveMapKiezerDialog extends StatefulWidget {
           service: service,
           klantNaam: klantNaam,
           klantnummer: klantnummer,
+          initieleBestandsnaam: initieleBestandsnaam,
         );
       },
     );
@@ -47,24 +51,33 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   final TextEditingController _zoekController = TextEditingController();
+  late final TextEditingController _bestandsnaamController;
   final List<_OneDrivePadStap> _pad = <_OneDrivePadStap>[
     const _OneDrivePadStap(id: null, naam: 'OneDrive'),
   ];
 
   List<OneDriveMapItem> _mappen = <OneDriveMapItem>[];
   bool _laden = true;
+  bool _mapAanmaken = false;
   String _fout = '';
+  String _bestandsnaamFout = '';
   int _laadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+    _bestandsnaamController = TextEditingController(
+      text: OneDriveKlantdocumentService.normaliseerPdfBestandsnaam(
+        widget.initieleBestandsnaam,
+      ),
+    );
     _laadHuidigeMap();
   }
 
   @override
   void dispose() {
     _zoekController.dispose();
+    _bestandsnaamController.dispose();
     super.dispose();
   }
 
@@ -143,12 +156,139 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
     await _laadHuidigeMap();
   }
 
+  Future<void> _nieuweMapAanmaken() async {
+    if (_laden || _mapAanmaken) return;
+
+    final naamController = TextEditingController();
+    String dialoogFout = '';
+
+    final mapNaam = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            void bevestig() {
+              final fout = OneDriveKlantdocumentService.valideerMapNaam(
+                naamController.text,
+              );
+
+              if (fout != null) {
+                setDialogState(() {
+                  dialoogFout = fout;
+                });
+                return;
+              }
+
+              Navigator.of(dialogContext).pop(naamController.text.trim());
+            }
+
+            return AlertDialog(
+              title: const Text('Nieuwe map aanmaken'),
+              content: SizedBox(
+                width: 420,
+                child: TextField(
+                  controller: naamController,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => bevestig(),
+                  decoration: InputDecoration(
+                    labelText: 'Naam van de nieuwe map',
+                    hintText: 'Bijvoorbeeld Opmeting of Offerte',
+                    errorText: dialoogFout.isEmpty ? null : dialoogFout,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Annuleren'),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(backgroundColor: _groen),
+                  onPressed: bevestig,
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                  label: const Text('Map aanmaken'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    naamController.dispose();
+    if (mapNaam == null || !mounted) return;
+
+    setState(() {
+      _mapAanmaken = true;
+    });
+
+    try {
+      final nieuweMap = await widget.service.maakMap(
+        bovenliggendeMapId: _huidigeStap.id,
+        naam: mapNaam,
+      );
+
+      if (!mounted) return;
+
+      FocusScope.of(context).unfocus();
+      _zoekController.clear();
+      _pad.add(_OneDrivePadStap(id: nieuweMap.id, naam: nieuweMap.naam));
+      await _laadHuidigeMap();
+    } on OneDriveKlantdocumentException catch (fout) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(fout.bericht),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } catch (fout) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('De nieuwe map kon niet worden aangemaakt.\n$fout'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _mapAanmaken = false;
+        });
+      }
+    }
+  }
+
   void _kiesHuidigeMap() {
     final mapId = _huidigeStap.id;
     if (mapId == null || mapId.isEmpty) return;
 
+    final bestandsnaam =
+        OneDriveKlantdocumentService.normaliseerPdfBestandsnaam(
+          _bestandsnaamController.text,
+        );
+    final bestandsnaamFout =
+        OneDriveKlantdocumentService.valideerPdfBestandsnaam(bestandsnaam);
+
+    if (bestandsnaamFout != null) {
+      setState(() {
+        _bestandsnaamFout = bestandsnaamFout;
+      });
+      return;
+    }
+
+    _bestandsnaamController.value = TextEditingValue(
+      text: bestandsnaam,
+      selection: TextSelection.collapsed(offset: bestandsnaam.length),
+    );
+
     final mapPad = _pad.skip(1).map((stap) => stap.naam).join('/');
-    Navigator.of(context).pop(OneDriveGekozenMap(id: mapId, pad: mapPad));
+    Navigator.of(context).pop(
+      OneDriveGekozenMap(id: mapId, pad: mapPad, bestandsnaam: bestandsnaam),
+    );
   }
 
   @override
@@ -162,7 +302,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
       insetPadding: const EdgeInsets.all(18),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 680),
+        constraints: const BoxConstraints(maxWidth: 860, maxHeight: 760),
         child: Column(
           children: <Widget>[
             _bouwKop(klantInfo),
@@ -213,7 +353,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Open Klanten, kies de bestaande klant en daarna de gewenste bestaande submap.',
+                  'Kies een bestaande map of maak hier een nieuwe map aan. Pas daarna eventueel de PDF-bestandsnaam aan.',
                   style: TextStyle(color: _tekstGrijs, fontSize: 11.5),
                 ),
               ],
@@ -315,12 +455,30 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
             ),
           );
 
+          final nieuweMapKnop = OutlinedButton.icon(
+            onPressed: _laden || _mapAanmaken ? null : _nieuweMapAanmaken,
+            icon: _mapAanmaken
+                ? const SizedBox(
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.create_new_folder_outlined),
+            label: const Text('Nieuwe map'),
+          );
+
           if (compact) {
             return Column(
               children: <Widget>[
                 broodkruimel,
                 const SizedBox(height: 8),
-                zoekveld,
+                Row(
+                  children: <Widget>[
+                    Expanded(child: zoekveld),
+                    const SizedBox(width: 8),
+                    nieuweMapKnop,
+                  ],
+                ),
               ],
             );
           }
@@ -330,6 +488,8 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
               Expanded(child: broodkruimel),
               const SizedBox(width: 12),
               SizedBox(width: 250, child: zoekveld),
+              const SizedBox(width: 8),
+              nieuweMapKnop,
             ],
           );
         },
@@ -428,66 +588,105 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
   }
 
   Widget _bouwOnderbalk() {
-    final kanKiezen = _huidigeStap.id != null && !_laden && _fout.isEmpty;
+    final kanKiezen =
+        _huidigeStap.id != null && !_laden && !_mapAanmaken && _fout.isEmpty;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final padTekst = Text(
-            _huidigePad,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: _tekstGrijs,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          TextField(
+            controller: _bestandsnaamController,
+            enabled: !_laden && !_mapAanmaken,
+            textInputAction: TextInputAction.done,
+            onChanged: (_) {
+              if (_bestandsnaamFout.isNotEmpty) {
+                setState(() {
+                  _bestandsnaamFout = '';
+                });
+              }
+            },
+            onSubmitted: (_) {
+              if (kanKiezen) _kiesHuidigeMap();
+            },
+            decoration: InputDecoration(
+              labelText: 'PDF-bestandsnaam',
+              hintText: 'Geef de gewenste bestandsnaam in',
+              helperText: 'De extensie .pdf wordt automatisch toegevoegd.',
+              errorText: _bestandsnaamFout.isEmpty ? null : _bestandsnaamFout,
+              prefixIcon: const Icon(Icons.picture_as_pdf_outlined),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: _rand),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: _rand),
+              ),
             ),
-          );
-
-          final knoppen = Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Annuleren'),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: _groen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 13,
-                  ),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final padTekst = Text(
+                _huidigePad,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _tekstGrijs,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
                 ),
-                onPressed: kanKiezen ? _kiesHuidigeMap : null,
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Deze map kiezen'),
-              ),
-            ],
-          );
+              );
 
-          if (constraints.maxWidth < 580) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                padTekst,
-                const SizedBox(height: 10),
-                Align(alignment: Alignment.centerRight, child: knoppen),
-              ],
-            );
-          }
+              final knoppen = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Annuleren'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _groen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 13,
+                      ),
+                    ),
+                    onPressed: kanKiezen ? _kiesHuidigeMap : null,
+                    icon: const Icon(Icons.cloud_upload_outlined),
+                    label: const Text('Opslaan in deze map'),
+                  ),
+                ],
+              );
 
-          return Row(
-            children: <Widget>[
-              Expanded(child: padTekst),
-              const SizedBox(width: 12),
-              knoppen,
-            ],
-          );
-        },
+              if (constraints.maxWidth < 620) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    padTekst,
+                    const SizedBox(height: 10),
+                    Align(alignment: Alignment.centerRight, child: knoppen),
+                  ],
+                );
+              }
+
+              return Row(
+                children: <Widget>[
+                  Expanded(child: padTekst),
+                  const SizedBox(width: 12),
+                  knoppen,
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

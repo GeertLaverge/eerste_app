@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: OFFERTE-PDF-OPSLAAN-ONEDRIVE-KLANTEN-20260731
+// THIMACO-CONTROLE: OFFERTE-PDF-ONEDRIVE-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -107,6 +107,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         service: _oneDriveService,
         klantNaam: widget.titelhoofd.klantNaam,
         klantnummer: widget.titelhoofd.klantnummer,
+        initieleBestandsnaam: _maakBestandsnaam(),
       );
 
       if (gekozenMap == null || !mounted) return;
@@ -115,7 +116,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       final resultaat = await _oneDriveService.uploadPdf(
         map: gekozenMap,
         documentType: 'Offerte',
-        bestandsnaam: _maakBestandsnaam(),
+        bestandsnaam: gekozenMap.bestandsnaam,
         bytes: pdfBytes,
       );
 

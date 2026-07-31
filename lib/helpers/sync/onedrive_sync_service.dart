@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: ONEDRIVE-SYNC-VELUX-DAKRAMEN-CATALOGUS-20260729
+// THIMACO-CONTROLE: ONEDRIVE-SYNC-ZONDER-OVERBODIGE-LOGIN-20260731
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-ONEDRIVE-SYNC-20260729
 // THIMACO-CONTROLE: ONEDRIVE-PLOOIWERKEN-INSTELLINGEN-DEFINITIEF-20260728-2110
 import 'dart:convert';
@@ -929,7 +929,7 @@ class OneDriveSyncService {
   }
 
   Future<String> downloadBackup({bool downloadFotos = true}) async {
-    final token = await OneDriveAuthService().loginInteractief();
+    final token = await OneDriveAuthService().login();
 
     if (token.startsWith('FOUT')) {
       return token;
@@ -1442,7 +1442,7 @@ class OneDriveSyncService {
       return slimmeSync();
     }
 
-    final token = await OneDriveAuthService().loginInteractief();
+    final token = await OneDriveAuthService().login();
 
     if (token.startsWith('FOUT')) {
       laatsteSyncActie = 'Eerste login mislukt';
@@ -1619,7 +1619,7 @@ class OneDriveSyncService {
   Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
       final token = magLoginVragen
-          ? await OneDriveAuthService().loginInteractief()
+          ? await OneDriveAuthService().login()
           : await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {

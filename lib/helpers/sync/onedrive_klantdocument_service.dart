@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: ONEDRIVE-KLANTDOCUMENTEN-STAP-2-20260731
+// THIMACO-CONTROLE: ONEDRIVE-KLANTDOCUMENTEN-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -14,10 +14,15 @@ class OneDriveMapItem {
 }
 
 class OneDriveGekozenMap {
-  const OneDriveGekozenMap({required this.id, required this.pad});
+  const OneDriveGekozenMap({
+    required this.id,
+    required this.pad,
+    required this.bestandsnaam,
+  });
 
   final String id;
   final String pad;
+  final String bestandsnaam;
 }
 
 class OneDriveKlantdocumentResultaat {
@@ -50,9 +55,52 @@ class OneDriveKlantdocumentService {
     : _authService = authService ?? OneDriveAuthService();
 
   static const String _graphBasis = 'https://graph.microsoft.com/v1.0';
+  static final RegExp _ongeldigeOneDriveTekens = RegExp(r'["*:<>?/\\|]');
 
   final OneDriveAuthService _authService;
   String? _token;
+
+  static String normaliseerPdfBestandsnaam(String waarde) {
+    final naam = waarde.trim();
+    if (naam.isEmpty) return '';
+
+    return naam.toLowerCase().endsWith('.pdf') ? naam : '$naam.pdf';
+  }
+
+  static String? valideerMapNaam(String waarde) {
+    final naam = waarde.trim();
+
+    if (naam.isEmpty) {
+      return 'Geef een naam in voor de nieuwe map.';
+    }
+    if (naam == '.' || naam == '..') {
+      return 'Deze mapnaam is niet toegestaan.';
+    }
+    if (_ongeldigeOneDriveTekens.hasMatch(naam)) {
+      return 'De mapnaam bevat een teken dat OneDrive niet toestaat.';
+    }
+    if (naam.endsWith('.') || naam.endsWith(' ')) {
+      return 'Een mapnaam mag niet eindigen met een punt of spatie.';
+    }
+
+    return null;
+  }
+
+  static String? valideerPdfBestandsnaam(String waarde) {
+    final naam = normaliseerPdfBestandsnaam(waarde);
+
+    if (naam.isEmpty) {
+      return 'Geef een bestandsnaam in voor de PDF.';
+    }
+    if (_ongeldigeOneDriveTekens.hasMatch(naam)) {
+      return 'De bestandsnaam bevat een teken dat OneDrive niet toestaat.';
+    }
+    if (naam.endsWith('.') || naam.endsWith(' ')) {
+      return 'Een bestandsnaam mag niet eindigen met een punt of spatie.';
+    }
+
+    return null;
+  }
 
   Future<List<OneDriveMapItem>> laadMappen({String? bovenliggendeMapId}) async {
     final eersteUrl = bovenliggendeMapId == null
@@ -114,13 +162,71 @@ class OneDriveKlantdocumentService {
     return mappen;
   }
 
+  Future<OneDriveMapItem> maakMap({
+    String? bovenliggendeMapId,
+    required String naam,
+  }) async {
+    final schoneNaam = naam.trim();
+    final validatieFout = valideerMapNaam(schoneNaam);
+    if (validatieFout != null) {
+      throw OneDriveKlantdocumentException(validatieFout);
+    }
+
+    final url = bovenliggendeMapId == null
+        ? Uri.parse('$_graphBasis/me/drive/root/children')
+        : Uri.parse(
+            '$_graphBasis/me/drive/items/'
+            '${Uri.encodeComponent(bovenliggendeMapId)}/children',
+          );
+
+    final response = await _postJsonMetHerlogin(url, <String, dynamic>{
+      'name': schoneNaam,
+      'folder': <String, dynamic>{},
+      '@microsoft.graph.conflictBehavior': 'fail',
+    });
+
+    if (response.statusCode == 409) {
+      throw OneDriveKlantdocumentException(
+        'Er bestaat al een map met de naam “$schoneNaam” in deze map.',
+      );
+    }
+
+    if (response.statusCode != 201) {
+      throw OneDriveKlantdocumentException(
+        _maakGraphFoutmelding(
+          response,
+          standaard: 'De nieuwe OneDrive-map kon niet worden aangemaakt.',
+        ),
+      );
+    }
+
+    final data = jsonDecode(response.body);
+    if (data is! Map<String, dynamic>) {
+      throw const OneDriveKlantdocumentException(
+        'OneDrive gaf geen geldige nieuwe map terug.',
+      );
+    }
+
+    final id = data['id']?.toString().trim() ?? '';
+    final teruggegevenNaam = data['name']?.toString().trim() ?? schoneNaam;
+
+    if (id.isEmpty) {
+      throw const OneDriveKlantdocumentException(
+        'De nieuwe OneDrive-map heeft geen geldig mapnummer gekregen.',
+      );
+    }
+
+    return OneDriveMapItem(id: id, naam: teruggegevenNaam);
+  }
+
   Future<OneDriveKlantdocumentResultaat> uploadPdf({
     required OneDriveGekozenMap map,
     required String documentType,
     required String bestandsnaam,
     required Uint8List bytes,
   }) async {
-    final schoneBestandsnaam = bestandsnaam.trim();
+    final schoneBestandsnaam = normaliseerPdfBestandsnaam(bestandsnaam);
+    final validatieFout = valideerPdfBestandsnaam(schoneBestandsnaam);
 
     if (map.id.trim().isEmpty) {
       throw const OneDriveKlantdocumentException(
@@ -128,10 +234,8 @@ class OneDriveKlantdocumentService {
       );
     }
 
-    if (schoneBestandsnaam.isEmpty) {
-      throw const OneDriveKlantdocumentException(
-        'De PDF heeft geen geldige bestandsnaam.',
-      );
+    if (validatieFout != null) {
+      throw OneDriveKlantdocumentException(validatieFout);
     }
 
     if (bytes.isEmpty) {
@@ -194,6 +298,35 @@ class OneDriveKlantdocumentService {
     return response;
   }
 
+  Future<http.Response> _postJsonMetHerlogin(
+    Uri url,
+    Map<String, dynamic> inhoud,
+  ) async {
+    var token = await _haalToken();
+    var response = await http.post(
+      url,
+      headers: <String, String>{
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(inhoud),
+    );
+
+    if (response.statusCode == 401) {
+      token = await _haalToken(forceerInteractief: true);
+      response = await http.post(
+        url,
+        headers: <String, String>{
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(inhoud),
+      );
+    }
+
+    return response;
+  }
+
   Future<http.Response> _putMetHerlogin(Uri url, Uint8List bytes) async {
     var token = await _haalToken();
     var response = await http.put(
@@ -225,13 +358,9 @@ class OneDriveKlantdocumentService {
       return _token!;
     }
 
-    var token = forceerInteractief
+    final token = forceerInteractief
         ? await _authService.loginInteractief()
-        : await _authService.tokenSilent();
-
-    if (!forceerInteractief && token.startsWith('FOUT')) {
-      token = await _authService.loginInteractief();
-    }
+        : await _authService.login();
 
     if (token.startsWith('FOUT') || token.trim().isEmpty) {
       throw OneDriveKlantdocumentException(
