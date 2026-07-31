@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: GENEREREN-MENU-MET-LAATSTE-BESTAND-EN-FICHEMENU-20260731
 // THIMACO-CONTROLE: KORTE-BESTANDSLABELS-EN-FICHEKNOP-ZONDER-RAND-20260730
 // THIMACO-CONTROLE: MENU-TEKST-ZWART-NORMAAL-20260730
 // THIMACO-CONTROLE: UNIFORM-BESTAND-EN-TOEVOEGMENU-20260730
@@ -23,6 +24,7 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
     required this.onHerberekenOfferte,
     required this.onOpenPrijsOverzicht,
     required this.onOpenOffertePreview,
+    required this.onOpenOpmetingPreview,
     required this.onFormulierGekozen,
   });
 
@@ -47,6 +49,7 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
   final Future<void> Function() onHerberekenOfferte;
   final Future<void> Function() onOpenPrijsOverzicht;
   final Future<void> Function() onOpenOffertePreview;
+  final Future<void> Function() onOpenOpmetingPreview;
   final Future<void> Function(OfferteArtikelRegistratie registratie)
   onFormulierGekozen;
 
@@ -62,6 +65,10 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
       child: Row(
         children: <Widget>[
           _bouwBestandMenu(),
+          if (heeftOpenBestand && heeftOndersteundeOffertePosities) ...<Widget>[
+            const SizedBox(width: 8),
+            _bouwGenererenMenu(),
+          ],
           const SizedBox(width: 12),
           Expanded(
             child: Text(
@@ -83,8 +90,6 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
               const SizedBox(width: 8),
             ],
             _bouwPrijsOverzichtKnop(),
-            const SizedBox(width: 8),
-            _bouwOfferteKnop(),
             const SizedBox(width: 8),
           ],
           if (heeftOpenBestand)
@@ -235,6 +240,114 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
     );
   }
 
+  Widget _bouwGenererenMenu() {
+    return PopupMenuButton<String>(
+      tooltip: 'Offerte of opmeting genereren',
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 14,
+      shadowColor: const Color(0x33000000),
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 8),
+      constraints: const BoxConstraints(minWidth: 210, maxWidth: 210),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: _rand),
+      ),
+      onSelected: (waarde) {
+        switch (waarde) {
+          case 'offerte':
+            unawaited(onOpenOffertePreview());
+            break;
+          case 'opmeting':
+            unawaited(onOpenOpmetingPreview());
+            break;
+        }
+      },
+      itemBuilder: (context) {
+        return <PopupMenuEntry<String>>[
+          _bouwGenererenMenuItem(
+            waarde: 'offerte',
+            icoon: Icons.request_quote_outlined,
+            tekst: 'Offerte',
+          ),
+          _bouwGenererenMenuItem(
+            waarde: 'opmeting',
+            icoon: Icons.straighten_rounded,
+            tekst: 'Opmeting',
+          ),
+        ];
+      },
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF15A24),
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.picture_as_pdf_outlined, color: Colors.white, size: 19),
+            SizedBox(width: 8),
+            Text(
+              'Genereren',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            SizedBox(width: 3),
+            Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _bouwGenererenMenuItem({
+    required String waarde,
+    required IconData icoon,
+    required String tekst,
+  }) {
+    return PopupMenuItem<String>(
+      value: waarde,
+      height: 42,
+      padding: const EdgeInsets.fromLTRB(6, 2, 6, 2),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: _zachteGroeneRand),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icoon, color: _groen, size: 17),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                tekst,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.normal,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded, color: _groen, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _bouwHerberekenKnop() {
     return Tooltip(
       message: 'Offerte herberekenen met huidige prijsinstellingen',
@@ -269,21 +382,6 @@ class OpmetingOverzichtBovenbalk extends StatelessWidget {
         foregroundColor: _groen,
         backgroundColor: _lichtGroen,
         side: const BorderSide(color: Color(0xFFCDEBD6)),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-      ),
-    );
-  }
-
-  Widget _bouwOfferteKnop() {
-    return ElevatedButton.icon(
-      onPressed: () => unawaited(onOpenOffertePreview()),
-      icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-      label: const Text('Offerte'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFF15A24),
-        foregroundColor: Colors.white,
-        elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       ),

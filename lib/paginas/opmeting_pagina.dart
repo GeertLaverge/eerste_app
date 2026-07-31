@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: ONEDRIVE-KLANTDOCUMENTEN-STAP-2-20260731
+// THIMACO-CONTROLE: GENEREREN-OFFERTE-OPMETING-20260731
+// THIMACO-CONTROLE: VOORZETROLLUIK-MENU-NAVIGATIE-20260731-1025
 // THIMACO-CONTROLE: VELUX-GEEN-ONTERECHTE-PRIJSWAARSCHUWING-20260730
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-OPMETING-PAGINA-FASE-1-2-20260729-2030
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-HOOFDPAGINA-20260729
@@ -10,11 +13,13 @@ import '../helpers/app_storage.dart';
 import '../helpers/offerte/offerte_controller.dart';
 import '../helpers/offerte/offerte_validatie_service.dart';
 import '../helpers/offerte/offerte_pdf_preview_pagina.dart';
+import '../helpers/offerte/opmeting_pdf_preview_pagina.dart';
 import 'offerte_prijs_overzicht_pagina.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
 import '../helpers/offerte/prijzen/offerte_project_prijsregel_controller.dart';
 import '../helpers/offerte/prijzen/offerte_prijsinstellingen_controller.dart';
+import '../helpers/sync/onedrive_klantdocument_service.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../helpers/offerte/artikelen/offerte_artikel_register.dart';
@@ -361,6 +366,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  Future<void> _openVoorzetrolluik({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openVoorzetrolluik(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
   Future<void> _openSektionalePoort({
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
@@ -520,6 +533,19 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         if (positie.isVerwijderd || positie.isNietRekenen) {
           return false;
         }
+
+        return positie.vliegendeurData != null ||
+            OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
+      }),
+    );
+  }
+
+  List<OpmetingOverzichtRaamItem> _selecteerOndersteundeOpmetingPosities(
+    Iterable<OpmetingOverzichtRaamItem> posities,
+  ) {
+    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+      posities.where((positie) {
+        if (positie.isVerwijderd) return false;
 
         return positie.vliegendeurData != null ||
             OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
@@ -819,15 +845,93 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       _projectTitelhoofd = titelhoofd;
     });
 
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (context) {
-          return OffertePdfPreviewPagina(
-            titelhoofd: titelhoofd,
-            posities: offertePosities,
-          );
-        },
-      ),
+    await _projectBestandController.opslaanBestand(toonMeldingNaOpslaan: false);
+
+    if (!mounted) return;
+
+    final oneDriveResultaat = await Navigator.of(context)
+        .push<OneDriveKlantdocumentResultaat>(
+          MaterialPageRoute<OneDriveKlantdocumentResultaat>(
+            builder: (context) {
+              return OffertePdfPreviewPagina(
+                titelhoofd: titelhoofd,
+                posities: offertePosities,
+              );
+            },
+          ),
+        );
+
+    if (!mounted || oneDriveResultaat == null) return;
+
+    _toonMelding(
+      '${oneDriveResultaat.documentType} opgeslagen in OneDrive: '
+      '${oneDriveResultaat.volledigPad}',
+    );
+  }
+
+  Future<void> _openOpmetingPreview() async {
+    final opmetingPosities = _selecteerOndersteundeOpmetingPosities(
+      _raamOpmetingen,
+    );
+
+    if (opmetingPosities.isEmpty) {
+      _toonMelding(
+        'Er zijn geen ondersteunde artikelfiches om op de opmeting te plaatsen.',
+        fout: true,
+      );
+      return;
+    }
+
+    final basisTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty
+        ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
+        : _projectTitelhoofd;
+
+    final titelhoofd = await _projectTitelhoofdController.vulAanUitKlantenfiche(
+      klantNaam: basisTitelhoofd.klantNaam,
+      basis: basisTitelhoofd,
+    );
+
+    if (!mounted) return;
+
+    if (titelhoofd.klantNaam.trim().isEmpty) {
+      _toonMelding(
+        'Vul eerst de klantgegevens bovenaan de opmeting in.',
+        fout: true,
+      );
+      return;
+    }
+
+    await AppStorage.bewaarOpmetingProjectTitelhoofd(
+      titelhoofd.metWijzigingsDatum(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _projectTitelhoofd = titelhoofd;
+    });
+
+    await _projectBestandController.opslaanBestand(toonMeldingNaOpslaan: false);
+
+    if (!mounted) return;
+
+    final oneDriveResultaat = await Navigator.of(context)
+        .push<OneDriveKlantdocumentResultaat>(
+          MaterialPageRoute<OneDriveKlantdocumentResultaat>(
+            builder: (context) {
+              return OpmetingPdfPreviewPagina(
+                titelhoofd: titelhoofd,
+                posities: opmetingPosities,
+              );
+            },
+          ),
+        );
+
+    if (!mounted || oneDriveResultaat == null) return;
+
+    _toonMelding(
+      '${oneDriveResultaat.documentType} opgeslagen in OneDrive: '
+      '${oneDriveResultaat.volledigPad}',
     );
   }
 
@@ -867,7 +971,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     return OpmetingOverzichtBovenbalk(
       titel: _titelBovenbalk(),
       heeftOpenBestand: _heeftOpenBestand,
-      heeftOndersteundeOffertePosities: _selecteerOndersteundeOffertePosities(
+      heeftOndersteundeOffertePosities: _selecteerOndersteundeOpmetingPosities(
         _raamOpmetingen,
       ).isNotEmpty,
       berekenPrijzen: _projectTitelhoofd.berekenPrijzen,
@@ -882,6 +986,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           _prijsinstellingenController.herberekenOfferteHandmatig,
       onOpenPrijsOverzicht: _openPrijsOverzicht,
       onOpenOffertePreview: _openOffertePreview,
+      onOpenOpmetingPreview: _openOpmetingPreview,
       onFormulierGekozen: _openGeregistreerdFormulier,
     );
   }
@@ -912,6 +1017,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.voorzetscreen:
         await _openVoorzetscreen();
+        break;
+
+      case OfferteArtikelOpenType.voorzetrolluik:
+        await _openVoorzetrolluik();
         break;
 
       case OfferteArtikelOpenType.sektionalePoort:

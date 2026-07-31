@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-INBOUWSCHAKELAAR-PRIJS-MOMENTOPNAME-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-MOMENTOPNAME-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKING-MOMENTOPNAME-20260730
 // THIMACO-CONTROLE: EERSTE-PRIJS-SNAPSHOT-STIL-20260724
@@ -323,6 +324,7 @@ class OffertePrijsinstellingenController {
           var prijsDataGewijzigd = false;
 
           final voorzetscreenModel = opmeting.voorzetscreenData;
+          final voorzetrolluikModel = opmeting.voorzetrolluikData;
           final veluxModel = opmeting.veluxDakraamData;
           if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
               voorzetscreenModel != null) {
@@ -354,6 +356,45 @@ class OffertePrijsinstellingenController {
                           keuze.menuId.trim() == 'voorzetscreenBediening' &&
                           keuze.keuzeId.trim() == 'inbouwschakelaar' &&
                           voorzetscreenModel.bediening.trim().toLowerCase() ==
+                              'inbouwschakelaar';
+                    },
+                  );
+              prijsDataGewijzigd = true;
+            }
+          } else if (koppeling.ondersteuntTechnischeKeuzeprijzen &&
+              voorzetrolluikModel != null) {
+            final artikelSignatuur = jsonEncode(<String, Object>{
+              'formulierType': 'voorzetrolluik',
+              'breedteMm': voorzetrolluikModel.breedteMm,
+              'hoogteMm': voorzetrolluikModel.hoogteMm,
+              'aantal': voorzetrolluikModel.aantal,
+              'bediening': voorzetrolluikModel.bediening.name,
+              'elektrischeBediening': voorzetrolluikModel.elektrischeBediening,
+            });
+
+            if (OfferteTechnischePrijsMomentopnameService.moetMomentopnameBijwerken(
+              prijsData: prijsData,
+              profiel: profiel,
+              artikelSignatuur: artikelSignatuur,
+              forceer: forceerPrijsinstellingen,
+            )) {
+              prijsData =
+                  OfferteTechnischePrijsMomentopnameService.maakMomentopname(
+                    prijsData: prijsData,
+                    profiel: profiel,
+                    breedteMm: voorzetrolluikModel.breedteMm,
+                    hoogteMm: voorzetrolluikModel.hoogteMm,
+                    aantal: voorzetrolluikModel.aantal,
+                    artikelSignatuur: artikelSignatuur,
+                    keuzeIsGeselecteerd: (keuze) {
+                      return _normaliseerFormulierType(keuze.formulierType) ==
+                              'voorzetrolluik' &&
+                          keuze.menuId.trim() == 'voorzetrolluikBediening' &&
+                          keuze.keuzeId.trim() == 'inbouwschakelaar' &&
+                          voorzetrolluikModel.isElektrisch &&
+                          voorzetrolluikModel.elektrischeBediening
+                                  .trim()
+                                  .toLowerCase() ==
                               'inbouwschakelaar';
                     },
                   );

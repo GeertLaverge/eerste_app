@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-NAVIGATIE-AMBIGUOUS-IMPORT-HERSTEL-20260731-0845
 // THIMACO-CONTROLE: VOORZETSCREEN-PROJECTKLEUR-NAVIGATIE-20260730-2005
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-NAVIGATIE-FASE-1-2-20260729-2030
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-NAVIGATIE-20260729
@@ -5,13 +6,14 @@
 import 'package:flutter/material.dart';
 
 import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
-import '../overzicht/opmeting_overzicht_model.dart';
+import '../overzicht/opmeting_overzicht_model.dart' as overzicht;
 import '../project/opmeting_project_titelhoofd_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_fiche.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_fiche.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_fiche.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_fiche.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_fiche.dart';
+import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_fiche.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_fiche.dart';
 import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_fiche.dart';
 import '../../../paginas/opmeting_raam_pagina.dart';
@@ -59,7 +61,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingRaamPagina(
@@ -81,7 +83,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openVasteInzethor({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -113,7 +115,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingVasteInzethorFiche(
@@ -142,7 +144,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openVliegendeur({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -166,7 +168,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingVliegendeurFiche(
@@ -189,7 +191,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openSchuifvliegendeur({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -213,7 +215,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingSchuifvliegendeurFiche(
@@ -253,7 +255,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openPlooiwerken({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -277,7 +279,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingPlooiwerkenFiche(
@@ -300,7 +302,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openVoorzetscreen({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) return;
     _formulierOpenenBezig = true;
@@ -316,7 +318,7 @@ class OpmetingFormulierNavigatieController {
       if (!isMounted() || !context.mounted) return;
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingVoorzetscreenFiche(
@@ -335,8 +337,44 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
+  Future<void> openVoorzetrolluik({
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) async {
+    if (_formulierOpenenBezig) return;
+    _formulierOpenenBezig = true;
+
+    try {
+      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
+          ? bestaandeOpmeting!.klantNaam.trim()
+          : leesKlantNaam().trim();
+
+      if (klantNaam.isEmpty || !isMounted()) return;
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+      if (!isMounted() || !context.mounted) return;
+
+      final resultaat = await Navigator.of(context)
+          .push<overzicht.OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingVoorzetrolluikFiche(
+                  klantNaam: klantNaam,
+                  bestaandeOpmeting: bestaandeOpmeting,
+                  projectKleur: _projectKleurVoorPlooiwerken(),
+                );
+              },
+            ),
+          );
+
+      if (resultaat == null || !isMounted()) return;
+      await herlaadOpmetingen(klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
+    }
+  }
+
   Future<void> openSektionalePoort({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -360,7 +398,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingSektionalePoortFiche(
@@ -383,7 +421,7 @@ class OpmetingFormulierNavigatieController {
   }
 
   Future<void> openVeluxDakraam({
-    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
     if (_formulierOpenenBezig) {
       return;
@@ -407,7 +445,7 @@ class OpmetingFormulierNavigatieController {
       }
 
       final resultaat = await Navigator.of(context)
-          .push<OpmetingOverzichtRaamItem>(
+          .push<overzicht.OpmetingOverzichtRaamItem>(
             MaterialPageRoute(
               builder: (routeContext) {
                 return OpmetingVeluxDakraamFiche(
@@ -428,7 +466,7 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
-  Future<void> bewerkOpmeting(OpmetingOverzichtRaamItem item) async {
+  Future<void> bewerkOpmeting(overzicht.OpmetingOverzichtRaamItem item) async {
     if (item.formulierTypeGenormaliseerd == 'vasteInzethor') {
       await openVasteInzethor(bestaandeOpmeting: item);
       return;
@@ -454,6 +492,11 @@ class OpmetingFormulierNavigatieController {
       return;
     }
 
+    if (item.formulierTypeGenormaliseerd == 'voorzetrolluik') {
+      await openVoorzetrolluik(bestaandeOpmeting: item);
+      return;
+    }
+
     if (item.formulierTypeGenormaliseerd == 'sektionalePoort') {
       await openSektionalePoort(bestaandeOpmeting: item);
       return;
@@ -465,7 +508,7 @@ class OpmetingFormulierNavigatieController {
     }
 
     final resultaat = await Navigator.of(context)
-        .push<OpmetingOverzichtRaamItem>(
+        .push<overzicht.OpmetingOverzichtRaamItem>(
           MaterialPageRoute(
             builder: (routeContext) {
               return OpmetingRaamPagina(

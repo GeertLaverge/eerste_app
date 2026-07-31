@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-INBOUWSCHAKELAAR-TECHNISCHE-PRIJSKEUZE-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-INGEBOUWDE-INBOUWSCHAKELAAR-PRIJSKEUZE-20260730-2205
 // THIMACO-CONTROLE: VELUX-INGEBOUWDE-AFWERKINGSKEUZES-20260730
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-STOPCONTACT-PRIJSKEUZE-FINAAL-20260729-1214
@@ -51,6 +52,16 @@ class OfferteTechnischeKeuzeLaadHelper {
       OfferteTechnischeKeuzeRef(
         formulierType: 'voorzetscreen',
         menuId: 'voorzetscreenBediening',
+        keuzeId: 'inbouwschakelaar',
+        menuTitelMomentopname: 'Bediening',
+        keuzeTitelMomentopname: 'Inbouwschakelaar',
+        hoeUitschrijvenMomentopname: 'Inbouwschakelaar',
+      );
+
+  static const OfferteTechnischeKeuzeRef voorzetrolluikInbouwschakelaar =
+      OfferteTechnischeKeuzeRef(
+        formulierType: 'voorzetrolluik',
+        menuId: 'voorzetrolluikBediening',
         keuzeId: 'inbouwschakelaar',
         menuTitelMomentopname: 'Bediening',
         keuzeTitelMomentopname: 'Inbouwschakelaar',
@@ -145,6 +156,9 @@ class OfferteTechnischeKeuzeLaadHelper {
     if (formulierType == 'voorzetscreen') {
       return const <OfferteTechnischeKeuzeRef>[voorzetscreenInbouwschakelaar];
     }
+    if (formulierType == 'voorzetrolluik') {
+      return const <OfferteTechnischeKeuzeRef>[voorzetrolluikInbouwschakelaar];
+    }
     return const <OfferteTechnischeKeuzeRef>[];
   }
 
@@ -170,7 +184,8 @@ class OfferteTechnischeKeuzeLaadHelper {
 
     if (canoniekFormulierType.isEmpty ||
         canoniekFormulierType == 'vasteInzethor' ||
-        canoniekFormulierType == 'voorzetscreen') {
+        canoniekFormulierType == 'voorzetscreen' ||
+        canoniekFormulierType == 'voorzetrolluik') {
       return null;
     }
 
@@ -358,6 +373,7 @@ class OfferteTechnischeKeuzeLaadHelper {
       'sektionalepoort' => 'sektionalePoort',
       'veluxdakraam' => 'veluxDakraam',
       'voorzetscreen' => 'voorzetscreen',
+      'voorzetrolluik' => 'voorzetrolluik',
       _ => '',
     };
   }

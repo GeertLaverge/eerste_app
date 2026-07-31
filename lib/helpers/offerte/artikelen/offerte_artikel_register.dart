@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-MENU-REGISTRATIE-20260731-1025
 // THIMACO-CONTROLE: OPMEETFICHE-MENU-GROEPEN-20260730
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-REGISTER-FASE-1-2-20260729-2030
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-REGISTER-20260729
@@ -22,6 +23,7 @@ enum OfferteArtikelOpenType {
   schuifvliegendeur,
   plooiwerken,
   voorzetscreen,
+  voorzetrolluik,
   sektionalePoort,
   veluxDakraam,
 }
@@ -148,6 +150,14 @@ class OfferteArtikelRegister {
           openType: OfferteArtikelOpenType.voorzetscreen,
         ),
         OfferteArtikelRegistratie(
+          menuWaarde: 'voorzetrolluik',
+          formulierType: 'voorzetrolluik',
+          formulierNaam: 'Voorzetrolluiken',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.view_stream_outlined,
+          openType: OfferteArtikelOpenType.voorzetrolluik,
+        ),
+        OfferteArtikelRegistratie(
           menuWaarde: 'sektionale_poort',
           formulierType: 'sektionalePoort',
           formulierNaam: 'Sektionale poorten',
@@ -187,6 +197,7 @@ class OfferteArtikelRegister {
             'schuifvliegendeur',
             'plooiwerken',
             'voorzetscreen',
+            'voorzetrolluik',
           ],
         ),
         OfferteArtikelMenuGroep(

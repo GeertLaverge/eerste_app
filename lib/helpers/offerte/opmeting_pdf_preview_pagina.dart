@@ -1,4 +1,5 @@
-// THIMACO-CONTROLE: OFFERTE-PDF-OPSLAAN-ONEDRIVE-KLANTEN-20260731
+// THIMACO-CONTROLE: OPMETING-PDF-OPSLAAN-ONEDRIVE-KLANTEN-20260731
+// THIMACO-CONTROLE: OPMETING-PDF-PREVIEW-ZONDER-PRIJZEN-20260731
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -13,10 +14,9 @@ import '../sync/onedrive_map_kiezer_dialog.dart';
 import 'offerte_pdf_model.dart';
 import 'offerte_pdf_service.dart';
 import 'offerte_pvc_raam_tekening_service.dart';
-import 'prijzen/offerte_project_prijs_service.dart';
 
-class OffertePdfPreviewPagina extends StatefulWidget {
-  const OffertePdfPreviewPagina({
+class OpmetingPdfPreviewPagina extends StatefulWidget {
+  const OpmetingPdfPreviewPagina({
     super.key,
     required this.titelhoofd,
     required this.posities,
@@ -26,13 +26,13 @@ class OffertePdfPreviewPagina extends StatefulWidget {
   final List<OpmetingOverzichtRaamItem> posities;
 
   @override
-  State<OffertePdfPreviewPagina> createState() {
-    return _OffertePdfPreviewPaginaState();
+  State<OpmetingPdfPreviewPagina> createState() {
+    return _OpmetingPdfPreviewPaginaState();
   }
 }
 
-class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
-  static const Color _oranje = Color(0xFFF15A24);
+class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
+  static const Color _groen = Color(0xFF0B7A3B);
 
   final OneDriveKlantdocumentService _oneDriveService =
       OneDriveKlantdocumentService();
@@ -48,7 +48,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   @override
-  void didUpdateWidget(covariant OffertePdfPreviewPagina oldWidget) {
+  void didUpdateWidget(covariant OpmetingPdfPreviewPagina oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.titelhoofd != widget.titelhoofd ||
@@ -57,16 +57,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     }
   }
 
-  /// Tijdens hot reload blijft de State van deze pagina bestaan.
-  /// Zonder deze heropbouw blijft PdfPreview de eerder gemaakte PDF tonen.
   @override
   void reassemble() {
     super.reassemble();
 
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     setState(_maakNieuwePdfFuture);
   }
 
@@ -80,18 +75,12 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   String _maakBestandsnaam() {
-    final offerteNummer = widget.titelhoofd.samengesteldOffertenummer;
-    final veiligeNaam = widget.titelhoofd.klantNaam.trim().replaceAll(
-      RegExp(r'[^a-zA-Z0-9_-]+'),
-      '_',
-    );
-    final nummerVoorBestandsnaam = offerteNummer.trim().isEmpty
-        ? 'zonder_nummer'
-        : offerteNummer.trim();
+    final datumTekst = _datumVoorBestandsnaam(DateTime.now());
+    final veiligeNaam = _veiligBestandsdeel(widget.titelhoofd.klantNaam);
 
     return veiligeNaam.isEmpty
-        ? 'Thimaco_offerte_$nummerVoorBestandsnaam.pdf'
-        : 'Thimaco_offerte_${nummerVoorBestandsnaam}_$veiligeNaam.pdf';
+        ? 'Thimaco_opmeting_$datumTekst.pdf'
+        : 'Thimaco_opmeting_${datumTekst}_$veiligeNaam.pdf';
   }
 
   Future<void> _opslaanNaarOneDrive() async {
@@ -114,7 +103,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       final pdfBytes = await _pdfFuture;
       final resultaat = await _oneDriveService.uploadPdf(
         map: gekozenMap,
-        documentType: 'Offerte',
+        documentType: 'Opmeting',
         bestandsnaam: _maakBestandsnaam(),
         bytes: pdfBytes,
       );
@@ -203,15 +192,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
       widget.posities,
     );
-
     final pvcRaamTekeningen =
         await OffertePvcRaamTekeningService.maakTekeningen(posities);
-
-    final projectPrijsResultaat =
-        OfferteProjectPrijsService.berekenAlleOndersteundeUitTitelhoofd(
-          titelhoofd: titelhoofd,
-          alleOpmetingen: posities,
-        );
 
     final data = OfferteDocumentData(
       klant: OfferteKlantgegevens.vanTitelhoofd(titelhoofd),
@@ -223,11 +205,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       projectKleurBuiten: titelhoofd.projectKleurBuiten,
       ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
       posities: posities,
-      projectPrijsregels: projectPrijsResultaat.prijsregels,
       pvcRaamTekeningen: pvcRaamTekeningen,
     );
 
-    return OffertePdfService.bouwPdf(data);
+    return OffertePdfService.bouwOpmetingPdf(data);
   }
 
   @override
@@ -237,10 +218,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
-        backgroundColor: _oranje,
+        backgroundColor: _groen,
         foregroundColor: Colors.white,
         title: const Text(
-          'Offertevoorbeeld',
+          'Opmetingvoorbeeld',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: <Widget>[
@@ -282,14 +263,14 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             pdfFileName: bestandsnaam,
             build: (_) => _pdfFuture,
             loadingWidget: const Center(
-              child: CircularProgressIndicator(color: _oranje),
+              child: CircularProgressIndicator(color: _groen),
             ),
             onError: (context, fout) {
               return Center(
                 child: Padding(
                   padding: const EdgeInsets.all(24),
                   child: Text(
-                    'De offerte kon niet worden opgebouwd.\n\n$fout',
+                    'De opmeting kon niet worden opgebouwd.\n\n$fout',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFFB91C1C),
@@ -303,5 +284,19 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         },
       ),
     );
+  }
+
+  static String _veiligBestandsdeel(String waarde) {
+    return waarde
+        .trim()
+        .replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  static String _datumVoorBestandsnaam(DateTime datum) {
+    String twee(int waarde) => waarde.toString().padLeft(2, '0');
+
+    return '${datum.year}-${twee(datum.month)}-${twee(datum.day)}';
   }
 }

@@ -1,9 +1,12 @@
+// THIMACO-CONTROLE: OPMETING-PDF-ZONDER-PRIJSBLOKKEN-20260731
 // THIMACO-CONTROLE: PDF-CONST-TEXTSTYLE-NORMAAL-FIX-20260726
 // THIMACO-CONTROLE: TECHNISCHE-REGELS-UNIFORM-ZONDER-SCHAALVERKLEINING-20260726
 // THIMACO-CONTROLE: ALGEMENE-ARTIKEL-LAYOUT-VOLLE-BREEDTE-20260720
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'dart:math' as math;
 
 class OffertePdfTechnischeRegel {
   const OffertePdfTechnischeRegel({
@@ -19,6 +22,22 @@ class OffertePdfTechnischeRegel {
 
 class OffertePdfArtikelLayoutHelper {
   const OffertePdfArtikelLayoutHelper._();
+
+  static const Object _toonPrijsblokkenZoneSleutel =
+      #thimacoToonPdfPrijsblokken;
+
+  static bool get toonPrijsblokken {
+    return Zone.current[_toonPrijsblokkenZoneSleutel] != false;
+  }
+
+  /// Voert [actie] uit met dezelfde artikellayout, maar zonder prijszone,
+  /// prijsblokken en prijsruimte. De zone blijft ook over async-grenzen actief.
+  static T zonderPrijsblokken<T>(T Function() actie) {
+    return runZoned<T>(
+      actie,
+      zoneValues: <Object?, Object?>{_toonPrijsblokkenZoneSleutel: false},
+    );
+  }
 
   static const PdfColor oranje = PdfColor.fromInt(0xFFF15A24);
   static const PdfColor tekstDonker = PdfColor.fromInt(0xFF22272D);
@@ -108,7 +127,7 @@ class OffertePdfArtikelLayoutHelper {
       for (final regel in samengevoegdeRegels) {
         benodigdeHoogte += _technischeRegelHoogteVoor(
           regel,
-          toonPrijsZone: true,
+          toonPrijsZone: toonPrijsblokken,
         );
       }
     }
@@ -138,6 +157,7 @@ class OffertePdfArtikelLayoutHelper {
     required double kolomHoogte,
     required double prijsHoogte,
   }) {
+    if (!toonPrijsblokken) return kolomHoogte;
     return kolomHoogte + ruimteVoorPrijsBlok + prijsHoogte;
   }
 
@@ -147,6 +167,14 @@ class OffertePdfArtikelLayoutHelper {
     required pw.Widget technischeKolom,
     required pw.Widget prijsBlok,
   }) {
+    if (!toonPrijsblokken) {
+      return bouwArtikelLayoutZonderPrijs(
+        kolomHoogte: kolomHoogte,
+        tekenvlak: tekenvlak,
+        technischeKolom: technischeKolom,
+      );
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.stretch,
       children: <pw.Widget>[
@@ -263,6 +291,7 @@ class OffertePdfArtikelLayoutHelper {
     String legeTekst = 'Geen bijkomende technische gegevens.',
     bool toonPrijsZone = true,
   }) {
+    final effectievePrijsZone = toonPrijsZone && toonPrijsblokken;
     final samengevoegdeRegels = combineerTechnischeRegels(regels);
     final compact = _gebruikCompacteTechnischeOpmaak(
       regels: samengevoegdeRegels,
@@ -306,7 +335,7 @@ class OffertePdfArtikelLayoutHelper {
               _bouwTechnischeRegel(
                 regel: samengevoegdeRegels[index],
                 laatste: index == samengevoegdeRegels.length - 1,
-                toonPrijsZone: toonPrijsZone,
+                toonPrijsZone: effectievePrijsZone,
               ),
           if (notities.trim().isNotEmpty) ...<pw.Widget>[
             pw.SizedBox(height: compact ? 5 : 7),

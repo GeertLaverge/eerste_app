@@ -1,25 +1,24 @@
-// THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONDERLATONDER-REFERENTIE-HERSTEL-20260731-0900
-// THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONGEBRUIKTE-IMPORT-VERWIJDERD-20260730
+// THIMACO-CONTROLE: VOORZETROLLUIK-OFFERTE-PDF-VOLLEDIG-20260731
 import 'dart:math' as math;
 
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
-import '../opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
-import '../opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_technische_regels_helper.dart';
+import '../opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_model.dart';
+import '../opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_technische_regels_helper.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
 import 'prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import 'prijzen/offerte_prijsregel_weergave_service.dart';
 
-class OffertePdfVoorzetscreenWidget {
-  const OffertePdfVoorzetscreenWidget._();
+class OffertePdfVoorzetrolluikWidget {
+  const OffertePdfVoorzetrolluikWidget._();
 
   static const double _basisPrijsRegelHoogte = 34;
   static const double _basisOptiePrijsRegelHoogte = 78;
 
   static double berekenKolomHoogte(OpmetingOverzichtRaamItem positie) {
-    final model = positie.voorzetscreenData;
+    final model = positie.voorzetrolluikData;
     if (model == null) return OffertePdfArtikelLayoutHelper.minimumKolomHoogte;
 
     return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
@@ -48,7 +47,7 @@ class OffertePdfVoorzetscreenWidget {
     double btwPercentage = 0.0,
     String btwRegelLabel = 'BTW',
   }) {
-    final model = positie.voorzetscreenData;
+    final model = positie.voorzetrolluikData;
     if (model == null) return pw.SizedBox();
 
     final hoogte = berekenKolomHoogte(positie);
@@ -86,9 +85,9 @@ class OffertePdfVoorzetscreenWidget {
 
   static List<OffertePdfTechnischeRegel> _technischeRegelsVoorOfferte(
     OpmetingOverzichtRaamItem positie,
-    OpmetingVoorzetscreenModel model,
+    OpmetingVoorzetrolluikModel model,
   ) {
-    final resultaat = OpmetingVoorzetscreenTechnischeRegelsHelper.bouw(model)
+    final resultaat = OpmetingVoorzetrolluikTechnischeRegelsHelper.bouw(model)
         .map(
           (regel) => OffertePdfTechnischeRegel(
             titel: regel.titel,
@@ -271,11 +270,12 @@ class OffertePdfVoorzetscreenWidget {
   }
 
   static pw.Widget _bouwTekening(
-    OpmetingVoorzetscreenModel model, {
+    OpmetingVoorzetrolluikModel model, {
     required double breedte,
     required double hoogte,
   }) {
-    final doek = _svgKleur(model.doekVoorzijdeHex, '#D8DADD');
+    final lamelKleur = _lamelSvgKleur(model);
+    final profielKleur = _profielSvgKleur(model);
     final buitenBreedte = model.buitenBreedteMm.toDouble();
     final buitenHoogte = model.buitenHoogteMm.toDouble();
     final schaal = math.min(155 / buitenBreedte, 180 / buitenHoogte);
@@ -293,17 +293,20 @@ class OffertePdfVoorzetscreenWidget {
     final kastOnder = frontBoven + kastHoogte;
     final onderlatBoven = math.max(
       kastOnder + 12,
-      frontOnder - (300 * schaal) - onderlatHoogte,
+      frontOnder -
+          (OpmetingVoorzetrolluikModel.vrijeOnderruimteMm * schaal) -
+          onderlatHoogte,
     );
-    final doekLinks = frontLinks + geleiderBreedte;
-    final doekRechts = frontRechts - geleiderBreedte;
+    final lamelLinks = frontLinks + geleiderBreedte;
+    final lamelRechts = frontRechts - geleiderBreedte;
+    final lamelHoogte = math.max(2.4, model.lamelHoogteMm * schaal);
 
     final breedteMaatLinks = model.breedteInclusiefGeleiders
         ? frontLinks
-        : doekLinks;
+        : lamelLinks;
     final breedteMaatRechts = model.breedteInclusiefGeleiders
         ? frontRechts
-        : doekRechts;
+        : lamelRechts;
     final hoogteMaatBoven = model.hoogteInclusiefKast ? frontBoven : kastOnder;
 
     final zijKast = math.max(12.0, model.kastmaat.millimeter * schaal);
@@ -316,13 +319,34 @@ class OffertePdfVoorzetscreenWidget {
     String n(num waarde) => waarde.toStringAsFixed(2);
 
     final vormPad = switch (model.kastvorm) {
-      OpmetingVoorzetscreenKastvorm.recht =>
-        '<rect x="${n(zijLinks)}" y="${n(zijBoven)}" width="${n(zijKast)}" height="${n(zijKast)}" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
-      OpmetingVoorzetscreenKastvorm.schuin =>
-        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijRechts)} V ${n(zijOnder - (zijKast * 0.23))} L ${n(zijRechts - (zijKast * 0.23))} ${n(zijOnder)} H ${n(zijLinks)} Z" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
-      OpmetingVoorzetscreenKastvorm.rond =>
-        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijLinks + (zijKast / 2))} Q ${n(zijRechts)} ${n(zijBoven)} ${n(zijRechts)} ${n(zijBoven + (zijKast / 2))} V ${n(zijOnder)} H ${n(zijLinks)} Z" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
+      OpmetingVoorzetrolluikKastvorm.schuin =>
+        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijRechts)} V ${n(zijOnder - (zijKast * 0.23))} L ${n(zijRechts - (zijKast * 0.23))} ${n(zijOnder)} H ${n(zijLinks)} Z" fill="$profielKleur" stroke="#374151" stroke-width="1.3"/>',
+      OpmetingVoorzetrolluikKastvorm.rond =>
+        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijRechts)} V ${n(zijBoven + (zijKast / 2))} Q ${n(zijRechts)} ${n(zijOnder)} ${n(zijLinks + (zijKast / 2))} ${n(zijOnder)} H ${n(zijLinks)} Z" fill="$profielKleur" stroke="#374151" stroke-width="1.3"/>',
     };
+
+    final lamelLijnen = StringBuffer();
+    final aantalRijen = math.max(
+      1,
+      ((onderlatBoven - kastOnder) / lamelHoogte).floor(),
+    );
+    final aantalOpenRijen = (aantalRijen * model.openLamellenPercentage / 100)
+        .round();
+    final eersteOpenRij = aantalRijen - aantalOpenRijen;
+    var y = kastOnder + lamelHoogte;
+    var index = 1;
+    while (y < onderlatBoven - 0.5 && index < 160) {
+      lamelLijnen.writeln(
+        '<line x1="${n(lamelLinks)}" y1="${n(y)}" x2="${n(lamelRechts)}" y2="${n(y)}" stroke="#6B7280" stroke-width="0.55" opacity="0.72"/>',
+      );
+      if (index >= eersteOpenRij && model.openLamellenPercentage > 0) {
+        lamelLijnen.writeln(
+          '<line x1="${n(lamelLinks + 1)}" y1="${n(y)}" x2="${n(lamelRechts - 1)}" y2="${n(y)}" stroke="#FFFFFF" stroke-width="1.15" opacity="0.86"/>',
+        );
+      }
+      y += lamelHoogte;
+      index++;
+    }
 
     final svg =
         '''
@@ -330,16 +354,12 @@ class OffertePdfVoorzetscreenWidget {
   <text x="112" y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#475569">Vooraanzicht</text>
   <text x="292" y="14" text-anchor="middle" font-size="9" font-weight="700" fill="#475569">Zijaanzicht</text>
 
-  <rect x="${n(frontLinks)}" y="${n(frontBoven)}" width="${n(frontBreedte)}" height="${n(kastHoogte)}" fill="#E5E7EB" stroke="#374151" stroke-width="1.3"/>
-  <rect x="${n(doekLinks)}" y="${n(kastOnder)}" width="${n(doekRechts - doekLinks)}" height="${n(onderlatBoven - kastOnder)}" fill="$doek" stroke="#374151" stroke-width="1.0"/>
-  <g opacity="0.22" stroke="#FFFFFF" stroke-width="0.7">
-    <path d="M ${n(doekLinks)} ${n(onderlatBoven)} L ${n(doekRechts)} ${n(kastOnder)}"/>
-    <path d="M ${n(doekLinks)} ${n(onderlatBoven - 18)} L ${n(doekRechts - 18)} ${n(kastOnder)}"/>
-    <path d="M ${n(doekLinks + 18)} ${n(onderlatBoven)} L ${n(doekRechts)} ${n(kastOnder + 18)}"/>
-  </g>
-  <rect x="${n(frontLinks)}" y="${n(kastOnder)}" width="${n(geleiderBreedte)}" height="${n(frontOnder - kastOnder)}" fill="#F8FAFC" stroke="#374151" stroke-width="1.1"/>
-  <rect x="${n(frontRechts - geleiderBreedte)}" y="${n(kastOnder)}" width="${n(geleiderBreedte)}" height="${n(frontOnder - kastOnder)}" fill="#F8FAFC" stroke="#374151" stroke-width="1.1"/>
-  <rect x="${n(doekLinks)}" y="${n(onderlatBoven)}" width="${n(doekRechts - doekLinks)}" height="${n(onderlatHoogte)}" fill="#F8FAFC" stroke="#374151" stroke-width="1.1"/>
+  <rect x="${n(frontLinks)}" y="${n(frontBoven)}" width="${n(frontBreedte)}" height="${n(kastHoogte)}" fill="$profielKleur" stroke="#374151" stroke-width="1.3"/>
+  <rect x="${n(lamelLinks)}" y="${n(kastOnder)}" width="${n(lamelRechts - lamelLinks)}" height="${n(onderlatBoven - kastOnder)}" fill="$lamelKleur" stroke="#374151" stroke-width="1.0"/>
+  ${lamelLijnen.toString()}
+  <rect x="${n(frontLinks)}" y="${n(kastOnder)}" width="${n(geleiderBreedte)}" height="${n(frontOnder - kastOnder)}" fill="$profielKleur" stroke="#374151" stroke-width="1.1"/>
+  <rect x="${n(frontRechts - geleiderBreedte)}" y="${n(kastOnder)}" width="${n(geleiderBreedte)}" height="${n(frontOnder - kastOnder)}" fill="$profielKleur" stroke="#374151" stroke-width="1.1"/>
+  <rect x="${n(lamelLinks)}" y="${n(onderlatBoven)}" width="${n(lamelRechts - lamelLinks)}" height="${n(onderlatHoogte)}" fill="$profielKleur" stroke="#374151" stroke-width="1.1"/>
 
   <line x1="${n(breedteMaatLinks)}" y1="${n(frontOnder + 16)}" x2="${n(breedteMaatRechts)}" y2="${n(frontOnder + 16)}" stroke="#475569" stroke-width="0.8"/>
   <line x1="${n(breedteMaatLinks)}" y1="${n(frontOnder)}" x2="${n(breedteMaatLinks)}" y2="${n(frontOnder + 19)}" stroke="#475569" stroke-width="0.8"/>
@@ -352,7 +372,7 @@ class OffertePdfVoorzetscreenWidget {
   <text x="${n(frontLinks - 25)}" y="${n((hoogteMaatBoven + frontOnder) / 2)}" transform="rotate(-90 ${n(frontLinks - 25)} ${n((hoogteMaatBoven + frontOnder) / 2)})" text-anchor="middle" font-size="8" fill="#475569">${model.hoogteMm} mm</text>
 
   $vormPad
-  <rect x="${n(zijLinks)}" y="${n(zijOnder)}" width="${n(zijGeleiderBreedte)}" height="${n(frontOnder - zijOnder)}" fill="#E5E7EB" stroke="#374151" stroke-width="1.1"/>
+  <rect x="${n(zijLinks)}" y="${n(zijOnder)}" width="${n(zijGeleiderBreedte)}" height="${n(frontOnder - zijOnder)}" fill="$profielKleur" stroke="#374151" stroke-width="1.1"/>
   <text x="292" y="229" text-anchor="middle" font-size="8" font-weight="700" fill="#475569">${model.kastvorm.label}</text>
   <text x="292" y="242" text-anchor="middle" font-size="8" fill="#475569">${model.kastmaat.millimeter} × ${model.kastmaat.millimeter} mm</text>
 </svg>
@@ -363,6 +383,23 @@ class OffertePdfVoorzetscreenWidget {
       height: hoogte,
       child: pw.SvgImage(svg: svg),
     );
+  }
+
+  static String _lamelSvgKleur(OpmetingVoorzetrolluikModel model) {
+    final code = model.lamelKleurCode.toUpperCase();
+    if (code.contains('9016')) return '#FFFFFF';
+    return _svgKleur(model.lamelKleurHex, '#D1D5DB');
+  }
+
+  static String _profielSvgKleur(OpmetingVoorzetrolluikModel model) {
+    final tekst =
+        '${model.kleurBenaming} ${model.poedercode} '
+                '${model.projectKleurWaarde}'
+            .toUpperCase();
+    if (tekst.contains('9016') || tekst.contains('VERKEERSWIT')) {
+      return '#FFFFFF';
+    }
+    return '#E5E7EB';
   }
 
   static String _svgKleur(String waarde, String standaard) {

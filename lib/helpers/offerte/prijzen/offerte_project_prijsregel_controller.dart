@@ -1,4 +1,6 @@
-// THIMACO-CONTROLE: PROJECTPRIJS-VERDEELKOST-MEERDERE-FICHES-20260726
+// THIMACO-CONTROLE: PROJECTPRIJS-IDENTIEKE-REGELS-EENMAAL-MET-ARTIKELGROEPEN-20260731
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -298,6 +300,24 @@ class OfferteProjectPrijsregelController {
     return List<OfferteArtikelPrijsKoppeling>.unmodifiable(resultaat);
   }
 
+  String _normaliseerPrijsregelOmschrijving(String waarde) {
+    return waarde.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  String _projectPrijsregelInhoudSleutel(OffertePrijsregelModel regel) {
+    final inhoud = Map<String, dynamic>.from(regel.toJson())
+      ..remove('id')
+      ..remove('formulierType')
+      ..remove('volgorde')
+      ..remove('gewijzigdOp');
+
+    inhoud['omschrijving'] = _normaliseerPrijsregelOmschrijving(
+      regel.omschrijving,
+    );
+
+    return jsonEncode(inhoud);
+  }
+
   String _projectPrijsregelGroepSleutel(OffertePrijsregelModel regel) {
     if (regel.isVerdeeldeProjectkost) {
       final verdeelSleutel =
@@ -307,22 +327,22 @@ class OfferteProjectPrijsregelController {
       }
     }
 
-    return 'prijsregel::${regel.id}';
+    // Een algemene prijsregel kan in meerdere artikelprofielen met een ander
+    // technisch ID opgeslagen zijn. Voor het projectvenster is het echter één
+    // regel wanneer omschrijving, bedrag, eenheid en overige prijsinstellingen
+    // gelijk zijn. ID, formulierType, volgorde en wijzigingsdatum bepalen enkel
+    // waar de regel bewaard is en mogen dus geen dubbele zichtbare rij maken.
+    return 'prijsregel-inhoud::${_projectPrijsregelInhoudSleutel(regel)}';
   }
 
   Map<String, List<OffertePrijsregelModel>>
-  _maakGekoppeldeVerdeelkostBronnenPerRegelId(
+  _maakGekoppeldeProjectPrijsregelBronnenPerRegelId(
     List<OffertePrijsregelModel> prijsregels,
   ) {
     final perSleutel = <String, List<OffertePrijsregelModel>>{};
 
     for (final regel in prijsregels) {
-      final sleutel = OfferteVerdeelkostService.gekoppeldeVerdeelkostSleutel(
-        regel,
-      );
-
-      if (sleutel.isEmpty) continue;
-
+      final sleutel = _projectPrijsregelGroepSleutel(regel);
       perSleutel
           .putIfAbsent(sleutel, () => <OffertePrijsregelModel>[])
           .add(regel);
@@ -433,22 +453,20 @@ class OfferteProjectPrijsregelController {
           continue;
         }
 
-        OffertePrijsregelModel? bestaandeVerdeelkostBron;
-        if (regel.isVerdeeldeProjectkost) {
-          for (final bron in gekoppeldeBronnen) {
-            if (_normaliseerPrijsFormulierType(bron.formulierType) == sleutel) {
-              bestaandeVerdeelkostBron = bron;
-              break;
-            }
+        OffertePrijsregelModel? bestaandeBronRegel;
+        for (final bron in gekoppeldeBronnen) {
+          if (_normaliseerPrijsFormulierType(bron.formulierType) == sleutel) {
+            bestaandeBronRegel = bron;
+            break;
           }
         }
 
         resultaat.add(
           regel.copyWith(
-            id: bestaandeVerdeelkostBron?.id ?? regel.id,
+            id: bestaandeBronRegel?.id ?? regel.id,
             categorie: OffertePrijsCategorie.alleArtikelen,
             formulierType: bronGroep.formulierType,
-            volgorde: bestaandeVerdeelkostBron?.volgorde ?? regel.volgorde,
+            volgorde: bestaandeBronRegel?.volgorde ?? regel.volgorde,
           ),
         );
       }
@@ -487,7 +505,7 @@ class OfferteProjectPrijsregelController {
     }
 
     final gekoppeldeBronnenPerRegelId =
-        _maakGekoppeldeVerdeelkostBronnenPerRegelId(beginRegels);
+        _maakGekoppeldeProjectPrijsregelBronnenPerRegelId(beginRegels);
     final huidigeRegels = _combineerProjectPrijsregelsVoorVenster(beginRegels);
     final formulierTypeSelectiesPerPrijsregelId =
         _maakFormulierTypeSelectiesPerPrijsregelId(

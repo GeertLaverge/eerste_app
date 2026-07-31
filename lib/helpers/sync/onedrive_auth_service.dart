@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-KLANTMAPPEN-FILES-READWRITE-20260731
 import 'package:msal_auth/msal_auth.dart';
 
 class OneDriveAuthService {
@@ -7,6 +8,7 @@ class OneDriveAuthService {
   static const List<String> scopes = [
     'User.Read',
     'Files.ReadWrite.AppFolder',
+    'Files.ReadWrite',
     'Mail.Send',
     'Mail.ReadWrite',
   ];

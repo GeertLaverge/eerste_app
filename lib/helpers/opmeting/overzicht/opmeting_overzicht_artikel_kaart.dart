@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-OVERZICHT-VOLLEDIG-20260731
 // THIMACO-CONTROLE: VELUX-GEEN-STUKPRIJS-NAAST-OMSCHRIJVING-20260730
 // THIMACO-CONTROLE: VELUX-KLANTOMSCHRIJVING-VERKOOPPRIJS-20260730
 // THIMACO-CONTROLE: VELUX-OVERZICHT-EN-CATALOGUSPRIJS-20260729-2212
@@ -29,6 +30,9 @@ import '../toebehoren/plooiwerken/opmeting_plooiwerken_tekenvlak.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_technische_regels_helper.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_tekenvlak.dart';
+import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_model.dart';
+import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_technische_regels_helper.dart';
+import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_tekenvlak.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_technische_regels_helper.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_tekenvlak.dart';
@@ -105,6 +109,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     final schuifvliegendeur = item.schuifvliegendeurData;
     final plooiwerken = item.plooiwerkenData;
     final voorzetscreen = item.voorzetscreenData;
+    final voorzetrolluik = item.voorzetrolluikData;
     final sektionalePoort = item.sektionalePoortData;
     final veluxDakraam = item.veluxDakraamData;
     final vliegendeurTechnischeRegels = vliegendeur == null
@@ -130,6 +135,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         ? const <OpmetingOverzichtTechnischeRegel>[]
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
             OpmetingVoorzetscreenTechnischeRegelsHelper.bouw(voorzetscreen),
+          );
+    final voorzetrolluikTechnischeRegels = voorzetrolluik == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            OpmetingVoorzetrolluikTechnischeRegelsHelper.bouw(voorzetrolluik),
           );
     final sektionalePoortTechnischeRegels = sektionalePoort == null
         ? const <OpmetingOverzichtTechnischeRegel>[]
@@ -303,6 +313,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             _bouwVoorzetscreenOverzicht(
               voorzetscreen,
               voorzetscreenTechnischeRegels,
+            )
+          else if (voorzetrolluik != null)
+            _bouwVoorzetrolluikOverzicht(
+              voorzetrolluik,
+              voorzetrolluikTechnischeRegels,
             )
           else if (sektionalePoort != null)
             _bouwSektionalePoortOverzicht(
@@ -591,6 +606,50 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       maatTitel: 'Afmetingen',
       maatWaarde: model.maatSamenvatting,
       tekening: OpmetingVoorzetscreenTekenvlak(model: model),
+    );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen gegevens ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
+    );
+  }
+
+  Widget _bouwVoorzetrolluikOverzicht(
+    OpmetingVoorzetrolluikModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Afmetingen',
+      maatWaarde: model.maatSamenvatting,
+      tekening: OpmetingVoorzetrolluikTekenvlak(model: model),
     );
     final prijsResultaat =
         OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(

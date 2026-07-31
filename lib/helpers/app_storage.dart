@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-APP-STORAGE-FASE-1-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-APP-STORAGE-BEDIENINGEN-20260730-2115
 // THIMACO-CONTROLE: APP-STORAGE-VELUX-DAKRAMEN-CATALOGUS-20260729
 // THIMACO-CONTROLE: APP-STORAGE-SEKTIONALE-POORTEN-20260729
@@ -20,6 +21,7 @@ import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
 import 'opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
+import 'opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_instellingen_model.dart';
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
@@ -81,6 +83,9 @@ class AppStorage {
 
   static const String _opmetingVoorzetscreenInstellingenKey =
       'thimaco_opmeting_voorzetscreen_instellingen';
+
+  static const String _opmetingVoorzetrolluikInstellingenKey =
+      'thimaco_opmeting_voorzetrolluik_instellingen';
 
   static const String _opmetingSektionalePoortInstellingenKey =
       'thimaco_opmeting_sektionale_poort_instellingen';
@@ -1127,6 +1132,82 @@ class AppStorage {
     await prefs.setString(
       _opmetingVoorzetscreenInstellingenKey,
       encodeOpmetingVoorzetscreenInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN VOORZETROLLUIKEN
+  // ------------------------------------------------------------
+
+  static OpmetingVoorzetrolluikInstellingen
+  _decodeOpmetingVoorzetrolluikInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingVoorzetrolluikInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return const OpmetingVoorzetrolluikInstellingen();
+      }
+
+      return OpmetingVoorzetrolluikInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingVoorzetrolluikInstellingen();
+    }
+  }
+
+  static String encodeOpmetingVoorzetrolluikInstellingenVoorSync(
+    OpmetingVoorzetrolluikInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingVoorzetrolluikInstellingen>
+  laadOpmetingVoorzetrolluikInstellingen() async {
+    final prefs = await openBox();
+    final instellingen = _decodeOpmetingVoorzetrolluikInstellingen(
+      prefs.getString(_opmetingVoorzetrolluikInstellingenKey),
+    );
+
+    return instellingen.copyWith(
+      lamelkleuren: instellingen.lamelkleuren.isEmpty
+          ? OpmetingVoorzetrolluikInstellingen.standaardLamelkleuren
+          : instellingen.lamelkleuren,
+      motoren: instellingen.motoren.isEmpty
+          ? OpmetingVoorzetrolluikInstellingen.standaardMotoren
+          : instellingen.motoren,
+      zonnecelMotoren: instellingen.zonnecelMotoren.isEmpty
+          ? OpmetingVoorzetrolluikInstellingen.standaardZonnecelMotoren
+          : instellingen.zonnecelMotoren,
+    );
+  }
+
+  static Future<void> bewaarOpmetingVoorzetrolluikInstellingen(
+    OpmetingVoorzetrolluikInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+
+    await prefs.setString(
+      _opmetingVoorzetrolluikInstellingenKey,
+      encodeOpmetingVoorzetrolluikInstellingenVoorSync(voorOpslag),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingVoorzetrolluikInstellingenVoorSync(
+    OpmetingVoorzetrolluikInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingVoorzetrolluikInstellingenKey,
+      encodeOpmetingVoorzetrolluikInstellingenVoorSync(instellingen),
     );
   }
 

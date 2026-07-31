@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-STUKPRIJS-MUTATIE-ADAPTER-20260731
+// THIMACO-CONTROLE: VOORZETSCREEN-STUKPRIJS-MUTATIE-ADAPTER-20260731
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-PRIJS-MUTATIE-20260729
 // THIMACO-CONTROLE: PLOOIWERKEN-PRIJS-MUTATIE-ADAPTER-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-PRIJS-MUTATIE-ADAPTER-20260728
@@ -71,6 +73,10 @@ class OfferteArtikelPrijsMutatieService {
       _SchuifvliegendeurPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter plooiwerken =
       _PlooiwerkenPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter voorzetscreen =
+      _VoorzetscreenPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter voorzetrolluik =
+      _VoorzetrolluikPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter sektionalePoort =
       _SektionalePoortPrijsMutatieAdapter();
 
@@ -86,6 +92,8 @@ class OfferteArtikelPrijsMutatieService {
         vliegendeur,
         schuifvliegendeur,
         plooiwerken,
+        voorzetscreen,
+        voorzetrolluik,
         sektionalePoort,
       ];
 
@@ -406,6 +414,122 @@ class _PlooiwerkenPrijsMutatieAdapter
       artikel,
     );
     return koppeling?.adapterId == id;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _VoorzetscreenPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _VoorzetscreenPrijsMutatieAdapter();
+
+  @override
+  String get id => 'voorzetscreen';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return koppeling?.adapterId == id && artikel.voorzetscreenData != null;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _VoorzetrolluikPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _VoorzetrolluikPrijsMutatieAdapter();
+
+  @override
+  String get id => 'voorzetrolluik';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return koppeling?.adapterId == id && artikel.voorzetrolluikData != null;
   }
 
   @override
