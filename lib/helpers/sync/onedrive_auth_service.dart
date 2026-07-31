@@ -1,11 +1,11 @@
-// THIMACO-CONTROLE: ONEDRIVE-KLANTMAPPEN-FILES-READWRITE-20260731
+// THIMACO-CONTROLE: ONEDRIVE-SILENT-LOGIN-KEYCHAIN-20260731
 import 'package:msal_auth/msal_auth.dart';
 
 class OneDriveAuthService {
   static const String clientId = '3224b91e-bff0-4b46-8b8e-f3db21987a2a';
   static const String tenantId = 'cf489dc4-f99d-4365-8204-926a654d871b';
 
-  static const List<String> scopes = [
+  static const List<String> scopes = <String>[
     'User.Read',
     'Files.ReadWrite.AppFolder',
     'Files.ReadWrite',
@@ -14,9 +14,7 @@ class OneDriveAuthService {
   ];
 
   static SingleAccountPca? _pca;
-
-  // Tijdelijke fallback: werkt alleen zolang de app open blijft.
-  static String? _laatsteToken;
+  static Future<String>? _lopendeLogin;
 
   Future<SingleAccountPca> _getPca() async {
     _pca ??= await SingleAccountPca.create(
@@ -33,26 +31,15 @@ class OneDriveAuthService {
   Future<String> tokenSilent() async {
     try {
       final pca = await _getPca();
-
       final result = await pca.acquireTokenSilent(scopes: scopes);
-
-      final token = result.accessToken;
+      final token = result.accessToken.trim();
 
       if (token.isEmpty) {
-        if (_laatsteToken != null && _laatsteToken!.isNotEmpty) {
-          return _laatsteToken!;
-        }
-
         return 'FOUT_GEEN_TOKEN_SILENT';
       }
 
-      _laatsteToken = token;
       return token;
     } catch (e) {
-      if (_laatsteToken != null && _laatsteToken!.isNotEmpty) {
-        return _laatsteToken!;
-      }
-
       return 'FOUT_SILENT_LOGIN: $e';
     }
   }
@@ -60,26 +47,50 @@ class OneDriveAuthService {
   Future<String> loginInteractief() async {
     try {
       final pca = await _getPca();
-
       final result = await pca.acquireToken(scopes: scopes);
-
-      final token = result.accessToken;
+      final token = result.accessToken.trim();
 
       if (token.isEmpty) {
         return 'FOUT_GEEN_TOKEN';
       }
 
-      _laatsteToken = token;
       return token;
     } catch (e) {
       return 'FOUT_LOGIN: $e';
     }
   }
 
+  Future<String> login() {
+    final lopendeLogin = _lopendeLogin;
+    if (lopendeLogin != null) {
+      return lopendeLogin;
+    }
+
+    final nieuweLogin = _loginMetSilentFallback();
+    _lopendeLogin = nieuweLogin;
+
+    nieuweLogin.whenComplete(() {
+      if (identical(_lopendeLogin, nieuweLogin)) {
+        _lopendeLogin = null;
+      }
+    });
+
+    return nieuweLogin;
+  }
+
+  Future<String> _loginMetSilentFallback() async {
+    final silentToken = await tokenSilent();
+
+    if (!_isFout(silentToken)) {
+      return silentToken;
+    }
+
+    return loginInteractief();
+  }
+
   Future<String> accountDebugInfo() async {
     try {
       final pca = await _getPca();
-
       final account = await pca.currentAccount;
 
       return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN\n$account';
@@ -88,7 +99,8 @@ class OneDriveAuthService {
     }
   }
 
-  Future<String> login() async {
-    return loginInteractief();
+  static bool _isFout(String waarde) {
+    final tekst = waarde.trim();
+    return tekst.isEmpty || tekst.startsWith('FOUT');
   }
 }
