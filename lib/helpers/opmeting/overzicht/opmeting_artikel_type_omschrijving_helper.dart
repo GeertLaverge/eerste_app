@@ -1,9 +1,11 @@
+// THIMACO-CONTROLE: UITVALSCHERM-ARTIKELOMSCHRIJVING-20260801
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-ANALYZER-HERSTEL-20260729-1045
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-ARTIKELOMSCHRIJVING-20260729
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-ARTIKELOMSCHRIJVING-20260728
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
+import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_model.dart';
 import 'opmeting_overzicht_model.dart';
 
 class OpmetingArtikelTypeOmschrijvingHelper {
@@ -22,6 +24,12 @@ class OpmetingArtikelTypeOmschrijvingHelper {
         return _deurOmschrijvingRegels(item).join(' - ');
       case 'schuifvliegendeur':
         return _schuifvliegendeurOmschrijving(item);
+      case 'uitvalscherm':
+        final uitvalscherm = item.uitvalschermData;
+        if (uitvalscherm == null) return '';
+        return uitvalscherm.type.is700LX
+            ? '${uitvalscherm.type.label} · ${uitvalscherm.lxOmschrijving}'
+            : '${uitvalscherm.type.label} · ${uitvalscherm.doekSamenvatting}';
       case 'sektionalePoort':
         final model = item.sektionalePoortData;
         if (model == null) return '';

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTE-GOEDKEURING-IPAD-PAPIER-20260801
+// THIMACO-CONTROLE: UITVALSCHERM-PDF-KOPPELING-20260801
 // THIMACO-CONTROLE: OPMETING-PDF-KLANTADRES-IN-KOP-20260731
 // THIMACO-CONTROLE: GENEREREN-OPMETING-PDF-ZONDER-PRIJZEN-20260731
 // THIMACO-CONTROLE: VOORZETROLLUIK-CENTRALE-OFFERTE-PDF-20260731
@@ -15,10 +17,12 @@ import 'package:printing/printing.dart';
 import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
+import 'offerte_goedkeuring_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
 import 'offerte_pdf_plooiwerken_widget.dart';
 import 'offerte_pdf_voorzetscreen_widget.dart';
 import 'offerte_pdf_voorzetrolluik_widget.dart';
+import 'offerte_pdf_uitvalscherm_widget.dart';
 import 'offerte_pdf_sektionale_poort_widget.dart';
 import 'offerte_pdf_pvc_raam_widget.dart';
 import 'offerte_pdf_schuifvliegendeur_widget.dart';
@@ -43,7 +47,7 @@ class OffertePdfService {
   static const double _artikelKopHoogte = 32;
   static const double _ruimteTussenArtikels = 16;
   static const double _paginaVoetReserve = 36;
-  static const double _basisEindBerekeningReserve = 106;
+  static const double _basisEindBerekeningReserve = 0;
   static const double _opmetingPaddingBoven = 18;
   static const double _opmetingPaddingOnder = 18;
   static const double _opmetingKopHoogte = 72;
@@ -56,7 +60,10 @@ class OffertePdfService {
         '${twee(datum.hour)}${twee(datum.minute)}';
   }
 
-  static Future<Uint8List> bouwPdf(OfferteDocumentData data) async {
+  static Future<Uint8List> bouwPdf(
+    OfferteDocumentData data, {
+    OfferteGoedkeuring? goedkeuring,
+  }) async {
     final logoData = await rootBundle.load(logoAsset);
     final toonzaalData = await rootBundle.load(toonzaalAsset);
 
@@ -86,7 +93,7 @@ class OffertePdfService {
 
     final detailPaginas = _verdeelPositiesOverPaginas(data);
     final optiePaginas = _verdeelOptiesOverPaginas(data);
-    final totaalPaginaAantal = 1 + detailPaginas.length + optiePaginas.length;
+    final totaalPaginaAantal = 2 + detailPaginas.length + optiePaginas.length;
 
     document.addPage(
       pw.Page(
@@ -124,7 +131,7 @@ class OffertePdfService {
     }
 
     // Alleen opties waarvoor expliciet `apartePagina` werd gekozen, komen
-    // na de volledige hoofdofferte en haar eindberekening. Opties met
+    // na de volledige hoofdofferte en vóór de afzonderlijke goedkeuringspagina. Opties met
     // `positieBehouden` staan al op hun oorspronkelijke plaats tussen de
     // gewone artikelen. Een artikelblok wordt nooit opgesplitst.
     for (final optiePagina in optiePaginas) {
@@ -144,6 +151,21 @@ class OffertePdfService {
       );
       paginaNummer++;
     }
+
+    document.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        theme: pdfThema,
+        build: (context) => _bouwGoedkeuringsPagina(
+          data: data,
+          logo: logo,
+          goedkeuring: goedkeuring,
+          paginaNummer: paginaNummer,
+          totaalPaginaAantal: totaalPaginaAantal,
+        ),
+      ),
+    );
 
     return document.save();
   }
@@ -730,12 +752,13 @@ class OffertePdfService {
               _bouwProjectPrijsregels(data),
               pw.SizedBox(height: 10),
             ],
-            _bouwEindBerekening(data),
             if (data.heeftLossePrijsOpties) ...<pw.Widget>[
-              pw.SizedBox(height: 10),
               _bouwLossePrijsOpties(data),
+              pw.SizedBox(height: 10),
             ],
-            pw.SizedBox(height: 14),
+            if (data.heeftZichtbareProjectPrijsregels ||
+                data.heeftLossePrijsOpties)
+              pw.SizedBox(height: 4),
           ],
           _bouwPaginaVoet(
             logo: logo,
@@ -947,6 +970,14 @@ class OffertePdfService {
             )
           else if (artikel.positie.voorzetrolluikData != null)
             OffertePdfVoorzetrolluikWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
+          else if (artikel.positie.uitvalschermData != null)
+            OffertePdfUitvalschermWidget.bouwPositie(
               positie: artikel.positie,
               kortingToestaan: kortingToestaanEffectief,
               isOptie: isOptie,
@@ -1275,6 +1306,12 @@ class OffertePdfService {
         kortingToestaan: kortingToestaanEffectief,
         isOptie: isOptie,
       );
+    } else if (positie.uitvalschermData != null) {
+      inhoudHoogte = OffertePdfUitvalschermWidget.berekenTotalePositieHoogte(
+        positie,
+        kortingToestaan: kortingToestaanEffectief,
+        isOptie: isOptie,
+      );
     } else if (positie.sektionalePoortData != null) {
       inhoudHoogte = OffertePdfSektionalePoortWidget.berekenTotalePositieHoogte(
         positie,
@@ -1338,7 +1375,6 @@ class OffertePdfService {
         data.algemeneArtikelPrijsregelsInbegrepenInOfferte.length;
     final aantalProjectOpties = data.lossePrijsOpties.length;
     var reserve = _basisEindBerekeningReserve;
-    if (data.kortingTotaalExclBtw > 0.0) reserve += 48.0;
     if (aantalProjectRegels > 0) {
       reserve += 38.0 + (aantalProjectRegels * 25.0);
     }
@@ -1457,6 +1493,309 @@ class OffertePdfService {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  static pw.Widget _bouwGoedkeuringsPagina({
+    required OfferteDocumentData data,
+    required pw.ImageProvider logo,
+    required OfferteGoedkeuring? goedkeuring,
+    required int paginaNummer,
+    required int totaalPaginaAantal,
+  }) {
+    final isOndertekend = goedkeuring?.isOndertekend ?? false;
+    final klantNaam = data.klant.naam.trim();
+    final offerteNummer = data.offerteNummer.trim().isEmpty
+        ? 'Zonder offertenummer'
+        : data.offerteNummer.trim();
+
+    return pw.Container(
+      width: PdfPageFormat.a4.width,
+      height: PdfPageFormat.a4.height,
+      color: PdfColors.white,
+      padding: const pw.EdgeInsets.fromLTRB(
+        34,
+        _detailPaddingBoven,
+        34,
+        _detailPaddingOnder,
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: <pw.Widget>[
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: <pw.Widget>[
+              pw.Image(logo, width: 76, height: 34, fit: pw.BoxFit.contain),
+              pw.SizedBox(width: 14),
+              pw.Expanded(
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: <pw.Widget>[
+                    pw.Text(
+                      'Goedkeuring offerte',
+                      style: pw.TextStyle(
+                        color: tekstDonker,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.SizedBox(height: 3),
+                    pw.Text(
+                      '$offerteNummer · ${_formatteerDatum(data.offerteDatum)}',
+                      style: const pw.TextStyle(
+                        color: tekstGrijs,
+                        fontSize: 8.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isOndertekend)
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: pw.BoxDecoration(
+                    color: const PdfColor.fromInt(0xFFE7F6EC),
+                    borderRadius: pw.BorderRadius.circular(20),
+                    border: pw.Border.all(
+                      color: const PdfColor.fromInt(0xFF0B7A3B),
+                      width: 0.7,
+                    ),
+                  ),
+                  child: pw.Text(
+                    'ONDERTEKEND',
+                    style: pw.TextStyle(
+                      color: const PdfColor.fromInt(0xFF0B7A3B),
+                      fontSize: 7.5,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          pw.SizedBox(height: 14),
+          pw.Container(height: 1, color: oranje),
+          pw.SizedBox(height: 16),
+          _bouwEindBerekening(data),
+          pw.SizedBox(height: 18),
+          _bouwGoedkeuringsContainer(
+            data: data,
+            goedkeuring: goedkeuring,
+            klantNaam: klantNaam,
+            offerteNummer: offerteNummer,
+          ),
+          pw.Spacer(),
+          pw.Text(
+            'Afzonderlijk vermelde opties zijn niet in het bovenstaande '
+            'totaal inbegrepen, tenzij dit uitdrukkelijk anders is vermeld.',
+            textAlign: pw.TextAlign.center,
+            style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.2),
+          ),
+          pw.SizedBox(height: 10),
+          _bouwPaginaVoet(
+            logo: logo,
+            paginaNummer: paginaNummer,
+            totaalPaginaAantal: totaalPaginaAantal,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _bouwGoedkeuringsContainer({
+    required OfferteDocumentData data,
+    required OfferteGoedkeuring? goedkeuring,
+    required String klantNaam,
+    required String offerteNummer,
+  }) {
+    final isOndertekend = goedkeuring?.isOndertekend ?? false;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.fromLTRB(16, 14, 16, 16),
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFF9FAFB),
+        borderRadius: pw.BorderRadius.circular(9),
+        border: pw.Border.all(color: rand, width: 0.9),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: <pw.Widget>[
+          pw.Text(
+            'Goedkeuring door de klant',
+            style: pw.TextStyle(
+              color: tekstDonker,
+              fontSize: 11,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 7),
+          pw.Text(
+            'Ondergetekende verklaart kennis te hebben genomen van deze '
+            'offerte en de bijbehorende voorwaarden en keurt de beschreven '
+            'werken en het vermelde totaalbedrag goed.',
+            style: const pw.TextStyle(
+              color: tekstGrijs,
+              fontSize: 8.2,
+              lineSpacing: 2,
+            ),
+          ),
+          pw.SizedBox(height: 12),
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: <pw.Widget>[
+              pw.Expanded(
+                child: _goedkeuringsInfoRegel(
+                  label: 'Offertenummer',
+                  waarde: offerteNummer,
+                ),
+              ),
+              pw.SizedBox(width: 16),
+              pw.Expanded(
+                child: _goedkeuringsInfoRegel(
+                  label: 'Datum offerte',
+                  waarde: _formatteerDatum(data.offerteDatum),
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 8),
+          _goedkeuringsInfoRegel(
+            label: 'Totaal inclusief btw',
+            waarde: _formatteerEuro(data.totaalInclusiefBtw),
+            benadrukt: true,
+          ),
+          pw.SizedBox(height: 16),
+          if (isOndertekend) ...<pw.Widget>[
+            pw.Row(
+              children: <pw.Widget>[
+                pw.Expanded(
+                  child: _goedkeuringsInfoRegel(
+                    label: 'Naam klant',
+                    waarde: goedkeuring!.naam.trim(),
+                  ),
+                ),
+                pw.SizedBox(width: 16),
+                pw.Expanded(
+                  child: _goedkeuringsInfoRegel(
+                    label: 'Ondertekend op',
+                    waarde: _formatteerDatumTijd(goedkeuring!.getekendOp),
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+            pw.Container(
+              height: 128,
+              padding: const pw.EdgeInsets.fromLTRB(12, 8, 12, 8),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                borderRadius: pw.BorderRadius.circular(7),
+                border: pw.Border.all(color: rand, width: 0.8),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: <pw.Widget>[
+                  pw.Text(
+                    'Handtekening klant',
+                    style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.5),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Expanded(
+                    child: pw.Center(
+                      child: pw.Image(
+                        pw.MemoryImage(goedkeuring!.handtekeningPng),
+                        fit: pw.BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...<pw.Widget>[
+            pw.Row(
+              children: <pw.Widget>[
+                pw.Expanded(
+                  child: _legeGoedkeuringsLijn(
+                    label: 'Naam klant',
+                    vooraf: klantNaam,
+                  ),
+                ),
+                pw.SizedBox(width: 16),
+                pw.Expanded(
+                  child: _legeGoedkeuringsLijn(label: 'Datum goedkeuring'),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 14),
+            pw.Container(
+              height: 128,
+              padding: const pw.EdgeInsets.all(12),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                borderRadius: pw.BorderRadius.circular(7),
+                border: pw.Border.all(color: rand, width: 0.8),
+              ),
+              child: pw.Align(
+                alignment: pw.Alignment.topLeft,
+                child: pw.Text(
+                  'Handtekening klant',
+                  style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.5),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _goedkeuringsInfoRegel({
+    required String label,
+    required String waarde,
+    bool benadrukt = false,
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: <pw.Widget>[
+        pw.Text(
+          label,
+          style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.2),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Text(
+          waarde.trim().isEmpty ? '—' : waarde.trim(),
+          style: pw.TextStyle(
+            color: benadrukt ? oranje : tekstDonker,
+            fontSize: benadrukt ? 10 : 8.5,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _legeGoedkeuringsLijn({
+    required String label,
+    String vooraf = '',
+  }) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: <pw.Widget>[
+        pw.Text(
+          label,
+          style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.2),
+        ),
+        pw.SizedBox(height: 6),
+        if (vooraf.trim().isNotEmpty)
+          pw.Text(
+            vooraf.trim(),
+            style: const pw.TextStyle(color: tekstDonker, fontSize: 8.5),
+          ),
+        pw.SizedBox(height: vooraf.trim().isNotEmpty ? 5 : 15),
+        pw.Container(height: 0.8, color: tekstGrijs),
       ],
     );
   }
@@ -1665,6 +2004,13 @@ class OffertePdfService {
         ),
       ],
     );
+  }
+
+  static String _formatteerDatumTijd(DateTime datum) {
+    String twee(int waarde) => waarde.toString().padLeft(2, '0');
+
+    return '${twee(datum.day)}/${twee(datum.month)}/${datum.year} '
+        'om ${twee(datum.hour)}:${twee(datum.minute)}';
   }
 
   static String _formatteerDatum(DateTime datum) {

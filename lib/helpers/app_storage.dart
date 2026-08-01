@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-APP-STORAGE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-APP-STORAGE-FASE-1-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-APP-STORAGE-BEDIENINGEN-20260730-2115
 // THIMACO-CONTROLE: APP-STORAGE-VELUX-DAKRAMEN-CATALOGUS-20260729
@@ -22,6 +23,7 @@ import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
 import 'opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
 import 'opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_instellingen_model.dart';
+import 'opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_model.dart';
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
@@ -86,6 +88,9 @@ class AppStorage {
 
   static const String _opmetingVoorzetrolluikInstellingenKey =
       'thimaco_opmeting_voorzetrolluik_instellingen';
+
+  static const String _opmetingUitvalschermInstellingenKey =
+      'thimaco_opmeting_uitvalscherm_instellingen';
 
   static const String _opmetingSektionalePoortInstellingenKey =
       'thimaco_opmeting_sektionale_poort_instellingen';
@@ -1208,6 +1213,67 @@ class AppStorage {
     await prefs.setString(
       _opmetingVoorzetrolluikInstellingenKey,
       encodeOpmetingVoorzetrolluikInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN UITVALSCHERMEN
+  // ------------------------------------------------------------
+
+  static OpmetingUitvalschermInstellingen
+  _decodeOpmetingUitvalschermInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingUitvalschermInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return const OpmetingUitvalschermInstellingen();
+      }
+      return OpmetingUitvalschermInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingUitvalschermInstellingen();
+    }
+  }
+
+  static String encodeOpmetingUitvalschermInstellingenVoorSync(
+    OpmetingUitvalschermInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingUitvalschermInstellingen>
+  laadOpmetingUitvalschermInstellingen() async {
+    final prefs = await openBox();
+    return _decodeOpmetingUitvalschermInstellingen(
+      prefs.getString(_opmetingUitvalschermInstellingenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingUitvalschermInstellingen(
+    OpmetingUitvalschermInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+    await prefs.setString(
+      _opmetingUitvalschermInstellingenKey,
+      encodeOpmetingUitvalschermInstellingenVoorSync(voorOpslag),
+    );
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingUitvalschermInstellingenVoorSync(
+    OpmetingUitvalschermInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingUitvalschermInstellingenKey,
+      encodeOpmetingUitvalschermInstellingenVoorSync(instellingen),
     );
   }
 

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-HOOFDPAGINA-20260801
 // THIMACO-CONTROLE: ONEDRIVE-KLANTDOCUMENTEN-STAP-2-20260731
 // THIMACO-CONTROLE: GENEREREN-OFFERTE-OPMETING-20260731
 // THIMACO-CONTROLE: VOORZETROLLUIK-MENU-NAVIGATIE-20260731-1025
@@ -370,6 +371,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
     return _formulierNavigatieController.openVoorzetrolluik(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
+  Future<void> _openUitvalscherm({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openUitvalscherm(
       bestaandeOpmeting: bestaandeOpmeting,
     );
   }
@@ -1021,6 +1030,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.voorzetrolluik:
         await _openVoorzetrolluik();
+        break;
+
+      case OfferteArtikelOpenType.uitvalscherm:
+        await _openUitvalscherm();
         break;
 
       case OfferteArtikelOpenType.sektionalePoort:

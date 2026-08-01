@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-NAVIGATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-NAVIGATIE-AMBIGUOUS-IMPORT-HERSTEL-20260731-0845
 // THIMACO-CONTROLE: VOORZETSCREEN-PROJECTKLEUR-NAVIGATIE-20260730-2005
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-NAVIGATIE-FASE-1-2-20260729-2030
@@ -14,6 +15,7 @@ import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_fiche.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_fiche.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_fiche.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_fiche.dart';
+import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_fiche.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_fiche.dart';
 import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_fiche.dart';
 import '../../../paginas/opmeting_raam_pagina.dart';
@@ -373,6 +375,42 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
+  Future<void> openUitvalscherm({
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) async {
+    if (_formulierOpenenBezig) return;
+    _formulierOpenenBezig = true;
+
+    try {
+      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
+          ? bestaandeOpmeting!.klantNaam.trim()
+          : leesKlantNaam().trim();
+
+      if (klantNaam.isEmpty || !isMounted()) return;
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+      if (!isMounted() || !context.mounted) return;
+
+      final resultaat = await Navigator.of(context)
+          .push<overzicht.OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingUitvalschermFiche(
+                  klantNaam: klantNaam,
+                  bestaandeOpmeting: bestaandeOpmeting,
+                  projectKleur: _projectKleurVoorPlooiwerken(),
+                );
+              },
+            ),
+          );
+
+      if (resultaat == null || !isMounted()) return;
+      await herlaadOpmetingen(klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
+    }
+  }
+
   Future<void> openSektionalePoort({
     overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
@@ -494,6 +532,11 @@ class OpmetingFormulierNavigatieController {
 
     if (item.formulierTypeGenormaliseerd == 'voorzetrolluik') {
       await openVoorzetrolluik(bestaandeOpmeting: item);
+      return;
+    }
+
+    if (item.formulierTypeGenormaliseerd == 'uitvalscherm') {
+      await openUitvalscherm(bestaandeOpmeting: item);
       return;
     }
 

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-INSTELLINGEN-ONEDRIVE-SYNC-20260801
 // THIMACO-CONTROLE: ONEDRIVE-SYNC-ZONDER-OVERBODIGE-LOGIN-20260731
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-ONEDRIVE-SYNC-20260729
 // THIMACO-CONTROLE: ONEDRIVE-PLOOIWERKEN-INSTELLINGEN-DEFINITIEF-20260728-2110
@@ -79,6 +80,9 @@ class OneDriveSyncService {
 
   static const String _opmetingSektionalePoortInstellingenKey =
       'thimaco_opmeting_sektionale_poort_instellingen';
+
+  static const String _opmetingUitvalschermInstellingenKey =
+      'thimaco_opmeting_uitvalscherm_instellingen';
 
   static const String _opmetingVeluxDakraamInstellingenKey =
       'thimaco_opmeting_velux_dakraam_instellingen';
@@ -579,6 +583,11 @@ class OneDriveSyncService {
             prefs.getString(_opmetingPlooiwerkenInstellingenKey) ??
             (cloudBackup['opmetingPlooiwerkenInstellingen'] is String
                 ? cloudBackup['opmetingPlooiwerkenInstellingen'] as String
+                : null),
+        'opmetingUitvalschermInstellingen':
+            prefs.getString(_opmetingUitvalschermInstellingenKey) ??
+            (cloudBackup['opmetingUitvalschermInstellingen'] is String
+                ? cloudBackup['opmetingUitvalschermInstellingen'] as String
                 : null),
         'opmetingSektionalePoortInstellingen':
             prefs.getString(_opmetingSektionalePoortInstellingenKey) ??
@@ -1361,6 +1370,13 @@ class OneDriveSyncService {
         await prefs.setString(
           _opmetingPlooiwerkenInstellingenKey,
           data['opmetingPlooiwerkenInstellingen'],
+        );
+      }
+
+      if (data['opmetingUitvalschermInstellingen'] is String) {
+        await prefs.setString(
+          _opmetingUitvalschermInstellingenKey,
+          data['opmetingUitvalschermInstellingen'],
         );
       }
 

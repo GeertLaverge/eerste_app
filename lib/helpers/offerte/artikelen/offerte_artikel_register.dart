@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-MENU-REGISTRATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-MENU-REGISTRATIE-20260731-1025
 // THIMACO-CONTROLE: OPMEETFICHE-MENU-GROEPEN-20260730
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-REGISTER-FASE-1-2-20260729-2030
@@ -24,6 +25,7 @@ enum OfferteArtikelOpenType {
   plooiwerken,
   voorzetscreen,
   voorzetrolluik,
+  uitvalscherm,
   sektionalePoort,
   veluxDakraam,
 }
@@ -158,6 +160,14 @@ class OfferteArtikelRegister {
           openType: OfferteArtikelOpenType.voorzetrolluik,
         ),
         OfferteArtikelRegistratie(
+          menuWaarde: 'uitvalscherm',
+          formulierType: 'uitvalscherm',
+          formulierNaam: 'Uitvalscherm',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.wb_sunny_outlined,
+          openType: OfferteArtikelOpenType.uitvalscherm,
+        ),
+        OfferteArtikelRegistratie(
           menuWaarde: 'sektionale_poort',
           formulierType: 'sektionalePoort',
           formulierNaam: 'Sektionale poorten',
@@ -196,8 +206,14 @@ class OfferteArtikelRegister {
             'vliegendeur',
             'schuifvliegendeur',
             'plooiwerken',
+          ],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'Zonwering',
+          menuWaarden: <String>[
             'voorzetscreen',
             'voorzetrolluik',
+            'uitvalscherm',
           ],
         ),
         OfferteArtikelMenuGroep(

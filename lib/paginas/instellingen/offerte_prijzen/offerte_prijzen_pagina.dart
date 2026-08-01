@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260730-2205
 // THIMACO-CONTROLE: VELUX-ZICHTBAAR-BIJ-TECHNISCHE-PRIJSKEUZES-20260730
@@ -71,6 +72,13 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           formulierType: 'voorzetrolluik',
           naam: 'Voorzetrolluik',
           icoon: Icons.blinds_outlined,
+          actief: true,
+          toonBijTechnischeKeuzes: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'uitvalscherm',
+          naam: 'Uitvalscherm',
+          icoon: Icons.wb_sunny_outlined,
           actief: true,
           toonBijTechnischeKeuzes: true,
         ),
