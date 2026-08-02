@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-LEES-EN-ONTVANGSTBEVESTIGING-20260802
 // THIMACO-CONTROLE: OFFERTE-MAIL-GRAPH-VERZEND-SERVICE-20260802
 
 import 'dart:convert';
@@ -136,6 +137,8 @@ class OfferteMailVerzendService {
       Uri.parse('$_graphBasis/me/messages'),
       <String, dynamic>{
         'subject': onderwerp,
+        'isReadReceiptRequested': true,
+        'isDeliveryReceiptRequested': true,
         'body': <String, dynamic>{'contentType': 'Text', 'content': bericht},
         'toRecipients': <Map<String, dynamic>>[
           <String, dynamic>{

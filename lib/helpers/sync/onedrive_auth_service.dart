@@ -1,4 +1,8 @@
+// THIMACO-CONTROLE: ONEDRIVE-ACCOUNT-DEBUG-MET-ECHT-EMAILADRES-20260802
 // THIMACO-CONTROLE: ONEDRIVE-SILENT-ZONDER-OVERBODIGE-POPUP-20260731
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
 import 'package:msal_auth/msal_auth.dart';
 
 class OneDriveAuthService {
@@ -163,7 +167,50 @@ class OneDriveAuthService {
       final pca = await _getPca();
       final account = await pca.currentAccount;
 
-      return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN\n$account';
+      if (account == null) {
+        return 'ACCOUNT_DEBUG: GEEN MICROSOFT-ACCOUNT GEVONDEN';
+      }
+
+      final token = await tokenSilent();
+      if (_isFout(token)) {
+        return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN, MAAR GEEN STILLE TOKEN\n'
+            '$token';
+      }
+
+      final response = await http.get(
+        Uri.parse(
+          'https://graph.microsoft.com/v1.0/me?'
+          r'$select=id,displayName,mail,userPrincipalName',
+        ),
+        headers: <String, String>{
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
+
+      if (response.statusCode != 200) {
+        return 'ACCOUNT_DEBUG: MICROSOFT GRAPH FOUT ${response.statusCode}\n'
+            '${response.body}';
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return 'ACCOUNT_DEBUG: ONVERWACHT ANTWOORD VAN MICROSOFT';
+      }
+
+      final data = Map<String, dynamic>.from(decoded);
+      final naam = data['displayName']?.toString().trim() ?? '';
+      final mail = data['mail']?.toString().trim() ?? '';
+      final gebruikersnaam = data['userPrincipalName']?.toString().trim() ?? '';
+      final id = data['id']?.toString().trim() ?? '';
+      final effectiefAdres = mail.isNotEmpty ? mail : gebruikersnaam;
+
+      return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN\n'
+          'Naam: ${naam.isEmpty ? '-' : naam}\n'
+          'E-mailadres: ${effectiefAdres.isEmpty ? '-' : effectiefAdres}\n'
+          'Microsoft-gebruikersnaam: '
+          '${gebruikersnaam.isEmpty ? '-' : gebruikersnaam}\n'
+          'Account-ID: ${id.isEmpty ? '-' : id}';
     } catch (e) {
       return 'ACCOUNT_DEBUG_FOUT: $e';
     }

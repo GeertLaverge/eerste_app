@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: IPAD-GEEN-AUTOMATISCHE-MICROSOFT-LOGIN-20260802
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-ONEDRIVE-SYNC-20260802
 // THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-ONEDRIVE-SYNC-20260802
 import 'dart:convert';
@@ -1054,11 +1055,15 @@ class OneDriveSyncService {
       return slimmeSync();
     }
 
-    final token = await OneDriveAuthService().loginInteractief();
+    // Een automatische eerste-startcontrole mag nooit zelf een interactief
+    // Microsoft-aanmeldvenster openen. Op iPad kan dat venster anders telkens
+    // opnieuw verschijnen wanneer de stille token tijdelijk niet beschikbaar is.
+    final token = await OneDriveAuthService().tokenSilent();
 
     if (token.startsWith('FOUT')) {
-      laatsteSyncActie = 'Eerste login mislukt';
-      return token;
+      laatsteSyncActie =
+          'Eerste start overgeslagen: geen stille Microsoft-sessie beschikbaar';
+      return 'EERSTE_START_GEEN_STILLE_LOGIN';
     }
 
     final resultaat = await downloadBackupMetToken(token, downloadFotos: true);
