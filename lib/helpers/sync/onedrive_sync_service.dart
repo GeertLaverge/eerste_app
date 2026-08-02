@@ -1235,9 +1235,11 @@ class OneDriveSyncService {
 
   Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
-      final token = magLoginVragen
-          ? await OneDriveAuthService().loginInteractief()
-          : await OneDriveAuthService().tokenSilent();
+      // Ook wanneer een gewone opslagactie historisch magLoginVragen=true
+      // doorgeeft, mag deze datumcontrole nooit zelf een Microsoft-venster
+      // openen. Alleen de expliciete knoppen Aanmelden Microsoft en
+      // Download van OneDrive gebruiken loginInteractief().
+      final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return null;

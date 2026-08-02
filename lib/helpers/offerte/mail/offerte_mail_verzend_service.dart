@@ -32,7 +32,7 @@ class OfferteMailVerzendService {
   static const int _kleineBijlageGrens = 3 * 1024 * 1024;
   static const int _maximaleBijlageGrootte = 150 * 1024 * 1024;
   static const int _uploadBlokGrootte = 3932160; // 12 × 320 KiB, onder 4 MiB.
-  static const String _immutableIdVoorkeur = 'IdType=\"ImmutableId\"';
+  static const String _immutableIdVoorkeur = 'IdType="ImmutableId"';
 
   final OneDriveAuthService _authService;
   String? _token;
@@ -73,6 +73,27 @@ class OfferteMailVerzendService {
       }
     }
 
+    // Gewone offerte-mails worden rechtstreeks via /me/sendMail verstuurd.
+    // Dit is dezelfde eenvoudige Graph-verzendroute die geen tijdelijk concept
+    // achterlaat en expliciet bewaart in Verzonden items.
+    final totaleBijlageGrootte = bijlagen.fold<int>(
+      0,
+      (totaal, bijlage) => totaal + bijlage.bytes.length,
+    );
+    if (totaleBijlageGrootte < _kleineBijlageGrens) {
+      onVoortgang?.call('E-mail versturen…', 0.10);
+      await _verstuurRechtstreeks(
+        ontvanger: schoonAdres,
+        onderwerp: onderwerp.trim(),
+        bericht: bericht.trim(),
+        bijlagen: bijlagen,
+      );
+      onVoortgang?.call('E-mail verstuurd', 1.0);
+      return;
+    }
+
+    // Alleen voor grotere totale bijlagen blijft de uploadsessie via een
+    // concept nodig. Dit pad wordt niet gebruikt voor gewone kleine offertes.
     String? conceptId;
     try {
       onVoortgang?.call('E-mail voorbereiden…', 0.05);
@@ -124,6 +145,50 @@ class OfferteMailVerzendService {
         await _verwijderConceptBestEffort(conceptId);
       }
       rethrow;
+    }
+  }
+
+  Future<void> _verstuurRechtstreeks({
+    required String ontvanger,
+    required String onderwerp,
+    required String bericht,
+    required List<OfferteMailBijlage> bijlagen,
+  }) async {
+    final response = await _postJsonMetHerlogin(
+      Uri.parse('$_graphBasis/me/sendMail'),
+      <String, dynamic>{
+        'message': <String, dynamic>{
+          'subject': onderwerp,
+          'body': <String, dynamic>{'contentType': 'Text', 'content': bericht},
+          'toRecipients': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'emailAddress': <String, dynamic>{'address': ontvanger},
+            },
+          ],
+          'isReadReceiptRequested': true,
+          'isDeliveryReceiptRequested': true,
+          'attachments': bijlagen
+              .map((bijlage) {
+                return <String, dynamic>{
+                  '@odata.type': '#microsoft.graph.fileAttachment',
+                  'name': _veiligeBestandsnaam(bijlage.bestandsnaam),
+                  'contentType': bijlage.contentType,
+                  'contentBytes': base64Encode(bijlage.bytes),
+                };
+              })
+              .toList(growable: false),
+        },
+        'saveToSentItems': true,
+      },
+    );
+
+    if (response.statusCode != 202) {
+      throw OfferteMailVerzendException(
+        _foutmelding(
+          response,
+          standaard: 'De e-mail kon niet worden verstuurd.',
+        ),
+      );
     }
   }
 
