@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-AUTOMATISCH-ALTIJD-SILENT-20260802
 // THIMACO-CONTROLE: ONEDRIVE-ACCOUNT-DEBUG-MET-ECHT-EMAILADRES-20260802
 // THIMACO-CONTROLE: ONEDRIVE-SILENT-ZONDER-OVERBODIGE-POPUP-20260731
 import 'dart:convert';
@@ -24,7 +25,6 @@ class OneDriveAuthService {
   // een andere stille tokenaanvraag al geldig was.
   static Future<String>? _lopendeSilentAanvraag;
   static Future<String>? _lopendeInteractieveAanvraag;
-  static Future<String>? _lopendeLoginMetFallback;
 
   // Alleen een tijdelijke geheugenbuffer. De blijvende account- en
   // refreshtokenopslag blijft door MSAL in de iOS-Keychain gebeuren.
@@ -120,46 +120,17 @@ class OneDriveAuthService {
     }
   }
 
-  /// Voor normale appwerking: eerst zonder scherm aanmelden en uitsluitend
-  /// wanneer er echt geen bruikbare sessie bestaat interactief aanmelden.
-  Future<String> login() {
-    final tokenUitGeheugen = _geldigGeheugenToken();
-    if (tokenUitGeheugen != null) {
-      return Future<String>.value(tokenUitGeheugen);
-    }
+  /// Voor alle automatische appwerking wordt uitsluitend stil aangemeld.
+  /// Alleen de expliciete knop 'Aanmelden Microsoft' mag loginInteractief()
+  /// aanroepen. Hierdoor kan synchronisatie, mail of OneDrive-navigatie nooit
+  /// uit zichzelf een Microsoft-venster openen.
+  Future<String> login() => tokenSilent();
 
-    final lopendeAanvraag = _lopendeLoginMetFallback;
-    if (lopendeAanvraag != null) {
-      return lopendeAanvraag;
-    }
-
-    final nieuweAanvraag = _loginMetSilentFallback();
-    _lopendeLoginMetFallback = nieuweAanvraag;
-
-    nieuweAanvraag.whenComplete(() {
-      if (identical(_lopendeLoginMetFallback, nieuweAanvraag)) {
-        _lopendeLoginMetFallback = null;
-      }
-    });
-
-    return nieuweAanvraag;
-  }
-
-  Future<String> _loginMetSilentFallback() async {
-    final silentToken = await tokenSilent();
-
-    if (!_isFout(silentToken)) {
-      return silentToken;
-    }
-
-    // Controleer nogmaals of een parallelle aanvraag intussen een token
-    // opleverde voordat een zichtbaar Microsoft-scherm wordt gestart.
-    final tokenUitGeheugen = _geldigGeheugenToken();
-    if (tokenUitGeheugen != null) {
-      return tokenUitGeheugen;
-    }
-
-    return loginInteractief();
+  /// Verwijdert uitsluitend de tijdelijke tokenbuffer in het appgeheugen.
+  /// De blijvende MSAL-accountgegevens in de iOS-Keychain blijven behouden.
+  void wisTijdelijkToken() {
+    _geheugenToken = null;
+    _geheugenTokenVervaltOp = null;
   }
 
   Future<String> accountDebugInfo() async {

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-VERZONDEN-ITEMS-CONTROLE-20260802
+// THIMACO-CONTROLE: OFFERTE-MAIL-ZONDER-AUTOMATISCHE-LOGINPOPUP-20260802
 // THIMACO-CONTROLE: OFFERTE-MAIL-LEES-EN-ONTVANGSTBEVESTIGING-20260802
 // THIMACO-CONTROLE: OFFERTE-MAIL-GRAPH-VERZEND-SERVICE-20260802
 
@@ -30,6 +32,7 @@ class OfferteMailVerzendService {
   static const int _kleineBijlageGrens = 3 * 1024 * 1024;
   static const int _maximaleBijlageGrootte = 150 * 1024 * 1024;
   static const int _uploadBlokGrootte = 3932160; // 12 × 320 KiB, onder 4 MiB.
+  static const String _immutableIdVoorkeur = 'IdType=\"ImmutableId\"';
 
   final OneDriveAuthService _authService;
   String? _token;
@@ -57,12 +60,6 @@ class OfferteMailVerzendService {
         'De e-mailtekst mag niet leeg zijn.',
       );
     }
-    if (bijlagen.isEmpty) {
-      throw const OfferteMailVerzendException(
-        'Er is geen document geselecteerd om te versturen.',
-      );
-    }
-
     for (final bijlage in bijlagen) {
       if (bijlage.bytes.isEmpty) {
         throw OfferteMailVerzendException(
@@ -120,8 +117,10 @@ class OfferteMailVerzendService {
       onVoortgang?.call('E-mail versturen…', 0.94);
       await _verstuurConcept(conceptId);
       onVoortgang?.call('E-mail verstuurd', 1.0);
-    } catch (_) {
-      if (conceptId != null) {
+    } catch (fout) {
+      final opdrachtAanvaard =
+          fout is OfferteMailVerzendException && fout.verzendOpdrachtAanvaard;
+      if (conceptId != null && !opdrachtAanvaard) {
         await _verwijderConceptBestEffort(conceptId);
       }
       rethrow;
@@ -273,7 +272,7 @@ class OfferteMailVerzendService {
   }
 
   Future<void> _verstuurConcept(String conceptId) async {
-    final response = await _postLeegMetHerlogin(
+    final response = await _postLeegMetStilleToken(
       Uri.parse(
         '$_graphBasis/me/messages/${Uri.encodeComponent(conceptId)}/send',
       ),
@@ -287,14 +286,92 @@ class OfferteMailVerzendService {
         ),
       );
     }
+
+    await _controleerWerkelijkVerzonden(conceptId);
+  }
+
+  Future<void> _controleerWerkelijkVerzonden(String conceptId) async {
+    final verzondenMapId = await _haalVerzondenMapId();
+
+    for (var poging = 0; poging < 10; poging++) {
+      if (poging > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 600));
+      }
+
+      final response = await _getMetStilleToken(
+        Uri.parse(
+          '$_graphBasis/me/messages/${Uri.encodeComponent(conceptId)}?'
+          r'$select=id,isDraft,parentFolderId,sentDateTime,subject',
+        ),
+      );
+
+      if (response.statusCode == 404) {
+        continue;
+      }
+      if (response.statusCode != 200) {
+        throw OfferteMailVerzendException(
+          _foutmelding(
+            response,
+            standaard:
+                'Microsoft aanvaardde de verzending, maar de controle van Verzonden items mislukte.',
+          ),
+          verzendOpdrachtAanvaard: true,
+        );
+      }
+
+      final data = _leesJsonMap(response);
+      final isConcept = data['isDraft'] == true;
+      final mapId = data['parentFolderId']?.toString().trim() ?? '';
+      final verzondenOp = data['sentDateTime']?.toString().trim() ?? '';
+
+      if (!isConcept &&
+          verzondenOp.isNotEmpty &&
+          mapId.isNotEmpty &&
+          mapId == verzondenMapId) {
+        return;
+      }
+    }
+
+    throw const OfferteMailVerzendException(
+      'Microsoft heeft de verzendopdracht aanvaard, maar het bericht kon niet '
+      'binnen enkele seconden in Verzonden items worden bevestigd. Controleer '
+      'de internetverbinding en probeer niet onmiddellijk opnieuw te verzenden.',
+      verzendOpdrachtAanvaard: true,
+    );
+  }
+
+  Future<String> _haalVerzondenMapId() async {
+    final response = await _getMetStilleToken(
+      Uri.parse('$_graphBasis/me/mailFolders/sentitems?\$select=id'),
+    );
+    if (response.statusCode != 200) {
+      throw OfferteMailVerzendException(
+        _foutmelding(
+          response,
+          standaard: 'De map Verzonden items kon niet worden gecontroleerd.',
+        ),
+        verzendOpdrachtAanvaard: true,
+      );
+    }
+    final id = _leesJsonMap(response)['id']?.toString().trim() ?? '';
+    if (id.isEmpty) {
+      throw const OfferteMailVerzendException(
+        'Microsoft gaf geen geldige map Verzonden items terug.',
+        verzendOpdrachtAanvaard: true,
+      );
+    }
+    return id;
   }
 
   Future<void> _verwijderConceptBestEffort(String conceptId) async {
     try {
-      final token = await _haalToken();
+      final token = await _haalStilleToken();
       await http.delete(
         Uri.parse('$_graphBasis/me/messages/${Uri.encodeComponent(conceptId)}'),
-        headers: <String, String>{'Authorization': 'Bearer $token'},
+        headers: <String, String>{
+          'Authorization': 'Bearer $token',
+          'Prefer': _immutableIdVoorkeur,
+        },
       );
     } catch (_) {
       // Een mislukte opruiming mag de oorspronkelijke fout niet vervangen.
@@ -305,23 +382,25 @@ class OfferteMailVerzendService {
     Uri url,
     Map<String, dynamic> inhoud,
   ) async {
-    var token = await _haalToken();
+    var token = await _haalStilleToken();
     var response = await http.post(
       url,
       headers: <String, String>{
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        'Prefer': _immutableIdVoorkeur,
       },
       body: jsonEncode(inhoud),
     );
 
     if (response.statusCode == 401) {
-      token = await _haalToken(forceerInteractief: true);
+      token = await _vernieuwStilleToken();
       response = await http.post(
         url,
         headers: <String, String>{
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
+          'Prefer': _immutableIdVoorkeur,
         },
         body: jsonEncode(inhoud),
       );
@@ -329,46 +408,77 @@ class OfferteMailVerzendService {
     return response;
   }
 
-  Future<http.Response> _postLeegMetHerlogin(Uri url) async {
-    var token = await _haalToken();
+  Future<http.Response> _postLeegMetStilleToken(Uri url) async {
+    var token = await _haalStilleToken();
     var response = await http.post(
       url,
       headers: <String, String>{
         'Authorization': 'Bearer $token',
         'Content-Length': '0',
+        'Prefer': _immutableIdVoorkeur,
       },
     );
 
     if (response.statusCode == 401) {
-      token = await _haalToken(forceerInteractief: true);
+      token = await _vernieuwStilleToken();
       response = await http.post(
         url,
         headers: <String, String>{
           'Authorization': 'Bearer $token',
           'Content-Length': '0',
+          'Prefer': _immutableIdVoorkeur,
         },
       );
     }
     return response;
   }
 
-  Future<String> _haalToken({bool forceerInteractief = false}) async {
-    if (!forceerInteractief && _token?.trim().isNotEmpty == true) {
+  Future<http.Response> _getMetStilleToken(Uri url) async {
+    var token = await _haalStilleToken();
+    var response = await http.get(
+      url,
+      headers: <String, String>{
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Prefer': _immutableIdVoorkeur,
+      },
+    );
+
+    if (response.statusCode == 401) {
+      token = await _vernieuwStilleToken();
+      response = await http.get(
+        url,
+        headers: <String, String>{
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Prefer': _immutableIdVoorkeur,
+        },
+      );
+    }
+    return response;
+  }
+
+  Future<String> _haalStilleToken() async {
+    if (_token?.trim().isNotEmpty == true) {
       return _token!;
     }
 
-    final token = forceerInteractief
-        ? await _authService.loginInteractief()
-        : await _authService.login();
-
+    final token = await _authService.tokenSilent();
     if (token.trim().isEmpty || token.startsWith('FOUT')) {
       throw OfferteMailVerzendException(
-        'Aanmelden bij Microsoft is niet gelukt.\n$token',
+        'De stille Microsoft-sessie is niet beschikbaar. Open Instellingen en '
+        'druk één keer zelf op Aanmelden Microsoft.\n$token',
       );
     }
 
     _token = token;
     return token;
+  }
+
+  Future<String> _vernieuwStilleToken() async {
+    _token = null;
+    _authService.wisTijdelijkToken();
+    return _haalStilleToken();
   }
 
   Map<String, dynamic> _leesJsonMap(http.Response response) {
@@ -413,9 +523,13 @@ class OfferteMailVerzendService {
 }
 
 class OfferteMailVerzendException implements Exception {
-  const OfferteMailVerzendException(this.bericht);
+  const OfferteMailVerzendException(
+    this.bericht, {
+    this.verzendOpdrachtAanvaard = false,
+  });
 
   final String bericht;
+  final bool verzendOpdrachtAanvaard;
 
   @override
   String toString() => bericht;
