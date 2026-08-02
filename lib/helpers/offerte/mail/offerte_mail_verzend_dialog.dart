@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-MET-BIJLAGEN-20260802
 // THIMACO-CONTROLE: EEN-OPGESLAGEN-MAILBERICHT-PER-VERZENDING-20260802
 
 import 'dart:typed_data';
@@ -547,6 +548,17 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
 
       if (!mounted) return;
       Navigator.pop(context, true);
+    } on OfferteMailGeannuleerdException catch (fout) {
+      if (!mounted) return;
+      setState(() {
+        _versturen = false;
+        _status = '';
+        _voortgang = 0;
+        _fout = '';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(fout.bericht), backgroundColor: _groen),
+      );
     } catch (fout) {
       if (!mounted) return;
       setState(() {
@@ -555,7 +567,7 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
         _voortgang = 0;
         _fout = fout is OfferteMailVerzendException
             ? fout.bericht
-            : 'De e-mail kon niet worden verstuurd.\n$fout';
+            : 'Het iPad-mailvenster kon niet worden geopend.\n$fout';
       });
     }
   }
@@ -951,7 +963,7 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
                       )
                     : const Icon(Icons.send_rounded),
                 label: const Text(
-                  'E-mail versturen',
+                  'Openen in iPad Mail',
                   style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
