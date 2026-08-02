@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: MAILBERICHT-PLAATSHOUDERS-20260802
+
 import 'offerte_goedkeuring_model.dart';
 import 'offerte_pdf_model.dart';
 
@@ -13,79 +15,126 @@ class OfferteMailTekst {
 class OfferteMailTemplateService {
   const OfferteMailTemplateService._();
 
-  static OfferteMailTekst voorVersturen(OfferteDocumentData data) {
-    final aanspreking = _aanspreking(data);
-    final nummer = _offerteNummer(data);
-    final datum = _datum(data.offerteDatum);
-    final totaal = _euro(data.totaalInclusiefBtw);
+  static const List<String> beschikbareVelden = <String>[
+    '[aanspreking]',
+    '[klantnaam]',
+    '[offertenummer]',
+    '[offertedatum]',
+    '[totaalbedrag]',
+    '[ondertekenaar]',
+  ];
 
+  static OfferteMailTekst vulIn({
+    required String onderwerp,
+    required String bericht,
+    required OfferteDocumentData data,
+    OfferteGoedkeuring? goedkeuring,
+  }) {
     return OfferteMailTekst(
-      onderwerp: 'Offerte Thimaco $nummer – ${data.klant.naam.trim()}',
-      bericht:
-          '''Beste $aanspreking,
-
-In bijlage bezorgen wij u onze offerte met nummer $nummer voor de besproken werken.
-
-Het totaalbedrag van de offerte bedraagt $totaal inclusief btw.
-
-U kunt de offerte op een van de volgende manieren goedkeuren:
-
-• ondertekenen tijdens onze afspraak op de iPad;
-• de goedkeuringspagina afdrukken, ondertekenen en per e-mail terugbezorgen;
-• deze e-mail beantwoorden met de onderstaande tekst:
-
-“Ik, [naam klant], keur offerte $nummer van $datum voor een totaalbedrag van $totaal inclusief btw goed.”
-
-Hebt u nog vragen of wenst u bepaalde zaken te bespreken, dan mag u ons uiteraard steeds contacteren.
-
-Met vriendelijke groeten
-
-Geert
-Thimaco
-Ramen · Deuren · Zonwering
-Kerkdreef 1
-8791 Beveren-Leie
-056 44 91 35
-info@thimaco.be''',
+      onderwerp: _vervangVelden(onderwerp, data, goedkeuring),
+      bericht: _vervangVelden(bericht, data, goedkeuring),
     );
   }
 
-  static OfferteMailTekst naGoedkeuring(
+  static String maakOnderwerpHerbruikbaar(
+    String onderwerp,
     OfferteDocumentData data,
     OfferteGoedkeuring? goedkeuring,
   ) {
-    final aanspreking = _aanspreking(data);
-    final nummer = _offerteNummer(data);
-    final totaal = _euro(data.totaalInclusiefBtw);
-    final naam = goedkeuring?.naam.trim() ?? '';
-    final ondertekenaar = naam.isEmpty ? '' : ' door $naam';
+    return _maakHerbruikbaar(onderwerp, data, goedkeuring, onderwerpVeld: true);
+  }
 
-    return OfferteMailTekst(
-      onderwerp: 'Bevestiging goedkeuring offerte Thimaco $nummer',
-      bericht:
-          '''Beste $aanspreking,
+  static String maakBerichtHerbruikbaar(
+    String bericht,
+    OfferteDocumentData data,
+    OfferteGoedkeuring? goedkeuring,
+  ) {
+    return _maakHerbruikbaar(bericht, data, goedkeuring, onderwerpVeld: false);
+  }
 
-Bedankt voor uw goedkeuring$ondertekenaar van offerte $nummer.
+  static String _vervangVelden(
+    String waarde,
+    OfferteDocumentData data,
+    OfferteGoedkeuring? goedkeuring,
+  ) {
+    var resultaat = waarde;
+    final velden = _veldWaarden(data, goedkeuring);
+    for (final item in velden.entries) {
+      resultaat = resultaat.replaceAll(item.key, item.value);
+    }
+    return resultaat;
+  }
 
-In bijlage vindt u een kopie van de ondertekende offerte voor een totaalbedrag van $totaal inclusief btw.
+  static String _maakHerbruikbaar(
+    String waarde,
+    OfferteDocumentData data,
+    OfferteGoedkeuring? goedkeuring, {
+    required bool onderwerpVeld,
+  }) {
+    var resultaat = waarde;
+    final velden = _veldWaarden(data, goedkeuring).entries
+        .where((item) => item.value.trim().isNotEmpty)
+        .toList(growable: false);
 
-Wij nemen contact met u op voor de verdere opvolging en planning van uw dossier.
+    velden.sort((links, rechts) {
+      if (links.value == rechts.value) {
+        final linksVoorkeur = _veldVoorkeur(links.key, onderwerpVeld);
+        final rechtsVoorkeur = _veldVoorkeur(rechts.key, onderwerpVeld);
+        return linksVoorkeur.compareTo(rechtsVoorkeur);
+      }
+      return rechts.value.length.compareTo(links.value.length);
+    });
 
-Met vriendelijke groeten
+    final reedsVervangenWaarden = <String>{};
+    for (final item in velden) {
+      if (!reedsVervangenWaarden.add(item.value)) continue;
+      resultaat = resultaat.replaceAll(item.value, item.key);
+    }
+    return resultaat;
+  }
 
-Geert
-Thimaco
-Ramen · Deuren · Zonwering
-Kerkdreef 1
-8791 Beveren-Leie
-056 44 91 35
-info@thimaco.be''',
-    );
+  static int _veldVoorkeur(String veld, bool onderwerpVeld) {
+    if (onderwerpVeld) {
+      return switch (veld) {
+        '[klantnaam]' => 0,
+        '[offertenummer]' => 1,
+        '[offertedatum]' => 2,
+        '[totaalbedrag]' => 3,
+        '[aanspreking]' => 4,
+        '[ondertekenaar]' => 5,
+        _ => 10,
+      };
+    }
+    return switch (veld) {
+      '[aanspreking]' => 0,
+      '[klantnaam]' => 1,
+      '[offertenummer]' => 2,
+      '[offertedatum]' => 3,
+      '[totaalbedrag]' => 4,
+      '[ondertekenaar]' => 5,
+      _ => 10,
+    };
+  }
+
+  static Map<String, String> _veldWaarden(
+    OfferteDocumentData data,
+    OfferteGoedkeuring? goedkeuring,
+  ) {
+    return <String, String>{
+      '[aanspreking]': _aanspreking(data),
+      '[klantnaam]': data.klant.naam.trim().isEmpty
+          ? 'klant'
+          : data.klant.naam.trim(),
+      '[offertenummer]': _offerteNummer(data),
+      '[offertedatum]': _datum(data.offerteDatum),
+      '[totaalbedrag]': _euro(data.totaalInclusiefBtw),
+      '[ondertekenaar]': goedkeuring?.naam.trim() ?? '',
+    };
   }
 
   static String _aanspreking(OfferteDocumentData data) {
-    final contactpersoon = data.klant.contactpersoon.trim();
-    if (contactpersoon.isNotEmpty) return contactpersoon;
+    final contact = data.klant.contactpersoon.trim();
+    if (contact.isNotEmpty) return contact;
 
     final naam = data.klant.naam.trim();
     return naam.isEmpty ? 'klant' : naam;

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-APP-STORAGE-20260802
+// THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-APP-STORAGE-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-APP-STORAGE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-APP-STORAGE-FASE-1-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-APP-STORAGE-BEDIENINGEN-20260730-2115
@@ -14,6 +16,7 @@ import 'sync/onedrive_sync_service.dart';
 import 'sync/sync_merge_service.dart';
 
 import '../helpers/notities/notitie_actie_model.dart';
+import 'bibliotheek/bibliotheek_model.dart';
 import '../helpers/notities/notitie_model.dart';
 import 'opmeting/raam/opmeting_raam_keuzemenu_model.dart';
 import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
@@ -26,6 +29,7 @@ import 'opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_instellingen_
 import 'opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_model.dart';
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
+import 'offerte/mail/offerte_mail_tekst_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
@@ -40,6 +44,16 @@ class AppStorage {
   static const String _leveranciersKey = 'leveranciers_lijst';
 
   static const String _leveranciersSyncMetaKey = 'leveranciers_lijst_sync_meta';
+
+  static const String _bibliotheekKey = 'thimaco_algemene_bibliotheek';
+
+  static const String _bibliotheekGewijzigdOpKey =
+      'thimaco_algemene_bibliotheek_gewijzigd_op';
+
+  static const String _offerteMailTekstenKey = 'thimaco_offerte_mail_teksten';
+
+  static const String _offerteMailTekstenGewijzigdOpKey =
+      'thimaco_offerte_mail_teksten_gewijzigd_op';
 
   static const String _klantenFichesKey = 'klanten_fiches';
 
@@ -354,6 +368,124 @@ class AppStorage {
       _agendaItemsNieuwKey,
       encodeAgendaItemsVoorSync(itemsPerDag),
     );
+  }
+
+  // ------------------------------------------------------------
+  // ALGEMENE BIBLIOTHEEK
+  // ------------------------------------------------------------
+
+  static Future<BibliotheekData> laadBibliotheek() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_bibliotheekKey);
+
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return BibliotheekData.leeg();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return BibliotheekData.leeg();
+      }
+
+      return BibliotheekData.fromJson(Map<String, dynamic>.from(decoded));
+    } catch (_) {
+      return BibliotheekData.leeg();
+    }
+  }
+
+  static Future<void> bewaarBibliotheek(BibliotheekData data) async {
+    final prefs = await openBox();
+    final gewijzigdOp = DateTime.now().toUtc().toIso8601String();
+
+    await prefs.setString(_bibliotheekKey, jsonEncode(data.toJson()));
+    await prefs.setString(_bibliotheekGewijzigdOpKey, gewijzigdOp);
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarBibliotheekVoorSync({
+    required BibliotheekData data,
+    required String gewijzigdOp,
+  }) async {
+    final prefs = await openBox();
+
+    await prefs.setString(_bibliotheekKey, jsonEncode(data.toJson()));
+    await prefs.setString(
+      _bibliotheekGewijzigdOpKey,
+      gewijzigdOp.trim().isEmpty
+          ? DateTime.now().toUtc().toIso8601String()
+          : gewijzigdOp.trim(),
+    );
+  }
+
+  static Future<String> laadBibliotheekJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_bibliotheekKey) ?? '';
+  }
+
+  static Future<String> laadBibliotheekGewijzigdOpVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_bibliotheekGewijzigdOpKey) ?? '';
+  }
+
+  // ------------------------------------------------------------
+  // OFFERTE MAILTEKSTEN
+  // ------------------------------------------------------------
+
+  static Future<OfferteMailTekstenData> laadOfferteMailTeksten() async {
+    final prefs = await openBox();
+    final jsonString = prefs.getString(_offerteMailTekstenKey);
+
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return OfferteMailTekstenData.leeg();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return OfferteMailTekstenData.leeg();
+      }
+      return OfferteMailTekstenData.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return OfferteMailTekstenData.leeg();
+    }
+  }
+
+  static Future<void> bewaarOfferteMailTeksten(
+    OfferteMailTekstenData data,
+  ) async {
+    final prefs = await openBox();
+    final gewijzigdOp = DateTime.now().toUtc().toIso8601String();
+
+    await prefs.setString(_offerteMailTekstenKey, jsonEncode(data.toJson()));
+    await prefs.setString(_offerteMailTekstenGewijzigdOpKey, gewijzigdOp);
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOfferteMailTekstenVoorSync({
+    required OfferteMailTekstenData data,
+    required String gewijzigdOp,
+  }) async {
+    final prefs = await openBox();
+    await prefs.setString(_offerteMailTekstenKey, jsonEncode(data.toJson()));
+    await prefs.setString(
+      _offerteMailTekstenGewijzigdOpKey,
+      gewijzigdOp.trim().isEmpty
+          ? DateTime.now().toUtc().toIso8601String()
+          : gewijzigdOp.trim(),
+    );
+  }
+
+  static Future<String> laadOfferteMailTekstenJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offerteMailTekstenKey) ?? '';
+  }
+
+  static Future<String> laadOfferteMailTekstenGewijzigdOpVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offerteMailTekstenGewijzigdOpKey) ?? '';
   }
 
   // ------------------------------------------------------------

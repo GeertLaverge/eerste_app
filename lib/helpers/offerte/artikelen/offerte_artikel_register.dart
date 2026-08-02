@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-ARTIKEL-REGISTER-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-MENU-REGISTRATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-MENU-REGISTRATIE-20260731-1025
 // THIMACO-CONTROLE: OPMEETFICHE-MENU-GROEPEN-20260730
@@ -28,6 +29,7 @@ enum OfferteArtikelOpenType {
   uitvalscherm,
   sektionalePoort,
   veluxDakraam,
+  algemeneOpmeting,
 }
 
 class OfferteArtikelRegistratie {
@@ -183,6 +185,14 @@ class OfferteArtikelRegister {
           icoon: Icons.roofing_outlined,
           openType: OfferteArtikelOpenType.veluxDakraam,
         ),
+        OfferteArtikelRegistratie(
+          menuWaarde: 'algemene_opmeting',
+          formulierType: 'algemeneOpmeting',
+          formulierNaam: 'Algemene opmeting',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.description_outlined,
+          openType: OfferteArtikelOpenType.algemeneOpmeting,
+        ),
       ];
 
   /// De professionele volgorde van het menu in de opmetingbovenbalk.
@@ -223,6 +233,10 @@ class OfferteArtikelRegister {
         OfferteArtikelMenuGroep(
           label: 'Dakramen',
           menuWaarden: <String>['velux_dakraam'],
+        ),
+        OfferteArtikelMenuGroep(
+          label: 'Algemeen',
+          menuWaarden: <String>['algemene_opmeting'],
         ),
       ];
 

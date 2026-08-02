@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-VERKOOP-AANKOOP-WINST-KORTING-20260802
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-PRIJSKOPPELING-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-VOLLEDIGE-PRIJSKOPPELING-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-VOLLEDIGE-PRIJSKOPPELING-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-PRIJS-20260730-2205
@@ -124,6 +126,16 @@ class OfferteArtikelPrijsKoppelingService {
         isHandmatigGeprijsdArtikel: true,
       );
 
+  static const OfferteArtikelPrijsKoppeling algemeneOpmeting =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'algemeneOpmeting',
+        formulierType: 'algemeneOpmeting',
+        formulierNaam: 'Algemene opmeting',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: false,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
   static const OfferteArtikelPrijsKoppeling sektionalePoort =
       OfferteArtikelPrijsKoppeling(
         adapterId: 'sektionalePoort',
@@ -226,6 +238,7 @@ class OfferteArtikelPrijsKoppelingService {
         sektionalePoort,
         veluxDakraam,
         ...algemeneKoppelingen,
+        algemeneOpmeting,
       ];
 
   /// Artikelen waarvan de basisprijs per stuk handmatig wordt ingevuld.
@@ -242,6 +255,7 @@ class OfferteArtikelPrijsKoppelingService {
     uitvalscherm,
     sektionalePoort,
     veluxDakraam,
+    algemeneOpmeting,
   ];
 
   /// Volledige lijst voor artikelprijsverwerking, prijsinstellingen, totalen en
@@ -270,6 +284,7 @@ class OfferteArtikelPrijsKoppelingService {
     'sektionalePoort',
     'veluxDakraam',
     ...algemeneFormulierTypes,
+    'algemeneOpmeting',
   ];
 
   static OfferteArtikelPrijsKoppeling? koppelingVoorArtikel(
@@ -301,6 +316,10 @@ class OfferteArtikelPrijsKoppelingService {
 
     if (artikel.uitvalschermData != null) {
       return uitvalscherm;
+    }
+
+    if (artikel.algemeneOpmetingData != null) {
+      return algemeneOpmeting;
     }
 
     if (artikel.sektionalePoortData != null) {
@@ -496,6 +515,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.voorzetscreenData?.aantal ??
         artikel.voorzetrolluikData?.aantal ??
         artikel.uitvalschermData?.aantal ??
+        (artikel.algemeneOpmetingData != null ? 1 : null) ??
         artikel.sektionalePoortData?.aantal ??
         artikel.veluxDakraamData?.veiligAantal ??
         1;
@@ -543,6 +563,54 @@ class OfferteArtikelPrijsKoppelingService {
       return OffertePrijsBerekeningService.resultaatUitMomentopname(
         vasteModel,
         kortingToestaan: kortingToestaan,
+      );
+    }
+
+    final algemeneOpmeting = artikel.algemeneOpmetingData;
+    if (algemeneOpmeting != null) {
+      // Algemene opmeting beheert vrije prijzen bewust als zichtbare,
+      // verplaatsbare blokken in de fiche. Automatisch opgebouwde vrije-
+      // prijsselecties uit het centrale profiel worden hier daarom niet nog
+      // eens meegerekend; anders zou een gekozen regel dubbel in het totaal
+      // terechtkomen.
+      final actuelePrijsData = artikel.offertePrijsData.copyWith(
+        prijsPerStukExclBtw: algemeneOpmeting.prijsTotaalExclBtw,
+        toegepasteTechnischePrijsregels:
+            const <OfferteToegepastePrijsregelModel>[],
+        technischePrijsSignatuur: '',
+        vrijeArtikelPrijsSelecties: const [],
+        vrijeArtikelPrijsSignatuur: '',
+      );
+      final standaardResultaat =
+          OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
+            prijsData: actuelePrijsData,
+            aantal: 1,
+            breedteMm: breedteMmVoorArtikel(artikel),
+            hoogteMm: hoogteMmVoorArtikel(artikel),
+            kortingToestaan: kortingToestaan,
+          );
+
+      final aankoopTotaal = algemeneOpmeting.aankoopPrijsTotaalExclBtw;
+      final winstmargePercentage = actuelePrijsData.artikelWinstmargePercentage;
+      final kortingPercentage = kortingToestaan
+          ? actuelePrijsData.artikelKortingPercentage
+          : 0.0;
+      final winstmargeBedrag = aankoopTotaal * (winstmargePercentage / 100.0);
+      final aankoopdeelNaWinstmarge = aankoopTotaal + winstmargeBedrag;
+
+      return OfferteBerekeningResultaat(
+        basisTotaalExclBtw: standaardResultaat.basisTotaalExclBtw,
+        aantalArtikelen: standaardResultaat.aantalArtikelen,
+        basisPrijsPerStukExclBtw: standaardResultaat.basisPrijsPerStukExclBtw,
+        technischePrijsregels: standaardResultaat.technischePrijsregels,
+        vrijeArtikelPrijsregels: standaardResultaat.vrijeArtikelPrijsregels,
+        verdeeldePrijsregels: standaardResultaat.verdeeldePrijsregels,
+        winstmargePercentage: winstmargePercentage,
+        winstmargeBasisExclBtwOverride: aankoopTotaal,
+        kortingBasisExclBtwOverride: aankoopdeelNaWinstmarge,
+        winstmargeOmschrijving: standaardResultaat.winstmargeOmschrijving,
+        kortingPercentage: kortingPercentage,
+        kortingOmschrijving: standaardResultaat.kortingOmschrijving,
       );
     }
 

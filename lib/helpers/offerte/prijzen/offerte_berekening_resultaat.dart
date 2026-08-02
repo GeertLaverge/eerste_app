@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-KORTING-ALLEEN-OP-AANKOOPDEEL-20260802
+// THIMACO-CONTROLE: WINSTMARGE-BASIS-OVERRIDE-ALGEMENE-OPMETING-20260802
 import 'offerte_toegepaste_prijsregel_model.dart';
 
 class OfferteBerekeningResultaat {
@@ -12,6 +14,8 @@ class OfferteBerekeningResultaat {
     List<OfferteToegepastePrijsregelModel> verdeeldePrijsregels =
         const <OfferteToegepastePrijsregelModel>[],
     double winstmargePercentage = 0,
+    double? winstmargeBasisExclBtwOverride,
+    double? kortingBasisExclBtwOverride,
     String winstmargeOmschrijving = 'Winstmarge',
     double kortingPercentage = 0,
     String kortingOmschrijving = 'Korting',
@@ -37,6 +41,12 @@ class OfferteBerekeningResultaat {
        winstmargePercentage = _normaliseerWinstmargePercentage(
          winstmargePercentage,
        ),
+       winstmargeBasisExclBtwOverride = winstmargeBasisExclBtwOverride == null
+           ? null
+           : _rondBedragAf(winstmargeBasisExclBtwOverride),
+       kortingBasisExclBtwOverride = kortingBasisExclBtwOverride == null
+           ? null
+           : _rondBedragAf(kortingBasisExclBtwOverride),
        winstmargeOmschrijving = winstmargeOmschrijving.trim().isEmpty
            ? 'Winstmarge'
            : winstmargeOmschrijving.trim(),
@@ -52,6 +62,21 @@ class OfferteBerekeningResultaat {
   final List<OfferteToegepastePrijsregelModel> vrijeArtikelPrijsregels;
   final List<OfferteToegepastePrijsregelModel> verdeeldePrijsregels;
   final double winstmargePercentage;
+
+  /// Optionele interne basis waarop alleen de winstmarge wordt berekend.
+  ///
+  /// Zonder override blijft de bestaande werking ongewijzigd en wordt de
+  /// volledige basisprijs gebruikt. Algemene opmeting gebruikt dit om alleen
+  /// aankoopprijsblokken van winstmarge te voorzien, terwijl verkoopprijzen
+  /// reeds hun definitieve verkoopbedrag bevatten.
+  final double? winstmargeBasisExclBtwOverride;
+
+  /// Optionele interne basis waarop uitsluitend de artikelkorting wordt
+  /// berekend. Zonder override blijft de bestaande werking van alle andere
+  /// fiches ongewijzigd. Algemene opmeting gebruikt het aankoopdeel na
+  /// winstmarge, zodat reeds ingevoerde verkoopprijzen nooit korting krijgen.
+  final double? kortingBasisExclBtwOverride;
+
   final String winstmargeOmschrijving;
   final double kortingPercentage;
   final String kortingOmschrijving;
@@ -162,17 +187,21 @@ class OfferteBerekeningResultaat {
   /// stuk berekend. Artikeltoeslagen, verdeelde transport- en projectkosten
   /// blijven buiten deze berekening.
   double get winstmargeBasisExclBtw {
-    return basisTotaalExclBtw;
+    return winstmargeBasisExclBtwOverride ?? basisTotaalExclBtw;
   }
 
   double get winstmargePerStukExclBtw {
-    if (winstmargePercentage <= 0.0 || basisPrijsPerStukExclBtw <= 0.0) {
+    if (winstmargePercentage <= 0.0 || winstmargeBasisExclBtw <= 0.0) {
       return 0.0;
     }
 
-    return _rondBedragAf(
-      basisPrijsPerStukExclBtw * (winstmargePercentage / 100.0),
-    );
+    // Zonder override blijft de bestaande berekening exact gebaseerd op de
+    // opgeslagen basisprijs per stuk. Alleen Algemene opmeting gebruikt de
+    // afwijkende aankoopbasis.
+    final basisPerStuk = winstmargeBasisExclBtwOverride == null
+        ? basisPrijsPerStukExclBtw
+        : winstmargeBasisExclBtw / aantalArtikelen.toDouble();
+    return _rondBedragAf(basisPerStuk * (winstmargePercentage / 100.0));
   }
 
   double get winstmargeBedragExclBtw {
@@ -193,17 +222,16 @@ class OfferteBerekeningResultaat {
   /// winstmarge werd toegevoegd. Artikeltoeslagen en transportkosten worden
   /// hierdoor nooit verlaagd.
   double get kortingBasisExclBtw {
-    return basisNaWinstmargeExclBtw;
+    return kortingBasisExclBtwOverride ?? basisNaWinstmargeExclBtw;
   }
 
   double get kortingPerStukExclBtw {
-    if (kortingPercentage <= 0.0 || prijsPerStukNaWinstmargeExclBtw <= 0.0) {
+    if (kortingPercentage <= 0.0 || kortingBasisExclBtw <= 0.0) {
       return 0.0;
     }
 
-    return _rondBedragAf(
-      prijsPerStukNaWinstmargeExclBtw * (kortingPercentage / 100.0),
-    );
+    final basisPerStuk = kortingBasisExclBtw / aantalArtikelen.toDouble();
+    return _rondBedragAf(basisPerStuk * (kortingPercentage / 100.0));
   }
 
   double get kortingBedragExclBtw {
@@ -212,14 +240,12 @@ class OfferteBerekeningResultaat {
 
   double get verkoopPrijsPerStukNaKortingExclBtw {
     return _rondBedragAf(
-      prijsPerStukNaWinstmargeExclBtw - kortingPerStukExclBtw,
+      basisNaWinstmargeEnKortingExclBtw / aantalArtikelen.toDouble(),
     );
   }
 
   double get basisNaWinstmargeEnKortingExclBtw {
-    return _rondBedragAf(
-      verkoopPrijsPerStukNaKortingExclBtw * aantalArtikelen.toDouble(),
-    );
+    return _rondBedragAf(basisNaWinstmargeExclBtw - kortingBedragExclBtw);
   }
 
   double get totaalZonderVerdeeldeKostenExclBtw {

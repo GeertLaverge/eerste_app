@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJS-CORRECTIE-ADAPTER-20260802
 // THIMACO-CONTROLE: VOORZETROLLUIK-STUKPRIJS-MUTATIE-ADAPTER-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-STUKPRIJS-MUTATIE-ADAPTER-20260731
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-PRIJS-MUTATIE-20260729
@@ -79,6 +80,8 @@ class OfferteArtikelPrijsMutatieService {
       _VoorzetrolluikPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter sektionalePoort =
       _SektionalePoortPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter algemeneOpmeting =
+      _AlgemeneOpmetingPrijsMutatieAdapter();
 
   static const List<OfferteArtikelPrijsMutatieAdapter> _adapters =
       <OfferteArtikelPrijsMutatieAdapter>[
@@ -95,6 +98,7 @@ class OfferteArtikelPrijsMutatieService {
         voorzetscreen,
         voorzetrolluik,
         sektionalePoort,
+        algemeneOpmeting,
       ];
 
   static OfferteArtikelPrijsMutatieAdapter? adapterVoor(
@@ -240,6 +244,64 @@ class _AlgemeenArtikelPrijsMutatieAdapter
     );
     return OfferteArtikelPrijsKoppelingService.isAlgemeenArtikel(artikel) &&
         koppeling?.adapterId == formulierType;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _AlgemeneOpmetingPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _AlgemeneOpmetingPrijsMutatieAdapter();
+
+  @override
+  String get id => 'algemeneOpmeting';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return artikel.algemeneOpmetingData != null && koppeling?.adapterId == id;
   }
 
   @override

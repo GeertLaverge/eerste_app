@@ -1,7 +1,5 @@
-// THIMACO-CONTROLE: UITVALSCHERM-INSTELLINGEN-ONEDRIVE-SYNC-20260801
-// THIMACO-CONTROLE: ONEDRIVE-SYNC-ZONDER-OVERBODIGE-LOGIN-20260731
-// THIMACO-CONTROLE: SEKTIONALE-POORTEN-ONEDRIVE-SYNC-20260729
-// THIMACO-CONTROLE: ONEDRIVE-PLOOIWERKEN-INSTELLINGEN-DEFINITIEF-20260728-2110
+// THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-ONEDRIVE-SYNC-20260802
+// THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-ONEDRIVE-SYNC-20260802
 import 'dart:convert';
 import 'dart:io';
 
@@ -23,24 +21,15 @@ class OneDriveSyncService {
   static const String _lokaleWijzigingOpenstaandKey =
       'lokale_wijziging_openstaand';
 
-  static const String _dagtaakTemplatesKey = 'dagtaak_templates';
-  static const String _dagtaakTemplatesSyncMetaKey =
-      'dagtaak_templates_sync_meta';
-  static const String _leveranciersKey = 'leveranciers_lijst';
-  static const String _leveranciersSyncMetaKey = 'leveranciers_lijst_sync_meta';
-  static const String _notitiesKey = 'thimaco_notities';
-  static const String _notitiesSyncMetaKey = 'thimaco_notities_sync_meta';
-  static const String _notitieActiesKey = 'thimaco_notitie_acties';
-  static const String _notitieActiesSyncMetaKey =
-      'thimaco_notitie_acties_sync_meta';
+  static const String _bibliotheekKey = 'thimaco_algemene_bibliotheek';
 
-  static const String _opmetingRaamKeuzemenusKey = 'opmeting_raam_keuzemenus';
-  static const String _opmetingRaamKeuzemenusAluKey =
-      'opmeting_raam_keuzemenus_alu';
-  static const String _opmetingDeurKeuzemenusPvcKey =
-      'opmeting_deur_keuzemenus_pvc';
-  static const String _opmetingDeurKeuzemenusAluKey =
-      'opmeting_deur_keuzemenus_alu';
+  static const String _bibliotheekGewijzigdOpKey =
+      'thimaco_algemene_bibliotheek_gewijzigd_op';
+
+  static const String _offerteMailTekstenKey = 'thimaco_offerte_mail_teksten';
+
+  static const String _offerteMailTekstenGewijzigdOpKey =
+      'thimaco_offerte_mail_teksten_gewijzigd_op';
 
   static const String _deurpanelenBibliotheekKey =
       'thimaco_deurpanelen_bibliotheek';
@@ -63,9 +52,6 @@ class OneDriveSyncService {
   static const String _opmetingProjectKleurenKey =
       'thimaco_opmeting_project_kleuren';
 
-  static const String _opmetingProjectKleurenSyncMetaKey =
-      'thimaco_opmeting_project_kleuren_sync_meta';
-
   static const String _opmetingSchuifraamKeuzemenusPvcKey =
       'opmeting_schuifraam_keuzemenus_pvc';
 
@@ -74,18 +60,6 @@ class OneDriveSyncService {
 
   static const String _opmetingSchuifraamOpbouwTypesKey =
       'opmeting_schuifraam_opbouw_types';
-
-  static const String _opmetingPlooiwerkenInstellingenKey =
-      'thimaco_opmeting_plooiwerken_instellingen';
-
-  static const String _opmetingSektionalePoortInstellingenKey =
-      'thimaco_opmeting_sektionale_poort_instellingen';
-
-  static const String _opmetingUitvalschermInstellingenKey =
-      'thimaco_opmeting_uitvalscherm_instellingen';
-
-  static const String _opmetingVeluxDakraamInstellingenKey =
-      'thimaco_opmeting_velux_dakraam_instellingen';
 
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
@@ -327,129 +301,33 @@ class OneDriveSyncService {
         cloudPrijsprofielen,
       );
 
-      final lokaleCollectieFallbackDatum =
-          prefs.getString(_backupDatumKey) ?? backupDatum;
+      final algemeneBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_bibliotheekKey),
+        cloudWaarde: cloudBackup['algemeneBibliotheek'] is String
+            ? cloudBackup['algemeneBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(_bibliotheekGewijzigdOpKey),
+        cloudGewijzigdOp:
+            cloudBackup['algemeneBibliotheekGewijzigdOp'] is String
+            ? cloudBackup['algemeneBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: cloudBackupDatum.isEmpty
+            ? backupDatum
+            : cloudBackupDatum,
+      );
 
-      final mergedDagtaakTemplates = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _dagtaakTemplatesKey,
-        lokaleMetadataKey: _dagtaakTemplatesSyncMetaKey,
-        cloudDataVeld: 'dagtaakTemplates',
-        cloudMetadataVeld: 'dagtaakTemplatesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedLeveranciers = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _leveranciersKey,
-        lokaleMetadataKey: _leveranciersSyncMetaKey,
-        cloudDataVeld: 'leveranciers',
-        cloudMetadataVeld: 'leveranciersSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-        idVoorRecord: SyncMergeService.syncIdVoorLeverancierRecord,
-      );
-      final mergedNotities = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _notitiesKey,
-        lokaleMetadataKey: _notitiesSyncMetaKey,
-        cloudDataVeld: 'notities',
-        cloudMetadataVeld: 'notitiesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedNotitieActies = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _notitieActiesKey,
-        lokaleMetadataKey: _notitieActiesSyncMetaKey,
-        cloudDataVeld: 'notitieActies',
-        cloudMetadataVeld: 'notitieActiesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedProjectKleuren = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingProjectKleurenKey,
-        lokaleMetadataKey: _opmetingProjectKleurenSyncMetaKey,
-        cloudDataVeld: 'opmetingProjectKleuren',
-        cloudMetadataVeld: 'opmetingProjectKleurenSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingRaamKeuzemenusKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusKey),
-        cloudDataVeld: 'opmetingRaamKeuzemenus',
-        cloudMetadataVeld: 'opmetingRaamKeuzemenusSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedRaamKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingRaamKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingRaamKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingRaamKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingRaamKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedDeurKeuzemenusPvc = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingDeurKeuzemenusPvcKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingDeurKeuzemenusPvcKey,
-        ),
-        cloudDataVeld: 'opmetingDeurKeuzemenusPvc',
-        cloudMetadataVeld: 'opmetingDeurKeuzemenusPvcSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedDeurKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingDeurKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingDeurKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingDeurKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingDeurKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedSchuifraamKeuzemenusPvc = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingSchuifraamKeuzemenusPvcKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusPvcKey,
-        ),
-        cloudDataVeld: 'opmetingSchuifraamKeuzemenusPvc',
-        cloudMetadataVeld: 'opmetingSchuifraamKeuzemenusPvcSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedSchuifraamKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _opmetingSchuifraamKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingSchuifraamKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingSchuifraamKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
+      final offerteMailTeksten = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_offerteMailTekstenKey),
+        cloudWaarde: cloudBackup['offerteMailTeksten'] is String
+            ? cloudBackup['offerteMailTeksten'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(_offerteMailTekstenGewijzigdOpKey),
+        cloudGewijzigdOp: cloudBackup['offerteMailTekstenGewijzigdOp'] is String
+            ? cloudBackup['offerteMailTekstenGewijzigdOp'] as String
+            : null,
+        fallbackDatum: cloudBackupDatum.isEmpty
+            ? backupDatum
+            : cloudBackupDatum,
       );
 
       final deurpanelenBibliotheek = _kiesRecenteStringWaarde(
@@ -504,113 +382,51 @@ class OneDriveSyncService {
       final backup = <String, dynamic>{
         'backupDatum': backupDatum,
         'agendaItems': encodeAgenda(mergedAgenda),
-        'dagtaakTemplates': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedDagtaakTemplates.records,
-        ),
-        'dagtaakTemplatesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
-          mergedDagtaakTemplates.metadata,
-        ),
-        'leveranciers': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedLeveranciers.records,
-        ),
-        'leveranciersSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
-          mergedLeveranciers.metadata,
-        ),
+        'dagtaakTemplates': prefs.getString('dagtaak_templates'),
+        'leveranciers': prefs.getString('leveranciers_lijst'),
+        'algemeneBibliotheek': algemeneBibliotheek.waarde,
+        'algemeneBibliotheekGewijzigdOp': algemeneBibliotheek.gewijzigdOp,
+        'offerteMailTeksten': offerteMailTeksten.waarde,
+        'offerteMailTekstenGewijzigdOp': offerteMailTeksten.gewijzigdOp,
         'klantenFiches': encodeKlanten(mergedKlanten),
-        'notities': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedNotities.records,
-        ),
-        'notitiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
-          mergedNotities.metadata,
-        ),
-        'notitieActies': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedNotitieActies.records,
-        ),
-        'notitieActiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
-          mergedNotitieActies.metadata,
-        ),
+        'notities': prefs.getString('thimaco_notities'),
+        'notitieActies': prefs.getString('thimaco_notitie_acties'),
         'opmetingRaamOpvullingen': prefs.getString('opmeting_raam_opvullingen'),
-        'opmetingRaamKeuzemenus': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedRaamKeuzemenus.records,
+        'opmetingRaamKeuzemenus': prefs.getString('opmeting_raam_keuzemenus'),
+        'opmetingRaamKeuzemenusAlu': prefs.getString(
+          'opmeting_raam_keuzemenus_alu',
         ),
-        'opmetingRaamKeuzemenusSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedRaamKeuzemenus.metadata,
-            ),
-        'opmetingRaamKeuzemenusAlu': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedRaamKeuzemenusAlu.records,
+        'opmetingDeurKeuzemenusPvc': prefs.getString(
+          'opmeting_deur_keuzemenus_pvc',
         ),
-        'opmetingRaamKeuzemenusAluSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedRaamKeuzemenusAlu.metadata,
-            ),
-        'opmetingDeurKeuzemenusPvc': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedDeurKeuzemenusPvc.records,
+        'opmetingDeurKeuzemenusAlu': prefs.getString(
+          'opmeting_deur_keuzemenus_alu',
         ),
-        'opmetingDeurKeuzemenusPvcSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedDeurKeuzemenusPvc.metadata,
-            ),
-        'opmetingDeurKeuzemenusAlu': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedDeurKeuzemenusAlu.records,
-        ),
-        'opmetingDeurKeuzemenusAluSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedDeurKeuzemenusAlu.metadata,
-            ),
         'opmetingSchuifraamKeuzemenusPvc':
-            AppStorage.encodeJsonMapLijstVoorSync(
-              mergedSchuifraamKeuzemenusPvc.records,
-            ),
-        'opmetingSchuifraamKeuzemenusPvcSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedSchuifraamKeuzemenusPvc.metadata,
-            ),
+            prefs.getString(_opmetingSchuifraamKeuzemenusPvcKey) ??
+            (cloudBackup['opmetingSchuifraamKeuzemenusPvc'] is String
+                ? cloudBackup['opmetingSchuifraamKeuzemenusPvc'] as String
+                : null),
         'opmetingSchuifraamKeuzemenusAlu':
-            AppStorage.encodeJsonMapLijstVoorSync(
-              mergedSchuifraamKeuzemenusAlu.records,
-            ),
-        'opmetingSchuifraamKeuzemenusAluSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedSchuifraamKeuzemenusAlu.metadata,
-            ),
+            prefs.getString(_opmetingSchuifraamKeuzemenusAluKey) ??
+            (cloudBackup['opmetingSchuifraamKeuzemenusAlu'] is String
+                ? cloudBackup['opmetingSchuifraamKeuzemenusAlu'] as String
+                : null),
         'opmetingSchuifraamOpbouwTypes':
             prefs.getString(_opmetingSchuifraamOpbouwTypesKey) ??
             (cloudBackup['opmetingSchuifraamOpbouwTypes'] is String
                 ? cloudBackup['opmetingSchuifraamOpbouwTypes'] as String
-                : null),
-        'opmetingPlooiwerkenInstellingen':
-            prefs.getString(_opmetingPlooiwerkenInstellingenKey) ??
-            (cloudBackup['opmetingPlooiwerkenInstellingen'] is String
-                ? cloudBackup['opmetingPlooiwerkenInstellingen'] as String
-                : null),
-        'opmetingUitvalschermInstellingen':
-            prefs.getString(_opmetingUitvalschermInstellingenKey) ??
-            (cloudBackup['opmetingUitvalschermInstellingen'] is String
-                ? cloudBackup['opmetingUitvalschermInstellingen'] as String
-                : null),
-        'opmetingSektionalePoortInstellingen':
-            prefs.getString(_opmetingSektionalePoortInstellingenKey) ??
-            (cloudBackup['opmetingSektionalePoortInstellingen'] is String
-                ? cloudBackup['opmetingSektionalePoortInstellingen'] as String
-                : null),
-        'opmetingVeluxDakraamInstellingen':
-            prefs.getString(_opmetingVeluxDakraamInstellingenKey) ??
-            (cloudBackup['opmetingVeluxDakraamInstellingen'] is String
-                ? cloudBackup['opmetingVeluxDakraamInstellingen'] as String
                 : null),
         'opmetingen': encodeOpmetingen(mergedOpmetingen),
         'opmetingProjectTitelhoofden':
             AppStorage.encodeOpmetingProjectTitelhoofdenVoorSync(
               mergedTitelhoofden,
             ),
-        'opmetingProjectKleuren': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedProjectKleuren.records,
-        ),
-        'opmetingProjectKleurenSyncMeta':
-            SyncMergeService.encodeJsonRecordMetadata(
-              mergedProjectKleuren.metadata,
-            ),
+        'opmetingProjectKleuren':
+            prefs.getString(_opmetingProjectKleurenKey) ??
+            (cloudBackup['opmetingProjectKleuren'] is String
+                ? cloudBackup['opmetingProjectKleuren'] as String
+                : null),
         'offertePrijsProfielen': AppStorage.encodeOffertePrijsProfielenVoorSync(
           mergedPrijsprofielen,
         ),
@@ -654,75 +470,26 @@ class OneDriveSyncService {
         mergedPrijsprofielen,
       );
 
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _dagtaakTemplatesKey,
-        metadataKey: _dagtaakTemplatesSyncMetaKey,
-        resultaat: mergedDagtaakTemplates,
+        key: _bibliotheekKey,
+        waarde: algemeneBibliotheek.waarde,
       );
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _leveranciersKey,
-        metadataKey: _leveranciersSyncMetaKey,
-        resultaat: mergedLeveranciers,
+        key: _bibliotheekGewijzigdOpKey,
+        waarde: algemeneBibliotheek.gewijzigdOp,
       );
-      await _bewaarJsonLijstCollectie(
+
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _notitiesKey,
-        metadataKey: _notitiesSyncMetaKey,
-        resultaat: mergedNotities,
+        key: _offerteMailTekstenKey,
+        waarde: offerteMailTeksten.waarde,
       );
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _notitieActiesKey,
-        metadataKey: _notitieActiesSyncMetaKey,
-        resultaat: mergedNotitieActies,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingProjectKleurenKey,
-        metadataKey: _opmetingProjectKleurenSyncMetaKey,
-        resultaat: mergedProjectKleuren,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingRaamKeuzemenusKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusKey),
-        resultaat: mergedRaamKeuzemenus,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingRaamKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusAluKey),
-        resultaat: mergedRaamKeuzemenusAlu,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingDeurKeuzemenusPvcKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingDeurKeuzemenusPvcKey),
-        resultaat: mergedDeurKeuzemenusPvc,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingDeurKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingDeurKeuzemenusAluKey),
-        resultaat: mergedDeurKeuzemenusAlu,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingSchuifraamKeuzemenusPvcKey,
-        metadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusPvcKey,
-        ),
-        resultaat: mergedSchuifraamKeuzemenusPvc,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingSchuifraamKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusAluKey,
-        ),
-        resultaat: mergedSchuifraamKeuzemenusAlu,
+        key: _offerteMailTekstenGewijzigdOpKey,
+        waarde: offerteMailTeksten.gewijzigdOp,
       );
 
       await _bewaarOptioneleString(
@@ -766,8 +533,8 @@ class OneDriveSyncService {
       await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
 
       laatsteSyncActie = uploadFotos
-          ? 'Merge upload met foto’s en deurpanelen uitgevoerd'
-          : 'Snelle merge upload zonder foto’s met deurpanelen uitgevoerd';
+          ? 'Merge upload met foto’s, deurpanelen en bibliotheek uitgevoerd'
+          : 'Snelle merge upload zonder foto’s met bibliotheek uitgevoerd';
 
       if (uploadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
         return 'BACKUP_OK_FOTOS_LATER\n'
@@ -778,64 +545,6 @@ class OneDriveSyncService {
     } catch (e) {
       return 'BACKUP_EXCEPTION: $e';
     }
-  }
-
-  static String _syncMetaKeyVoorDataKey(String dataKey) {
-    return '${dataKey}_sync_meta';
-  }
-
-  static String _standaardJsonRecordId(Map<String, dynamic> record) {
-    return record['id']?.toString().trim() ?? '';
-  }
-
-  static SyncJsonRecordMergeResult _mergeJsonLijstCollectie({
-    required SharedPreferences prefs,
-    required Map<String, dynamic> cloudData,
-    required String lokaleDataKey,
-    required String lokaleMetadataKey,
-    required String cloudDataVeld,
-    required String cloudMetadataVeld,
-    required String lokaleFallbackDatum,
-    required String cloudFallbackDatum,
-    String Function(Map<String, dynamic> record)? idVoorRecord,
-  }) {
-    return SyncMergeService.mergeJsonRecords(
-      lokaal: AppStorage.decodeJsonMapLijstVoorSync(
-        prefs.getString(lokaleDataKey),
-      ),
-      cloud: AppStorage.decodeJsonMapLijstVoorSync(
-        cloudData[cloudDataVeld] is String
-            ? cloudData[cloudDataVeld] as String
-            : null,
-      ),
-      lokaleMetadata: SyncMergeService.decodeJsonRecordMetadata(
-        prefs.getString(lokaleMetadataKey),
-      ),
-      cloudMetadata: SyncMergeService.decodeJsonRecordMetadata(
-        cloudData[cloudMetadataVeld] is String
-            ? cloudData[cloudMetadataVeld] as String
-            : null,
-      ),
-      idVoorRecord: idVoorRecord ?? _standaardJsonRecordId,
-      lokaleFallbackDatum: lokaleFallbackDatum,
-      cloudFallbackDatum: cloudFallbackDatum,
-    );
-  }
-
-  static Future<void> _bewaarJsonLijstCollectie({
-    required SharedPreferences prefs,
-    required String dataKey,
-    required String metadataKey,
-    required SyncJsonRecordMergeResult resultaat,
-  }) async {
-    await prefs.setString(
-      dataKey,
-      AppStorage.encodeJsonMapLijstVoorSync(resultaat.records),
-    );
-    await prefs.setString(
-      metadataKey,
-      SyncMergeService.encodeJsonRecordMetadata(resultaat.metadata),
-    );
   }
 
   Future<String> _uploadKlantenFotos(String token) async {
@@ -938,7 +647,7 @@ class OneDriveSyncService {
   }
 
   Future<String> downloadBackup({bool downloadFotos = true}) async {
-    final token = await OneDriveAuthService().login();
+    final token = await OneDriveAuthService().loginInteractief();
 
     if (token.startsWith('FOUT')) {
       return token;
@@ -1098,129 +807,28 @@ class OneDriveSyncService {
         cloudPrijsprofielen,
       );
 
-      final lokaleCollectieFallbackDatum =
-          prefs.getString(_backupDatumKey) ?? backupDatum;
+      final algemeneBibliotheek = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_bibliotheekKey),
+        cloudWaarde: data['algemeneBibliotheek'] is String
+            ? data['algemeneBibliotheek'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(_bibliotheekGewijzigdOpKey),
+        cloudGewijzigdOp: data['algemeneBibliotheekGewijzigdOp'] is String
+            ? data['algemeneBibliotheekGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
+      );
 
-      final mergedDagtaakTemplates = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _dagtaakTemplatesKey,
-        lokaleMetadataKey: _dagtaakTemplatesSyncMetaKey,
-        cloudDataVeld: 'dagtaakTemplates',
-        cloudMetadataVeld: 'dagtaakTemplatesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedLeveranciers = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _leveranciersKey,
-        lokaleMetadataKey: _leveranciersSyncMetaKey,
-        cloudDataVeld: 'leveranciers',
-        cloudMetadataVeld: 'leveranciersSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-        idVoorRecord: SyncMergeService.syncIdVoorLeverancierRecord,
-      );
-      final mergedNotities = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _notitiesKey,
-        lokaleMetadataKey: _notitiesSyncMetaKey,
-        cloudDataVeld: 'notities',
-        cloudMetadataVeld: 'notitiesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedNotitieActies = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _notitieActiesKey,
-        lokaleMetadataKey: _notitieActiesSyncMetaKey,
-        cloudDataVeld: 'notitieActies',
-        cloudMetadataVeld: 'notitieActiesSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedProjectKleuren = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingProjectKleurenKey,
-        lokaleMetadataKey: _opmetingProjectKleurenSyncMetaKey,
-        cloudDataVeld: 'opmetingProjectKleuren',
-        cloudMetadataVeld: 'opmetingProjectKleurenSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingRaamKeuzemenusKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusKey),
-        cloudDataVeld: 'opmetingRaamKeuzemenus',
-        cloudMetadataVeld: 'opmetingRaamKeuzemenusSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedRaamKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingRaamKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingRaamKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingRaamKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingRaamKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedDeurKeuzemenusPvc = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingDeurKeuzemenusPvcKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingDeurKeuzemenusPvcKey,
-        ),
-        cloudDataVeld: 'opmetingDeurKeuzemenusPvc',
-        cloudMetadataVeld: 'opmetingDeurKeuzemenusPvcSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedDeurKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingDeurKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingDeurKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingDeurKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingDeurKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedSchuifraamKeuzemenusPvc = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingSchuifraamKeuzemenusPvcKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusPvcKey,
-        ),
-        cloudDataVeld: 'opmetingSchuifraamKeuzemenusPvc',
-        cloudMetadataVeld: 'opmetingSchuifraamKeuzemenusPvcSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedSchuifraamKeuzemenusAlu = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _opmetingSchuifraamKeuzemenusAluKey,
-        lokaleMetadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusAluKey,
-        ),
-        cloudDataVeld: 'opmetingSchuifraamKeuzemenusAlu',
-        cloudMetadataVeld: 'opmetingSchuifraamKeuzemenusAluSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
+      final offerteMailTeksten = _kiesRecenteStringWaarde(
+        lokaleWaarde: prefs.getString(_offerteMailTekstenKey),
+        cloudWaarde: data['offerteMailTeksten'] is String
+            ? data['offerteMailTeksten'] as String
+            : null,
+        lokaleGewijzigdOp: prefs.getString(_offerteMailTekstenGewijzigdOpKey),
+        cloudGewijzigdOp: data['offerteMailTekstenGewijzigdOp'] is String
+            ? data['offerteMailTekstenGewijzigdOp'] as String
+            : null,
+        fallbackDatum: backupDatum,
       );
 
       final deurpanelenBibliotheek = _kiesRecenteStringWaarde(
@@ -1281,76 +889,50 @@ class OneDriveSyncService {
         mergedPrijsprofielen,
       );
 
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _dagtaakTemplatesKey,
-        metadataKey: _dagtaakTemplatesSyncMetaKey,
-        resultaat: mergedDagtaakTemplates,
+        key: _bibliotheekKey,
+        waarde: algemeneBibliotheek.waarde,
       );
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _leveranciersKey,
-        metadataKey: _leveranciersSyncMetaKey,
-        resultaat: mergedLeveranciers,
+        key: _bibliotheekGewijzigdOpKey,
+        waarde: algemeneBibliotheek.gewijzigdOp,
       );
-      await _bewaarJsonLijstCollectie(
+
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _notitiesKey,
-        metadataKey: _notitiesSyncMetaKey,
-        resultaat: mergedNotities,
+        key: _offerteMailTekstenKey,
+        waarde: offerteMailTeksten.waarde,
       );
-      await _bewaarJsonLijstCollectie(
+      await _bewaarOptioneleString(
         prefs: prefs,
-        dataKey: _notitieActiesKey,
-        metadataKey: _notitieActiesSyncMetaKey,
-        resultaat: mergedNotitieActies,
+        key: _offerteMailTekstenGewijzigdOpKey,
+        waarde: offerteMailTeksten.gewijzigdOp,
       );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingProjectKleurenKey,
-        metadataKey: _opmetingProjectKleurenSyncMetaKey,
-        resultaat: mergedProjectKleuren,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingRaamKeuzemenusKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusKey),
-        resultaat: mergedRaamKeuzemenus,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingRaamKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingRaamKeuzemenusAluKey),
-        resultaat: mergedRaamKeuzemenusAlu,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingDeurKeuzemenusPvcKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingDeurKeuzemenusPvcKey),
-        resultaat: mergedDeurKeuzemenusPvc,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingDeurKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(_opmetingDeurKeuzemenusAluKey),
-        resultaat: mergedDeurKeuzemenusAlu,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingSchuifraamKeuzemenusPvcKey,
-        metadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusPvcKey,
-        ),
-        resultaat: mergedSchuifraamKeuzemenusPvc,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _opmetingSchuifraamKeuzemenusAluKey,
-        metadataKey: _syncMetaKeyVoorDataKey(
-          _opmetingSchuifraamKeuzemenusAluKey,
-        ),
-        resultaat: mergedSchuifraamKeuzemenusAlu,
-      );
+
+      if (data['opmetingProjectKleuren'] is String) {
+        await prefs.setString(
+          _opmetingProjectKleurenKey,
+          data['opmetingProjectKleuren'] as String,
+        );
+      }
+
+      if (data['dagtaakTemplates'] is String) {
+        await prefs.setString('dagtaak_templates', data['dagtaakTemplates']);
+      }
+
+      if (data['leveranciers'] is String) {
+        await prefs.setString('leveranciers_lijst', data['leveranciers']);
+      }
+
+      if (data['notities'] is String) {
+        await prefs.setString('thimaco_notities', data['notities']);
+      }
+
+      if (data['notitieActies'] is String) {
+        await prefs.setString('thimaco_notitie_acties', data['notitieActies']);
+      }
 
       if (data['opmetingRaamOpvullingen'] is String) {
         await prefs.setString(
@@ -1359,38 +941,52 @@ class OneDriveSyncService {
         );
       }
 
+      if (data['opmetingRaamKeuzemenus'] is String) {
+        await prefs.setString(
+          'opmeting_raam_keuzemenus',
+          data['opmetingRaamKeuzemenus'],
+        );
+      }
+
+      if (data['opmetingRaamKeuzemenusAlu'] is String) {
+        await prefs.setString(
+          'opmeting_raam_keuzemenus_alu',
+          data['opmetingRaamKeuzemenusAlu'],
+        );
+      }
+
+      if (data['opmetingDeurKeuzemenusPvc'] is String) {
+        await prefs.setString(
+          'opmeting_deur_keuzemenus_pvc',
+          data['opmetingDeurKeuzemenusPvc'],
+        );
+      }
+
+      if (data['opmetingDeurKeuzemenusAlu'] is String) {
+        await prefs.setString(
+          'opmeting_deur_keuzemenus_alu',
+          data['opmetingDeurKeuzemenusAlu'],
+        );
+      }
+
+      if (data['opmetingSchuifraamKeuzemenusPvc'] is String) {
+        await prefs.setString(
+          _opmetingSchuifraamKeuzemenusPvcKey,
+          data['opmetingSchuifraamKeuzemenusPvc'],
+        );
+      }
+
+      if (data['opmetingSchuifraamKeuzemenusAlu'] is String) {
+        await prefs.setString(
+          _opmetingSchuifraamKeuzemenusAluKey,
+          data['opmetingSchuifraamKeuzemenusAlu'],
+        );
+      }
+
       if (data['opmetingSchuifraamOpbouwTypes'] is String) {
         await prefs.setString(
           _opmetingSchuifraamOpbouwTypesKey,
           data['opmetingSchuifraamOpbouwTypes'],
-        );
-      }
-
-      if (data['opmetingPlooiwerkenInstellingen'] is String) {
-        await prefs.setString(
-          _opmetingPlooiwerkenInstellingenKey,
-          data['opmetingPlooiwerkenInstellingen'],
-        );
-      }
-
-      if (data['opmetingUitvalschermInstellingen'] is String) {
-        await prefs.setString(
-          _opmetingUitvalschermInstellingenKey,
-          data['opmetingUitvalschermInstellingen'],
-        );
-      }
-
-      if (data['opmetingSektionalePoortInstellingen'] is String) {
-        await prefs.setString(
-          _opmetingSektionalePoortInstellingenKey,
-          data['opmetingSektionalePoortInstellingen'],
-        );
-      }
-
-      if (data['opmetingVeluxDakraamInstellingen'] is String) {
-        await prefs.setString(
-          _opmetingVeluxDakraamInstellingenKey,
-          data['opmetingVeluxDakraamInstellingen'],
         );
       }
 
@@ -1435,8 +1031,8 @@ class OneDriveSyncService {
       }
 
       laatsteSyncActie = downloadFotos
-          ? 'Download met foto’s en deurpanelen uitgevoerd'
-          : 'Snelle download zonder foto’s met deurpanelen uitgevoerd';
+          ? 'Download met foto’s, deurpanelen en bibliotheek uitgevoerd'
+          : 'Snelle download zonder foto’s met bibliotheek uitgevoerd';
 
       if (downloadFotos && !fotoResultaat.startsWith('FOTOS_OK')) {
         return 'IMPORT_OK_FOTOS_LATER\n'
@@ -1458,7 +1054,7 @@ class OneDriveSyncService {
       return slimmeSync();
     }
 
-    final token = await OneDriveAuthService().login();
+    final token = await OneDriveAuthService().loginInteractief();
 
     if (token.startsWith('FOUT')) {
       laatsteSyncActie = 'Eerste login mislukt';
@@ -1635,7 +1231,7 @@ class OneDriveSyncService {
   Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
       final token = magLoginVragen
-          ? await OneDriveAuthService().login()
+          ? await OneDriveAuthService().loginInteractief()
           : await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {

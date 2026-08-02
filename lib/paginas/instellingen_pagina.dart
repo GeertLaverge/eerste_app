@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-INSTELLINGENKNOP-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-INSTELLINGENKNOP-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-INSTELLINGENKNOP-FASE-1-20260731
 // THIMACO-CONTROLE: INSTELLINGEN-KNOP-VELUX-DAKRAMEN-20260729
@@ -20,6 +21,7 @@ import 'instellingen/voorzetrolluiken/opmeting_voorzetrolluik_instellingen_pagin
 import 'instellingen/uitvalscherm/opmeting_uitvalscherm_instellingen_pagina.dart';
 import 'instellingen/sektionale_poorten/opmeting_sektionale_poort_instellingen_pagina.dart';
 import 'instellingen/velux_dakramen/opmeting_velux_dakraam_instellingen_pagina.dart';
+import 'instellingen/offerte_mail/offerte_mail_teksten_pagina.dart';
 import 'instellingen/offerte_prijzen/offerte_prijzen_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
@@ -361,6 +363,22 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.roofing_outlined),
                 label: const Text('Velux dakramen'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OfferteMailTekstenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.mark_email_unread_outlined),
+                label: const Text('Tekst bij mail'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),

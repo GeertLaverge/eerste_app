@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-OVERZICHT-MODEL-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-OVERZICHT-MODEL-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-OVERZICHT-MODEL-FASE-1-20260731
 // THIMACO-CONTROLE: VELUX-DAKRAMEN-OVERZICHT-MODEL-FASE-1-2-20260729-2030
@@ -5,6 +6,7 @@
 // THIMACO-CONTROLE: PLOOIWERKEN-OVERZICHT-MODEL-KOPPELING-20260728
 // THIMACO-CONTROLE: OVERZICHT-MODEL-PRIJSdata-BEHOUDEN-TECHNISCHE-REGEL-ZICHTBAAR-20260720
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
+import '../algemene_opmeting/opmeting_algemene_opmeting_model.dart';
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
 import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
@@ -382,6 +384,7 @@ class OpmetingOverzichtRaamItem {
     this.voorzetscreenData,
     this.voorzetrolluikData,
     this.uitvalschermData,
+    this.algemeneOpmetingData,
     this.sektionalePoortData,
     this.veluxDakraamData,
   });
@@ -442,6 +445,7 @@ class OpmetingOverzichtRaamItem {
   final OpmetingVoorzetscreenModel? voorzetscreenData;
   final OpmetingVoorzetrolluikModel? voorzetrolluikData;
   final OpmetingUitvalschermModel? uitvalschermData;
+  final OpmetingAlgemeneOpmetingModel? algemeneOpmetingData;
   final OpmetingSektionalePoortModel? sektionalePoortData;
   final OpmetingVeluxDakraamModel? veluxDakraamData;
 
@@ -525,6 +529,12 @@ class OpmetingOverzichtRaamItem {
       case 'Uitvalschermen':
         return 'uitvalscherm';
 
+      case 'algemeneOpmeting':
+      case 'algemene_opmeting':
+      case 'Algemene opmeting':
+      case 'algemeen':
+        return 'algemeneOpmeting';
+
       case 'sektionalePoort':
       case 'sektionale_poort':
       case 'Sektionale poort':
@@ -591,6 +601,9 @@ class OpmetingOverzichtRaamItem {
       case 'uitvalscherm':
         return 'Uitvalscherm';
 
+      case 'algemeneOpmeting':
+        return 'Algemene opmeting';
+
       case 'sektionalePoort':
         return 'Sektionale poorten';
 
@@ -637,6 +650,7 @@ class OpmetingOverzichtRaamItem {
     OpmetingVoorzetscreenModel? voorzetscreenData,
     OpmetingVoorzetrolluikModel? voorzetrolluikData,
     OpmetingUitvalschermModel? uitvalschermData,
+    OpmetingAlgemeneOpmetingModel? algemeneOpmetingData,
     OpmetingSektionalePoortModel? sektionalePoortData,
     OpmetingVeluxDakraamModel? veluxDakraamData,
   }) {
@@ -678,6 +692,7 @@ class OpmetingOverzichtRaamItem {
       voorzetscreenData: voorzetscreenData ?? this.voorzetscreenData,
       voorzetrolluikData: voorzetrolluikData ?? this.voorzetrolluikData,
       uitvalschermData: uitvalschermData ?? this.uitvalschermData,
+      algemeneOpmetingData: algemeneOpmetingData ?? this.algemeneOpmetingData,
       sektionalePoortData: sektionalePoortData ?? this.sektionalePoortData,
       veluxDakraamData: veluxDakraamData ?? this.veluxDakraamData,
     );
@@ -741,6 +756,8 @@ class OpmetingOverzichtRaamItem {
         'voorzetrolluikData': voorzetrolluikData!.toJson(),
       if (uitvalschermData != null)
         'uitvalschermData': uitvalschermData!.toJson(),
+      if (algemeneOpmetingData != null)
+        'algemeneOpmetingData': algemeneOpmetingData!.toJson(),
       if (sektionalePoortData != null)
         'sektionalePoortData': sektionalePoortData!.toJson(),
       if (veluxDakraamData != null)
@@ -852,6 +869,11 @@ class OpmetingOverzichtRaamItem {
       uitvalschermData: json['uitvalschermData'] is Map
           ? OpmetingUitvalschermModel.fromJson(
               Map<String, dynamic>.from(json['uitvalschermData'] as Map),
+            )
+          : null,
+      algemeneOpmetingData: json['algemeneOpmetingData'] is Map
+          ? OpmetingAlgemeneOpmetingModel.fromJson(
+              Map<String, dynamic>.from(json['algemeneOpmetingData'] as Map),
             )
           : null,
       sektionalePoortData: json['sektionalePoortData'] is Map

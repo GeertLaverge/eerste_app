@@ -1,10 +1,10 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-VERZENDOVERZICHT-EN-BIBLIOTHEEK-20260802
 // THIMACO-CONTROLE: OFFERTE-GOEDKEURING-IPAD-PAPIER-MAIL-20260801
 // THIMACO-CONTROLE: OFFERTE-PDF-ONEDRIVE-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
@@ -14,7 +14,7 @@ import '../sync/onedrive_klantdocument_service.dart';
 import '../sync/onedrive_map_kiezer_dialog.dart';
 import 'offerte_goedkeuring_model.dart';
 import 'offerte_handtekening_dialog.dart';
-import 'offerte_mail_template_service.dart';
+import 'mail/offerte_mail_verzend_dialog.dart';
 import 'offerte_pdf_model.dart';
 import 'offerte_pdf_service.dart';
 import 'offerte_pvc_raam_tekening_service.dart';
@@ -274,59 +274,39 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     }
   }
 
-  Future<void> _toonMailtekst(_MailKeuze keuze) async {
-    await _pdfFuture;
+  Future<void> _toonVerzendOverzicht(OfferteMailVerzendSoort soort) async {
+    final pdfBytes = await _pdfFuture;
     final data = _laatsteDocumentData;
     if (data == null || !mounted) return;
 
-    final mail = switch (keuze) {
-      _MailKeuze.versturen => OfferteMailTemplateService.voorVersturen(data),
-      _MailKeuze.bevestiging => OfferteMailTemplateService.naGoedkeuring(
-        data,
-        _goedkeuring,
-      ),
-    };
+    if (soort == OfferteMailVerzendSoort.bevestiging && !_isOndertekend) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Laat de offerte eerst ondertekenen voordat u een '
+            'bevestigingsmail verstuurt.',
+          ),
+          backgroundColor: _groen,
+        ),
+      );
+      return;
+    }
 
-    await showDialog<void>(
+    final verstuurd = await OfferteMailVerzendDialog.toon(
       context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            keuze == _MailKeuze.versturen
-                ? 'Mail bij versturen offerte'
-                : 'Bevestigingsmail na goedkeuring',
-          ),
-          content: SizedBox(
-            width: 620,
-            child: SingleChildScrollView(child: SelectableText(mail.volledig)),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Sluiten'),
-            ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: _groen,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () async {
-                await Clipboard.setData(ClipboardData(text: mail.volledig));
-                if (!mounted) return;
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Onderwerp en mailtekst zijn gekopieerd.'),
-                    backgroundColor: _groen,
-                  ),
-                );
-              },
-              icon: const Icon(Icons.copy_rounded),
-              label: const Text('Kopiëren'),
-            ),
-          ],
-        );
-      },
+      data: data,
+      offerteBytes: pdfBytes,
+      offerteBestandsnaam: _maakBestandsnaam(),
+      soort: soort,
+      goedkeuring: _goedkeuring,
+    );
+
+    if (!mounted || verstuurd != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('De e-mail is verstuurd.'),
+        backgroundColor: _groen,
+      ),
     );
   }
 
@@ -384,25 +364,37 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   Widget _bouwMailActie() {
-    return PopupMenuButton<_MailKeuze>(
-      tooltip: 'Mailtekst',
+    return PopupMenuButton<OfferteMailVerzendSoort>(
+      tooltip: 'E-mail versturen',
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
       icon: const Icon(Icons.email_outlined),
-      onSelected: _toonMailtekst,
-      itemBuilder: (context) => const <PopupMenuEntry<_MailKeuze>>[
-        PopupMenuItem<_MailKeuze>(
-          value: _MailKeuze.versturen,
+      onSelected: _toonVerzendOverzicht,
+      itemBuilder: (context) => <PopupMenuEntry<OfferteMailVerzendSoort>>[
+        const PopupMenuItem<OfferteMailVerzendSoort>(
+          value: OfferteMailVerzendSoort.offerte,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.outgoing_mail),
-            title: Text('Mail bij versturen'),
+            leading: Icon(Icons.outgoing_mail, color: _groen),
+            title: Text('Offerte versturen'),
+            subtitle: Text('Overzicht van tekst en bijlagen'),
           ),
         ),
-        PopupMenuItem<_MailKeuze>(
-          value: _MailKeuze.bevestiging,
+        PopupMenuItem<OfferteMailVerzendSoort>(
+          value: OfferteMailVerzendSoort.bevestiging,
+          enabled: _isOndertekend,
           child: ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.mark_email_read_outlined),
-            title: Text('Bevestiging na ondertekening'),
+            leading: Icon(
+              Icons.mark_email_read_outlined,
+              color: _isOndertekend ? _groen : const Color(0xFF9CA3AF),
+            ),
+            title: const Text('Bevestiging na ondertekening'),
+            subtitle: Text(
+              _isOndertekend
+                  ? 'Ondertekende offerte en gekozen folders'
+                  : 'Eerst laten ondertekenen',
+            ),
           ),
         ),
       ],
@@ -592,7 +584,5 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         '${twee(datum.hour)}:${twee(datum.minute)}';
   }
 }
-
-enum _MailKeuze { versturen, bevestiging }
 
 enum _OndertekeningKeuze { opnieuw, verwijderen }

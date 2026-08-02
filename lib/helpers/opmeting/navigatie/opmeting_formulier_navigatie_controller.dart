@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-NAVIGATIE-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-NAVIGATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-NAVIGATIE-AMBIGUOUS-IMPORT-HERSTEL-20260731-0845
 // THIMACO-CONTROLE: VOORZETSCREEN-PROJECTKLEUR-NAVIGATIE-20260730-2005
@@ -7,6 +8,7 @@
 import 'package:flutter/material.dart';
 
 import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
+import '../algemene_opmeting/opmeting_algemene_opmeting_fiche.dart';
 import '../overzicht/opmeting_overzicht_model.dart' as overzicht;
 import '../project/opmeting_project_titelhoofd_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_fiche.dart';
@@ -411,6 +413,41 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
+  Future<void> openAlgemeneOpmeting({
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) async {
+    if (_formulierOpenenBezig) return;
+    _formulierOpenenBezig = true;
+
+    try {
+      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
+          ? bestaandeOpmeting!.klantNaam.trim()
+          : leesKlantNaam().trim();
+
+      if (klantNaam.isEmpty || !isMounted()) return;
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+      if (!isMounted() || !context.mounted) return;
+
+      final resultaat = await Navigator.of(context)
+          .push<overzicht.OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingAlgemeneOpmetingFiche(
+                  klantNaam: klantNaam,
+                  bestaandeOpmeting: bestaandeOpmeting,
+                );
+              },
+            ),
+          );
+
+      if (resultaat == null || !isMounted()) return;
+      await herlaadOpmetingen(klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
+    }
+  }
+
   Future<void> openSektionalePoort({
     overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
@@ -537,6 +574,11 @@ class OpmetingFormulierNavigatieController {
 
     if (item.formulierTypeGenormaliseerd == 'uitvalscherm') {
       await openUitvalscherm(bestaandeOpmeting: item);
+      return;
+    }
+
+    if (item.formulierTypeGenormaliseerd == 'algemeneOpmeting') {
+      await openAlgemeneOpmeting(bestaandeOpmeting: item);
       return;
     }
 

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-BOVENBALK-ACTIES-20260801
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-HOOFDPAGINA-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-HOOFDPAGINA-20260801
 // THIMACO-CONTROLE: ONEDRIVE-KLANTDOCUMENTEN-STAP-2-20260731
 // THIMACO-CONTROLE: GENEREREN-OFFERTE-OPMETING-20260731
@@ -383,6 +385,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
+  Future<void> _openAlgemeneOpmeting({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openAlgemeneOpmeting(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
   Future<void> _openSektionalePoort({
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
@@ -543,7 +553,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           return false;
         }
 
-        return positie.vliegendeurData != null ||
+        return positie.algemeneOpmetingData != null ||
+            positie.vliegendeurData != null ||
             OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
       }),
     );
@@ -556,7 +567,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       posities.where((positie) {
         if (positie.isVerwijderd) return false;
 
-        return positie.vliegendeurData != null ||
+        return positie.algemeneOpmetingData != null ||
+            positie.vliegendeurData != null ||
             OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
       }),
     );
@@ -1034,6 +1046,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.uitvalscherm:
         await _openUitvalscherm();
+        break;
+
+      case OfferteArtikelOpenType.algemeneOpmeting:
+        await _openAlgemeneOpmeting();
         break;
 
       case OfferteArtikelOpenType.sektionalePoort:

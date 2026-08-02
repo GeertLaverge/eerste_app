@@ -1,5 +1,4 @@
-// THIMACO-CONTROLE: UITVALSCHERM-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260801
-// THIMACO-CONTROLE: VOORZETROLLUIK-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260731
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-ALLEEN-VRIJE-PRIJZEN-20260801
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260730-2205
 // THIMACO-CONTROLE: VELUX-ZICHTBAAR-BIJ-TECHNISCHE-PRIJSKEUZES-20260730
 // THIMACO-CONTROLE: VELUX-OFFERTEPRIJZEN-VRIJE-PRIJZEN-FASE-4-20260729-2257
@@ -69,20 +68,6 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           toonBijTechnischeKeuzes: true,
         ),
         _OffertePrijsFicheKeuze(
-          formulierType: 'voorzetrolluik',
-          naam: 'Voorzetrolluik',
-          icoon: Icons.blinds_outlined,
-          actief: true,
-          toonBijTechnischeKeuzes: true,
-        ),
-        _OffertePrijsFicheKeuze(
-          formulierType: 'uitvalscherm',
-          naam: 'Uitvalscherm',
-          icoon: Icons.wb_sunny_outlined,
-          actief: true,
-          toonBijTechnischeKeuzes: true,
-        ),
-        _OffertePrijsFicheKeuze(
           formulierType: 'sektionalePoort',
           naam: 'Sektionale poorten',
           icoon: Icons.garage_outlined,
@@ -132,6 +117,14 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           actief: true,
         ),
         _OffertePrijsFicheKeuze(
+          formulierType: 'algemeneOpmeting',
+          naam: 'Algemene opmeting',
+          icoon: Icons.description_outlined,
+          actief: true,
+          toonBijTechnischeKeuzes: false,
+          toonBijProjectPrijsregels: false,
+        ),
+        _OffertePrijsFicheKeuze(
           formulierType: 'zonwering',
           naam: 'Zonwering',
           icoon: Icons.wb_sunny_outlined,
@@ -142,6 +135,12 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
 
   List<_OffertePrijsFicheKeuze> get _actieveFiches {
     return _fiches.where((fiche) => fiche.actief).toList(growable: false);
+  }
+
+  List<_OffertePrijsFicheKeuze> get _projectPrijsFiches {
+    return _actieveFiches
+        .where((fiche) => fiche.toonBijProjectPrijsregels)
+        .toList(growable: false);
   }
 
   static String _normaliseerFormulierType(String waarde) {
@@ -276,7 +275,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
   }) {
     final resultaat = <OffertePrijsregelModel>[];
     final fichePerSleutel = <String, _OffertePrijsFicheKeuze>{
-      for (final fiche in _actieveFiches)
+      for (final fiche in _projectPrijsFiches)
         _normaliseerFormulierType(fiche.formulierType): fiche,
     };
 
@@ -332,7 +331,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
       final profielenPerFormulierType = <String, OffertePrijsprofielModel>{};
       final beginRegels = <OffertePrijsregelModel>[];
 
-      for (final fiche in _actieveFiches) {
+      for (final fiche in _projectPrijsFiches) {
         final bestaand = await AppStorage.laadOffertePrijsProfiel(
           fiche.formulierType,
         );
@@ -374,7 +373,8 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           );
 
       final formulierTypeLabels = <String, String>{
-        for (final fiche in _actieveFiches) fiche.formulierType: fiche.naam,
+        for (final fiche in _projectPrijsFiches)
+          fiche.formulierType: fiche.naam,
       };
 
       setState(() {
@@ -386,7 +386,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
         titel: 'Prijsregel toepassen op…',
         subtitel:
             'Beheer algemene offerteprijzen voor alle soorten opmeetfiches',
-        formulierType: _actieveFiches.first.formulierType,
+        formulierType: _projectPrijsFiches.first.formulierType,
         categorie: OffertePrijsCategorie.alleArtikelen,
         beginPrijsregels: huidigeRegels,
         toonProjectActies: true,
@@ -417,7 +417,7 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
             gekoppeldeBronnenPerRegelId: gekoppeldeBronnenPerRegelId,
           );
 
-      for (final fiche in _actieveFiches) {
+      for (final fiche in _projectPrijsFiches) {
         final sleutel = _normaliseerFormulierType(fiche.formulierType);
 
         final profiel =
@@ -523,13 +523,14 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
                   'meerdere soorten opmeetfiches kunnen worden toegepast. '
                   'Daaronder beheert u de artikelspecifieke offerteprijzen '
                   'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
-                  'Schuifvliegendeur, Plooiwerken, Voorzetscreen, Voorzetrolluik, Sektionale poorten, Velux '
-                  'dakramen, PVC en ALU raam, PVC en ALU schuifraam en PVC en '
-                  'ALU deur zijn actief. Technische-keuzeprijzen zijn onder meer '
-                  'beschikbaar voor Voorzetscreen, Voorzetrolluik, Sektionale poorten en Velux '
-                  'dakramen. Bij Voorzetscreen en Voorzetrolluik wordt alleen '
-                  'Inbouwschakelaar afzonderlijk geprijsd; de overige bediening blijft inbegrepen '
-                  'in de prijs per stuk. Bij Velux worden de prijzen voor MDF- en '
+                  'Schuifvliegendeur, Plooiwerken, Voorzetscreen, Algemene opmeting, '
+                  'Sektionale poorten, Velux dakramen, PVC en ALU raam, PVC en ALU '
+                  'schuifraam en PVC en ALU deur zijn actief. Algemene opmeting '
+                  'gebruikt uitsluitend Vrije prijs per artikel. Technische-keuzeprijzen '
+                  'zijn onder meer beschikbaar voor Voorzetscreen, Sektionale poorten '
+                  'en Velux dakramen. Bij Voorzetscreen wordt alleen Inbouwschakelaar '
+                  'afzonderlijk geprijsd; de overige bediening blijft inbegrepen in de '
+                  'prijs per stuk. Bij Velux worden de prijzen voor MDF- en '
                   'kunststofbinnenafwerking hier centraal ingesteld.',
                   style: TextStyle(
                     color: _tekstGrijs,
@@ -900,6 +901,7 @@ class _OffertePrijsFicheKeuze {
     required this.icoon,
     this.actief = false,
     this.toonBijTechnischeKeuzes = true,
+    this.toonBijProjectPrijsregels = true,
   });
 
   final String formulierType;
@@ -907,4 +909,5 @@ class _OffertePrijsFicheKeuze {
   final IconData icoon;
   final bool actief;
   final bool toonBijTechnischeKeuzes;
+  final bool toonBijProjectPrijsregels;
 }

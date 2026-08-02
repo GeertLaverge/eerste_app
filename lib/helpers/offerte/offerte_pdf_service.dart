@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-PDF-ROUTING-WINSTMARGE-20260802
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-PDF-KOPPELING-20260801
 // THIMACO-CONTROLE: OFFERTE-GOEDKEURING-IPAD-PAPIER-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-PDF-KOPPELING-20260801
 // THIMACO-CONTROLE: OPMETING-PDF-KLANTADRES-IN-KOP-20260731
@@ -17,6 +19,7 @@ import 'package:printing/printing.dart';
 import '../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_pdf_artikel_layout_helper.dart';
+import 'offerte_pdf_algemene_opmeting_widget.dart';
 import 'offerte_goedkeuring_model.dart';
 import 'offerte_pdf_inzethor_widget.dart';
 import 'offerte_pdf_plooiwerken_widget.dart';
@@ -826,10 +829,13 @@ class OffertePdfService {
         ? data.positiePrijsOptiesVoor(artikel.positie)
         : const <OffertePrijsOptieRegel>[];
     final isVelux = artikel.positie.veluxDakraamData != null;
-    final artikelType = isVelux
+    final algemeneOpmeting = artikel.positie.algemeneOpmetingData;
+    final artikelType = algemeneOpmeting != null
+        ? algemeneOpmeting.effectieveTitel
+        : isVelux
         ? OffertePdfVeluxDakraamWidget.titelVoorPositie(artikel.positie)
         : artikel.positie.formulierTypeLabel;
-    final uitvoeringsRegels = isVelux
+    final uitvoeringsRegels = isVelux || algemeneOpmeting != null
         ? const <String>[]
         : OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(
             artikel.positie,
@@ -978,6 +984,14 @@ class OffertePdfService {
             )
           else if (artikel.positie.uitvalschermData != null)
             OffertePdfUitvalschermWidget.bouwPositie(
+              positie: artikel.positie,
+              kortingToestaan: kortingToestaanEffectief,
+              isOptie: isOptie,
+              btwPercentage: data.btwPercentage,
+              btwRegelLabel: data.btwRegelLabel,
+            )
+          else if (artikel.positie.algemeneOpmetingData != null)
+            OffertePdfAlgemeneOpmetingWidget.bouwPositie(
               positie: artikel.positie,
               kortingToestaan: kortingToestaanEffectief,
               isOptie: isOptie,
@@ -1312,6 +1326,13 @@ class OffertePdfService {
         kortingToestaan: kortingToestaanEffectief,
         isOptie: isOptie,
       );
+    } else if (positie.algemeneOpmetingData != null) {
+      inhoudHoogte =
+          OffertePdfAlgemeneOpmetingWidget.berekenTotalePositieHoogte(
+            positie,
+            kortingToestaan: kortingToestaanEffectief,
+            isOptie: isOptie,
+          );
     } else if (positie.sektionalePoortData != null) {
       inhoudHoogte = OffertePdfSektionalePoortWidget.berekenTotalePositieHoogte(
         positie,
@@ -1341,7 +1362,8 @@ class OffertePdfService {
     OpmetingOverzichtRaamItem positie, {
     bool toonOptieMelding = true,
   }) {
-    final uitvoeringsRegels = positie.veluxDakraamData != null
+    final uitvoeringsRegels =
+        positie.veluxDakraamData != null || positie.algemeneOpmetingData != null
         ? const <String>[]
         : OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(positie);
     final extraRegels = uitvoeringsRegels.length > 1
