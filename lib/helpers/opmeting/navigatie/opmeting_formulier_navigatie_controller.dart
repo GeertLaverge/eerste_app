@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-NAVIGATIE-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-NAVIGATIE-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-NAVIGATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-NAVIGATIE-AMBIGUOUS-IMPORT-HERSTEL-20260731-0845
@@ -16,6 +17,7 @@ import '../toebehoren/vliegendeur/opmeting_vliegendeur_fiche.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_fiche.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_fiche.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_fiche.dart';
+import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_fiche.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_fiche.dart';
 import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_fiche.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_fiche.dart';
@@ -341,6 +343,41 @@ class OpmetingFormulierNavigatieController {
     }
   }
 
+  Future<void> openBuitenjaloezie({
+    overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) async {
+    if (_formulierOpenenBezig) return;
+    _formulierOpenenBezig = true;
+
+    try {
+      final klantNaam = bestaandeOpmeting?.klantNaam.trim().isNotEmpty == true
+          ? bestaandeOpmeting!.klantNaam.trim()
+          : leesKlantNaam().trim();
+
+      if (klantNaam.isEmpty || !isMounted()) return;
+
+      await _wachtTotPopupEnDialogGeslotenZijn();
+      if (!isMounted() || !context.mounted) return;
+
+      final resultaat = await Navigator.of(context)
+          .push<overzicht.OpmetingOverzichtRaamItem>(
+            MaterialPageRoute(
+              builder: (routeContext) {
+                return OpmetingBuitenjaloezieFiche(
+                  klantNaam: klantNaam,
+                  bestaandeOpmeting: bestaandeOpmeting,
+                );
+              },
+            ),
+          );
+
+      if (resultaat == null || !isMounted()) return;
+      await herlaadOpmetingen(klantNaam);
+    } finally {
+      _formulierOpenenBezig = false;
+    }
+  }
+
   Future<void> openVoorzetrolluik({
     overzicht.OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) async {
@@ -564,6 +601,11 @@ class OpmetingFormulierNavigatieController {
 
     if (item.formulierTypeGenormaliseerd == 'voorzetscreen') {
       await openVoorzetscreen(bestaandeOpmeting: item);
+      return;
+    }
+
+    if (item.formulierTypeGenormaliseerd == 'buitenjaloezie') {
+      await openBuitenjaloezie(bestaandeOpmeting: item);
       return;
     }
 

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-HOOFDPAGINA-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-BOVENBALK-ACTIES-20260801
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-HOOFDPAGINA-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-HOOFDPAGINA-20260801
@@ -365,6 +366,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     OpmetingOverzichtRaamItem? bestaandeOpmeting,
   }) {
     return _formulierNavigatieController.openVoorzetscreen(
+      bestaandeOpmeting: bestaandeOpmeting,
+    );
+  }
+
+  Future<void> _openBuitenjaloezie({
+    OpmetingOverzichtRaamItem? bestaandeOpmeting,
+  }) {
+    return _formulierNavigatieController.openBuitenjaloezie(
       bestaandeOpmeting: bestaandeOpmeting,
     );
   }
@@ -1038,6 +1047,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
       case OfferteArtikelOpenType.voorzetscreen:
         await _openVoorzetscreen();
+        break;
+
+      case OfferteArtikelOpenType.buitenjaloezie:
+        await _openBuitenjaloezie();
         break;
 
       case OfferteArtikelOpenType.voorzetrolluik:

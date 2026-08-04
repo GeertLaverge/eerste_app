@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-DEFINITIEF-OFFERTEPRIJZEN-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-KOPPELING-OFFERTEPRIJZEN-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-ALLEEN-VRIJE-PRIJZEN-20260801
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-ZICHTBAAR-IN-OFFERTEPRIJZEN-20260730-2205
 // THIMACO-CONTROLE: VELUX-ZICHTBAAR-BIJ-TECHNISCHE-PRIJSKEUZES-20260730
@@ -64,6 +66,13 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
           formulierType: 'voorzetscreen',
           naam: 'Voorzetscreen',
           icoon: Icons.blinds_outlined,
+          actief: true,
+          toonBijTechnischeKeuzes: true,
+        ),
+        _OffertePrijsFicheKeuze(
+          formulierType: 'buitenjaloezie',
+          naam: 'Buitenjaloezie',
+          icoon: Icons.blinds_rounded,
           actief: true,
           toonBijTechnischeKeuzes: true,
         ),
@@ -523,11 +532,11 @@ class _OffertePrijzenPaginaState extends State<OffertePrijzenPagina> {
                   'meerdere soorten opmeetfiches kunnen worden toegepast. '
                   'Daaronder beheert u de artikelspecifieke offerteprijzen '
                   'per soort opmeetfiche. Vaste inzethor, Vliegendeur, '
-                  'Schuifvliegendeur, Plooiwerken, Voorzetscreen, Algemene opmeting, '
+                  'Schuifvliegendeur, Plooiwerken, Voorzetscreen, Buitenjaloezie, Algemene opmeting, '
                   'Sektionale poorten, Velux dakramen, PVC en ALU raam, PVC en ALU '
                   'schuifraam en PVC en ALU deur zijn actief. Algemene opmeting '
                   'gebruikt uitsluitend Vrije prijs per artikel. Technische-keuzeprijzen '
-                  'zijn onder meer beschikbaar voor Voorzetscreen, Sektionale poorten '
+                  'zijn onder meer beschikbaar voor Voorzetscreen, Buitenjaloezie, Sektionale poorten '
                   'en Velux dakramen. Bij Voorzetscreen wordt alleen Inbouwschakelaar '
                   'afzonderlijk geprijsd; de overige bediening blijft inbegrepen in de '
                   'prijs per stuk. Bij Velux worden de prijzen voor MDF- en '

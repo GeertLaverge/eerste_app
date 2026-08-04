@@ -1,9 +1,9 @@
-// THIMACO-CONTROLE: FINALE-OPSCHONING-VOOR-VELUX-TITELHOOFD-20260729-1535
 // THIMACO-CONTROLE: KLANTNUMMER-IPAD-NUMERIEK-EN-LEEGMAKEN-20260729-1455
 // THIMACO-CONTROLE: OFFERTEVOLGNUMMER-VELDEN-LEEG-BIJ-FOCUS-20260726
 // THIMACO-CONTROLE: KLANTVELDEN-VISUEEL-ALLEMAAL-27PX-20260720
 // THIMACO-CONTROLE: COMPACTE-KLANTGEGEVENS-PROJECTKLEUR-ZONDER-ZWEVENDE-LABELS-20260720
 // THIMACO-CONTROLE: OFFERTENUMMER-CIJFERVAK-EENVOUDIG-OVERSCHRIJVEN-20260726
+// THIMACO-CONTROLE: PROJECT-TITELHOOFD-IPAD-STAAND-TWEE-KOLOMMEN-20260804
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -577,6 +577,7 @@ class _OpmetingProjectTitelhoofdKaartState
     return LayoutBuilder(
       builder: (context, constraints) {
         final breed = constraints.maxWidth >= 1050;
+        final tweeKolommen = constraints.maxWidth >= 650;
         const kaartHoogte = 276.0;
 
         if (breed) {
@@ -594,6 +595,37 @@ class _OpmetingProjectTitelhoofdKaartState
                 Expanded(flex: 7, child: _bouwOfferteInstellingenKaart()),
               ],
             ),
+          );
+        }
+
+        if (tweeKolommen) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: kaartHoogte,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _bouwKlantKaart()),
+                    const SizedBox(width: 10),
+                    Expanded(child: _bouwProjectKleurKaart()),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: kaartHoogte,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _bouwInhoudKaart()),
+                    const SizedBox(width: 10),
+                    Expanded(child: _bouwOfferteInstellingenKaart()),
+                  ],
+                ),
+              ),
+            ],
           );
         }
 
@@ -803,8 +835,7 @@ class _OpmetingProjectTitelhoofdKaartState
     return SizedBox(
       height: hoogte,
       child: DropdownButtonFormField<String>(
-        key: ValueKey<String>('aanspreking-$_aanspreking'),
-        initialValue: _aanspreking,
+        value: _aanspreking,
         isExpanded: true,
         iconSize: 14,
         style: const TextStyle(
@@ -973,8 +1004,7 @@ class _OpmetingProjectTitelhoofdKaartState
         SizedBox(
           width: 122,
           child: DropdownButtonFormField<String>(
-            key: ValueKey<String>('btw-$_btwTarief'),
-            initialValue: _btwTarief,
+            value: _btwTarief,
             isExpanded: true,
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
             style: const TextStyle(

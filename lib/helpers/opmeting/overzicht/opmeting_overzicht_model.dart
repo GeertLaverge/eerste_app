@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-LABEL-FASE-4-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-MODEL-FASE-3A-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-OVERZICHT-MODEL-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-OVERZICHT-MODEL-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-OVERZICHT-MODEL-FASE-1-20260731
@@ -20,6 +22,7 @@ import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
+import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_model.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_model.dart';
 import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
@@ -382,6 +385,7 @@ class OpmetingOverzichtRaamItem {
     this.schuifvliegendeurData,
     this.plooiwerkenData,
     this.voorzetscreenData,
+    this.buitenjaloezieData,
     this.voorzetrolluikData,
     this.uitvalschermData,
     this.algemeneOpmetingData,
@@ -443,6 +447,7 @@ class OpmetingOverzichtRaamItem {
   final OpmetingSchuifvliegendeurModel? schuifvliegendeurData;
   final OpmetingPlooiwerkenModel? plooiwerkenData;
   final OpmetingVoorzetscreenModel? voorzetscreenData;
+  final OpmetingBuitenjaloezieModel? buitenjaloezieData;
   final OpmetingVoorzetrolluikModel? voorzetrolluikData;
   final OpmetingUitvalschermModel? uitvalschermData;
   final OpmetingAlgemeneOpmetingModel? algemeneOpmetingData;
@@ -516,6 +521,12 @@ class OpmetingOverzichtRaamItem {
       case 'Voorzetscreen':
       case 'Voorzetscreens':
         return 'voorzetscreen';
+
+      case 'buitenjaloezie':
+      case 'buiten_jaloezie':
+      case 'Buitenjaloezie':
+      case 'Buitenjaloezieën':
+        return 'buitenjaloezie';
 
       case 'voorzetrolluik':
       case 'voorzet_rolluik':
@@ -595,6 +606,9 @@ class OpmetingOverzichtRaamItem {
       case 'voorzetscreen':
         return 'Voorzetscreen';
 
+      case 'buitenjaloezie':
+        return 'Buitenjaloezie';
+
       case 'voorzetrolluik':
         return 'Voorzetrolluik';
 
@@ -648,6 +662,7 @@ class OpmetingOverzichtRaamItem {
     OpmetingSchuifvliegendeurModel? schuifvliegendeurData,
     OpmetingPlooiwerkenModel? plooiwerkenData,
     OpmetingVoorzetscreenModel? voorzetscreenData,
+    OpmetingBuitenjaloezieModel? buitenjaloezieData,
     OpmetingVoorzetrolluikModel? voorzetrolluikData,
     OpmetingUitvalschermModel? uitvalschermData,
     OpmetingAlgemeneOpmetingModel? algemeneOpmetingData,
@@ -690,6 +705,7 @@ class OpmetingOverzichtRaamItem {
           schuifvliegendeurData ?? this.schuifvliegendeurData,
       plooiwerkenData: plooiwerkenData ?? this.plooiwerkenData,
       voorzetscreenData: voorzetscreenData ?? this.voorzetscreenData,
+      buitenjaloezieData: buitenjaloezieData ?? this.buitenjaloezieData,
       voorzetrolluikData: voorzetrolluikData ?? this.voorzetrolluikData,
       uitvalschermData: uitvalschermData ?? this.uitvalschermData,
       algemeneOpmetingData: algemeneOpmetingData ?? this.algemeneOpmetingData,
@@ -752,6 +768,8 @@ class OpmetingOverzichtRaamItem {
       if (plooiwerkenData != null) 'plooiwerkenData': plooiwerkenData!.toJson(),
       if (voorzetscreenData != null)
         'voorzetscreenData': voorzetscreenData!.toJson(),
+      if (buitenjaloezieData != null)
+        'buitenjaloezieData': buitenjaloezieData!.toJson(),
       if (voorzetrolluikData != null)
         'voorzetrolluikData': voorzetrolluikData!.toJson(),
       if (uitvalschermData != null)
@@ -859,6 +877,11 @@ class OpmetingOverzichtRaamItem {
       voorzetscreenData: json['voorzetscreenData'] is Map
           ? OpmetingVoorzetscreenModel.fromJson(
               Map<String, dynamic>.from(json['voorzetscreenData'] as Map),
+            )
+          : null,
+      buitenjaloezieData: json['buitenjaloezieData'] is Map
+          ? OpmetingBuitenjaloezieModel.fromJson(
+              Map<String, dynamic>.from(json['buitenjaloezieData'] as Map),
             )
           : null,
       voorzetrolluikData: json['voorzetrolluikData'] is Map

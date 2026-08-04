@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLINGEN-VERSLEPEN-EN-SUBMENU-KOPIEREN-20260803
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -45,6 +46,7 @@ class _OpmetingRaamOpvullingenPaginaState
 
     _vulOntbrekendeGroepenAan(groepen, opvullingen);
     groepen.sort(_sorteerGroepen);
+    _normaliseerTypeVolgorde(opvullingen);
     opvullingen.sort(_sorteerOpvullingen);
 
     if (!mounted) {
@@ -170,11 +172,6 @@ class _OpmetingRaamOpvullingenPaginaState
             icon: const Icon(Icons.create_new_folder_outlined, color: _groen),
           ),
           IconButton(
-            tooltip: 'Standaard submenu’s en types toevoegen',
-            onPressed: _bewaren ? null : _voegStandaardTypesToe,
-            icon: const Icon(Icons.playlist_add_rounded, color: _groen),
-          ),
-          IconButton(
             tooltip: 'Nieuwe opvulling',
             onPressed: _bewaren ? null : () => _openEditor(),
             icon: const Icon(Icons.add_rounded, color: _groen),
@@ -232,7 +229,7 @@ class _OpmetingRaamOpvullingenPaginaState
           SizedBox(width: 10),
           Expanded(
             child: Text(
-              'Maak zelf submenu’s aan, bijvoorbeeld Niet gelaagd, 1 zijde gelaagd, 2 zijden gelaagd of een eigen groep. Onder elk submenu voeg je types toe zoals Helder, Gezandstraald of Ornament. Deze lijst wordt gebruikt in PVC raam, ALU raam en PVC deur.',
+              'Maak zelf submenu’s aan en voeg daaronder types toe. Houd het sleepicoon ingedrukt om een type binnen hetzelfde submenu te verplaatsen of naar een ander submenu te slepen. Een volledig submenu kan inclusief alle types worden gekopieerd. Deze lijst wordt gebruikt in PVC raam, ALU raam en PVC deur.',
               style: TextStyle(
                 color: _tekstGrijs,
                 fontSize: 12,
@@ -272,12 +269,6 @@ class _OpmetingRaamOpvullingenPaginaState
             icon: const Icon(Icons.add_rounded, size: 18),
             label: const Text('Type toevoegen'),
             style: OutlinedButton.styleFrom(foregroundColor: _groen),
-          ),
-          OutlinedButton.icon(
-            onPressed: _bewaren ? null : _voegStandaardTypesToe,
-            icon: const Icon(Icons.playlist_add_rounded, size: 18),
-            label: const Text('Standaard types'),
-            style: OutlinedButton.styleFrom(foregroundColor: _tekstDonker),
           ),
         ],
       ),
@@ -395,6 +386,16 @@ class _OpmetingRaamOpvullingenPaginaState
               ),
             ),
             IconButton(
+              tooltip: 'Volledig submenu kopiëren',
+              visualDensity: VisualDensity.compact,
+              onPressed: _bewaren ? null : () => _kopieerGroep(groep),
+              icon: const Icon(
+                Icons.content_copy_rounded,
+                color: _groen,
+                size: 19,
+              ),
+            ),
+            IconButton(
               tooltip: 'Submenu wijzigen',
               visualDensity: VisualDensity.compact,
               onPressed: () => _openGroepEditor(groep: groep),
@@ -422,9 +423,13 @@ class _OpmetingRaamOpvullingenPaginaState
         ),
         children: [
           if (items.isEmpty)
-            _legeGroepRij(groep)
-          else
-            ...items.map(_opvullingRij),
+            _groepEindDoel(groep: groep, leeg: true)
+          else ...[
+            ...items.map(
+              (item) => _opvullingSleepDoel(groep: groep, doel: item),
+            ),
+            _groepEindDoel(groep: groep),
+          ],
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerLeft,
@@ -470,6 +475,31 @@ class _OpmetingRaamOpvullingenPaginaState
       ),
       child: Row(
         children: [
+          LongPressDraggable<_OpvullingSleepData>(
+            data: _OpvullingSleepData(opvulling.id),
+            feedback: Material(
+              color: Colors.transparent,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: _sleepFeedback(opvulling),
+              ),
+            ),
+            childWhenDragging: const SizedBox(
+              width: 30,
+              child: Icon(
+                Icons.drag_indicator_rounded,
+                color: Color(0x339CA3AF),
+              ),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.only(right: 5),
+              child: Icon(
+                Icons.drag_indicator_rounded,
+                color: _tekstGrijs,
+                size: 22,
+              ),
+            ),
+          ),
           _kleurVak(opvulling),
           const SizedBox(width: 10),
           Expanded(
@@ -556,6 +586,295 @@ class _OpmetingRaamOpvullingenPaginaState
         ),
       ),
     );
+  }
+
+  Widget _opvullingSleepDoel({
+    required OpmetingRaamOpvullingGroepModel groep,
+    required OpmetingRaamOpvullingModel doel,
+  }) {
+    return DragTarget<_OpvullingSleepData>(
+      onWillAcceptWithDetails: (details) => details.data.opvullingId != doel.id,
+      onAcceptWithDetails: (details) {
+        _verplaatsType(
+          bronId: details.data.opvullingId,
+          doelGroep: groep,
+          voorDoelId: doel.id,
+        );
+      },
+      builder: (context, kandidaten, geweigerd) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          padding: kandidaten.isEmpty
+              ? EdgeInsets.zero
+              : const EdgeInsets.only(top: 5),
+          decoration: BoxDecoration(
+            border: kandidaten.isEmpty
+                ? null
+                : const Border(top: BorderSide(color: _groen, width: 3)),
+          ),
+          child: _opvullingRij(doel),
+        );
+      },
+    );
+  }
+
+  Widget _groepEindDoel({
+    required OpmetingRaamOpvullingGroepModel groep,
+    bool leeg = false,
+  }) {
+    return DragTarget<_OpvullingSleepData>(
+      onWillAcceptWithDetails: (_) => true,
+      onAcceptWithDetails: (details) {
+        _verplaatsType(bronId: details.data.opvullingId, doelGroep: groep);
+      },
+      builder: (context, kandidaten, geweigerd) {
+        final actief = kandidaten.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          width: double.infinity,
+          margin: EdgeInsets.only(top: leeg ? 0 : 2),
+          padding: EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: actief ? 15 : (leeg ? 12 : 5),
+          ),
+          decoration: BoxDecoration(
+            color: actief ? _lichtGroen : const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: actief ? _groen : _rand,
+              width: actief ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            actief
+                ? 'Plaats type in ${groep.label}'
+                : leeg
+                ? 'Nog geen types in ${groep.label}. Sleep hier een type naartoe.'
+                : 'Sleep hier om onderaan te plaatsen',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: actief ? _groen : _tekstGrijs,
+              fontSize: leeg ? 12 : 10.5,
+              fontWeight: actief ? FontWeight.w900 : FontWeight.w600,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sleepFeedback(OpmetingRaamOpvullingModel opvulling) {
+    return Container(
+      width: 390,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: _groen, width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x22000000),
+            blurRadius: 16,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.drag_indicator_rounded, color: _groen),
+          const SizedBox(width: 8),
+          _kleurVak(opvulling),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              opvulling.naam,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _tekstDonker,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _verplaatsType({
+    required String bronId,
+    required OpmetingRaamOpvullingGroepModel doelGroep,
+    String? voorDoelId,
+  }) async {
+    if (_bewaren) return;
+
+    OpmetingRaamOpvullingModel? bron;
+    for (final item in _opvullingen) {
+      if (item.id == bronId) {
+        bron = item;
+        break;
+      }
+    }
+    if (bron == null) return;
+
+    final bronType = bron;
+    final perGroep = <String, List<OpmetingRaamOpvullingModel>>{};
+    for (final groep in _groepen) {
+      perGroep[groep.id] =
+          _opvullingen
+              .where(
+                (item) => item.groepId == groep.id && item.id != bronType.id,
+              )
+              .toList()
+            ..sort(_sorteerOpvullingen);
+    }
+
+    final doelLijst = perGroep.putIfAbsent(
+      doelGroep.id,
+      () => <OpmetingRaamOpvullingModel>[],
+    );
+
+    var invoegIndex = doelLijst.length;
+    if (voorDoelId != null) {
+      final gevonden = doelLijst.indexWhere((item) => item.id == voorDoelId);
+      if (gevonden >= 0) invoegIndex = gevonden;
+    }
+
+    doelLijst.insert(
+      invoegIndex,
+      bronType.copyWith(
+        groepId: doelGroep.id,
+        groepNaam: doelGroep.naam,
+        groepSorteerIndex: doelGroep.sorteerIndex,
+      ),
+    );
+
+    final nieuweLijst = <OpmetingRaamOpvullingModel>[];
+    final gesorteerdeGroepen = List<OpmetingRaamOpvullingGroepModel>.from(
+      _groepen,
+    )..sort(_sorteerGroepen);
+
+    for (final groep in gesorteerdeGroepen) {
+      final lijst = perGroep[groep.id] ?? const [];
+      for (var index = 0; index < lijst.length; index++) {
+        nieuweLijst.add(
+          lijst[index].copyWith(
+            groepId: groep.id,
+            groepNaam: groep.naam,
+            groepSorteerIndex: groep.sorteerIndex,
+            typeSorteerIndex: index,
+          ),
+        );
+      }
+    }
+
+    await _bewaarAlles(opvullingen: nieuweLijst);
+  }
+
+  Future<void> _kopieerGroep(OpmetingRaamOpvullingGroepModel bronGroep) async {
+    if (_bewaren) return;
+
+    final nieuweNaam = _maakUniekeKopieNaam(bronGroep.naam);
+    final nieuweGroep = OpmetingRaamOpvullingGroepModel(
+      id: _maakGroepId(nieuweNaam),
+      naam: nieuweNaam,
+      sorteerIndex: _volgendeGroepIndex(),
+    );
+
+    final bronTypes =
+        _opvullingen.where((item) => item.groepId == bronGroep.id).toList()
+          ..sort(_sorteerOpvullingen);
+
+    final nieuweGroepen = <OpmetingRaamOpvullingGroepModel>[
+      ..._groepen,
+      nieuweGroep,
+    ];
+    final nieuweTypes = List<OpmetingRaamOpvullingModel>.from(_opvullingen);
+
+    for (var index = 0; index < bronTypes.length; index++) {
+      final bron = bronTypes[index];
+      nieuweTypes.add(
+        bron.copyWith(
+          id: _maakOpvullingIdInLijst(
+            opvullingen: nieuweTypes,
+            groep: nieuweGroep,
+            naam: bron.naam,
+          ),
+          groepId: nieuweGroep.id,
+          groepNaam: nieuweGroep.naam,
+          groepSorteerIndex: nieuweGroep.sorteerIndex,
+          typeSorteerIndex: index,
+        ),
+      );
+    }
+
+    await _bewaarAlles(groepen: nieuweGroepen, opvullingen: nieuweTypes);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          bronTypes.isEmpty
+              ? 'Submenu “${bronGroep.label}” is gekopieerd.'
+              : 'Submenu “${bronGroep.label}” en ${bronTypes.length} types zijn gekopieerd.',
+        ),
+      ),
+    );
+  }
+
+  String _maakUniekeKopieNaam(String bronNaam) {
+    final basis = '${bronNaam.trim()} - kopie';
+    var naam = basis;
+    var teller = 2;
+
+    while (_groepen.any(
+      (groep) => groep.naam.trim().toLowerCase() == naam.toLowerCase(),
+    )) {
+      naam = '$basis $teller';
+      teller++;
+    }
+
+    return naam;
+  }
+
+  int _volgendeTypeIndex(String groepId) {
+    final types = _opvullingen
+        .where((item) => item.groepId == groepId)
+        .toList();
+    if (types.isEmpty) return 0;
+
+    var hoogste = types.first.typeSorteerIndex;
+    for (final item in types) {
+      if (item.typeSorteerIndex > hoogste) hoogste = item.typeSorteerIndex;
+    }
+    return hoogste + 1;
+  }
+
+  void _normaliseerTypeVolgorde(List<OpmetingRaamOpvullingModel> opvullingen) {
+    final perGroep = <String, List<OpmetingRaamOpvullingModel>>{};
+
+    for (final item in opvullingen) {
+      perGroep.putIfAbsent(item.groepId, () => []).add(item);
+    }
+
+    for (final lijst in perGroep.values) {
+      lijst.sort((eerste, tweede) {
+        final indexVergelijking = eerste.typeSorteerIndex.compareTo(
+          tweede.typeSorteerIndex,
+        );
+        if (indexVergelijking != 0) return indexVergelijking;
+        return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+      });
+
+      for (var index = 0; index < lijst.length; index++) {
+        final oud = lijst[index];
+        final positie = opvullingen.indexWhere((item) => item.id == oud.id);
+        if (positie >= 0) {
+          opvullingen[positie] = oud.copyWith(typeSorteerIndex: index);
+        }
+      }
+    }
   }
 
   Future<void> _openGroepEditor({
@@ -936,6 +1255,10 @@ class _OpmetingRaamOpvullingenPaginaState
                           groepId: groep.id,
                           groepNaam: groep.naam,
                           groepSorteerIndex: groep.sorteerIndex,
+                          typeSorteerIndex:
+                              opvulling != null && opvulling.groepId == groep.id
+                              ? opvulling.typeSorteerIndex
+                              : _volgendeTypeIndex(groep.id),
                           actief: actief,
                         ),
                       );
@@ -1068,75 +1391,6 @@ class _OpmetingRaamOpvullingenPaginaState
     await _bewaarAlles(groepen: nieuweGroepen, opvullingen: nieuweOpvullingen);
   }
 
-  Future<void> _voegStandaardTypesToe() async {
-    final nieuweGroepen = List<OpmetingRaamOpvullingGroepModel>.from(_groepen);
-    final nieuweLijst = List<OpmetingRaamOpvullingModel>.from(_opvullingen);
-    var toegevoegd = 0;
-
-    for (final standaardGroep
-        in OpmetingRaamOpvullingGroepModel.standaardGroepen) {
-      var groep = _zoekGroepInLijst(nieuweGroepen, standaardGroep.id);
-      if (groep == null) {
-        groep = standaardGroep;
-        nieuweGroepen.add(groep);
-        toegevoegd++;
-      }
-
-      final groepVoorStandaard = groep;
-
-      for (final standaard in _standaardTypes) {
-        final bestaatAl = nieuweLijst.any((item) {
-          return item.groepId == groepVoorStandaard.id &&
-              item.naam.trim().toLowerCase() == standaard.naam.toLowerCase();
-        });
-
-        if (bestaatAl) {
-          continue;
-        }
-
-        nieuweLijst.add(
-          OpmetingRaamOpvullingModel(
-            id: _maakOpvullingIdInLijst(
-              opvullingen: nieuweLijst,
-              groep: groepVoorStandaard,
-              naam: standaard.naam,
-            ),
-            naam: standaard.naam,
-            kleurWaarde: standaard.kleurWaarde,
-            transparantie: standaard.transparantie,
-            groepId: groepVoorStandaard.id,
-            groepNaam: groepVoorStandaard.naam,
-            groepSorteerIndex: groepVoorStandaard.sorteerIndex,
-          ),
-        );
-        toegevoegd++;
-      }
-    }
-
-    if (toegevoegd == 0) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Alle standaard submenu’s en types bestaan al.'),
-        ),
-      );
-      return;
-    }
-
-    await _bewaarAlles(groepen: nieuweGroepen, opvullingen: nieuweLijst);
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$toegevoegd standaard onderdelen toegevoegd.')),
-    );
-  }
-
   OpmetingRaamOpvullingGroepModel? _zoekGroep(String? groepId) {
     return _zoekGroepInLijst(_groepen, groepId);
   }
@@ -1254,6 +1508,14 @@ class _OpmetingRaamOpvullingenPaginaState
       return groepNaamVergelijking;
     }
 
+    final typeVergelijking = eerste.typeSorteerIndex.compareTo(
+      tweede.typeSorteerIndex,
+    );
+
+    if (typeVergelijking != 0) {
+      return typeVergelijking;
+    }
+
     return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
   }
 
@@ -1271,20 +1533,10 @@ class _OpmetingRaamOpvullingenPaginaState
     0xFFFFE082,
     0xFFFFAB91,
   ];
-
-  static const List<_StandaardOpvulling> _standaardTypes = [
-    _StandaardOpvulling('Helder', 0xFFB3E5FC, 0.22),
-    _StandaardOpvulling('Gezandstraald', 0xFFE0E0E0, 0.34),
-    _StandaardOpvulling('Ornament', 0xFFD1C4E9, 0.30),
-    _StandaardOpvulling('Mat', 0xFFFFFFFF, 0.42),
-    _StandaardOpvulling('Melkglas', 0xFFFFF9C4, 0.36),
-  ];
 }
 
-class _StandaardOpvulling {
-  const _StandaardOpvulling(this.naam, this.kleurWaarde, this.transparantie);
+class _OpvullingSleepData {
+  const _OpvullingSleepData(this.opvullingId);
 
-  final String naam;
-  final int kleurWaarde;
-  final double transparantie;
+  final String opvullingId;
 }

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-ONDER-UITVALSCHERM-PLUSMENU-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-REGISTER-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-ARTIKEL-REGISTER-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-MENU-REGISTRATIE-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-MENU-REGISTRATIE-20260731-1025
@@ -25,6 +27,7 @@ enum OfferteArtikelOpenType {
   schuifvliegendeur,
   plooiwerken,
   voorzetscreen,
+  buitenjaloezie,
   voorzetrolluik,
   uitvalscherm,
   sektionalePoort,
@@ -170,6 +173,14 @@ class OfferteArtikelRegister {
           openType: OfferteArtikelOpenType.uitvalscherm,
         ),
         OfferteArtikelRegistratie(
+          menuWaarde: 'buitenjaloezie',
+          formulierType: 'buitenjaloezie',
+          formulierNaam: 'Buitenjaloezie',
+          categorie: OfferteArtikelCategorie.toebehoren,
+          icoon: Icons.blinds_rounded,
+          openType: OfferteArtikelOpenType.buitenjaloezie,
+        ),
+        OfferteArtikelRegistratie(
           menuWaarde: 'sektionale_poort',
           formulierType: 'sektionalePoort',
           formulierNaam: 'Sektionale poorten',
@@ -224,6 +235,7 @@ class OfferteArtikelRegister {
             'voorzetscreen',
             'voorzetrolluik',
             'uitvalscherm',
+            'buitenjaloezie',
           ],
         ),
         OfferteArtikelMenuGroep(

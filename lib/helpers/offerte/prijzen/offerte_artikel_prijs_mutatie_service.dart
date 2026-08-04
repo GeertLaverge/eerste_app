@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-PRIJS-MUTATIE-EXACT-ZOALS-VOORZETSCREEN-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJS-CORRECTIE-ADAPTER-20260802
 // THIMACO-CONTROLE: VOORZETROLLUIK-STUKPRIJS-MUTATIE-ADAPTER-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-STUKPRIJS-MUTATIE-ADAPTER-20260731
@@ -76,6 +77,8 @@ class OfferteArtikelPrijsMutatieService {
       _PlooiwerkenPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter voorzetscreen =
       _VoorzetscreenPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter buitenjaloezie =
+      _BuitenjaloeziePrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter voorzetrolluik =
       _VoorzetrolluikPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter sektionalePoort =
@@ -96,6 +99,7 @@ class OfferteArtikelPrijsMutatieService {
         schuifvliegendeur,
         plooiwerken,
         voorzetscreen,
+        buitenjaloezie,
         voorzetrolluik,
         sektionalePoort,
         algemeneOpmeting,
@@ -564,6 +568,67 @@ class _VoorzetscreenPrijsMutatieAdapter
     final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
       artikel,
     );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _BuitenjaloeziePrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _BuitenjaloeziePrijsMutatieAdapter();
+
+  @override
+  String get id => 'buitenjaloezie';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+
+    return koppeling?.adapterId == id && artikel.buitenjaloezieData != null;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+
     if (prijsData == null) return artikel;
 
     return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(

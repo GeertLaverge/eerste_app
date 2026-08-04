@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-APP-STORAGE-FASE-3A-20260803
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-APP-STORAGE-20260802
 // THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-APP-STORAGE-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-APP-STORAGE-20260801
@@ -25,6 +26,7 @@ import 'opmeting/project/opmeting_project_kleur_model.dart';
 import 'opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting/toebehoren/plooiwerken/opmeting_plooiwerken_instellingen_model.dart';
 import 'opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
+import 'opmeting/toebehoren/buitenjaloezie/opmeting_buitenjaloezie_instellingen_model.dart';
 import 'opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_instellingen_model.dart';
 import 'opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_model.dart';
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
@@ -99,6 +101,9 @@ class AppStorage {
 
   static const String _opmetingVoorzetscreenInstellingenKey =
       'thimaco_opmeting_voorzetscreen_instellingen';
+
+  static const String _opmetingBuitenjaloezieInstellingenKey =
+      'thimaco_opmeting_buitenjaloezie_instellingen';
 
   static const String _opmetingVoorzetrolluikInstellingenKey =
       'thimaco_opmeting_voorzetrolluik_instellingen';
@@ -1269,6 +1274,70 @@ class AppStorage {
     await prefs.setString(
       _opmetingVoorzetscreenInstellingenKey,
       encodeOpmetingVoorzetscreenInstellingenVoorSync(instellingen),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // OPMETING - INSTELLINGEN BUITENJALOEZIEËN
+  // ------------------------------------------------------------
+
+  static OpmetingBuitenjaloezieInstellingen
+  _decodeOpmetingBuitenjaloezieInstellingen(String? jsonString) {
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return const OpmetingBuitenjaloezieInstellingen();
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! Map) {
+        return const OpmetingBuitenjaloezieInstellingen();
+      }
+
+      return OpmetingBuitenjaloezieInstellingen.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+    } catch (_) {
+      return const OpmetingBuitenjaloezieInstellingen();
+    }
+  }
+
+  static String encodeOpmetingBuitenjaloezieInstellingenVoorSync(
+    OpmetingBuitenjaloezieInstellingen instellingen,
+  ) {
+    return jsonEncode(instellingen.toJson());
+  }
+
+  static Future<OpmetingBuitenjaloezieInstellingen>
+  laadOpmetingBuitenjaloezieInstellingen() async {
+    final prefs = await openBox();
+    return _decodeOpmetingBuitenjaloezieInstellingen(
+      prefs.getString(_opmetingBuitenjaloezieInstellingenKey),
+    );
+  }
+
+  static Future<void> bewaarOpmetingBuitenjaloezieInstellingen(
+    OpmetingBuitenjaloezieInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    final voorOpslag = instellingen.gewijzigdOp.trim().isEmpty
+        ? instellingen.metWijzigingsDatum()
+        : instellingen;
+
+    await prefs.setString(
+      _opmetingBuitenjaloezieInstellingenKey,
+      encodeOpmetingBuitenjaloezieInstellingenVoorSync(voorOpslag),
+    );
+
+    await _syncBackup();
+  }
+
+  static Future<void> bewaarOpmetingBuitenjaloezieInstellingenVoorSync(
+    OpmetingBuitenjaloezieInstellingen instellingen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _opmetingBuitenjaloezieInstellingenKey,
+      encodeOpmetingBuitenjaloezieInstellingenVoorSync(instellingen),
     );
   }
 

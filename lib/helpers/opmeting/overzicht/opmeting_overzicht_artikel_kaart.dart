@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-DEFINITIEF-OVERZICHT-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-WINST-KORTING-ACTIEF-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-VOLLEDIG-FASE-4-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJSUITSPITSING-OVERZICHT-20260802
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-VOLLEDIG-AFGEWERKT-OVERZICHT-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-OVERZICHT-VOLLEDIG-20260801
@@ -36,6 +39,9 @@ import '../toebehoren/plooiwerken/opmeting_plooiwerken_tekenvlak.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_technische_regels_helper.dart';
 import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_tekenvlak.dart';
+import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_model.dart';
+import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_technische_regels_helper.dart';
+import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_tekenvlak.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_model.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_technische_regels_helper.dart';
 import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_tekenvlak.dart';
@@ -118,6 +124,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     final schuifvliegendeur = item.schuifvliegendeurData;
     final plooiwerken = item.plooiwerkenData;
     final voorzetscreen = item.voorzetscreenData;
+    final buitenjaloezie = item.buitenjaloezieData;
     final voorzetrolluik = item.voorzetrolluikData;
     final uitvalscherm = item.uitvalschermData;
     final algemeneOpmeting = item.algemeneOpmetingData;
@@ -147,6 +154,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
             OpmetingVoorzetscreenTechnischeRegelsHelper.bouw(voorzetscreen),
           );
+    final buitenjaloezieTechnischeRegels = buitenjaloezie == null
+        ? const <OpmetingOverzichtTechnischeRegel>[]
+        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
+            OpmetingBuitenjaloezieTechnischeRegelsHelper.bouw(buitenjaloezie),
+          );
     final voorzetrolluikTechnischeRegels = voorzetrolluik == null
         ? const <OpmetingOverzichtTechnischeRegel>[]
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
@@ -173,6 +185,13 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         : '$positieLabel · ${algemeneOpmeting.effectieveTitel}';
     final artikelOmschrijving = algemeneOpmeting != null
         ? ''
+        : buitenjaloezie != null
+        ? <String>[
+            item.formulierTypeLabel.trim(),
+            buitenjaloezie.systeem.label,
+            buitenjaloezie.lameltype.label,
+            buitenjaloezie.lamelkleurSamenvatting,
+          ].where((regel) => regel.trim().isNotEmpty).join('  -  ')
         : veluxDakraam == null
         ? <String>[
             item.formulierTypeLabel.trim(),
@@ -338,6 +357,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             _bouwVoorzetscreenOverzicht(
               voorzetscreen,
               voorzetscreenTechnischeRegels,
+            )
+          else if (buitenjaloezie != null)
+            _bouwBuitenjaloezieOverzicht(
+              buitenjaloezie,
+              buitenjaloezieTechnischeRegels,
             )
           else if (voorzetrolluik != null)
             _bouwVoorzetrolluikOverzicht(
@@ -798,6 +822,56 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       aantal: model.aantal,
       technischeRegelsScrollbaar: false,
       toonTechnischePrijsZone: false,
+    );
+  }
+
+  Widget _bouwBuitenjaloezieOverzicht(
+    OpmetingBuitenjaloezieModel model,
+    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
+  ) {
+    final maatSamenvatting =
+        '${model.totaleBreedteMm} × ${model.totaleHoogteMm} mm';
+
+    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
+      maatTitel: 'Totale afmetingen',
+      maatWaarde: maatSamenvatting,
+      tekening: OpmetingBuitenjaloezieTekenvlak(model: model),
+    );
+
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
+
+    if (prijsResultaat == null) {
+      final gemeenschappelijkeHoogte =
+          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
+            technischeRegels: technischeRegels,
+          );
+
+      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+        hoogte: gemeenschappelijkeHoogte,
+        tekenvlak: tekenvlak,
+        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+          technischeRegels: technischeRegels,
+          legeTekst: 'Geen gegevens ingevuld.',
+          scrollbaar: false,
+          toonPrijsZone: false,
+        ),
+      );
+    }
+
+    return _bouwGeprijsdArtikelOverzicht(
+      tekenvlak: tekenvlak,
+      technischeRegels: technischeRegels,
+      prijsData: item.offertePrijsData,
+      prijsResultaat: prijsResultaat,
+      aantal: model.aantal,
+      technischeRegelsScrollbaar: false,
+      toonTechnischePrijsZone: false,
+      toonPrijsPerStukVeld: true,
+      toonWinstEnKorting: true,
     );
   }
 

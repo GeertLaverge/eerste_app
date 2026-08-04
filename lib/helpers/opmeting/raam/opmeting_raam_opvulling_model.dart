@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLING-TYPE-SORTEERINDEX-20260803
 import 'package:flutter/material.dart';
 
 class OpmetingRaamOpvullingGroepModel {
@@ -186,6 +187,7 @@ class OpmetingRaamOpvullingModel {
     this.groepId = 'niet_gelaagd',
     this.groepNaam = 'Niet gelaagd',
     this.groepSorteerIndex = 0,
+    this.typeSorteerIndex = 0,
     this.actief = true,
     this.isGroepDefinitie = false,
   });
@@ -197,6 +199,7 @@ class OpmetingRaamOpvullingModel {
   final String groepId;
   final String groepNaam;
   final int groepSorteerIndex;
+  final int typeSorteerIndex;
   final bool actief;
   final bool isGroepDefinitie;
 
@@ -232,6 +235,7 @@ class OpmetingRaamOpvullingModel {
     String? groepId,
     String? groepNaam,
     int? groepSorteerIndex,
+    int? typeSorteerIndex,
     bool? actief,
     bool? isGroepDefinitie,
   }) {
@@ -243,6 +247,7 @@ class OpmetingRaamOpvullingModel {
       groepId: groepId ?? this.groepId,
       groepNaam: groepNaam ?? this.groepNaam,
       groepSorteerIndex: groepSorteerIndex ?? this.groepSorteerIndex,
+      typeSorteerIndex: typeSorteerIndex ?? this.typeSorteerIndex,
       actief: actief ?? this.actief,
       isGroepDefinitie: isGroepDefinitie ?? this.isGroepDefinitie,
     );
@@ -258,6 +263,7 @@ class OpmetingRaamOpvullingModel {
       'groepId': groepId,
       'groepNaam': groepNaam,
       'groepSorteerIndex': groepSorteerIndex,
+      'typeSorteerIndex': typeSorteerIndex,
       'actief': actief,
       'isGroepDefinitie': isGroepDefinitie,
     };
@@ -309,6 +315,7 @@ class OpmetingRaamOpvullingModel {
         json['groepSorteerIndex'] ?? json['sorteerIndex'],
         standaardGroep.sorteerIndex,
       ),
+      typeSorteerIndex: _leesInt(json['typeSorteerIndex'], 0),
       actief: json['actief'] != false,
       isGroepDefinitie: isGroepDefinitie,
     );
@@ -325,6 +332,7 @@ class OpmetingRaamOpvullingModel {
       groepId: groep.id,
       groepNaam: groep.naam,
       groepSorteerIndex: groep.sorteerIndex,
+      typeSorteerIndex: 0,
       actief: false,
       isGroepDefinitie: true,
     );

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-EXACT-ZOALS-VOORZETSCREEN-PRIJSKOPPELING-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-PRIJSKOPPELING-FASE-3A-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-VERKOOP-AANKOOP-WINST-KORTING-20260802
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-PRIJSKOPPELING-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-VOLLEDIGE-PRIJSKOPPELING-20260801
@@ -101,6 +103,16 @@ class OfferteArtikelPrijsKoppelingService {
         adapterId: 'voorzetscreen',
         formulierType: 'voorzetscreen',
         formulierNaam: 'Voorzetscreen',
+        isVasteInzethor: false,
+        ondersteuntTechnischeKeuzeprijzen: true,
+        isHandmatigGeprijsdArtikel: true,
+      );
+
+  static const OfferteArtikelPrijsKoppeling buitenjaloezie =
+      OfferteArtikelPrijsKoppeling(
+        adapterId: 'buitenjaloezie',
+        formulierType: 'buitenjaloezie',
+        formulierNaam: 'Buitenjaloezie',
         isVasteInzethor: false,
         ondersteuntTechnischeKeuzeprijzen: true,
         isHandmatigGeprijsdArtikel: true,
@@ -233,6 +245,7 @@ class OfferteArtikelPrijsKoppelingService {
         schuifvliegendeur,
         plooiwerken,
         voorzetscreen,
+        buitenjaloezie,
         voorzetrolluik,
         uitvalscherm,
         sektionalePoort,
@@ -251,6 +264,7 @@ class OfferteArtikelPrijsKoppelingService {
     schuifvliegendeur,
     plooiwerken,
     voorzetscreen,
+    buitenjaloezie,
     voorzetrolluik,
     uitvalscherm,
     sektionalePoort,
@@ -279,6 +293,7 @@ class OfferteArtikelPrijsKoppelingService {
     'schuifvliegendeur',
     'plooiwerken',
     'voorzetscreen',
+    'buitenjaloezie',
     'voorzetrolluik',
     'uitvalscherm',
     'sektionalePoort',
@@ -308,6 +323,10 @@ class OfferteArtikelPrijsKoppelingService {
 
     if (artikel.voorzetscreenData != null) {
       return voorzetscreen;
+    }
+
+    if (artikel.buitenjaloezieData != null) {
+      return buitenjaloezie;
     }
 
     if (artikel.voorzetrolluikData != null) {
@@ -513,6 +532,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.schuifvliegendeurData?.aantal ??
         artikel.plooiwerkenData?.aantal ??
         artikel.voorzetscreenData?.aantal ??
+        artikel.buitenjaloezieData?.aantal ??
         artikel.voorzetrolluikData?.aantal ??
         artikel.uitvalschermData?.aantal ??
         (artikel.algemeneOpmetingData != null ? 1 : null) ??
@@ -528,6 +548,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.vliegendeurData?.breedteMm ??
         artikel.schuifvliegendeurData?.breedteMm ??
         artikel.voorzetscreenData?.breedteMm ??
+        artikel.buitenjaloezieData?.totaleBreedteMm ??
         artikel.voorzetrolluikData?.breedteMm ??
         artikel.uitvalschermData?.breedteMm ??
         artikel.sektionalePoortData?.breedteMm ??
@@ -540,6 +561,7 @@ class OfferteArtikelPrijsKoppelingService {
         artikel.vliegendeurData?.hoogteMm ??
         artikel.schuifvliegendeurData?.hoogteMm ??
         artikel.voorzetscreenData?.hoogteMm ??
+        artikel.buitenjaloezieData?.totaleHoogteMm ??
         artikel.voorzetrolluikData?.hoogteMm ??
         artikel.uitvalschermData?.uitvalMm ??
         artikel.sektionalePoortData?.hoogteMm ??

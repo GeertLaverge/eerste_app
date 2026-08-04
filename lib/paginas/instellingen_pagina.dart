@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-KOPPELING-BEHOUden-20260803
+// THIMACO-CONTROLE: VERWIJDER-FOUTIEVE-FICHEKNOP-UIT-INSTELLINGEN-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGENKNOP-FASE-5-20260803
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-INSTELLINGENKNOP-20260802
 // THIMACO-CONTROLE: UITVALSCHERM-INSTELLINGENKNOP-20260801
 // THIMACO-CONTROLE: VOORZETROLLUIK-INSTELLINGENKNOP-FASE-1-20260731
@@ -17,6 +20,7 @@ import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_beheer_dialog.dart';
 import '../helpers/opmeting/project/opmeting_project_kleuren_pagina.dart';
 import 'instellingen/plooiwerken/opmeting_plooiwerken_instellingen_pagina.dart';
 import 'instellingen/voorzetscreens/opmeting_voorzetscreen_instellingen_pagina.dart';
+import 'instellingen/buitenjaloezieen/opmeting_buitenjaloezie_instellingen_pagina.dart';
 import 'instellingen/voorzetrolluiken/opmeting_voorzetrolluik_instellingen_pagina.dart';
 import 'instellingen/uitvalscherm/opmeting_uitvalscherm_instellingen_pagina.dart';
 import 'instellingen/sektionale_poorten/opmeting_sektionale_poort_instellingen_pagina.dart';
@@ -299,6 +303,22 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.blinds_outlined),
                 label: const Text('Voorzetscreens'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) {
+                        return const OpmetingBuitenjaloezieInstellingenPagina();
+                      },
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.blinds_rounded),
+                label: const Text('Buitenjaloezieën'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),
