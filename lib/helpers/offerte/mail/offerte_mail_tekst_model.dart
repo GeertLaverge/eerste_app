@@ -3,13 +3,15 @@
 enum OfferteMailBerichtGebruik {
   offerte,
   bevestiging,
+  bestelbon,
   beide;
 
   String get label {
     return switch (this) {
       OfferteMailBerichtGebruik.offerte => 'Offerte versturen',
       OfferteMailBerichtGebruik.bevestiging => 'Bevestiging na goedkeuring',
-      OfferteMailBerichtGebruik.beide => 'Beide verzendmomenten',
+      OfferteMailBerichtGebruik.bestelbon => 'Bestelbon leverancier',
+      OfferteMailBerichtGebruik.beide => 'Offerte en bevestiging',
     };
   }
 
@@ -21,6 +23,10 @@ enum OfferteMailBerichtGebruik {
   bool get beschikbaarVoorBevestiging {
     return this == OfferteMailBerichtGebruik.bevestiging ||
         this == OfferteMailBerichtGebruik.beide;
+  }
+
+  bool get beschikbaarVoorBestelbon {
+    return this == OfferteMailBerichtGebruik.bestelbon;
   }
 }
 
@@ -108,9 +114,13 @@ class OfferteMailTekstBlok {
     );
 
     final onderwerpUitJson = json['onderwerp']?.toString().trim() ?? '';
-    final standaardOnderwerp = gebruik == OfferteMailBerichtGebruik.bevestiging
-        ? 'Bevestiging goedkeuring offerte Thimaco [offertenummer]'
-        : 'Offerte Thimaco [offertenummer] – [klantnaam]';
+    final standaardOnderwerp = switch (gebruik) {
+      OfferteMailBerichtGebruik.bevestiging =>
+        'Bevestiging goedkeuring offerte Thimaco [offertenummer]',
+      OfferteMailBerichtGebruik.bestelbon =>
+        'Bestelbon Thimaco – [leverancier]',
+      _ => 'Offerte Thimaco [offertenummer] – [klantnaam]',
+    };
 
     return OfferteMailTekstBlok(
       id: json['id']?.toString() ?? '',
@@ -222,6 +232,29 @@ Kerkdreef 1
 056 44 91 35
 info@thimaco.be''',
           gebruik: OfferteMailBerichtGebruik.bevestiging,
+          actief: true,
+          gewijzigdOp: '',
+        ),
+        OfferteMailTekstBlok(
+          id: 'mailbericht_bestelbon_leverancier',
+          naam: 'Bestelbon leverancier',
+          onderwerp: 'Bestelbon Thimaco – [leverancier]',
+          tekst: '''Geachte,
+
+In bijlage bezorgen wij u onze bestelbon.
+
+Gelieve de bestelling te controleren en de verwachte leverdatum te bevestigen.
+
+Met vriendelijke groeten
+
+Geert
+Thimaco
+Ramen · Deuren · Zonwering
+Kerkdreef 1
+8791 Beveren-Leie
+056 44 91 35
+info@thimaco.be''',
+          gebruik: OfferteMailBerichtGebruik.bestelbon,
           actief: true,
           gewijzigdOp: '',
         ),

@@ -2,7 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+232
+version: 1.0.0+233
 
 
 
@@ -43,6 +43,7 @@ dependencies:
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
   printing: ^5.14.3
+  mobile_scanner: ^7.4.0
 
 dev_dependencies:
   flutter_test:

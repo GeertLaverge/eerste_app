@@ -1,9 +1,10 @@
-// THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-HOME-KNOP-20260802
+// THIMACO-CONTROLE: MAGAZIJN-HOME-ROUTE-20260804
 import 'package:flutter/material.dart';
 
 import '../../paginas/agenda_pagina_nieuw.dart' as agenda;
 import '../../paginas/bibliotheek_pagina.dart';
 import '../../paginas/klanten_pagina.dart';
+import '../../paginas/magazijn/magazijn_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
 import '../../paginas/opmeting_pagina.dart' as opmeting;
 
@@ -102,6 +103,14 @@ class HomeZijMenu extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const NotitiesBureauPagina()),
+          );
+          return;
+        }
+
+        if (titel == 'Magazijn') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MagazijnPagina()),
           );
           return;
         }
