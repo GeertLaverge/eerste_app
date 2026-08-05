@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'opmeting_raam_opvulling_model.dart';
+
 class OpmetingRaamLijn {
   const OpmetingRaamLijn({
     required this.id,
@@ -621,6 +623,9 @@ class OpmetingRaamVullingToewijzing {
     required this.naam,
     required this.kleurWaarde,
     required this.transparantie,
+    this.weergave = OpmetingRaamOpvullingWeergave.effen,
+    this.tekeningTekst = '',
+    this.lijnAfstandMm = 100,
   });
 
   /// Unieke en reproduceerbare identificatie van het vulvlak.
@@ -647,6 +652,15 @@ class OpmetingRaamVullingToewijzing {
   /// Momentopname van de dekking tussen 0.05 en 1.00.
   final double transparantie;
 
+  /// Momentopname van de gekozen visuele weergave.
+  final OpmetingRaamOpvullingWeergave weergave;
+
+  /// Vrije tekst die in het vulvlak wordt getekend.
+  final String tekeningTekst;
+
+  /// Afstand tussen patroonlijnen in millimeter.
+  final int lijnAfstandMm;
+
   Color get kleur => Color(kleurWaarde);
 
   Color get weergaveKleur {
@@ -664,6 +678,9 @@ class OpmetingRaamVullingToewijzing {
     String? naam,
     int? kleurWaarde,
     double? transparantie,
+    OpmetingRaamOpvullingWeergave? weergave,
+    String? tekeningTekst,
+    int? lijnAfstandMm,
   }) {
     return OpmetingRaamVullingToewijzing(
       vlakId: vlakId ?? this.vlakId,
@@ -672,6 +689,9 @@ class OpmetingRaamVullingToewijzing {
       naam: naam ?? this.naam,
       kleurWaarde: kleurWaarde ?? this.kleurWaarde,
       transparantie: transparantie ?? this.transparantie,
+      weergave: weergave ?? this.weergave,
+      tekeningTekst: tekeningTekst ?? this.tekeningTekst,
+      lijnAfstandMm: lijnAfstandMm ?? this.lijnAfstandMm,
     );
   }
 
@@ -683,6 +703,9 @@ class OpmetingRaamVullingToewijzing {
       'naam': naam,
       'kleurWaarde': kleurWaarde,
       'transparantie': transparantie,
+      'weergave': weergave.name,
+      'tekeningTekst': tekeningTekst,
+      'lijnAfstandMm': lijnAfstandMm,
     };
   }
 
@@ -697,6 +720,15 @@ class OpmetingRaamVullingToewijzing {
       naam: json['naam']?.toString() ?? '',
       kleurWaarde: (json['kleurWaarde'] as num?)?.toInt() ?? 0xFFB3E5FC,
       transparantie: transparantieWaarde.clamp(0.05, 1.0).toDouble(),
+      weergave: OpmetingRaamOpvullingWeergaveInfo.vanOpslagWaarde(
+        json['weergave'] ?? json['patroon'],
+      ),
+      tekeningTekst:
+          json['tekeningTekst']?.toString() ?? json['tekst']?.toString() ?? '',
+      lijnAfstandMm: ((json['lijnAfstandMm'] as num?)?.toInt() ?? 100).clamp(
+        10,
+        1000,
+      ),
     );
   }
 }

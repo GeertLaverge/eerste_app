@@ -2,6 +2,7 @@
 // THIMACO-CONTROLE: FORMULIER-LAYOUT-RELATIEVE-IMPORT-FIX-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
+// THIMACO-CONTROLE: DEURPANEEL-WISSEN-BLIJFT-WEG-PVC-ALU-20260805
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -227,6 +228,12 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       );
       notitiesController.text = bestaandeOpmeting.notities;
       _fotos = List<OpmetingFoto>.from(bestaandeOpmeting.fotos);
+      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+        bestaandeOpmeting.deurpaneelToewijzingen,
+      );
+      OpmetingDeurpaneelActieveKeuzeController.werkToewijzingenBij(
+        _deurpaneelToewijzingen,
+      );
 
       _kaderSamenstelling = bestaandeOpmeting.kaderSamenstelling;
       _overzichtTekeningData = bestaandeOpmeting.tekeningData;
@@ -255,7 +262,15 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     _laadKeuzemenus();
 
     if (bestaandeOpmeting != null) {
-      unawaited(_laadDeurpaneelToewijzingenVoorOpmeting(bestaandeOpmeting.id));
+      // De lijst in de overzichtspositie is de bron van waarheid. Zo kan een
+      // eerder apart opgeslagen, verouderde paneeltoewijzing een gewist
+      // deurpaneel niet opnieuw terugplaatsen wanneer de fiche heropent.
+      unawaited(
+        OpmetingDeurpaneelToewijzingStorageHelper.bewaarVoorOpmetingId(
+          opmetingId: bestaandeOpmeting.id,
+          toewijzingen: _deurpaneelToewijzingen,
+        ),
+      );
     }
   }
 
@@ -474,27 +489,6 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     _toonMelding('${samenstelling.samenvatting} werd samengesteld.');
   }
 
-  Future<void> _laadDeurpaneelToewijzingenVoorOpmeting(
-    String opmetingId,
-  ) async {
-    final toewijzingen =
-        await OpmetingDeurpaneelToewijzingStorageHelper.laadVoorOpmetingId(
-          opmetingId: opmetingId,
-        );
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
-        toewijzingen,
-      );
-    });
-
-    OpmetingDeurpaneelActieveKeuzeController.werkToewijzingenBij(toewijzingen);
-  }
-
   void _openDeurVleugel() {
     _toolGekozen(actieveTool == 'deurvleugel' ? 'lijn' : 'deurvleugel');
   }
@@ -637,18 +631,31 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       return;
     }
 
+    final vasteLijst = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+      nieuweToewijzingen,
+    );
+
     if (!mounted) {
-      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
-        nieuweToewijzingen,
-      );
+      _deurpaneelToewijzingen = vasteLijst;
       return;
     }
 
     setState(() {
-      _deurpaneelToewijzingen = List<OpmetingDeurpaneelToewijzing>.unmodifiable(
-        nieuweToewijzingen,
-      );
+      _deurpaneelToewijzingen = vasteLijst;
     });
+
+    final bestaandeOpmetingId = widget.bestaandeOpmeting?.id.trim() ?? '';
+    if (bestaandeOpmetingId.isNotEmpty) {
+      // Sla plaatsen, vervangen én wissen onmiddellijk op. De gebruiker hoeft
+      // dus niet eerst de volledige fiche opnieuw te bewaren voordat de
+      // verwijdering definitief is.
+      unawaited(
+        OpmetingDeurpaneelToewijzingStorageHelper.bewaarVoorOpmetingId(
+          opmetingId: bestaandeOpmetingId,
+          toewijzingen: vasteLijst,
+        ),
+      );
+    }
   }
 
   bool _zijnDeurpaneelToewijzingenGelijk(

@@ -1,8 +1,13 @@
-// THIMACO-CONTROLE: MAGAZIJN-HOOFDPAGINA-FASE-1-20260804
+// THIMACO-CONTROLE: MAGAZIJN-CENTRAAL-DOWNLOADSIGNAAL-FASE7-20260805
+// THIMACO-CONTROLE: MAGAZIJN-PERIODIEKE-SYNC-FASE6-20260805
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../helpers/magazijn/magazijn_controller.dart';
+import '../../helpers/sync/onedrive_sync_service.dart';
+import '../../helpers/sync/sync_navigatie_helper.dart';
 import 'magazijn_beheer_pagina.dart';
 import 'magazijn_bestellijst_pagina.dart';
 import 'magazijn_scan_pagina.dart';
@@ -14,22 +19,86 @@ class MagazijnPagina extends StatefulWidget {
   State<MagazijnPagina> createState() => _MagazijnPaginaState();
 }
 
-class _MagazijnPaginaState extends State<MagazijnPagina> {
+class _MagazijnPaginaState extends State<MagazijnPagina>
+    with WidgetsBindingObserver {
   static const Color _groen = Color(0xFF0B7A3B);
+  static const Duration _syncInterval = Duration(minutes: 3);
 
   final MagazijnController _controller = MagazijnController();
+
+  Timer? _syncTimer;
+  bool _syncBezig = false;
   int _index = 0;
 
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
+
     _controller.laad();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _synchroniseerEnHerlaad();
+    });
+
+    _syncTimer = Timer.periodic(_syncInterval, (_) {
+      _synchroniseerEnHerlaad();
+    });
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _synchroniseerEnHerlaad();
+      return;
+    }
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      OneDriveSyncService().uploadBackupOpAchtergrond();
+    }
+  }
+
+  Future<void> _synchroniseerEnHerlaad() async {
+    if (_syncBezig) {
+      return;
+    }
+
+    _syncBezig = true;
+
+    try {
+      final resultaat = await OneDriveSyncService().slimmeSync();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (_isDownloadResultaat(resultaat)) {
+        await _controller.laad();
+
+        if (!mounted) {
+          return;
+        }
+
+        SyncNavigatieHelper.meldDownloadVoltooid();
+      }
+    } finally {
+      _syncBezig = false;
+    }
+  }
+
+  bool _isDownloadResultaat(String resultaat) {
+    return resultaat.startsWith('IMPORT_OK');
   }
 
   @override
@@ -56,6 +125,7 @@ class _MagazijnPaginaState extends State<MagazijnPagina> {
           if (_controller.laden) {
             return const Center(child: CircularProgressIndicator());
           }
+
           return paginas[_index];
         },
       ),

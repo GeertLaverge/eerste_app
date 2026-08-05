@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-import '../opmeting/algemene_opmeting/opmeting_algemene_opmeting_blok_model.dart';
 import '../opmeting/algemene_opmeting/opmeting_algemene_opmeting_model.dart';
 import '../opmeting/algemene_opmeting/opmeting_algemene_opmeting_technische_regels_helper.dart';
 import '../opmeting/fotos/opmeting_foto_model.dart';

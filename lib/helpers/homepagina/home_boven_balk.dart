@@ -1,12 +1,10 @@
+// THIMACO-CONTROLE: HOME-GROENE-BOVENBALK-IPHONE-STATUS-20260805
 import 'package:flutter/material.dart';
-import '../../paginas/instellingen_pagina.dart';
 
 class HomeBovenBalk extends StatelessWidget {
   const HomeBovenBalk({super.key});
 
-  static const groen = Color(0xFF0B7A3B);
-
-  static const rand = Color(0xFFE5E7EB);
+  static const Color groen = Color(0xFF0B7A3B);
 
   @override
   Widget build(BuildContext context) {
@@ -14,44 +12,57 @@ class HomeBovenBalk extends StatelessWidget {
       height: 66,
       padding: const EdgeInsets.symmetric(horizontal: 22),
       decoration: const BoxDecoration(
-        color: Color(0xFFF5F5F5),
-        border: Border(bottom: BorderSide(color: rand)),
+        color: groen,
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: Color(0x24000000),
+            blurRadius: 10,
+            offset: Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
-        children: [
-          CircleAvatar(
-            radius: 19,
-            backgroundColor: groen,
-            child: Text(
+        children: <Widget>[
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Text(
               'T',
               style: TextStyle(
-                color: Colors.white,
+                color: groen,
                 fontSize: 22,
                 fontWeight: FontWeight.w900,
               ),
             ),
           ),
-          SizedBox(width: 12),
-          Text(
+          const SizedBox(width: 12),
+          const Text(
             'THIMACO',
             style: TextStyle(
+              color: Colors.white,
               fontSize: 24,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.5,
-              color: Colors.black87,
             ),
           ),
-          Spacer(),
-          Icon(Icons.notifications_none, size: 24),
-          SizedBox(width: 16),
-          InkWell(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const InstellingenPagina()),
-              );
-            },
-            child: const Icon(Icons.settings_outlined, size: 24),
+          const Spacer(),
+          IconButton(
+            tooltip: 'Meldingen',
+            color: Colors.white,
+            onPressed: () {},
+            icon: const Icon(Icons.notifications_none_rounded, size: 25),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'Instellingen',
+            color: Colors.white,
+            onPressed: () {},
+            icon: const Icon(Icons.settings_outlined, size: 25),
           ),
         ],
       ),

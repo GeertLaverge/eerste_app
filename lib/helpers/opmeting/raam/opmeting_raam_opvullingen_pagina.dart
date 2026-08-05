@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: OPVULLINGEN-VERSLEPEN-EN-SUBMENU-KOPIEREN-20260803
+// THIMACO-CONTROLE: OPVULLINGEN-PATROON-TEKST-ZWART-20260805
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
@@ -448,22 +448,6 @@ class _OpmetingRaamOpvullingenPaginaState
     );
   }
 
-  Widget _legeGroepRij(OpmetingRaamOpvullingGroepModel groep) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _rand),
-      ),
-      child: Text(
-        'Nog geen types in ${groep.label}.',
-        style: const TextStyle(color: _tekstGrijs, fontSize: 12),
-      ),
-    );
-  }
-
   Widget _opvullingRij(OpmetingRaamOpvullingModel opvulling) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -518,7 +502,9 @@ class _OpmetingRaamOpvullingenPaginaState
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  '${opvulling.groepLabel} · ${opvulling.transparantiePercentage}% zichtbaar',
+                  '${opvulling.groepLabel} · '
+                  '${opvulling.weergave.label} · '
+                  '${opvulling.transparantiePercentage}% zichtbaar',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: _tekstGrijs, fontSize: 11),
@@ -1045,6 +1031,10 @@ class _OpmetingRaamOpvullingenPaginaState
     var groep = _zoekGroep(opvulling?.groepId) ?? beginGroep ?? _groepen.first;
     var kleurWaarde = opvulling?.kleurWaarde ?? 0xFFB3E5FC;
     var transparantie = opvulling?.transparantie ?? 0.25;
+    var weergave = opvulling?.weergave ?? OpmetingRaamOpvullingWeergave.effen;
+    final tekeningTekstController = TextEditingController(
+      text: opvulling?.tekeningTekst ?? '',
+    );
     var actief = opvulling?.actief ?? true;
     String? foutmelding;
 
@@ -1108,6 +1098,48 @@ class _OpmetingRaamOpvullingenPaginaState
                             isDense: true,
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<OpmetingRaamOpvullingWeergave>(
+                          initialValue: weergave,
+                          decoration: const InputDecoration(
+                            labelText: 'Weergave op de tekening',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          items: OpmetingRaamOpvullingWeergave.values
+                              .map(
+                                (item) => DropdownMenuItem(
+                                  value: item,
+                                  child: Text(item.label),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (waarde) {
+                            if (waarde == null) {
+                              return;
+                            }
+
+                            setDialogState(() {
+                              weergave = waarde;
+                            });
+                          },
+                        ),
+                        if (weergave ==
+                            OpmetingRaamOpvullingWeergave.tekst) ...[
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: tekeningTekstController,
+                            textCapitalization: TextCapitalization.sentences,
+                            minLines: 1,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Tekst in de opvulling',
+                              hintText: 'bv. Paneel, Brievenbus of Ventilatie',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 14),
                         const Text(
                           'Kleur op de tekening',
@@ -1259,6 +1291,9 @@ class _OpmetingRaamOpvullingenPaginaState
                               opvulling != null && opvulling.groepId == groep.id
                               ? opvulling.typeSorteerIndex
                               : _volgendeTypeIndex(groep.id),
+                          weergave: weergave,
+                          tekeningTekst: tekeningTekstController.text.trim(),
+                          lijnAfstandMm: 100,
                           actief: actief,
                         ),
                       );
@@ -1288,6 +1323,7 @@ class _OpmetingRaamOpvullingenPaginaState
       await _bewaarAlles(opvullingen: nieuweLijst);
     } finally {
       naamController.dispose();
+      tekeningTekstController.dispose();
     }
   }
 
@@ -1520,6 +1556,7 @@ class _OpmetingRaamOpvullingenPaginaState
   }
 
   static const List<int> _kleurKeuzes = [
+    0xFF000000,
     0xFFB3E5FC,
     0xFFC8E6C9,
     0xFFFFF9C4,

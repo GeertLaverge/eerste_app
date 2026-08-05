@@ -1,8 +1,10 @@
-// THIMACO-CONTROLE: INSTELLINGEN-VOORZETSCREENS-BEDIENINGEN-20260730-2115
+// THIMACO-CONTROLE: VOORZETSCREEN-DOWNLOADSIGNAAL-FASE13-20260805
+// THIMACO-CONTROLE: INSTELLINGEN-VOORZETSCREENS-SCROLLBARE-TABELLEN-20260730-1625
 import 'package:flutter/material.dart';
 
 import '../../../helpers/app_storage.dart';
 import '../../../helpers/opmeting/toebehoren/voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OpmetingVoorzetscreenInstellingenPagina extends StatefulWidget {
   const OpmetingVoorzetscreenInstellingenPagina({super.key});
@@ -26,17 +28,27 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
   final TextEditingController _motorenController = TextEditingController();
   final TextEditingController _zonnecelMotorenController =
       TextEditingController();
-  final TextEditingController _bedieningenController = TextEditingController();
 
   bool _laden = true;
   bool _bewaren = false;
+  bool _controllersWordenGeladen = false;
+  bool _lokaleWijzigingen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     for (final controller in _controllers) {
       controller.addListener(_verversVoorbeeld);
     }
+
     _laad();
   }
 
@@ -45,26 +57,95 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     _doekenController,
     _motorenController,
     _zonnecelMotorenController,
-    _bedieningenController,
   ];
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+
     for (final controller in _controllers) {
       controller.removeListener(_verversVoorbeeld);
       controller.dispose();
     }
+
     super.dispose();
   }
 
   void _verversVoorbeeld() {
-    if (mounted) setState(() {});
+    if (_controllersWordenGeladen) {
+      return;
+    }
+
+    _lokaleWijzigingen = true;
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
-  Future<void> _laad() async {
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_lokaleWijzigingen || _bewaren) {
+      _downloadHerladenUitgesteld = true;
+      _toonNieuweCloudversieMelding();
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  void _toonNieuweCloudversieMelding() {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Er zijn nieuwere Voorzetscreen-instellingen ontvangen. '
+          'Je niet-opgeslagen wijzigingen blijven behouden.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() => _laden = true);
+    }
+
     final instellingen =
         await AppStorage.laadOpmetingVoorzetscreenInstellingen();
     if (!mounted) return;
+
+    _controllersWordenGeladen = true;
 
     _poederController.text = _poederNaarTekst(instellingen.poederkleuren);
     _doekenController.text = _doekenNaarTekst(instellingen.screendoeken);
@@ -72,9 +153,14 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     _zonnecelMotorenController.text = _motorenNaarTekst(
       instellingen.zonnecelMotoren,
     );
-    _bedieningenController.text = instellingen.bedieningen.join('\n');
 
-    setState(() => _laden = false);
+    _controllersWordenGeladen = false;
+
+    setState(() {
+      _laden = false;
+      _lokaleWijzigingen = false;
+      _downloadHerladenUitgesteld = false;
+    });
   }
 
   void _laadStandaardlijsten() {
@@ -90,9 +176,6 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     _zonnecelMotorenController.text = _motorenNaarTekst(
       OpmetingVoorzetscreenInstellingen.standaardZonnecelMotoren,
     );
-    _bedieningenController.text = OpmetingVoorzetscreenInstellingen
-        .standaardBedieningen
-        .join('\n');
   }
 
   String _poederNaarTekst(Iterable<OpmetingVoorzetscreenPoederkleur> kleuren) {
@@ -129,22 +212,6 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
         .map((regel) => regel.trim())
         .where((regel) => regel.isNotEmpty)
         .toList(growable: false);
-  }
-
-  List<String> _parseBedieningen() {
-    final resultaat = <String>[];
-    final gebruikt = <String>{};
-    final delen = _bedieningenController.text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .split(RegExp(r'[\n;\t]+'));
-
-    for (final deel in delen) {
-      final waarde = deel.trim();
-      if (waarde.isEmpty || !gebruikt.add(waarde.toLowerCase())) continue;
-      resultaat.add(waarde);
-    }
-    return List<String>.unmodifiable(resultaat);
   }
 
   List<String> _kolommen(String regel) {
@@ -289,11 +356,11 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
         screendoeken: _parseDoeken(),
         motoren: _parseMotoren(_motorenController),
         zonnecelMotoren: _parseMotoren(_zonnecelMotorenController),
-        bedieningen: _parseBedieningen(),
       ).metWijzigingsDatum();
 
       await AppStorage.bewaarOpmetingVoorzetscreenInstellingen(instellingen);
       if (!mounted) return;
+      setState(() => _lokaleWijzigingen = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -301,13 +368,17 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
             '${instellingen.poederkleuren.length} poederkleuren, '
             '${instellingen.screendoeken.length} doeken, '
             '${instellingen.motoren.length} motoren en '
-            '${instellingen.zonnecelMotoren.length} zonnecelmotoren en '
-            '${instellingen.bedieningen.length} bedieningen.',
+            '${instellingen.zonnecelMotoren.length} zonnecelmotoren.',
           ),
         ),
       );
     } finally {
       if (mounted) setState(() => _bewaren = false);
+    }
+
+    if (_downloadHerladenUitgesteld && mounted && !_lokaleWijzigingen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 
@@ -332,12 +403,6 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     );
   }
 
-  void _verwijderBediening(String bediening) {
-    _bedieningenController.text = _parseBedieningen()
-        .where((item) => item.toLowerCase() != bediening.toLowerCase())
-        .join('\n');
-  }
-
   @override
   Widget build(BuildContext context) {
     final poederkleuren = _laden
@@ -352,7 +417,6 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     final zonnecelMotoren = _laden
         ? const <OpmetingVoorzetscreenMotor>[]
         : _parseMotoren(_zonnecelMotorenController);
-    final bedieningen = _laden ? const <String>[] : _parseBedieningen();
 
     return Scaffold(
       backgroundColor: _achtergrond,
@@ -497,23 +561,6 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
                             _zonnecelMotorenController,
                             motor,
                           ),
-                        ),
-                      )
-                      .toList(growable: false),
-                ),
-                const SizedBox(height: 14),
-                _PlakTabelKaart(
-                  titel: 'Bediening',
-                  uitleg:
-                      'Eén bediening per regel. Deze keuzes verschijnen als radioknoppen op de opmeetfiche.',
-                  hint: 'Inbouwschakelaar',
-                  controller: _bedieningenController,
-                  aantalTekst: '${bedieningen.length} bedieningen',
-                  rijen: bedieningen
-                      .map(
-                        (bediening) => _VoorbeeldRij(
-                          kolommen: <String>[bediening],
-                          onVerwijderen: () => _verwijderBediening(bediening),
                         ),
                       )
                       .toList(growable: false),

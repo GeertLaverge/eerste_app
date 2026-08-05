@@ -1,9 +1,11 @@
-// THIMACO-CONTROLE: BIBLIOTHEEK-VASTE-BOVENBALK-GROENE-MENUS-GELIJKE-BOEKHOOGTE-20260802
+// THIMACO-CONTROLE: BIBLIOTHEEK-DOWNLOADSIGNAAL-FASE8-20260805
+// THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-PAGINA-20260802
 
 import 'package:flutter/material.dart';
 
 import '../helpers/bibliotheek/bibliotheek_model.dart';
 import '../helpers/bibliotheek/bibliotheek_repository.dart';
+import '../helpers/sync/sync_navigatie_helper.dart';
 import 'bibliotheek_folder_pagina.dart';
 
 class BibliotheekPagina extends StatefulWidget {
@@ -20,27 +22,15 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
-  static const List<int> _leveranciersKleurWaarden = <int>[
-    0xFF343A40,
-    0xFF1F4E5F,
-    0xFF315C46,
-    0xFFF28A2E,
-    0xFF8B3A3A,
-    0xFF5A4A78,
-    0xFF3F6B78,
-    0xFF8A7356,
-    0xFF68706D,
-    0xFFB0A79C,
-    0xFFD4C6B4,
-    0xFF8795A1,
-  ];
-
   final TextEditingController _zoekController = TextEditingController();
 
   BibliotheekData _data = BibliotheekData.leeg();
   String? _geselecteerdeLeverancierId;
   bool _laden = true;
   bool _bewarenBezig = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
   String _fout = '';
 
   BibliotheekLeverancier? get _geselecteerdeLeverancier {
@@ -56,20 +46,66 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laadBibliotheek();
   }
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
     _zoekController.dispose();
     super.dispose();
   }
 
-  Future<void> _laadBibliotheek() async {
-    setState(() {
-      _laden = true;
-      _fout = '';
-    });
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herlaadBibliotheekNaSync();
+  }
+
+  Future<void> _herlaadBibliotheekNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laadBibliotheek(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laadBibliotheek({bool toonLaden = true}) async {
+    final vorigeSelectie = _geselecteerdeLeverancierId;
+
+    if (toonLaden && mounted) {
+      setState(() {
+        _laden = true;
+        _fout = '';
+      });
+    }
 
     try {
       final data = await BibliotheekRepository.laad();
@@ -77,10 +113,16 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
 
       setState(() {
         _data = data;
-        _geselecteerdeLeverancierId = data.leveranciers.isEmpty
+        final vorigeBestaatNog = data.leveranciers.any(
+          (leverancier) => leverancier.id == vorigeSelectie,
+        );
+        _geselecteerdeLeverancierId = vorigeBestaatNog
+            ? vorigeSelectie
+            : data.leveranciers.isEmpty
             ? null
             : data.leveranciers.first.id;
         _laden = false;
+        _fout = '';
       });
     } catch (e) {
       if (!mounted) return;
@@ -124,24 +166,17 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     String beginNaam = '',
     String beginOmschrijving = '',
     bool toonOmschrijving = false,
-    bool toonKleur = false,
-    int beginKleurWaarde = 0xFF343A40,
   }) {
     return showDialog<_NaamEnOmschrijving>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) {
-        return Theme(
-          data: _bouwGroenThema(dialogContext),
-          child: _NaamEnOmschrijvingDialog(
-            titel: titel,
-            label: label,
-            beginNaam: beginNaam,
-            beginOmschrijving: beginOmschrijving,
-            toonOmschrijving: toonOmschrijving,
-            toonKleur: toonKleur,
-            beginKleurWaarde: beginKleurWaarde,
-          ),
+      builder: (_) {
+        return _NaamEnOmschrijvingDialog(
+          titel: titel,
+          label: label,
+          beginNaam: beginNaam,
+          beginOmschrijving: beginOmschrijving,
+          toonOmschrijving: toonOmschrijving,
         );
       },
     );
@@ -155,30 +190,26 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     final resultaat = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
-        return Theme(
-          data: _bouwGroenThema(dialogContext),
-          child: AlertDialog(
-            backgroundColor: Colors.white,
-            title: Text(
-              titel,
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
-            content: Text(tekst),
-            actions: <Widget>[
-              TextButton(
-                style: TextButton.styleFrom(foregroundColor: _groen),
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Annuleren'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
-                ),
-                onPressed: () => Navigator.pop(dialogContext, true),
-                child: Text(bevestigTekst),
-              ),
-            ],
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          title: Text(
+            titel,
+            style: const TextStyle(fontWeight: FontWeight.w900),
           ),
+          content: Text(tekst),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(bevestigTekst),
+            ),
+          ],
         );
       },
     );
@@ -190,10 +221,6 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     final invoer = await _vraagNaam(
       titel: 'Leverancier toevoegen',
       label: 'Naam leverancier',
-      toonKleur: true,
-      beginKleurWaarde:
-          _leveranciersKleurWaarden[_data.leveranciers.length %
-              _leveranciersKleurWaarden.length],
     );
     if (invoer == null) return;
 
@@ -201,7 +228,6 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     final leverancier = BibliotheekLeverancier(
       id: leverancierId,
       naam: invoer.naam,
-      kleurWaarde: invoer.kleurWaarde,
       schappen: <BibliotheekSchap>[
         BibliotheekSchap(
           id: _nieuwId('schap'),
@@ -227,18 +253,13 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
       titel: 'Leverancier wijzigen',
       label: 'Naam leverancier',
       beginNaam: leverancier.naam,
-      toonKleur: true,
-      beginKleurWaarde: leverancier.kleurWaarde,
     );
     if (invoer == null) return;
 
     final leveranciers = _data.leveranciers
         .map((item) {
           return item.id == leverancier.id
-              ? item.copyWith(
-                  naam: invoer.naam,
-                  kleurWaarde: invoer.kleurWaarde,
-                )
+              ? item.copyWith(naam: invoer.naam)
               : item;
         })
         .toList(growable: false);
@@ -476,221 +497,46 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
 
   @override
   Widget build(BuildContext context) {
-    final leverancier = _geselecteerdeLeverancier;
-
-    return Theme(
-      data: _bouwGroenThema(context),
-      child: Scaffold(
-        backgroundColor: _achtergrond,
-        body: SafeArea(
-          child: Column(
-            children: <Widget>[
-              _bouwBovenbalk(leverancier),
-              Expanded(child: _bouwBody()),
-            ],
+    return Scaffold(
+      backgroundColor: _achtergrond,
+      appBar: AppBar(
+        backgroundColor: _groen,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Bibliotheek',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        actions: <Widget>[
+          if (_bewarenBezig)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: _groen,
+              ),
+              onPressed: _voegLeverancierToe,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Leverancier'),
+            ),
           ),
-        ),
+        ],
       ),
-    );
-  }
-
-  ThemeData _bouwGroenThema(BuildContext context) {
-    final basis = Theme.of(context);
-    final kleurenschema = basis.colorScheme.copyWith(
-      primary: _groen,
-      secondary: _groen,
-      surface: Colors.white,
-      onPrimary: Colors.white,
-      onSecondary: Colors.white,
-    );
-
-    return basis.copyWith(
-      colorScheme: kleurenschema,
-      primaryColor: _groen,
-      focusColor: _groen.withValues(alpha: 0.12),
-      hoverColor: _groen.withValues(alpha: 0.07),
-      splashColor: _groen.withValues(alpha: 0.10),
-      highlightColor: _groen.withValues(alpha: 0.06),
-      textSelectionTheme: const TextSelectionThemeData(
-        cursorColor: _groen,
-        selectionColor: Color(0x5534A764),
-        selectionHandleColor: _groen,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        floatingLabelStyle: const TextStyle(color: _groen),
-        prefixIconColor: _groen,
-        suffixIconColor: _groen,
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: _groen, width: 1.6),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(foregroundColor: _groen),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: _groen,
-          foregroundColor: Colors.white,
-        ),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: _groen,
-          side: const BorderSide(color: _groen),
-        ),
-      ),
-      popupMenuTheme: PopupMenuThemeData(
-        color: Colors.white,
-        surfaceTintColor: Colors.white,
-        iconColor: _groen,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: const BorderSide(color: _rand),
-        ),
-      ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: _groen),
-    );
-  }
-
-  Widget _bouwBovenbalk(BibliotheekLeverancier? leverancier) {
-    final titel = leverancier?.naam.trim() ?? '';
-
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: _groen,
-          border: Border(bottom: BorderSide(color: Color(0xFF086A34))),
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final heelSmal = constraints.maxWidth < 650;
-            final middel = constraints.maxWidth < 920;
-            final knopBreedte = heelSmal ? 42.0 : (middel ? 124.0 : 138.0);
-            final actieBreedte =
-                (knopBreedte * 2) + 8 + 16 + (_bewarenBezig ? 33 : 0);
-            final titelBreedte = (constraints.maxWidth - (actieBreedte * 2))
-                .clamp(80.0, constraints.maxWidth)
-                .toDouble();
-
-            return Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                Center(
-                  child: SizedBox(
-                    width: titelBreedte,
-                    child: Text(
-                      titel.isEmpty ? 'Geen leverancier geselecteerd' : titel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: titel.isEmpty
-                            ? Colors.white.withValues(alpha: 0.74)
-                            : Colors.white,
-                        fontSize: middel ? 15 : 17,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 4,
-                  top: 0,
-                  bottom: 0,
-                  child: IconButton(
-                    tooltip: 'Home',
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(
-                      Icons.home_rounded,
-                      color: Colors.white,
-                      size: 23,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 8,
-                  top: 7,
-                  bottom: 7,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      if (_bewarenBezig) ...<Widget>[
-                        const SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      SizedBox(
-                        width: knopBreedte,
-                        height: 38,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _groen,
-                            padding: EdgeInsets.symmetric(
-                              horizontal: heelSmal ? 0 : 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                          ),
-                          onPressed: _voegLeverancierToe,
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: heelSmal
-                              ? const SizedBox.shrink()
-                              : const Text(
-                                  'Leverancier',
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: knopBreedte,
-                        height: 38,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _groen,
-                            disabledBackgroundColor: Colors.white.withValues(
-                              alpha: 0.42,
-                            ),
-                            disabledForegroundColor: Colors.white.withValues(
-                              alpha: 0.76,
-                            ),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: heelSmal ? 0 : 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(7),
-                            ),
-                          ),
-                          onPressed: leverancier == null ? null : _voegSchapToe,
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: heelSmal
-                              ? const SizedBox.shrink()
-                              : const Text(
-                                  'Schap',
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+      body: _bouwBody(),
     );
   }
 
@@ -726,76 +572,71 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
       );
     }
 
+    if (_data.leveranciers.isEmpty) {
+      return _bouwLegeBibliotheek();
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bredeKast = constraints.maxWidth >= 760;
+        final breed = constraints.maxWidth >= 900;
 
-        if (bredeKast) {
+        if (breed) {
           return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              SizedBox(width: 292, child: _bouwLeveranciersBoekenkast()),
-              Expanded(child: _bouwDocumentenBoekenkast()),
+              SizedBox(width: 260, child: _bouwLeveranciersPaneel()),
+              const VerticalDivider(width: 1, color: _rand),
+              Expanded(child: _bouwKast()),
             ],
           );
         }
 
         return Column(
           children: <Widget>[
-            SizedBox(height: 194, child: _bouwCompacteLeveranciersBoeken()),
-            Expanded(child: _bouwDocumentenBoekenkast()),
+            SizedBox(
+              height: 112,
+              child: _bouwLeveranciersPaneel(compact: true),
+            ),
+            const Divider(height: 1, color: _rand),
+            Expanded(child: _bouwKast()),
           ],
         );
       },
     );
   }
 
-  Widget _bouwLeveranciersBoekenkast() {
-    final aantalPlanken = ((_data.leveranciers.length + 3) ~/ 4)
-        .clamp(3, 100)
-        .toInt();
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFF0EFEB),
-        border: Border(right: BorderSide(color: Color(0xFFD7D5CF))),
-      ),
+  Widget _bouwLegeBibliotheek() {
+    return Center(
       child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        constraints: const BoxConstraints(maxWidth: 560),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(30),
         decoration: BoxDecoration(
-          color: const Color(0xFFE8E6E1),
-          borderRadius: BorderRadius.circular(3),
-          border: Border.all(color: const Color(0xFFD4D1CB)),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.055),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _rand),
         ),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _bouwLedLijn(),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
-                itemCount: aantalPlanken,
-                itemBuilder: (context, plankIndex) {
-                  final begin = plankIndex * 4;
-                  final einde = (begin + 4)
-                      .clamp(0, _data.leveranciers.length)
-                      .toInt();
-                  final leveranciers = begin < _data.leveranciers.length
-                      ? _data.leveranciers.sublist(begin, einde)
-                      : const <BibliotheekLeverancier>[];
-
-                  return _bouwLeveranciersPlank(
-                    leveranciers: leveranciers,
-                    beginIndex: begin,
-                  );
-                },
-              ),
+            const Icon(Icons.local_library_outlined, size: 54, color: _groen),
+            const SizedBox(height: 16),
+            const Text(
+              'Maak uw eerste leverancierskast',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Voeg een leverancier toe. Daarna kunt u schappen en folders aanmaken, PDF’s uit OneDrive koppelen en klantenfiches aan folders verbinden.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: _tekstGrijs, height: 1.4),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: _groen),
+              onPressed: _voegLeverancierToe,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Leverancier toevoegen'),
             ),
           ],
         ),
@@ -803,301 +644,142 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     );
   }
 
-  Widget _bouwLeveranciersPlank({
-    required List<BibliotheekLeverancier> leveranciers,
-    required int beginIndex,
-  }) {
-    return SizedBox(
-      height: 206,
-      child: Column(
-        children: <Widget>[
-          Expanded(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  for (
-                    var index = 0;
-                    index < leveranciers.length;
-                    index++
-                  ) ...<Widget>[
-                    _bouwLeveranciersBoek(
-                      leveranciers[index],
-                      beginIndex + index,
-                    ),
-                    if (index != leveranciers.length - 1)
-                      const SizedBox(width: 7),
-                  ],
-                ],
+  Widget _bouwLeveranciersPaneel({bool compact = false}) {
+    final inhoud = ListView.separated(
+      scrollDirection: compact ? Axis.horizontal : Axis.vertical,
+      padding: const EdgeInsets.all(12),
+      itemCount: _data.leveranciers.length,
+      separatorBuilder: (_, __) =>
+          SizedBox(width: compact ? 8 : 0, height: compact ? 0 : 8),
+      itemBuilder: (context, index) {
+        final leverancier = _data.leveranciers[index];
+        final geselecteerd = leverancier.id == _geselecteerdeLeverancierId;
+
+        return SizedBox(
+          width: compact ? 210 : null,
+          child: Material(
+            color: geselecteerd ? _lichtGroen : Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: geselecteerd ? _groen : _rand,
+                width: geselecteerd ? 1.4 : 1,
               ),
             ),
-          ),
-          _bouwKastPlank(),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwLedLijn() {
-    return Container(
-      height: 10,
-      margin: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[
-            Colors.transparent,
-            Colors.white.withValues(alpha: 0.95),
-            Colors.transparent,
-          ],
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.85),
-            blurRadius: 14,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwKastPlank() {
-    return Container(
-      height: 12,
-      margin: const EdgeInsets.only(top: 6, bottom: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD8D6D1),
-        border: const Border(
-          top: BorderSide(color: Color(0xFFF9F8F5), width: 2),
-          bottom: BorderSide(color: Color(0xFFBDBAB4)),
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwLeveranciersBoek(BibliotheekLeverancier leverancier, int index) {
-    final geselecteerd = leverancier.id == _geselecteerdeLeverancierId;
-    final boekKleur = Color(leverancier.kleurWaarde);
-    final tekstKleur = _contrasterendeTekst(boekKleur);
-    final breedte = 52.0 + ((index % 3) * 4.0);
-    const hoogte = 160.0;
-    const boekRadius = BorderRadius.only(
-      topLeft: Radius.circular(3),
-      topRight: Radius.circular(4),
-      bottomLeft: Radius.circular(2),
-      bottomRight: Radius.circular(2),
-    );
-
-    return Material(
-      color: boekKleur,
-      elevation: geselecteerd ? 6 : 3,
-      borderRadius: boekRadius,
-      shadowColor: Colors.black.withValues(alpha: 0.34),
-      child: InkWell(
-        borderRadius: boekRadius,
-        onTap: () {
-          setState(() {
-            _geselecteerdeLeverancierId = leverancier.id;
-            _zoekController.clear();
-          });
-        },
-        child: Container(
-          width: breedte,
-          height: hoogte,
-          decoration: BoxDecoration(
-            borderRadius: boekRadius,
-            border: Border.all(
-              color: geselecteerd
-                  ? const Color(0xFFF28A2E)
-                  : Colors.black.withValues(alpha: 0.17),
-              width: geselecteerd ? 3 : 1,
-            ),
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.17),
-                offset: const Offset(1, 0),
-              ),
-            ],
-          ),
-          child: Column(
-            children: <Widget>[
-              SizedBox(
-                height: 28,
-                child: PopupMenuButton<String>(
-                  tooltip: 'Leverancier beheren',
-                  padding: EdgeInsets.zero,
-                  color: Colors.white,
-                  icon: Icon(
-                    Icons.more_horiz_rounded,
-                    size: 18,
-                    color: tekstKleur.withValues(alpha: 0.86),
-                  ),
-                  onSelected: (actie) {
-                    if (actie == 'wijzig') {
-                      _wijzigLeverancier(leverancier);
-                    } else if (actie == 'verwijder') {
-                      _verwijderLeverancier(leverancier);
-                    }
-                  },
-                  itemBuilder: (_) => const <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'wijzig',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.palette_outlined, color: _groen),
-                        title: Text(
-                          'Naam en kleur wijzigen',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () {
+                setState(() {
+                  _geselecteerdeLeverancierId = leverancier.id;
+                  _zoekController.clear();
+                });
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: geselecteerd ? Colors.white : _achtergrond,
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(color: _rand),
                       ),
+                      child: const Icon(Icons.business_outlined, color: _groen),
                     ),
-                    PopupMenuItem<String>(
-                      value: 'verwijder',
-                      child: ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          Icons.delete_outline_rounded,
-                          color: Color(0xFFDC2626),
-                        ),
-                        title: Text('Verwijderen'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: RotatedBox(
-                    quarterTurns: 3,
-                    child: Center(
-                      child: Text(
-                        leverancier.naam.toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: tekstKleur,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.55,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Container(
-                height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  border: Border(
-                    top: BorderSide(
-                      color: Colors.white.withValues(alpha: 0.15),
-                    ),
-                  ),
-                ),
-                child: Text(
-                  '${leverancier.aantalFolders}',
-                  style: TextStyle(
-                    color: tekstKleur.withValues(alpha: 0.80),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bouwCompacteLeveranciersBoeken() {
-    return Container(
-      color: const Color(0xFFF0EFEB),
-      padding: const EdgeInsets.fromLTRB(10, 4, 10, 0),
-      child: Column(
-        children: <Widget>[
-          Expanded(
-            child: _data.leveranciers.isEmpty
-                ? const SizedBox.shrink()
-                : ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _data.leveranciers.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 7),
-                    itemBuilder: (context, index) {
-                      return Align(
-                        alignment: Alignment.bottomCenter,
-                        child: _bouwLeveranciersBoek(
-                          _data.leveranciers[index],
-                          index,
-                        ),
-                      );
-                    },
-                  ),
-          ),
-          _bouwKastPlank(),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwDocumentenBoekenkast() {
-    final leverancier = _geselecteerdeLeverancier;
-
-    return Container(
-      color: const Color(0xFFF4F2EE),
-      child: Column(
-        children: <Widget>[
-          _bouwKastWerkbalk(leverancier),
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEDEAE4),
-                border: Border.all(color: const Color(0xFFD4D1CA)),
-                borderRadius: BorderRadius.circular(5),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.055),
-                    blurRadius: 18,
-                    offset: const Offset(0, 7),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: <Widget>[
-                  _bouwLedLijn(),
-                  Expanded(
-                    child: leverancier == null
-                        ? _bouwLegeHoofdkast()
-                        : leverancier.schappen.isEmpty
-                        ? _bouwLegeKast(leverancier)
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-                            itemCount: leverancier.schappen.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, index) {
-                              return _bouwSchap(
-                                leverancier,
-                                leverancier.schappen[index],
-                              );
-                            },
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(
+                            leverancier.naam,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
-                  ),
-                ],
+                          const SizedBox(height: 3),
+                          Text(
+                            '${leverancier.schappen.length} schap(pen) · ${leverancier.aantalFolders} folder(s)',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: _tekstGrijs,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Leverancier beheren',
+                      onSelected: (actie) {
+                        if (actie == 'wijzig') {
+                          _wijzigLeverancier(leverancier);
+                        } else if (actie == 'verwijder') {
+                          _verwijderLeverancier(leverancier);
+                        }
+                      },
+                      itemBuilder: (_) => const <PopupMenuEntry<String>>[
+                        PopupMenuItem<String>(
+                          value: 'wijzig',
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.edit_outlined),
+                            title: Text('Naam wijzigen'),
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'verwijder',
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFDC2626),
+                            ),
+                            title: Text('Verwijderen'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (compact) return inhoud;
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Leveranciers',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+          Expanded(child: inhoud),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _voegLeverancierToe,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Leverancier toevoegen'),
               ),
             ),
           ),
@@ -1106,102 +788,96 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     );
   }
 
-  Widget _bouwKastWerkbalk(BibliotheekLeverancier? leverancier) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      child: TextField(
-        controller: _zoekController,
-        enabled: leverancier != null,
-        onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(
-          hintText: leverancier == null
-              ? 'Voeg bovenaan een leverancier toe'
-              : 'Zoek folder bij ${leverancier.naam}',
-          prefixIcon: const Icon(Icons.search_rounded),
-          suffixIcon: _zoekController.text.isEmpty
-              ? null
-              : IconButton(
-                  tooltip: 'Zoekopdracht wissen',
-                  onPressed: () {
-                    _zoekController.clear();
-                    setState(() {});
-                  },
-                  icon: const Icon(Icons.close_rounded),
+  Widget _bouwKast() {
+    final leverancier = _geselecteerdeLeverancier;
+    if (leverancier == null) return const SizedBox.shrink();
+
+    return Column(
+      children: <Widget>[
+        Container(
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: TextField(
+                  controller: _zoekController,
+                  onChanged: (_) => setState(() {}),
+                  decoration: InputDecoration(
+                    hintText: 'Zoek folder bij ${leverancier.naam}',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _zoekController.text.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              _zoekController.clear();
+                              setState(() {});
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                    filled: true,
+                    fillColor: _achtergrond,
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _rand),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: _rand),
+                    ),
+                  ),
                 ),
-          filled: true,
-          fillColor: const Color(0xFFF8F7F4),
-          isDense: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _rand),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _rand),
-          ),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _rand),
+              ),
+              const SizedBox(width: 10),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: _groen),
+                onPressed: _voegSchapToe,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Schap'),
+              ),
+            ],
           ),
         ),
-      ),
+        Expanded(
+          child: leverancier.schappen.isEmpty
+              ? _bouwLegeKast(leverancier)
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: leverancier.schappen.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
+                  itemBuilder: (context, index) {
+                    return _bouwSchap(leverancier, leverancier.schappen[index]);
+                  },
+                ),
+        ),
+      ],
     );
   }
 
   Widget _bouwLegeKast(BibliotheekLeverancier leverancier) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-      itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return _bouwLeegBasisSchap(
-          tekst: index == 0
-              ? 'Nog geen schappen. Gebruik + Schap bovenaan.'
-              : null,
-        );
-      },
-    );
-  }
-
-  Widget _bouwLegeHoofdkast() {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
-      itemCount: 3,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return _bouwLeegBasisSchap(
-          tekst: index == 0 ? 'Voeg bovenaan een leverancier toe.' : null,
-        );
-      },
-    );
-  }
-
-  Widget _bouwLeegBasisSchap({String? tekst}) {
-    return Container(
-      height: 210,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F2EC),
-        border: Border.all(color: const Color(0xFFD7D3CB)),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        children: <Widget>[
-          Expanded(
-            child: tekst == null
-                ? const SizedBox.shrink()
-                : Center(
-                    child: Text(
-                      tekst,
-                      style: const TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-          ),
-          _bouwSchapPlank(),
-        ],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.view_stream_outlined, size: 44, color: _groen),
+            const SizedBox(height: 12),
+            Text(
+              '${leverancier.naam} heeft nog geen schappen.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: _groen),
+              onPressed: _voegSchapToe,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Schap toevoegen'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1223,179 +899,118 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
         : schap.folders;
 
     return Container(
-      height: 226,
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F2EC),
-        border: Border.all(color: const Color(0xFFD7D3CB)),
-        borderRadius: BorderRadius.circular(4),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _rand),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.055),
-            blurRadius: 8,
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _bouwSchapKop(leverancier, schap),
-          Expanded(
-            child: folders.isEmpty
-                ? _bouwLeegSchap(leverancier, schap, zoekenActief)
-                : SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.fromLTRB(18, 8, 18, 0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: <Widget>[
-                        if (!zoekenActief)
-                          _bouwInvoegDoel(schapId: schap.id, index: 0),
-                        for (
-                          var index = 0;
-                          index < folders.length;
-                          index++
-                        ) ...<Widget>[
-                          _bouwFolderBoek(
-                            leverancier: leverancier,
-                            schap: schap,
-                            folder: folders[index],
-                            index: index,
-                            slepenActief: !zoekenActief,
-                          ),
-                          if (!zoekenActief)
-                            _bouwInvoegDoel(
-                              schapId: schap.id,
-                              index: index + 1,
-                            ),
-                        ],
-                      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 6, 8),
+            child: Row(
+              children: <Widget>[
+                const Icon(Icons.view_stream_outlined, color: _groen),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    schap.naam,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
-          ),
-          _bouwSchapPlank(),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwSchapKop(
-    BibliotheekLeverancier leverancier,
-    BibliotheekSchap schap,
-  ) {
-    return SizedBox(
-      height: 43,
-      child: Row(
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.only(left: 14),
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE3E0DA),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(3),
-                bottomRight: Radius.circular(3),
-              ),
-              border: Border.all(color: const Color(0xFFC9C6C0)),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
+                ),
+                Text(
+                  '${schap.folders.length} folder(s)',
+                  style: const TextStyle(color: _tekstGrijs, fontSize: 12),
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  tooltip: 'Folder toevoegen',
+                  onPressed: () => _voegFolderToe(leverancier, schap),
+                  icon: const Icon(Icons.create_new_folder_outlined),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Schap beheren',
+                  onSelected: (actie) {
+                    if (actie == 'wijzig') {
+                      _wijzigSchap(leverancier, schap);
+                    } else if (actie == 'verwijder') {
+                      _verwijderSchap(leverancier, schap);
+                    }
+                  },
+                  itemBuilder: (_) => const <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'wijzig',
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Naam wijzigen'),
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'verwijder',
+                      child: ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Color(0xFFDC2626),
+                        ),
+                        title: Text('Verwijderen'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            child: Text(
-              schap.naam.toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFF4B4C4C),
-                fontSize: 11.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
-              ),
-            ),
           ),
-          const Spacer(),
-          Text(
-            '${schap.folders.length} folder(s)',
-            style: const TextStyle(
-              color: _tekstGrijs,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          IconButton(
-            tooltip: 'Folder toevoegen',
-            onPressed: () => _voegFolderToe(leverancier, schap),
-            icon: const Icon(
-              Icons.library_add_outlined,
-              size: 21,
-              color: _groen,
-            ),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Schap beheren',
-            onSelected: (actie) {
-              if (actie == 'wijzig') {
-                _wijzigSchap(leverancier, schap);
-              } else if (actie == 'verwijder') {
-                _verwijderSchap(leverancier, schap);
-              }
-            },
-            itemBuilder: (_) => const <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                value: 'wijzig',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.edit_outlined, color: _groen),
-                  title: Text(
-                    'Naam wijzigen',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+          Container(height: 10, color: const Color(0xFFD7C3A2)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            child: folders.isEmpty
+                ? _bouwLeegSchap(leverancier, schap, zoekenActief)
+                : Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.end,
+                    spacing: 8,
+                    runSpacing: 10,
+                    children: <Widget>[
+                      if (!zoekenActief)
+                        _bouwInvoegDoel(
+                          schapId: schap.id,
+                          index: 0,
+                          compact: true,
+                        ),
+                      for (
+                        var index = 0;
+                        index < folders.length;
+                        index++
+                      ) ...<Widget>[
+                        _bouwFolderKaart(
+                          leverancier: leverancier,
+                          schap: schap,
+                          folder: folders[index],
+                          slepenActief: !zoekenActief,
+                        ),
+                        if (!zoekenActief)
+                          _bouwInvoegDoel(
+                            schapId: schap.id,
+                            index: index + 1,
+                            compact: true,
+                          ),
+                      ],
+                    ],
                   ),
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'verwijder',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.delete_outline_rounded,
-                    color: Color(0xFFDC2626),
-                  ),
-                  title: Text('Verwijderen'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 2),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwSchapPlank() {
-    return Container(
-      height: 16,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0xFFF8F7F4),
-            Color(0xFFD8D5CF),
-            Color(0xFFC6C3BD),
-          ],
-        ),
-        border: const Border(
-          top: BorderSide(color: Colors.white, width: 2),
-          bottom: BorderSide(color: Color(0xFFAAA7A2)),
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.16),
-            blurRadius: 8,
-            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -1408,10 +1023,13 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     bool zoekenActief,
   ) {
     if (zoekenActief) {
-      return const Center(
-        child: Text(
-          'Geen overeenkomende folders op dit schap.',
-          style: TextStyle(color: _tekstGrijs),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+          child: Text(
+            'Geen overeenkomende folders op dit schap.',
+            style: TextStyle(color: _tekstGrijs),
+          ),
         ),
       );
     }
@@ -1428,42 +1046,37 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
       },
       builder: (context, kandidaten, _) {
         final actief = kandidaten.isNotEmpty;
-        return Center(
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => _voegFolderToe(leverancier, schap),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 280,
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              decoration: BoxDecoration(
-                color: actief
-                    ? _lichtGroen
-                    : Colors.white.withValues(alpha: 0.52),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: actief ? _groen : const Color(0xFFD4D1CA),
-                  width: actief ? 1.5 : 1,
+        return InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _voegFolderToe(leverancier, schap),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 22),
+            decoration: BoxDecoration(
+              color: actief ? _lichtGroen : _achtergrond,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: actief ? _groen : _rand,
+                width: actief ? 1.5 : 1,
+              ),
+            ),
+            child: Column(
+              children: <Widget>[
+                Icon(
+                  actief
+                      ? Icons.move_to_inbox_outlined
+                      : Icons.create_new_folder_outlined,
+                  color: _groen,
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    actief
-                        ? Icons.move_to_inbox_outlined
-                        : Icons.library_add_outlined,
-                    color: _groen,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    actief
-                        ? 'Laat los om de folder hier te plaatsen'
-                        : 'Folder op dit schap plaatsen',
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ],
-              ),
+                const SizedBox(height: 6),
+                Text(
+                  actief
+                      ? 'Laat los om de folder hier te plaatsen'
+                      : 'Folder toevoegen',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ],
             ),
           ),
         );
@@ -1471,35 +1084,36 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
     );
   }
 
-  Widget _bouwFolderBoek({
+  Widget _bouwFolderKaart({
     required BibliotheekLeverancier leverancier,
     required BibliotheekSchap schap,
     required BibliotheekFolder folder,
-    required int index,
     required bool slepenActief,
   }) {
-    final boek = _FolderBoek(
+    final kaart = _FolderKaart(
       folder: folder,
-      kleur: _folderBoekKleur(folder, index),
-      hoogte: 148,
       onOpen: () => _openFolder(leverancier, schap, folder),
       onVerwijder: () => _verwijderFolder(leverancier, schap, folder),
     );
 
-    if (!slepenActief) return boek;
+    if (!slepenActief) return kaart;
 
     return LongPressDraggable<_FolderSleepData>(
       data: _FolderSleepData(schapId: schap.id, folderId: folder.id),
       feedback: Material(
         color: Colors.transparent,
-        child: SizedBox(width: 136, child: boek),
+        child: SizedBox(width: 170, child: kaart),
       ),
-      childWhenDragging: Opacity(opacity: 0.28, child: boek),
-      child: boek,
+      childWhenDragging: Opacity(opacity: 0.28, child: kaart),
+      child: kaart,
     );
   }
 
-  Widget _bouwInvoegDoel({required String schapId, required int index}) {
+  Widget _bouwInvoegDoel({
+    required String schapId,
+    required int index,
+    required bool compact,
+  }) {
     return DragTarget<_FolderSleepData>(
       onWillAcceptWithDetails: (_) => true,
       onAcceptWithDetails: (details) {
@@ -1514,9 +1128,8 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
         final actief = kandidaten.isNotEmpty;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          width: actief ? 36 : 12,
-          height: 154,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
+          width: actief ? 38 : (compact ? 8 : 14),
+          height: 112,
           decoration: BoxDecoration(
             color: actief ? _lichtGroen : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
@@ -1529,204 +1142,128 @@ class _BibliotheekPaginaState extends State<BibliotheekPagina> {
       },
     );
   }
-
-  Color _folderBoekKleur(BibliotheekFolder folder, int index) {
-    const kleuren = <Color>[
-      Color(0xFF26384D),
-      Color(0xFF34495E),
-      Color(0xFF5A636B),
-      Color(0xFFA7A39D),
-      Color(0xFF777B7D),
-      Color(0xFF3E454B),
-      Color(0xFFBBB7B0),
-      Color(0xFF6F7775),
-    ];
-    final basis = folder.id.hashCode.abs() + index;
-    return kleuren[basis % kleuren.length];
-  }
-
-  Color _contrasterendeTekst(Color achtergrond) {
-    return ThemeData.estimateBrightnessForColor(achtergrond) == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF292D30);
-  }
 }
 
-class _FolderBoek extends StatelessWidget {
-  const _FolderBoek({
+class _FolderKaart extends StatelessWidget {
+  const _FolderKaart({
     required this.folder,
-    required this.kleur,
-    required this.hoogte,
     required this.onOpen,
     required this.onVerwijder,
   });
 
   final BibliotheekFolder folder;
-  final Color kleur;
-  final int hoogte;
   final VoidCallback onOpen;
   final VoidCallback onVerwijder;
 
   @override
   Widget build(BuildContext context) {
-    final tekstKleur =
-        ThemeData.estimateBrightnessForColor(kleur) == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF2B2E30);
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Material(
-        color: kleur,
-        elevation: 4,
-        shadowColor: Colors.black.withValues(alpha: 0.35),
+    return Material(
+      color: const Color(0xFFF2A65A),
+      elevation: 1,
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(9),
+        topRight: Radius.circular(9),
+        bottomRight: Radius.circular(3),
+        bottomLeft: Radius.circular(3),
+      ),
+      child: InkWell(
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(4),
-          bottomLeft: Radius.circular(2),
-          bottomRight: Radius.circular(2),
+          topLeft: Radius.circular(9),
+          topRight: Radius.circular(9),
+          bottomRight: Radius.circular(3),
+          bottomLeft: Radius.circular(3),
         ),
-        child: InkWell(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(4),
-            topRight: Radius.circular(4),
-            bottomLeft: Radius.circular(2),
-            bottomRight: Radius.circular(2),
-          ),
-          onTap: onOpen,
-          child: Container(
-            width: 132,
-            height: hoogte.toDouble(),
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(4),
-                bottomLeft: Radius.circular(2),
-                bottomRight: Radius.circular(2),
-              ),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.14)),
+        onTap: onOpen,
+        child: Container(
+          width: 164,
+          height: 112,
+          padding: const EdgeInsets.fromLTRB(12, 10, 5, 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFD3833A)),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(9),
+              topRight: Radius.circular(9),
+              bottomRight: Radius.circular(3),
+              bottomLeft: Radius.circular(3),
             ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  width: 10,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.10),
-                    border: Border(
-                      right: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.18),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      folder.heeftPdf
+                          ? Icons.folder_special_outlined
+                          : Icons.folder_outlined,
+                      size: 23,
+                      color: const Color(0xFF5D3315),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      folder.naam,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF3E2412),
+                        fontWeight: FontWeight.w900,
+                        height: 1.05,
                       ),
                     ),
-                  ),
+                    const Spacer(),
+                    Text(
+                      folder.klanten.isEmpty
+                          ? (folder.heeftPdf ? 'PDF gekoppeld' : 'Nog geen PDF')
+                          : '${folder.klanten.length} klant(en)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF6B3C1A),
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(10, 8, 3, 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: PopupMenuButton<String>(
-                            padding: EdgeInsets.zero,
-                            iconSize: 18,
-                            tooltip: 'Folder beheren',
-                            color: Colors.white,
-                            icon: Icon(
-                              Icons.more_vert_rounded,
-                              color: tekstKleur.withValues(alpha: 0.82),
-                            ),
-                            onSelected: (actie) {
-                              if (actie == 'open') {
-                                onOpen();
-                              } else if (actie == 'verwijder') {
-                                onVerwijder();
-                              }
-                            },
-                            itemBuilder: (_) => const <PopupMenuEntry<String>>[
-                              PopupMenuItem<String>(
-                                value: 'open',
-                                child: ListTile(
-                                  dense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Icon(
-                                    Icons.open_in_full_rounded,
-                                    color: Color(0xFF0B7A3B),
-                                  ),
-                                  title: Text(
-                                    'Openen',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'verwijder',
-                                child: ListTile(
-                                  dense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: Icon(
-                                    Icons.delete_outline_rounded,
-                                    color: Color(0xFFDC2626),
-                                  ),
-                                  title: Text('Verwijderen'),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Center(
-                            child: Text(
-                              folder.naam,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: tekstKleur,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                height: 1.18,
-                              ),
-                            ),
-                          ),
-                        ),
-                        Icon(
-                          folder.heeftPdf
-                              ? Icons.picture_as_pdf_outlined
-                              : Icons.menu_book_rounded,
-                          size: 25,
-                          color: tekstKleur.withValues(alpha: 0.90),
-                        ),
-                        if (folder.klanten.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 4),
-                          Text(
-                            '${folder.klanten.length} klant(en)',
-                            maxLines: 1,
-                            textAlign: TextAlign.center,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: tekstKleur.withValues(alpha: 0.72),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ],
+              ),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                iconSize: 19,
+                tooltip: 'Folder beheren',
+                onSelected: (actie) {
+                  if (actie == 'open') {
+                    onOpen();
+                  } else if (actie == 'verwijder') {
+                    onVerwijder();
+                  }
+                },
+                itemBuilder: (_) => const <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    value: 'open',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.open_in_full_rounded),
+                      title: Text('Openen'),
                     ),
                   ),
-                ),
-                Container(
-                  width: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.24),
-                    borderRadius: BorderRadius.circular(2),
+                  PopupMenuItem<String>(
+                    value: 'verwijder',
+                    child: ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFDC2626),
+                      ),
+                      title: Text('Verwijderen'),
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -1748,8 +1285,6 @@ class _NaamEnOmschrijvingDialog extends StatefulWidget {
     required this.beginNaam,
     required this.beginOmschrijving,
     required this.toonOmschrijving,
-    required this.toonKleur,
-    required this.beginKleurWaarde,
   });
 
   final String titel;
@@ -1757,8 +1292,6 @@ class _NaamEnOmschrijvingDialog extends StatefulWidget {
   final String beginNaam;
   final String beginOmschrijving;
   final bool toonOmschrijving;
-  final bool toonKleur;
-  final int beginKleurWaarde;
 
   @override
   State<_NaamEnOmschrijvingDialog> createState() {
@@ -1772,7 +1305,6 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
   late final TextEditingController _naamController;
   late final TextEditingController _omschrijvingController;
   String _fout = '';
-  late int _kleurWaarde;
 
   @override
   void initState() {
@@ -1781,7 +1313,6 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
     _omschrijvingController = TextEditingController(
       text: widget.beginOmschrijving,
     );
-    _kleurWaarde = widget.beginKleurWaarde;
   }
 
   @override
@@ -1802,7 +1333,6 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
       _NaamEnOmschrijving(
         naam: naam,
         omschrijving: _omschrijvingController.text.trim(),
-        kleurWaarde: _kleurWaarde,
       ),
     );
   }
@@ -1834,68 +1364,6 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
               },
               onSubmitted: (_) => _bewaar(),
             ),
-            if (widget.toonKleur) ...<Widget>[
-              const SizedBox(height: 14),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Kleur boekenrug',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-              const SizedBox(height: 9),
-              Wrap(
-                spacing: 9,
-                runSpacing: 9,
-                children: _BibliotheekPaginaState._leveranciersKleurWaarden
-                    .map((waarde) {
-                      final geselecteerd = waarde == _kleurWaarde;
-                      final kleur = Color(waarde);
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(5),
-                        onTap: () => setState(() => _kleurWaarde = waarde),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 120),
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: kleur,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: geselecteerd
-                                  ? const Color(0xFFF28A2E)
-                                  : const Color(0xFFD1D5DB),
-                              width: geselecteerd ? 3 : 1,
-                            ),
-                            boxShadow: geselecteerd
-                                ? <BoxShadow>[
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFFF28A2E,
-                                      ).withValues(alpha: 0.24),
-                                      blurRadius: 7,
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: geselecteerd
-                              ? Icon(
-                                  Icons.check_rounded,
-                                  color:
-                                      ThemeData.estimateBrightnessForColor(
-                                            kleur,
-                                          ) ==
-                                          Brightness.dark
-                                      ? Colors.white
-                                      : const Color(0xFF20252A),
-                                )
-                              : null,
-                        ),
-                      );
-                    })
-                    .toList(growable: false),
-              ),
-            ],
             if (widget.toonOmschrijving) ...<Widget>[
               const SizedBox(height: 12),
               TextField(
@@ -1915,7 +1383,6 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
       ),
       actions: <Widget>[
         TextButton(
-          style: TextButton.styleFrom(foregroundColor: _groen),
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Annuleren'),
         ),
@@ -1930,13 +1397,8 @@ class _NaamEnOmschrijvingDialogState extends State<_NaamEnOmschrijvingDialog> {
 }
 
 class _NaamEnOmschrijving {
-  const _NaamEnOmschrijving({
-    required this.naam,
-    required this.omschrijving,
-    required this.kleurWaarde,
-  });
+  const _NaamEnOmschrijving({required this.naam, required this.omschrijving});
 
   final String naam;
   final String omschrijving;
-  final int kleurWaarde;
 }

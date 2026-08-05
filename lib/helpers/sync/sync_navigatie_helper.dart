@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: CENTRAAL-DOWNLOADSIGNAAL-FASE7-20260805
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -11,12 +13,20 @@ class SyncNavigatieHelper {
   /// Wordt verhoogd nadat een download van de gewone
   /// appgegevens succesvol is uitgevoerd.
   ///
-  /// Agenda, Klanten, Notities en Home luisteren hiernaar
-  /// en laden daarna hun lokale gegevens opnieuw in.
+  /// Agenda, Klanten, Notities, Home en andere luisterende
+  /// pagina's laden daarna hun lokale gegevens opnieuw in.
   static final ValueNotifier<int> downloadVersie = ValueNotifier<int>(0);
 
   /// Er kan maar één automatische download tegelijk lopen.
   static Future<void>? _lopendeAchtergrondDownload;
+
+  /// Centraal signaal voor iedere geslaagde download.
+  ///
+  /// Gebruik deze methode ook wanneer [OneDriveSyncService.slimmeSync]
+  /// buiten deze helper rechtstreeks wordt aangeroepen.
+  static void meldDownloadVoltooid() {
+    downloadVersie.value++;
+  }
 
   static void _melding(BuildContext context, String tekst) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tekst)));
@@ -78,7 +88,7 @@ class SyncNavigatieHelper {
     }
 
     if (!_isFoutmelding(resultaat)) {
-      downloadVersie.value++;
+      meldDownloadVoltooid();
     }
 
     _melding(context, resultaat);
@@ -165,7 +175,7 @@ class SyncNavigatieHelper {
 
       /*
        * Automatische navigatiesync:
-       * alleen agenda, klanten, notities en instellingen.
+       * alleen de gewone appgegevens.
        *
        * Klantenfoto's worden hier bewust overgeslagen,
        * zodat de geopende pagina soepel blijft werken.
@@ -179,7 +189,7 @@ class SyncNavigatieHelper {
         return;
       }
 
-      downloadVersie.value++;
+      meldDownloadVoltooid();
     } catch (_) {
       /*
        * Een automatische synchronisatie mag de navigatie

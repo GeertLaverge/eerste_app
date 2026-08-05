@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-AFMELDEN-NA-VEILIGE-UPLOAD-20260805
 // THIMACO-CONTROLE: ONEDRIVE-AUTOMATISCH-ALTIJD-SILENT-20260802
 // THIMACO-CONTROLE: ONEDRIVE-ACCOUNT-DEBUG-MET-ECHT-EMAILADRES-20260802
 // THIMACO-CONTROLE: ONEDRIVE-SILENT-ZONDER-OVERBODIGE-POPUP-20260731
@@ -133,15 +134,28 @@ class OneDriveAuthService {
     _geheugenTokenVervaltOp = null;
   }
 
-  Future<String> accountDebugInfo() async {
+  /// Meldt het huidige Microsoft-account volledig af.
+  ///
+  /// Deze methode wordt pas aangeroepen nadat Home de volledige OneDrive-backup
+  /// succesvol heeft afgewacht. Zowel de blijvende MSAL-accountcache als de
+  /// tijdelijke tokenbuffer van de app worden daarna gewist.
+  Future<String> afmelden() async {
     try {
       final pca = await _getPca();
-      final account = await pca.currentAccount;
+      final afgemeld = await pca.signOut();
 
-      if (account == null) {
-        return 'ACCOUNT_DEBUG: GEEN MICROSOFT-ACCOUNT GEVONDEN';
-      }
+      _lopendeSilentAanvraag = null;
+      _lopendeInteractieveAanvraag = null;
+      wisTijdelijkToken();
 
+      return afgemeld ? 'AFMELDEN_OK' : 'AFMELDEN_GEEN_ACCOUNT';
+    } catch (e) {
+      return 'AFMELDEN_FOUT: $e';
+    }
+  }
+
+  Future<String> accountDebugInfo() async {
+    try {
       final token = await tokenSilent();
       if (_isFout(token)) {
         return 'ACCOUNT_DEBUG: ACCOUNT GEVONDEN, MAAR GEEN STILLE TOKEN\n'

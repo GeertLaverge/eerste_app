@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VELUX-DOWNLOADSIGNAAL-FASE15-20260805
 // THIMACO-CONTROLE: VELUX-AFWERKINGSPRIJZEN-UIT-CATALOGUSINSTELLINGEN-20260730
 // THIMACO-CONTROLE: INSTELLINGEN-VELUX-FASE-1-2-20260729-2030
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../../helpers/app_storage.dart';
 import '../../../helpers/opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OpmetingVeluxDakraamInstellingenPagina extends StatefulWidget {
   const OpmetingVeluxDakraamInstellingenPagina({super.key});
@@ -36,28 +38,115 @@ class _OpmetingVeluxDakraamInstellingenPaginaState
   OpmetingVeluxDakraamInstellingen? _instellingen;
   bool _laden = true;
   bool _bewaren = false;
+  bool _controllersWordenGeladen = false;
+  bool _lokaleWijzigingen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
+    _catalogusJaarController.addListener(_verwerkControllerWijziging);
+    _geldigVanafController.addListener(_verwerkControllerWijziging);
+    _kux110PrijsController.addListener(_verwerkControllerWijziging);
+
     _laad();
   }
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+
+    _catalogusJaarController.removeListener(_verwerkControllerWijziging);
+    _geldigVanafController.removeListener(_verwerkControllerWijziging);
+    _kux110PrijsController.removeListener(_verwerkControllerWijziging);
+
     _catalogusJaarController.dispose();
     _geldigVanafController.dispose();
     _kux110PrijsController.dispose();
     for (final controller in _prijsControllers.values) {
+      controller.removeListener(_verwerkControllerWijziging);
       controller.dispose();
     }
     for (final controller in _muggengaasPrijsControllers.values) {
+      controller.removeListener(_verwerkControllerWijziging);
       controller.dispose();
     }
     super.dispose();
   }
 
-  Future<void> _laad() async {
+  void _verwerkControllerWijziging() {
+    if (_controllersWordenGeladen) {
+      return;
+    }
+
+    _lokaleWijzigingen = true;
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_lokaleWijzigingen || _bewaren) {
+      _downloadHerladenUitgesteld = true;
+      _toonNieuweCloudversieMelding();
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  void _toonNieuweCloudversieMelding() {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Er zijn nieuwere Velux-instellingen ontvangen. '
+          'Je niet-opgeslagen prijswijzigingen blijven behouden.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() => _laden = true);
+    }
+
     final instellingen =
         await AppStorage.laadOpmetingVeluxDakraamInstellingen();
     if (!mounted) return;
@@ -66,10 +155,14 @@ class _OpmetingVeluxDakraamInstellingenPaginaState
     setState(() {
       _instellingen = instellingen;
       _laden = false;
+      _lokaleWijzigingen = false;
+      _downloadHerladenUitgesteld = false;
     });
   }
 
   void _vulControllers(OpmetingVeluxDakraamInstellingen instellingen) {
+    _controllersWordenGeladen = true;
+
     _catalogusJaarController.text = instellingen.catalogusJaar.toString();
     _geldigVanafController.text = instellingen.geldigVanaf;
     _kux110PrijsController.text = _formatPrijsVoorInvoer(
@@ -77,20 +170,24 @@ class _OpmetingVeluxDakraamInstellingenPaginaState
     );
 
     for (final prijs in instellingen.prijzen) {
-      final controller = _prijsControllers.putIfAbsent(
-        prijs.id,
-        TextEditingController.new,
-      );
+      final controller = _prijsControllers.putIfAbsent(prijs.id, () {
+        final nieuw = TextEditingController();
+        nieuw.addListener(_verwerkControllerWijziging);
+        return nieuw;
+      });
       controller.text = _formatPrijsVoorInvoer(prijs.prijsExclBtw);
     }
 
     for (final prijs in instellingen.muggengaasPrijzen) {
-      final controller = _muggengaasPrijsControllers.putIfAbsent(
-        prijs.id,
-        TextEditingController.new,
-      );
+      final controller = _muggengaasPrijsControllers.putIfAbsent(prijs.id, () {
+        final nieuw = TextEditingController();
+        nieuw.addListener(_verwerkControllerWijziging);
+        return nieuw;
+      });
       controller.text = _formatPrijsVoorInvoer(prijs.prijsExclBtw);
     }
+
+    _controllersWordenGeladen = false;
   }
 
   String _formatPrijsVoorInvoer(double waarde) {
@@ -107,7 +204,10 @@ class _OpmetingVeluxDakraamInstellingenPaginaState
   void _herstelStandaard() {
     final standaard = OpmetingVeluxDakraamInstellingen.standaard2026();
     _vulControllers(standaard);
-    setState(() => _instellingen = standaard);
+    setState(() {
+      _instellingen = standaard;
+      _lokaleWijzigingen = true;
+    });
   }
 
   Future<void> _bewaar() async {
@@ -147,12 +247,20 @@ class _OpmetingVeluxDakraamInstellingenPaginaState
       await AppStorage.bewaarOpmetingVeluxDakraamInstellingen(instellingen);
       if (!mounted) return;
 
-      setState(() => _instellingen = instellingen);
+      setState(() {
+        _instellingen = instellingen;
+        _lokaleWijzigingen = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Instellingen Velux dakramen bewaard.')),
       );
     } finally {
       if (mounted) setState(() => _bewaren = false);
+    }
+
+    if (_downloadHerladenUitgesteld && mounted && !_lokaleWijzigingen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 

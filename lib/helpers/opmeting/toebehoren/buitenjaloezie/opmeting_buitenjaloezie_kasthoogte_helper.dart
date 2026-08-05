@@ -243,7 +243,7 @@ class OpmetingBuitenjaloezieKasthoogteHelper {
       return opties.first;
     }();
 
-    final resultaat = gekozen!;
+    final resultaat = gekozen;
     return model.copyWith(
       kastHoogteMm: resultaat.kastHoogteMm,
       lamellenpakketUitsteekMm: resultaat.lamellenpakketUitsteekMm,

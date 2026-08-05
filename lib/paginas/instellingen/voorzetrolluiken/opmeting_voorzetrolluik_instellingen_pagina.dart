@@ -1,9 +1,11 @@
+// THIMACO-CONTROLE: VOORZETROLLUIK-DOWNLOADSIGNAAL-FASE12-20260805
 // THIMACO-CONTROLE: INSTELLINGEN-VOORZETROLLUIKEN-NIEUWE-LAMELLEN-GROENE-DIALOGEN-20260731-1105
 import 'package:flutter/material.dart';
 
 import '../../../helpers/app_storage.dart';
 import '../../../helpers/opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_instellingen_model.dart';
 import '../../../helpers/opmeting/toebehoren/voorzetrolluik/opmeting_voorzetrolluik_kastmaat_helper.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OpmetingVoorzetrolluikInstellingenPagina extends StatefulWidget {
   const OpmetingVoorzetrolluikInstellingenPagina({super.key});
@@ -24,6 +26,11 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
 
   bool _laden = true;
   bool _bewaren = false;
+  bool _lokaleWijzigingen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
   List<OpmetingVoorzetrolluikLamelkleur> _lamelkleuren =
       <OpmetingVoorzetrolluikLamelkleur>[];
   List<OpmetingVoorzetrolluikMotor> _motoren = <OpmetingVoorzetrolluikMotor>[];
@@ -34,13 +41,81 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laad();
   }
 
-  Future<void> _laad() async {
+  @override
+  void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+    super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_lokaleWijzigingen || _bewaren) {
+      _downloadHerladenUitgesteld = true;
+      _toonNieuweCloudversieMelding();
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  void _toonNieuweCloudversieMelding() {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Er zijn nieuwere Voorzetrolluik-instellingen ontvangen. '
+          'Je niet-opgeslagen wijzigingen blijven behouden.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() => _laden = true);
+    }
+
     final instellingen =
         await AppStorage.laadOpmetingVoorzetrolluikInstellingen();
     if (!mounted) return;
+
     setState(() {
       _lamelkleuren = List<OpmetingVoorzetrolluikLamelkleur>.from(
         instellingen.lamelkleuren,
@@ -51,7 +126,13 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
       );
       _geleiderTypes = List<String>.from(instellingen.geleiderTypes);
       _laden = false;
+      _lokaleWijzigingen = false;
+      _downloadHerladenUitgesteld = false;
     });
+  }
+
+  void _markeerGewijzigd() {
+    _lokaleWijzigingen = true;
   }
 
   Future<void> _bewaar() async {
@@ -67,6 +148,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
         ),
       );
       if (!mounted) return;
+      setState(() => _lokaleWijzigingen = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: _groen,
@@ -75,6 +157,11 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
       );
     } finally {
       if (mounted) setState(() => _bewaren = false);
+    }
+
+    if (_downloadHerladenUitgesteld && mounted && !_lokaleWijzigingen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 
@@ -92,6 +179,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
       _geleiderTypes = List<String>.from(
         OpmetingVoorzetrolluikInstellingen.standaardGeleiderTypes,
       );
+      _markeerGewijzigd();
     });
   }
 
@@ -101,6 +189,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
     setState(() {
       _lamelkleuren.removeWhere((item) => item.id == kleur.id);
       _lamelkleuren.add(kleur);
+      _markeerGewijzigd();
     });
   }
 
@@ -110,7 +199,10 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
   ) async {
     final gewijzigd = await _toonLamelkleurDialoog(bestaand: kleur);
     if (gewijzigd == null) return;
-    setState(() => _lamelkleuren[index] = gewijzigd);
+    setState(() {
+      _lamelkleuren[index] = gewijzigd;
+      _markeerGewijzigd();
+    });
   }
 
   Future<OpmetingVoorzetrolluikLamelkleur?> _toonLamelkleurDialoog({
@@ -209,6 +301,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
       final lijst = zonnecel ? _zonnecelMotoren : _motoren;
       lijst.removeWhere((item) => item.id == motor.id);
       lijst.add(motor);
+      _markeerGewijzigd();
     });
   }
 
@@ -222,6 +315,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
     setState(() {
       final lijst = zonnecel ? _zonnecelMotoren : _motoren;
       lijst[index] = gewijzigd;
+      _markeerGewijzigd();
     });
   }
 
@@ -330,6 +424,7 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
         (item) => item.trim().toLowerCase() == waarde.toLowerCase(),
       );
       _geleiderTypes.add(waarde);
+      _markeerGewijzigd();
     });
   }
 
@@ -340,7 +435,10 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
       beginWaarde: _geleiderTypes[index],
     );
     if (waarde == null) return;
-    setState(() => _geleiderTypes[index] = waarde);
+    setState(() {
+      _geleiderTypes[index] = waarde;
+      _markeerGewijzigd();
+    });
   }
 
   Future<String?> _toonTekstDialoog({
@@ -511,7 +609,10 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
                       : 'Beschikbaar op de opmeetfiche',
                   onBewerken: () => _bewerkGeleiderType(index),
                   onVerwijderen: () {
-                    setState(() => _geleiderTypes.removeAt(index));
+                    setState(() {
+                      _geleiderTypes.removeAt(index);
+                      _markeerGewijzigd();
+                    });
                   },
                 );
               }),
@@ -545,7 +646,10 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
                       : '${kleur.code} · ${kleur.hexKleur}',
                   onBewerken: () => _bewerkLamelkleur(index, kleur),
                   onVerwijderen: () {
-                    setState(() => _lamelkleuren.removeAt(index));
+                    setState(() {
+                      _lamelkleuren.removeAt(index);
+                      _markeerGewijzigd();
+                    });
                   },
                 );
               }),
@@ -584,7 +688,10 @@ class _OpmetingVoorzetrolluikInstellingenPaginaState
                     motor: motor,
                   ),
                   onVerwijderen: () {
-                    setState(() => lijst.removeAt(index));
+                    setState(() {
+                      lijst.removeAt(index);
+                      _markeerGewijzigd();
+                    });
                   },
                 );
               }),

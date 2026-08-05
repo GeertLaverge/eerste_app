@@ -775,11 +775,10 @@ class _OpmetingUitvalschermRechterkolomState
 }
 
 class _SectieKaart extends StatelessWidget {
-  const _SectieKaart({required this.titel, required this.children, this.actie});
+  const _SectieKaart({required this.titel, required this.children});
 
   final String titel;
   final List<Widget> children;
-  final Widget? actie;
 
   @override
   Widget build(BuildContext context) {
@@ -793,7 +792,7 @@ class _SectieKaart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          if (titel.trim().isNotEmpty || actie != null) ...<Widget>[
+          if (titel.trim().isNotEmpty) ...<Widget>[
             Row(
               children: <Widget>[
                 Expanded(
@@ -806,7 +805,6 @@ class _SectieKaart extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (actie != null) actie!,
               ],
             ),
             const SizedBox(height: 7),

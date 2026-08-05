@@ -1,8 +1,9 @@
-// THIMACO-CONTROLE: UITVALSCHERM-ANALYZE-CORRECTIE-20260801
+// THIMACO-CONTROLE: UITVALSCHERM-DOWNLOADSIGNAAL-FASE10-20260805
 import 'package:flutter/material.dart';
 
 import '../../../helpers/app_storage.dart';
 import '../../../helpers/opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_model.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OpmetingUitvalschermInstellingenPagina extends StatefulWidget {
   const OpmetingUitvalschermInstellingenPagina({super.key});
@@ -21,21 +22,98 @@ class _OpmetingUitvalschermInstellingenPaginaState
       const OpmetingUitvalschermInstellingen();
   bool _laden = true;
   bool _bewaren = false;
+  bool _lokaleWijzigingen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laad();
   }
 
-  Future<void> _laad() async {
+  @override
+  void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+    super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_lokaleWijzigingen || _bewaren) {
+      _downloadHerladenUitgesteld = true;
+      _toonNieuweCloudversieMelding();
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  void _toonNieuweCloudversieMelding() {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Er zijn nieuwere Uitvalscherm-instellingen ontvangen. '
+          'Je niet-opgeslagen wijzigingen blijven behouden.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() => _laden = true);
+    }
+
     final instellingen =
         await AppStorage.laadOpmetingUitvalschermInstellingen();
     if (!mounted) return;
+
     setState(() {
       _instellingen = instellingen;
       _laden = false;
+      _lokaleWijzigingen = false;
+      _downloadHerladenUitgesteld = false;
     });
+  }
+
+  void _markeerGewijzigd() {
+    _lokaleWijzigingen = true;
   }
 
   Future<void> _bewaar() async {
@@ -44,17 +122,24 @@ class _OpmetingUitvalschermInstellingenPaginaState
     try {
       await AppStorage.bewaarOpmetingUitvalschermInstellingen(_instellingen);
       if (!mounted) return;
+      setState(() => _lokaleWijzigingen = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Instellingen Uitvalscherm bewaard.')),
       );
     } finally {
       if (mounted) setState(() => _bewaren = false);
     }
+
+    if (_downloadHerladenUitgesteld && mounted && !_lokaleWijzigingen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
+    }
   }
 
   void _herstelStandaard() {
     setState(() {
       _instellingen = const OpmetingUitvalschermInstellingen();
+      _markeerGewijzigd();
     });
   }
 
@@ -191,9 +276,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
             onBewerken: () => _bewerkDoek(index: index),
             onVerwijderen: () {
               final lijst = [..._instellingen.doeken]..removeAt(index);
-              setState(
-                () => _instellingen = _instellingen.copyWith(doeken: lijst),
-              );
+              setState(() {
+                _instellingen = _instellingen.copyWith(doeken: lijst);
+                _markeerGewijzigd();
+              });
             },
           ),
       ],
@@ -214,9 +300,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
             onBewerken: () => _bewerkMotor(index: index),
             onVerwijderen: () {
               final lijst = [..._instellingen.motoren]..removeAt(index);
-              setState(
-                () => _instellingen = _instellingen.copyWith(motoren: lijst),
-              );
+              setState(() {
+                _instellingen = _instellingen.copyWith(motoren: lijst);
+                _markeerGewijzigd();
+              });
             },
           ),
       ],
@@ -237,10 +324,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
                 _bewerkTekstLijst(type: 'Bediening', index: index),
             onVerwijderen: () {
               final lijst = [..._instellingen.bedieningen]..removeAt(index);
-              setState(
-                () =>
-                    _instellingen = _instellingen.copyWith(bedieningen: lijst),
-              );
+              setState(() {
+                _instellingen = _instellingen.copyWith(bedieningen: lijst);
+                _markeerGewijzigd();
+              });
             },
           ),
       ],
@@ -265,11 +352,12 @@ class _OpmetingUitvalschermInstellingenPaginaState
             onVerwijderen: () {
               final lijst = [..._instellingen.draagstructuurKleuren]
                 ..removeAt(index);
-              setState(
-                () => _instellingen = _instellingen.copyWith(
+              setState(() {
+                _instellingen = _instellingen.copyWith(
                   draagstructuurKleuren: lijst,
-                ),
-              );
+                );
+                _markeerGewijzigd();
+              });
             },
           ),
       ],
@@ -376,7 +464,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
     } else {
       lijst[index] = item;
     }
-    setState(() => _instellingen = _instellingen.copyWith(doeken: lijst));
+    setState(() {
+      _instellingen = _instellingen.copyWith(doeken: lijst);
+      _markeerGewijzigd();
+    });
   }
 
   Future<void> _bewerkMotor({int? index}) async {
@@ -450,7 +541,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
     } else {
       lijst[index] = item;
     }
-    setState(() => _instellingen = _instellingen.copyWith(motoren: lijst));
+    setState(() {
+      _instellingen = _instellingen.copyWith(motoren: lijst);
+      _markeerGewijzigd();
+    });
   }
 
   Future<void> _bewerkTekstLijst({required String type, int? index}) async {
@@ -477,7 +571,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
     } else {
       lijst[index] = controller.text.trim();
     }
-    setState(() => _instellingen = _instellingen.copyWith(bedieningen: lijst));
+    setState(() {
+      _instellingen = _instellingen.copyWith(bedieningen: lijst);
+      _markeerGewijzigd();
+    });
   }
 
   Future<void> _bewerkKleur({int? index}) async {
@@ -511,10 +608,10 @@ class _OpmetingUitvalschermInstellingenPaginaState
     } else {
       lijst[index] = item;
     }
-    setState(
-      () =>
-          _instellingen = _instellingen.copyWith(draagstructuurKleuren: lijst),
-    );
+    setState(() {
+      _instellingen = _instellingen.copyWith(draagstructuurKleuren: lijst);
+      _markeerGewijzigd();
+    });
   }
 
   Future<bool?> _toonFormulier({

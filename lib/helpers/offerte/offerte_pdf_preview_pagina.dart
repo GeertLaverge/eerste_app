@@ -102,8 +102,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final goedgekeurdDeel = _isOndertekend ? '_Goedgekeurd' : '';
 
     return veiligeNaam.isEmpty
-        ? 'Thimaco_offerte_${nummerVoorBestandsnaam}$goedgekeurdDeel.pdf'
-        : 'Thimaco_offerte_${nummerVoorBestandsnaam}_${veiligeNaam}'
+        ? 'Thimaco_offerte_$nummerVoorBestandsnaam$goedgekeurdDeel.pdf'
+        : 'Thimaco_offerte_${nummerVoorBestandsnaam}_$veiligeNaam'
               '$goedgekeurdDeel.pdf';
   }
 

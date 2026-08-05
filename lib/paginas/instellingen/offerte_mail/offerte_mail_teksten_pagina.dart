@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAILTEKSTEN-DOWNLOADSIGNAAL-FASE18-20260805
 // THIMACO-CONTROLE: VOLLEDIGE-MAILBERICHTEN-INSTELLINGEN-20260802
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../helpers/offerte/offerte_mail_template_service.dart';
 import '../../../helpers/offerte/mail/offerte_mail_tekst_model.dart';
 import '../../../helpers/offerte/mail/offerte_mail_teksten_repository.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OfferteMailTekstenPagina extends StatefulWidget {
   const OfferteMailTekstenPagina({super.key});
@@ -26,12 +28,64 @@ class _OfferteMailTekstenPaginaState extends State<OfferteMailTekstenPagina> {
   OfferteMailTekstenData _data = OfferteMailTekstenData.leeg();
   bool _laden = true;
   bool _bewaren = false;
+  bool _editorOpen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
   String _fout = '';
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laad();
+  }
+
+  @override
+  void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+    super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_bewaren || _editorOpen) {
+      _downloadHerladenUitgesteld = true;
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
   }
 
   ThemeData _groenThema(BuildContext context) {
@@ -104,16 +158,22 @@ class _OfferteMailTekstenPaginaState extends State<OfferteMailTekstenPagina> {
     );
   }
 
-  Future<void> _laad() async {
-    setState(() {
-      _laden = true;
-      _fout = '';
-    });
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() {
+        _laden = true;
+        _fout = '';
+      });
+    }
 
     try {
       final data = await OfferteMailTekstenRepository.laad();
       if (!mounted) return;
-      setState(() => _data = data);
+      setState(() {
+        _data = data;
+        _fout = '';
+        _downloadHerladenUitgesteld = false;
+      });
     } catch (fout) {
       if (!mounted) return;
       setState(() {
@@ -121,21 +181,28 @@ class _OfferteMailTekstenPaginaState extends State<OfferteMailTekstenPagina> {
             'De opgeslagen mailberichten konden niet worden geladen.\n$fout';
       });
     } finally {
-      if (mounted) setState(() => _laden = false);
+      if (mounted && toonLaden) {
+        setState(() => _laden = false);
+      }
     }
   }
 
   Future<void> _bewaarData(OfferteMailTekstenData data) async {
     if (_bewaren) return;
+
     setState(() {
       _bewaren = true;
       _data = data;
     });
 
+    var bewarenGelukt = false;
+
     try {
       await OfferteMailTekstenRepository.bewaar(data);
+      bewarenGelukt = true;
     } catch (fout) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Bewaren is niet gelukt.\n$fout'),
@@ -143,11 +210,23 @@ class _OfferteMailTekstenPaginaState extends State<OfferteMailTekstenPagina> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _bewaren = false);
+      if (mounted) {
+        setState(() => _bewaren = false);
+      }
+    }
+
+    if (bewarenGelukt &&
+        _downloadHerladenUitgesteld &&
+        mounted &&
+        !_editorOpen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 
   Future<void> _openEditor([OfferteMailTekstBlok? bestaand]) async {
+    _editorOpen = true;
+
     final resultaat = await showDialog<OfferteMailTekstBlok>(
       context: context,
       barrierDismissible: false,
@@ -159,7 +238,19 @@ class _OfferteMailTekstenPaginaState extends State<OfferteMailTekstenPagina> {
       },
     );
 
-    if (!mounted || resultaat == null) return;
+    _editorOpen = false;
+
+    if (!mounted) {
+      return;
+    }
+
+    if (resultaat == null) {
+      if (_downloadHerladenUitgesteld) {
+        _downloadHerladenUitgesteld = false;
+        await _herlaadNaSync();
+      }
+      return;
+    }
 
     final blokken = List<OfferteMailTekstBlok>.from(_data.blokken);
     final index = blokken.indexWhere((blok) => blok.id == resultaat.id);

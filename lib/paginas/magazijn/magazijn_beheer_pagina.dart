@@ -618,12 +618,15 @@ class MagazijnBeheerPagina extends StatelessWidget {
                                         huidigeSelectie?.naam ==
                                         leverancier.naam;
 
-                                    return RadioListTile<String>(
-                                      value: leverancier.naam,
-                                      groupValue: geselecteerd
-                                          ? leverancier.naam
-                                          : null,
-                                      activeColor: _groen,
+                                    return ListTile(
+                                      leading: Icon(
+                                        geselecteerd
+                                            ? Icons.radio_button_checked
+                                            : Icons.radio_button_off,
+                                        color: geselecteerd
+                                            ? _groen
+                                            : const Color(0xFF6B7280),
+                                      ),
                                       title: Text(
                                         leverancier.naam,
                                         style: const TextStyle(
@@ -633,7 +636,7 @@ class MagazijnBeheerPagina extends StatelessWidget {
                                       subtitle: leverancier.email.trim().isEmpty
                                           ? null
                                           : Text(leverancier.email),
-                                      onChanged: (_) {
+                                      onTap: () {
                                         Navigator.pop(
                                           dialogContext,
                                           leverancier,

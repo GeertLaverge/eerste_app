@@ -1720,7 +1720,7 @@ class OffertePdfService {
                 pw.Expanded(
                   child: _goedkeuringsInfoRegel(
                     label: 'Ondertekend op',
-                    waarde: _formatteerDatumTijd(goedkeuring!.getekendOp),
+                    waarde: _formatteerDatumTijd(goedkeuring.getekendOp),
                   ),
                 ),
               ],
@@ -1745,7 +1745,7 @@ class OffertePdfService {
                   pw.Expanded(
                     child: pw.Center(
                       child: pw.Image(
-                        pw.MemoryImage(goedkeuring!.handtekeningPng),
+                        pw.MemoryImage(goedkeuring.handtekeningPng),
                         fit: pw.BoxFit.contain,
                       ),
                     ),

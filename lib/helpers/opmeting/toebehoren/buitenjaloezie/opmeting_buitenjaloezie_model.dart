@@ -66,7 +66,7 @@ extension OpmetingBuitenjaloezieSysteemExtension
     final rolhorTekst = metRolhor
         ? 'Met geïntegreerde insectenhor'
         : 'Zonder geïntegreerde insectenhor';
-    return '${familieLabel} · $rolhorTekst';
+    return '$familieLabel · $rolhorTekst';
   }
 
   static OpmetingBuitenjaloezieSysteem vanOpslagWaarde(Object? waarde) {

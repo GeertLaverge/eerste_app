@@ -140,28 +140,6 @@ class OpmetingUitvalschermSvgHelper {
 ''';
   }
 
-  static String _maatVerticaal(
-    double x,
-    double y1,
-    double y2,
-    String tekst, {
-    bool links = false,
-  }) {
-    final tekstX = links ? x - 52 : x + 10;
-    return '''
-  <line x1="${_n(x)}" y1="${_n(y1)}" x2="${_n(x)}" y2="${_n(y2)}"
-        stroke="#50565D" stroke-width="1"/>
-  <line x1="${_n(x - 5)}" y1="${_n(y1 + 5)}"
-        x2="${_n(x + 5)}" y2="${_n(y1 - 5)}"
-        stroke="#50565D" stroke-width="1"/>
-  <line x1="${_n(x - 5)}" y1="${_n(y2 + 5)}"
-        x2="${_n(x + 5)}" y2="${_n(y2 - 5)}"
-        stroke="#50565D" stroke-width="1"/>
-  <text x="${_n(tekstX)}" y="${_n((y1 + y2) / 2 + 4)}"
-        font-size="11" fill="#50565D">${_escape(tekst)}</text>
-''';
-  }
-
   static String _veiligeKleur(String waarde) {
     final kleur = waarde.trim().toUpperCase();
     return RegExp(r'^#[0-9A-F]{6}$').hasMatch(kleur) ? kleur : '#8C8C8A';

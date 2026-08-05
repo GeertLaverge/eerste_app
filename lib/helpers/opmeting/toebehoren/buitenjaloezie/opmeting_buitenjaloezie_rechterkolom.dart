@@ -498,70 +498,6 @@ class _OpmetingBuitenjaloezieRechterkolomState
     );
   }
 
-  Widget _berekendeUitsteekKaart(
-    OpmetingBuitenjaloezieKastResultaat resultaat,
-  ) {
-    final uitsteekMm = resultaat.lamellenpakketUitsteekMm;
-    final uitsteekTekst = uitsteekMm == 0
-        ? 'Geen uitsteek — volledig in de kast'
-        : 'Circa $uitsteekMm mm onder de kast';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFF6FF),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFBFDBFE)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Icon(
-            Icons.straighten_rounded,
-            color: Color(0xFF2563EB),
-            size: 20,
-          ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Berekende uitsteek lamellenpakket',
-                  style: TextStyle(
-                    color: _tekst,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  uitsteekTekst,
-                  style: const TextStyle(
-                    color: Color(0xFF1D4ED8),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Automatisch bepaald voor kast '
-                  '${resultaat.kastHoogteMm} mm en de totale elementhoogte.',
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 10.5,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _kleurSectie() {
     final zoekterm = _kleurZoekController.text.trim().toLowerCase();
     final kleuren = widget.instellingen
@@ -627,11 +563,9 @@ class _OpmetingBuitenjaloezieRechterkolomState
             const _LegeZoekmelding(tekst: 'Geen passende kleuren gevonden.')
           else
             ...kleuren.map((kleur) {
-              return RadioListTile<String>(
-                value: kleur.code,
-                groupValue: widget.model.lamelkleurCode,
-                onChanged: (waarde) {
-                  if (waarde == null) return;
+              final geselecteerd = kleur.code == widget.model.lamelkleurCode;
+              return ListTile(
+                onTap: () {
                   _wijzig(
                     widget.model.copyWith(
                       lamelkleurCode: kleur.code,
@@ -640,9 +574,14 @@ class _OpmetingBuitenjaloezieRechterkolomState
                     ),
                   );
                 },
+                leading: Icon(
+                  geselecteerd
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: geselecteerd ? _groen : _tekstGrijs,
+                ),
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                activeColor: _groen,
                 title: Row(
                   children: <Widget>[
                     _kleurBol(kleur.hexKleur),
@@ -1033,15 +972,15 @@ class _OpmetingBuitenjaloezieRechterkolomState
     required ValueChanged<T> onChanged,
     bool ingeschakeld = true,
   }) {
-    return RadioListTile<T>(
-      value: waarde,
-      groupValue: groepWaarde,
-      onChanged: ingeschakeld
-          ? (nieuw) {
-              if (nieuw != null) onChanged(nieuw);
-            }
-          : null,
-      activeColor: _groen,
+    final geselecteerd = waarde == groepWaarde;
+    return ListTile(
+      onTap: ingeschakeld ? () => onChanged(waarde) : null,
+      leading: Icon(
+        geselecteerd ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: ingeschakeld
+            ? (geselecteerd ? _groen : _tekstGrijs)
+            : const Color(0xFF9CA3AF),
+      ),
       contentPadding: EdgeInsets.zero,
       dense: true,
       title: Text(

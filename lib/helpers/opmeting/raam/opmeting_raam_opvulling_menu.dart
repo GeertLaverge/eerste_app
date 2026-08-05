@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'opmeting_raam_opvulling_model.dart';
 
+// THIMACO-CONTROLE: OPVULLING-MENU-VOLGORDE-UIT-INSTELLINGEN-20260805
 class OpmetingRaamOpvullingMenu extends StatelessWidget {
   const OpmetingRaamOpvullingMenu({
     super.key,
@@ -579,6 +580,14 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
 
     if (groepNaamVergelijking != 0) {
       return groepNaamVergelijking;
+    }
+
+    final typeVolgordeVergelijking = eerste.typeSorteerIndex.compareTo(
+      tweede.typeSorteerIndex,
+    );
+
+    if (typeVolgordeVergelijking != 0) {
+      return typeVolgordeVergelijking;
     }
 
     return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());

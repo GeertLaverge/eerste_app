@@ -240,6 +240,9 @@ class OpmetingRaamVullingHelper {
           naam: opvulling.naam,
           kleurWaarde: opvulling.kleurWaarde,
           transparantie: opvulling.transparantie,
+          weergave: opvulling.weergave,
+          tekeningTekst: opvulling.tekeningTekst,
+          lijnAfstandMm: opvulling.lijnAfstandMm,
         ),
       );
     }

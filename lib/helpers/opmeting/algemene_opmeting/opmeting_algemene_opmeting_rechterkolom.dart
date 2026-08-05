@@ -31,10 +31,8 @@ class OpmetingAlgemeneOpmetingRechterkolom extends StatefulWidget {
 class _OpmetingAlgemeneOpmetingRechterkolomState
     extends State<OpmetingAlgemeneOpmetingRechterkolom> {
   static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
 
   late final TextEditingController _titelController;
 
@@ -192,6 +190,7 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
     }
   }
 
+  // ignore: unused_element
   Future<void> _openVrijePrijsPerArtikel() async {
     final regels = _beschikbarePrijsregels;
     final reedsToegevoegd = widget.model.blokken
@@ -991,7 +990,7 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
               const SizedBox(height: 10),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                activeColor: _groen,
+                activeThumbColor: _groen,
                 title: const Text(
                   'Prijs tonen op offerte',
                   style: TextStyle(fontWeight: FontWeight.w800),

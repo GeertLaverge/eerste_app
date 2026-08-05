@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: DEURPANELEN-DXF-DOWNLOADSIGNAAL-FASE19-20260805
 import 'package:flutter/material.dart';
 
 import 'opmeting_deurpaneel_bibliotheek.dart' as panelen_bibliotheek;
@@ -5,6 +6,7 @@ import 'opmeting_deurpaneel_dxf_bibliotheek.dart' as dxf_bibliotheek;
 import 'opmeting_deurpaneel_filter_helper.dart';
 import 'opmeting_deurpaneel_import_helper.dart';
 import 'opmeting_deurpaneel_model.dart';
+import '../../sync/sync_navigatie_helper.dart';
 
 class OpmetingDeurpaneelBeheerDialog extends StatefulWidget {
   const OpmetingDeurpaneelBeheerDialog({super.key});
@@ -29,17 +31,63 @@ class _OpmetingDeurpaneelBeheerDialogState
   bool _toonInactievePanelen = true;
   bool _laden = true;
   bool _bewaren = false;
+  bool _invoerDialogOpen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laadPanelen();
   }
 
-  Future<void> _laadPanelen() async {
-    setState(() {
-      _laden = true;
-    });
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_bewaren || _invoerDialogOpen) {
+      _downloadHerladenUitgesteld = true;
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laadPanelen(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laadPanelen({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() {
+        _laden = true;
+      });
+    }
 
     try {
       await panelen_bibliotheek.OpmetingDeurpaneelBibliotheek.laad();
@@ -49,7 +97,7 @@ class _OpmetingDeurpaneelBeheerDialogState
         _toonMelding('Deurpanelen konden niet worden geladen.', fout: true);
       }
     } finally {
-      if (mounted) {
+      if (mounted && toonLaden) {
         setState(() {
           _laden = false;
         });
@@ -59,6 +107,9 @@ class _OpmetingDeurpaneelBeheerDialogState
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
     _zoekController.dispose();
     super.dispose();
   }
@@ -325,6 +376,8 @@ class _OpmetingDeurpaneelBeheerDialogState
   }
 
   Future<void> _openDxfPlakDialog() async {
+    _invoerDialogOpen = true;
+
     final resultaat = await showDialog<_DxfPlakResultaat>(
       context: context,
       builder: (dialogContext) {
@@ -332,9 +385,19 @@ class _OpmetingDeurpaneelBeheerDialogState
       },
     );
 
+    _invoerDialogOpen = false;
+
+    if (!mounted) {
+      return;
+    }
+
     if (resultaat == null ||
         resultaat.bestandsnaam.trim().isEmpty ||
         resultaat.inhoud.trim().isEmpty) {
+      if (_downloadHerladenUitgesteld) {
+        _downloadHerladenUitgesteld = false;
+        await _herlaadNaSync();
+      }
       return;
     }
 
@@ -405,6 +468,8 @@ class _OpmetingDeurpaneelBeheerDialogState
   }
 
   Future<void> _openExcelPlakDialog() async {
+    _invoerDialogOpen = true;
+
     final tekst = await showDialog<String>(
       context: context,
       builder: (dialogContext) {
@@ -412,7 +477,17 @@ class _OpmetingDeurpaneelBeheerDialogState
       },
     );
 
+    _invoerDialogOpen = false;
+
+    if (!mounted) {
+      return;
+    }
+
     if (tekst == null || tekst.trim().isEmpty) {
+      if (_downloadHerladenUitgesteld) {
+        _downloadHerladenUitgesteld = false;
+        await _herlaadNaSync();
+      }
       return;
     }
 
@@ -479,8 +554,11 @@ class _OpmetingDeurpaneelBeheerDialogState
       _bewaren = true;
     });
 
+    var bewarenGelukt = false;
+
     try {
       await actie();
+      bewarenGelukt = true;
 
       if (mounted) {
         _toonMelding(melding);
@@ -498,6 +576,14 @@ class _OpmetingDeurpaneelBeheerDialogState
           _bewaren = false;
         });
       }
+    }
+
+    if (bewarenGelukt &&
+        _downloadHerladenUitgesteld &&
+        mounted &&
+        !_invoerDialogOpen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 

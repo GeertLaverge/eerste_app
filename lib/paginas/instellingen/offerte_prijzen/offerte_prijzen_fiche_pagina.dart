@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTE-PRIJZEN-FICHE-DOWNLOADSIGNAAL-FASE17-20260805
+// THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-PRIJSBOOM-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-PRIJSBOOM-ACTIEF-20260730
 // THIMACO-CONTROLE: VELUX-GEEN-TECHNISCHE-PRIJSKEUZES-FASE-4-20260729-2257
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-INSTELLINGEN-EN-PRIJZEN-20260728
@@ -17,6 +19,7 @@ import '../../../helpers/offerte/prijzen/offerte_prijsregel_model.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_laad_helper.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_prijs_koppeling_service.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 import 'offerte_prijsregel_dialog.dart';
 import 'offerte_prijstabel_widget.dart';
 import 'offerte_technische_prijs_overnemen_dialog.dart';
@@ -66,6 +69,10 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
   bool _laden = true;
   bool _opslaan = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
   String? _foutmelding;
 
   bool get _isVasteInzethor {
@@ -83,16 +90,8 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
         _normaliseerFormulierType('schuifvliegendeur');
   }
 
-  bool get _isVoorzetscreen {
-    return _normaliseerFormulierType(widget.formulierType) ==
-        _normaliseerFormulierType('voorzetscreen');
-  }
-
   bool get _heeftGeenTechnischeKeuzes {
-    return _isVasteInzethor ||
-        _isVliegendeur ||
-        _isSchuifvliegendeur ||
-        _isVoorzetscreen;
+    return _isVasteInzethor || _isVliegendeur || _isSchuifvliegendeur;
   }
 
   String get _paginaTitel {
@@ -119,11 +118,58 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     _laadProfiel();
   }
 
-  Future<void> _laadProfiel() async {
-    if (mounted) {
+  @override
+  void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+    super.dispose();
+  }
+
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_opslaan) {
+      _downloadHerladenUitgesteld = true;
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laadProfiel(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laadProfiel({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
       setState(() {
         _laden = true;
         _foutmelding = null;
@@ -179,6 +225,8 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
         _technischePrijsregelKoppelAantallen =
             technischePrijsregelKoppelAantallen;
         _laden = false;
+        _foutmelding = null;
+        _downloadHerladenUitgesteld = false;
       });
     } catch (e) {
       if (!mounted) {
@@ -371,6 +419,11 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
       if (melding != null && melding.isNotEmpty) {
         _toonMelding(melding);
+      }
+
+      if (_downloadHerladenUitgesteld && mounted) {
+        _downloadHerladenUitgesteld = false;
+        await _herlaadNaSync();
       }
     } catch (e) {
       if (!mounted) {

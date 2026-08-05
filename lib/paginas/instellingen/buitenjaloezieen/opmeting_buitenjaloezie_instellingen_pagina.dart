@@ -1,10 +1,12 @@
-// THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-VASTE-REFERENTIETABEL-20260803
+// THIMACO-CONTROLE: BUITENJALOEZIE-DOWNLOADSIGNAAL-FASE11-20260805
+// THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-KASTTABEL-165-185-20260803
 
 import 'package:flutter/material.dart';
 
 import '../../../helpers/app_storage.dart';
 import '../../../helpers/opmeting/toebehoren/buitenjaloezie/opmeting_buitenjaloezie_instellingen_model.dart';
 import '../../../helpers/opmeting/toebehoren/buitenjaloezie/opmeting_buitenjaloezie_model.dart';
+import '../../../helpers/sync/sync_navigatie_helper.dart';
 
 class OpmetingBuitenjaloezieInstellingenPagina extends StatefulWidget {
   const OpmetingBuitenjaloezieInstellingenPagina({super.key});
@@ -32,13 +34,24 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
 
   bool _laden = true;
   bool _bewaren = false;
+  bool _controllersWordenGeladen = false;
+  bool _lokaleWijzigingen = false;
+  bool _downloadHerladenUitgesteld = false;
+  bool _herladenNaSync = false;
+  bool _nogmaalsHerladenNaSync = false;
+  int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
   void initState() {
     super.initState();
+
+    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
+    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
+
     for (final controller in _controllers) {
       controller.addListener(_ververs);
     }
+
     _laad();
   }
 
@@ -52,21 +65,91 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
 
   @override
   void dispose() {
+    SyncNavigatieHelper.downloadVersie.removeListener(
+      _verwerkAchtergrondDownload,
+    );
+
     for (final controller in _controllers) {
       controller.removeListener(_ververs);
       controller.dispose();
     }
+
     super.dispose();
   }
 
   void _ververs() {
-    if (mounted) setState(() {});
+    if (_controllersWordenGeladen) {
+      return;
+    }
+
+    _lokaleWijzigingen = true;
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
-  Future<void> _laad() async {
+  void _verwerkAchtergrondDownload() {
+    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
+
+    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
+      return;
+    }
+
+    _laatsteVerwerkteDownloadVersie = nieuweVersie;
+
+    if (_lokaleWijzigingen || _bewaren) {
+      _downloadHerladenUitgesteld = true;
+      _toonNieuweCloudversieMelding();
+      return;
+    }
+
+    _herlaadNaSync();
+  }
+
+  void _toonNieuweCloudversieMelding() {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Er zijn nieuwere Buitenjaloezie-instellingen ontvangen. '
+          'Je niet-opgeslagen wijzigingen blijven behouden.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _herlaadNaSync() async {
+    if (_herladenNaSync) {
+      _nogmaalsHerladenNaSync = true;
+      return;
+    }
+
+    _herladenNaSync = true;
+
+    try {
+      do {
+        _nogmaalsHerladenNaSync = false;
+        await _laad(toonLaden: false);
+      } while (_nogmaalsHerladenNaSync && mounted);
+    } finally {
+      _herladenNaSync = false;
+    }
+  }
+
+  Future<void> _laad({bool toonLaden = true}) async {
+    if (toonLaden && mounted) {
+      setState(() => _laden = true);
+    }
+
     final instellingen =
         await AppStorage.laadOpmetingBuitenjaloezieInstellingen();
     if (!mounted) return;
+
+    _controllersWordenGeladen = true;
 
     _kleurenController.text = instellingen.lamelkleuren
         .map((kleur) {
@@ -101,7 +184,13 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
     _kabelsController.text = instellingen.motorkabelLengtes.join(', ');
     _afschuiningController.text = instellingen.afschuiningGraden.join(', ');
 
-    setState(() => _laden = false);
+    _controllersWordenGeladen = false;
+
+    setState(() {
+      _laden = false;
+      _lokaleWijzigingen = false;
+      _downloadHerladenUitgesteld = false;
+    });
   }
 
   Future<void> _bewaar() async {
@@ -147,6 +236,7 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
       await AppStorage.bewaarOpmetingBuitenjaloezieInstellingen(instellingen);
 
       if (!mounted) return;
+      setState(() => _lokaleWijzigingen = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: _groen,
@@ -160,6 +250,11 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
       _toonFout('Bewaren is niet gelukt: $fout');
     } finally {
       if (mounted) setState(() => _bewaren = false);
+    }
+
+    if (_downloadHerladenUitgesteld && mounted && !_lokaleWijzigingen) {
+      _downloadHerladenUitgesteld = false;
+      await _herlaadNaSync();
     }
   }
 
@@ -647,10 +742,9 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
           ),
           const SizedBox(height: 6),
           const Text(
-            'Vaste referentietabel — niet instelbaar. De app bepaalt automatisch '
-            'kast 165 of 185 mm en de bijbehorende uitsteek aan de hand '
-            'van systeem, lameltype en totale elementhoogte. XP is de '
-            'uitvoering met geïntegreerde rolhor.',
+            'Maximale totale elementhoogte in mm. XP is de uitvoering met '
+            'geïntegreerde rolhor. De uitsteek is het lamellenpakket met '
+            'onderlijst onder de kast.',
             style: TextStyle(color: _tekstGrijs, fontSize: 11.5, height: 1.35),
           ),
           const SizedBox(height: 12),

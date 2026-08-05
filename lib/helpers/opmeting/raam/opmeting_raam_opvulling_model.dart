@@ -1,6 +1,48 @@
 // THIMACO-CONTROLE: OPVULLING-TYPE-SORTEERINDEX-20260803
 import 'package:flutter/material.dart';
 
+enum OpmetingRaamOpvullingWeergave {
+  effen,
+  horizontaleLijnen,
+  verticaleLijnen,
+  tekst,
+}
+
+extension OpmetingRaamOpvullingWeergaveInfo on OpmetingRaamOpvullingWeergave {
+  String get label {
+    switch (this) {
+      case OpmetingRaamOpvullingWeergave.effen:
+        return 'Effen kleur';
+      case OpmetingRaamOpvullingWeergave.horizontaleLijnen:
+        return 'Horizontale lijnen · 100 mm';
+      case OpmetingRaamOpvullingWeergave.verticaleLijnen:
+        return 'Verticale lijnen · 100 mm';
+      case OpmetingRaamOpvullingWeergave.tekst:
+        return 'Tekst in opvulling';
+    }
+  }
+
+  static OpmetingRaamOpvullingWeergave vanOpslagWaarde(Object? waarde) {
+    final tekst = waarde?.toString().trim().toLowerCase() ?? '';
+
+    switch (tekst) {
+      case 'horizontalelijnen':
+      case 'horizontale_lijnen':
+      case 'horizontaal':
+        return OpmetingRaamOpvullingWeergave.horizontaleLijnen;
+      case 'verticalelijnen':
+      case 'verticale_lijnen':
+      case 'verticaal':
+        return OpmetingRaamOpvullingWeergave.verticaleLijnen;
+      case 'tekst':
+      case 'text':
+        return OpmetingRaamOpvullingWeergave.tekst;
+      default:
+        return OpmetingRaamOpvullingWeergave.effen;
+    }
+  }
+}
+
 class OpmetingRaamOpvullingGroepModel {
   const OpmetingRaamOpvullingGroepModel({
     required this.id,
@@ -188,6 +230,9 @@ class OpmetingRaamOpvullingModel {
     this.groepNaam = 'Niet gelaagd',
     this.groepSorteerIndex = 0,
     this.typeSorteerIndex = 0,
+    this.weergave = OpmetingRaamOpvullingWeergave.effen,
+    this.tekeningTekst = '',
+    this.lijnAfstandMm = 100,
     this.actief = true,
     this.isGroepDefinitie = false,
   });
@@ -200,6 +245,9 @@ class OpmetingRaamOpvullingModel {
   final String groepNaam;
   final int groepSorteerIndex;
   final int typeSorteerIndex;
+  final OpmetingRaamOpvullingWeergave weergave;
+  final String tekeningTekst;
+  final int lijnAfstandMm;
   final bool actief;
   final bool isGroepDefinitie;
 
@@ -236,6 +284,9 @@ class OpmetingRaamOpvullingModel {
     String? groepNaam,
     int? groepSorteerIndex,
     int? typeSorteerIndex,
+    OpmetingRaamOpvullingWeergave? weergave,
+    String? tekeningTekst,
+    int? lijnAfstandMm,
     bool? actief,
     bool? isGroepDefinitie,
   }) {
@@ -248,6 +299,9 @@ class OpmetingRaamOpvullingModel {
       groepNaam: groepNaam ?? this.groepNaam,
       groepSorteerIndex: groepSorteerIndex ?? this.groepSorteerIndex,
       typeSorteerIndex: typeSorteerIndex ?? this.typeSorteerIndex,
+      weergave: weergave ?? this.weergave,
+      tekeningTekst: tekeningTekst ?? this.tekeningTekst,
+      lijnAfstandMm: lijnAfstandMm ?? this.lijnAfstandMm,
       actief: actief ?? this.actief,
       isGroepDefinitie: isGroepDefinitie ?? this.isGroepDefinitie,
     );
@@ -264,6 +318,9 @@ class OpmetingRaamOpvullingModel {
       'groepNaam': groepNaam,
       'groepSorteerIndex': groepSorteerIndex,
       'typeSorteerIndex': typeSorteerIndex,
+      'weergave': weergave.name,
+      'tekeningTekst': tekeningTekst,
+      'lijnAfstandMm': lijnAfstandMm,
       'actief': actief,
       'isGroepDefinitie': isGroepDefinitie,
     };
@@ -316,6 +373,12 @@ class OpmetingRaamOpvullingModel {
         standaardGroep.sorteerIndex,
       ),
       typeSorteerIndex: _leesInt(json['typeSorteerIndex'], 0),
+      weergave: OpmetingRaamOpvullingWeergaveInfo.vanOpslagWaarde(
+        json['weergave'] ?? json['patroon'],
+      ),
+      tekeningTekst:
+          json['tekeningTekst']?.toString() ?? json['tekst']?.toString() ?? '',
+      lijnAfstandMm: _leesInt(json['lijnAfstandMm'], 100).clamp(10, 1000),
       actief: json['actief'] != false,
       isGroepDefinitie: isGroepDefinitie,
     );

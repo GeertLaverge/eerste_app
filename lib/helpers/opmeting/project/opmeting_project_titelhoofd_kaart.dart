@@ -835,7 +835,7 @@ class _OpmetingProjectTitelhoofdKaartState
     return SizedBox(
       height: hoogte,
       child: DropdownButtonFormField<String>(
-        value: _aanspreking,
+        initialValue: _aanspreking,
         isExpanded: true,
         iconSize: 14,
         style: const TextStyle(
@@ -1004,7 +1004,7 @@ class _OpmetingProjectTitelhoofdKaartState
         SizedBox(
           width: 122,
           child: DropdownButtonFormField<String>(
-            value: _btwTarief,
+            initialValue: _btwTarief,
             isExpanded: true,
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
             style: const TextStyle(
