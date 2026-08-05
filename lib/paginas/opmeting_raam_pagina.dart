@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLING-PATROON-TEKST-VERGELIJKING-20260805
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
 // THIMACO-CONTROLE: FORMULIER-LAYOUT-RELATIEVE-IMPORT-FIX-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
@@ -1125,10 +1126,32 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       final tweedeItem = tweede[index];
 
       if (eersteItem.nummer != tweedeItem.nummer ||
+          eersteItem.opvullingId != tweedeItem.opvullingId ||
           eersteItem.naam != tweedeItem.naam ||
           eersteItem.kleur.toARGB32() != tweedeItem.kleur.toARGB32() ||
           eersteItem.weergaveKleur.toARGB32() !=
-              tweedeItem.weergaveKleur.toARGB32()) {
+              tweedeItem.weergaveKleur.toARGB32() ||
+          eersteItem.weergave != tweedeItem.weergave ||
+          eersteItem.tekeningTekst != tweedeItem.tekeningTekst ||
+          eersteItem.lijnAfstandMm != tweedeItem.lijnAfstandMm ||
+          !_zijnStringLijstenGelijk(eersteItem.vlakIds, tweedeItem.vlakIds)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  bool _zijnStringLijstenGelijk(List<String> eerste, List<String> tweede) {
+    if (eerste.length != tweede.length) {
+      return false;
+    }
+
+    final eersteGesorteerd = List<String>.from(eerste)..sort();
+    final tweedeGesorteerd = List<String>.from(tweede)..sort();
+
+    for (var index = 0; index < eersteGesorteerd.length; index++) {
+      if (eersteGesorteerd[index] != tweedeGesorteerd[index]) {
         return false;
       }
     }

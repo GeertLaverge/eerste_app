@@ -1,12 +1,4 @@
-// THIMACO-CONTROLE: BUITENJALOEZIE-DEFINITIEF-OVERZICHT-20260803
-// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-WINST-KORTING-ACTIEF-20260803
-// THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-VOLLEDIG-FASE-4-20260803
-// THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJSUITSPITSING-OVERZICHT-20260802
-// THIMACO-CONTROLE: ALGEMENE-OPMETING-VOLLEDIG-AFGEWERKT-OVERZICHT-20260802
-// THIMACO-CONTROLE: UITVALSCHERM-OVERZICHT-VOLLEDIG-20260801
-// THIMACO-CONTROLE: VOORZETROLLUIK-OVERZICHT-VOLLEDIG-20260731
-// THIMACO-CONTROLE: VELUX-GEEN-STUKPRIJS-NAAST-OMSCHRIJVING-20260730
-// THIMACO-CONTROLE: VELUX-KLANTOMSCHRIJVING-VERKOOPPRIJS-20260730
+// THIMACO-CONTROLE: OVERZICHT-IPAD-PORTRET-TECHNIEK-EN-PRIJS-UITGELIJND-20260805
 // THIMACO-CONTROLE: VELUX-OVERZICHT-EN-CATALOGUSPRIJS-20260729-2212
 // THIMACO-CONTROLE: TECHNISCHE-PRIJSREGELS-IN-PRIJSBEREKENING-20260729-1415
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-OVERZICHT-KAART-20260729
@@ -24,11 +16,7 @@ import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../offerte/prijzen/offerte_artikel_korting_kaart.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../offerte/prijzen/offerte_berekening_resultaat.dart';
-import '../../offerte/prijzen/offerte_toegepaste_prijsregel_model.dart';
 import '../fotos/opmeting_foto_model.dart';
-import '../algemene_opmeting/opmeting_algemene_opmeting_model.dart';
-import '../algemene_opmeting/opmeting_algemene_opmeting_technische_regels_helper.dart';
-import '../algemene_opmeting/opmeting_algemene_opmeting_tekenvlak.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_model.dart';
 import '../toebehoren/vliegendeur/opmeting_vliegendeur_tekenvlak.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_model.dart';
@@ -36,23 +24,10 @@ import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_tekenvlak.dar
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_model.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_technische_regels_helper.dart';
 import '../toebehoren/plooiwerken/opmeting_plooiwerken_tekenvlak.dart';
-import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_model.dart';
-import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_technische_regels_helper.dart';
-import '../toebehoren/voorzetscreen/opmeting_voorzetscreen_tekenvlak.dart';
-import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_model.dart';
-import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_technische_regels_helper.dart';
-import '../toebehoren/buitenjaloezie/opmeting_buitenjaloezie_tekenvlak.dart';
-import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_model.dart';
-import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_technische_regels_helper.dart';
-import '../toebehoren/voorzetrolluik/opmeting_voorzetrolluik_tekenvlak.dart';
-import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_model.dart';
-import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_technische_regels_helper.dart';
-import '../toebehoren/uitvalscherm/opmeting_uitvalscherm_tekenvlak.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_model.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_technische_regels_helper.dart';
 import '../toebehoren/sektionale_poort/opmeting_sektionale_poort_tekenvlak.dart';
 import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_model.dart';
-import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_omschrijving_helper.dart';
 import '../toebehoren/velux_dakramen/opmeting_velux_dakraam_painter.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_tekenvlak.dart';
@@ -123,11 +98,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     final vliegendeur = item.vliegendeurData;
     final schuifvliegendeur = item.schuifvliegendeurData;
     final plooiwerken = item.plooiwerkenData;
-    final voorzetscreen = item.voorzetscreenData;
-    final buitenjaloezie = item.buitenjaloezieData;
-    final voorzetrolluik = item.voorzetrolluikData;
-    final uitvalscherm = item.uitvalschermData;
-    final algemeneOpmeting = item.algemeneOpmetingData;
     final sektionalePoort = item.sektionalePoortData;
     final veluxDakraam = item.veluxDakraamData;
     final vliegendeurTechnischeRegels = vliegendeur == null
@@ -149,26 +119,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
               OpmetingPlooiwerkenTechnischeRegelsHelper.bouw(plooiwerken),
             ),
           );
-    final voorzetscreenTechnischeRegels = voorzetscreen == null
-        ? const <OpmetingOverzichtTechnischeRegel>[]
-        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
-            OpmetingVoorzetscreenTechnischeRegelsHelper.bouw(voorzetscreen),
-          );
-    final buitenjaloezieTechnischeRegels = buitenjaloezie == null
-        ? const <OpmetingOverzichtTechnischeRegel>[]
-        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
-            OpmetingBuitenjaloezieTechnischeRegelsHelper.bouw(buitenjaloezie),
-          );
-    final voorzetrolluikTechnischeRegels = voorzetrolluik == null
-        ? const <OpmetingOverzichtTechnischeRegel>[]
-        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
-            OpmetingVoorzetrolluikTechnischeRegelsHelper.bouw(voorzetrolluik),
-          );
-    final uitvalschermTechnischeRegels = uitvalscherm == null
-        ? const <OpmetingOverzichtTechnischeRegel>[]
-        : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
-            OpmetingUitvalschermTechnischeRegelsHelper.bouw(uitvalscherm),
-          );
     final sektionalePoortTechnischeRegels = sektionalePoort == null
         ? const <OpmetingOverzichtTechnischeRegel>[]
         : OpmetingOverzichtArtikelLayoutHelper.combineerTechnischeRegels(
@@ -180,19 +130,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           );
     final uitvoeringsRegels =
         OpmetingArtikelTypeOmschrijvingHelper.omschrijvingRegelsVoor(item);
-    final algemenePositieLabel = algemeneOpmeting == null
-        ? positieLabel
-        : '$positieLabel · ${algemeneOpmeting.effectieveTitel}';
-    final artikelOmschrijving = algemeneOpmeting != null
-        ? ''
-        : buitenjaloezie != null
-        ? <String>[
-            item.formulierTypeLabel.trim(),
-            buitenjaloezie.systeem.label,
-            buitenjaloezie.lameltype.label,
-            buitenjaloezie.lamelkleurSamenvatting,
-          ].where((regel) => regel.trim().isNotEmpty).join('  -  ')
-        : veluxDakraam == null
+    final artikelOmschrijving = veluxDakraam == null
         ? <String>[
             item.formulierTypeLabel.trim(),
             ...uitvoeringsRegels.map((regel) => regel.trim()),
@@ -247,9 +185,9 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                       ? 'NIET REKENEN'
                       : item.isOfferteOptie
                       ? item.isOfferteOptieOpPositie
-                            ? '$algemenePositieLabel · IN OFFERTE'
-                            : '$algemenePositieLabel · APARTE PAGINA'
-                      : algemenePositieLabel,
+                            ? '$positieLabel · IN OFFERTE'
+                            : '$positieLabel · APARTE PAGINA'
+                      : positieLabel,
                   style: TextStyle(
                     color: item.isNietRekenen ? _rood : _groen,
                     fontSize: 13,
@@ -299,11 +237,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                             ))
                           _ArtikelActieTekstKnop(
                             tekst: 'Prijs toevoegen',
-                            lichtGrijs: algemeneOpmeting != null,
-                            onPressed: algemeneOpmeting != null
-                                ? () =>
-                                      _toonAlgemeneOpmetingPrijsMelding(context)
-                                : onPrijsMenuOpenen,
+                            onPressed: onPrijsMenuOpenen,
                           ),
                         _ArtikelActieTekstKnop(
                           tekst: 'Aanpassen',
@@ -353,28 +287,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
             )
           else if (plooiwerken != null)
             _bouwPlooiwerkenOverzicht(plooiwerken, plooiwerkenTechnischeRegels)
-          else if (voorzetscreen != null)
-            _bouwVoorzetscreenOverzicht(
-              voorzetscreen,
-              voorzetscreenTechnischeRegels,
-            )
-          else if (buitenjaloezie != null)
-            _bouwBuitenjaloezieOverzicht(
-              buitenjaloezie,
-              buitenjaloezieTechnischeRegels,
-            )
-          else if (voorzetrolluik != null)
-            _bouwVoorzetrolluikOverzicht(
-              voorzetrolluik,
-              voorzetrolluikTechnischeRegels,
-            )
-          else if (uitvalscherm != null)
-            _bouwUitvalschermOverzicht(
-              uitvalscherm,
-              uitvalschermTechnischeRegels,
-            )
-          else if (algemeneOpmeting != null)
-            _bouwAlgemeneOpmetingOverzicht(algemeneOpmeting)
           else if (sektionalePoort != null)
             _bouwSektionalePoortOverzicht(
               sektionalePoort,
@@ -476,37 +388,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-
-  Future<void> _toonAlgemeneOpmetingPrijsMelding(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          content: const Text(
-            'Prijzen en teksten enkel toe te voegen op opmetingsformulier. Klik op Aanpassen.',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          actions: <Widget>[
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.black),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text(
-                'Sluiten',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -642,102 +523,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     );
   }
 
-  Widget _bouwAlgemeneOpmetingOverzicht(OpmetingAlgemeneOpmetingModel model) {
-    final technischeRegels = <OpmetingOverzichtTechnischeRegel>[];
-    final technischeRegelsMetPrijs = <OpmetingOverzichtTechnischeRegelPrijs>[];
-
-    if (model.omschrijving.trim().isNotEmpty) {
-      final regel = OpmetingOverzichtTechnischeRegel(
-        titel: 'Omschrijving',
-        waarde: model.omschrijving.trim(),
-      );
-      technischeRegels.add(regel);
-      technischeRegelsMetPrijs.add(
-        OpmetingOverzichtTechnischeRegelPrijs(regel: regel),
-      );
-    }
-
-    for (final blok in model.blokken) {
-      final regel = OpmetingOverzichtTechnischeRegel(
-        titel: blok.isPrijs
-            ? '${blok.prijsSoort.cirkelTeken} ${blok.zichtbareTitel}'
-            : blok.zichtbareTitel,
-        waarde: blok.isPrijs
-            ? OpmetingAlgemeneOpmetingTechnischeRegelsHelper.prijsSamenvatting(
-                blok,
-                toonBedrag: false,
-              )
-            : blok.omschrijving.trim(),
-      );
-      technischeRegels.add(regel);
-      technischeRegelsMetPrijs.add(
-        OpmetingOverzichtTechnischeRegelPrijs(
-          regel: regel,
-          bedragExclBtw: blok.isPrijs ? blok.totaalExclBtw : null,
-        ),
-      );
-    }
-
-    final tekenvlak = Container(
-      decoration: BoxDecoration(
-        color: OpmetingOverzichtArtikelLayoutHelper.vlakAchtergrond,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: OpmetingOverzichtArtikelLayoutHelper.rand),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: OpmetingAlgemeneOpmetingTekenvlak(
-          fotos: model.fotos,
-          actiesZichtbaar: false,
-        ),
-      ),
-    );
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: !item.isOfferteOptie,
-        );
-
-    if (prijsResultaat == null) {
-      final hoogte =
-          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-          );
-      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-        hoogte: hoogte,
-        tekenvlak: tekenvlak,
-        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-          technischeRegels: technischeRegels,
-          technischeRegelsMetPrijs: berekenPrijzen
-              ? technischeRegelsMetPrijs
-              : null,
-          legeTekst: 'Geen tekst- of prijscontainers ingevuld.',
-          scrollbaar: false,
-          toonPrijsZone: berekenPrijzen,
-        ),
-      );
-    }
-
-    return _bouwGeprijsdArtikelOverzicht(
-      tekenvlak: tekenvlak,
-      technischeRegels: technischeRegels,
-      technischeRegelsMetPrijsOverride: berekenPrijzen
-          ? technischeRegelsMetPrijs
-          : null,
-      prijsData: item.offertePrijsData,
-      prijsResultaat: prijsResultaat,
-      aantal: 1,
-      technischeRegelsScrollbaar: false,
-      toonTechnischePrijsZone: true,
-      toonPrijsPerStukVeld: false,
-      toonWinstEnKorting: true,
-      toonTechnischePrijsregelsInSamenvatting: false,
-      algemeneVerkoopPrijsTotaalExclBtw: model.verkoopPrijsTotaalExclBtw,
-      algemeneAankoopPrijsTotaalExclBtw: model.aankoopPrijsTotaalExclBtw,
-    );
-  }
-
   Widget _bouwAlgemeenArtikelOverzicht(
     List<OpmetingOverzichtTechnischeRegel> technischeRegels,
   ) {
@@ -778,188 +563,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       prijsData: prijsData,
       prijsResultaat: prijsResultaat,
       aantal: OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(item),
-    );
-  }
-
-  Widget _bouwVoorzetscreenOverzicht(
-    OpmetingVoorzetscreenModel model,
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
-  ) {
-    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
-      maatTitel: 'Afmetingen',
-      maatWaarde: model.maatSamenvatting,
-      tekening: OpmetingVoorzetscreenTekenvlak(model: model),
-    );
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: !item.isOfferteOptie,
-        );
-
-    if (prijsResultaat == null) {
-      final gemeenschappelijkeHoogte =
-          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-          );
-
-      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-        hoogte: gemeenschappelijkeHoogte,
-        tekenvlak: tekenvlak,
-        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-          technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
-          scrollbaar: false,
-          toonPrijsZone: false,
-        ),
-      );
-    }
-
-    return _bouwGeprijsdArtikelOverzicht(
-      tekenvlak: tekenvlak,
-      technischeRegels: technischeRegels,
-      prijsData: item.offertePrijsData,
-      prijsResultaat: prijsResultaat,
-      aantal: model.aantal,
-      technischeRegelsScrollbaar: false,
-      toonTechnischePrijsZone: false,
-    );
-  }
-
-  Widget _bouwBuitenjaloezieOverzicht(
-    OpmetingBuitenjaloezieModel model,
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
-  ) {
-    final maatSamenvatting =
-        '${model.totaleBreedteMm} × ${model.totaleHoogteMm} mm';
-
-    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
-      maatTitel: 'Totale afmetingen',
-      maatWaarde: maatSamenvatting,
-      tekening: OpmetingBuitenjaloezieTekenvlak(model: model),
-    );
-
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: !item.isOfferteOptie,
-        );
-
-    if (prijsResultaat == null) {
-      final gemeenschappelijkeHoogte =
-          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-          );
-
-      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-        hoogte: gemeenschappelijkeHoogte,
-        tekenvlak: tekenvlak,
-        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-          technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
-          scrollbaar: false,
-          toonPrijsZone: false,
-        ),
-      );
-    }
-
-    return _bouwGeprijsdArtikelOverzicht(
-      tekenvlak: tekenvlak,
-      technischeRegels: technischeRegels,
-      prijsData: item.offertePrijsData,
-      prijsResultaat: prijsResultaat,
-      aantal: model.aantal,
-      technischeRegelsScrollbaar: false,
-      toonTechnischePrijsZone: false,
-      toonPrijsPerStukVeld: true,
-      toonWinstEnKorting: true,
-    );
-  }
-
-  Widget _bouwVoorzetrolluikOverzicht(
-    OpmetingVoorzetrolluikModel model,
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
-  ) {
-    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
-      maatTitel: 'Afmetingen',
-      maatWaarde: model.maatSamenvatting,
-      tekening: OpmetingVoorzetrolluikTekenvlak(model: model),
-    );
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: !item.isOfferteOptie,
-        );
-
-    if (prijsResultaat == null) {
-      final gemeenschappelijkeHoogte =
-          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-          );
-
-      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-        hoogte: gemeenschappelijkeHoogte,
-        tekenvlak: tekenvlak,
-        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-          technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
-          scrollbaar: false,
-          toonPrijsZone: false,
-        ),
-      );
-    }
-
-    return _bouwGeprijsdArtikelOverzicht(
-      tekenvlak: tekenvlak,
-      technischeRegels: technischeRegels,
-      prijsData: item.offertePrijsData,
-      prijsResultaat: prijsResultaat,
-      aantal: model.aantal,
-      technischeRegelsScrollbaar: false,
-      toonTechnischePrijsZone: false,
-    );
-  }
-
-  Widget _bouwUitvalschermOverzicht(
-    OpmetingUitvalschermModel model,
-    List<OpmetingOverzichtTechnischeRegel> technischeRegels,
-  ) {
-    final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
-      maatTitel: 'Breedte × uitval',
-      maatWaarde: model.maatSamenvatting,
-      tekening: OpmetingUitvalschermTekenvlak(model: model),
-    );
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: !item.isOfferteOptie,
-        );
-
-    if (prijsResultaat == null) {
-      final gemeenschappelijkeHoogte =
-          OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-          );
-
-      return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-        hoogte: gemeenschappelijkeHoogte,
-        tekenvlak: tekenvlak,
-        rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-          technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
-          scrollbaar: false,
-          toonPrijsZone: false,
-        ),
-      );
-    }
-
-    return _bouwGeprijsdArtikelOverzicht(
-      tekenvlak: tekenvlak,
-      technischeRegels: technischeRegels,
-      prijsData: item.offertePrijsData,
-      prijsResultaat: prijsResultaat,
-      aantal: model.aantal,
-      technischeRegelsScrollbaar: false,
-      toonTechnischePrijsZone: false,
     );
   }
 
@@ -1013,62 +616,29 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
 
   Widget _bouwVeluxDakraamOverzicht(OpmetingVeluxDakraamModel model) {
     final catalogusRegels = _veluxCatalogusRegels(model);
-    final prijsResultaat =
-        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-          item,
-          kortingToestaan: false,
-        );
-    final technischePrijsregels = prijsResultaat == null
-        ? const <OfferteToegepastePrijsregelModel>[]
-        : prijsResultaat.technischePrijsregels
-              .where(
-                (regel) =>
-                    regel.isGeldig &&
-                    regel.totaalExclBtw > 0.0 &&
-                    regel.toonOpOverzicht,
-              )
-              .toList(growable: false);
-
-    final technischeRegels = <OpmetingOverzichtTechnischeRegel>[];
-    final technischeRegelsMetPrijs = <OpmetingOverzichtTechnischeRegelPrijs>[];
-
-    for (final regel in catalogusRegels) {
-      final technischeRegel = OpmetingOverzichtTechnischeRegel(
-        titel: OpmetingVeluxDakraamOmschrijvingHelper.metAantal(
-          regel.omschrijving,
-          regel.aantal,
+    final technischeRegels = <OpmetingOverzichtTechnischeRegel>[
+      for (final regel in catalogusRegels)
+        OpmetingOverzichtTechnischeRegel(
+          titel: regel.omschrijving,
+          waarde:
+              '${regel.aantal} × ${_formatteerEuro(regel.prijsPerStukExclBtw)}',
         ),
-        waarde: '',
-      );
-      technischeRegels.add(technischeRegel);
-      technischeRegelsMetPrijs.add(
+      OpmetingOverzichtTechnischeRegel(
+        titel: 'Catalogustotaal',
+        waarde: 'Catalogus ${model.catalogusJaar}',
+      ),
+    ];
+    final technischeRegelsMetPrijs = <OpmetingOverzichtTechnischeRegelPrijs>[
+      for (var index = 0; index < catalogusRegels.length; index++)
         OpmetingOverzichtTechnischeRegelPrijs(
-          regel: technischeRegel,
-          bedragExclBtw: regel.totaalExclBtw,
+          regel: technischeRegels[index],
+          bedragExclBtw: catalogusRegels[index].totaalExclBtw,
         ),
-      );
-    }
-
-    for (final prijsregel in technischePrijsregels) {
-      final omschrijving = prijsregel.isOptie
-          ? '${prijsregel.omschrijving} · optie'
-          : prijsregel.omschrijving;
-      final technischeRegel = OpmetingOverzichtTechnischeRegel(
-        titel: OpmetingVeluxDakraamOmschrijvingHelper.metAantal(
-          omschrijving,
-          model.veiligAantal,
-        ),
-        waarde: '',
-      );
-      technischeRegels.add(technischeRegel);
-      technischeRegelsMetPrijs.add(
-        OpmetingOverzichtTechnischeRegelPrijs(
-          regel: technischeRegel,
-          bedragExclBtw: prijsregel.totaalExclBtw,
-        ),
-      );
-    }
-
+      OpmetingOverzichtTechnischeRegelPrijs(
+        regel: technischeRegels.last,
+        bedragExclBtw: model.catalogusTotaalExclBtw,
+      ),
+    ];
     final tekenvlak = OpmetingOverzichtArtikelLayoutHelper.bouwTekenvlak(
       maatTitel: model.alleenToebehoren
           ? 'Velux accessoires'
@@ -1081,6 +651,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         child: const SizedBox.expand(),
       ),
     );
+    final prijsResultaat =
+        OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+          item,
+          kortingToestaan: !item.isOfferteOptie,
+        );
 
     if (prijsResultaat == null) {
       final hoogte =
@@ -1096,7 +671,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           technischeRegelsMetPrijs: technischeRegelsMetPrijs,
           legeTekst: 'Geen Velux-catalogusartikelen gekozen.',
           scrollbaar: true,
-          toonPrijsZone: true,
+          toonPrijsZone: false,
         ),
       );
     }
@@ -1112,9 +687,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       basisOmschrijving: model.alleenToebehoren
           ? 'Catalogustotaal Velux-accessoires'
           : 'Catalogustotaal · ${model.veiligAantal} stuks',
-      toonTechnischePrijsZone: true,
-      toonWinstEnKorting: false,
-      toonTechnischePrijsregelsInSamenvatting: false,
+      toonTechnischePrijsZone: false,
     );
   }
 
@@ -1142,15 +715,13 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
 
     if (!model.alleenToebehoren) {
       voegToe(
-        omschrijving: OpmetingVeluxDakraamOmschrijvingHelper.dakvenster(model),
+        omschrijving: 'Velux ${model.productCode} · ${model.maatCode}',
         aantal: model.veiligAantal,
         prijsPerStukExclBtw: model.basisPrijsPerStukExclBtw,
       );
       if (model.gootstukType != OpmetingVeluxGootstukType.geen) {
         voegToe(
-          omschrijving: OpmetingVeluxDakraamOmschrijvingHelper.gootstukken(
-            model,
-          ),
+          omschrijving: '${model.gootstukType.productCode} · ${model.maatCode}',
           aantal: model.veiligAantal,
           prijsPerStukExclBtw: model.gootstukPrijsPerStukExclBtw,
         );
@@ -1159,43 +730,53 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
 
     if (model.rolluikType != OpmetingVeluxRolluikType.geen) {
       voegToe(
-        omschrijving: OpmetingVeluxDakraamOmschrijvingHelper.rolluik(model),
+        omschrijving:
+            '${model.rolluikType.productCode} · ${model.maatCode} · ${model.rolluikType.label}',
         aantal: model.effectiefRolluikAantal,
         prijsPerStukExclBtw: model.rolluikPrijsPerStukExclBtw,
       );
     }
     if (model.screenType != OpmetingVeluxScreenType.geen) {
       voegToe(
-        omschrijving: OpmetingVeluxDakraamOmschrijvingHelper.buitenscherm(
-          model,
-        ),
+        omschrijving:
+            '${model.screenType.productCode} · ${model.maatCode} · ${model.screenType.label}',
         aantal: model.effectiefScreenAantal,
         prijsPerStukExclBtw: model.screenPrijsPerStukExclBtw,
       );
     }
     if (model.verduisteringsgordijnDkl) {
       voegToe(
-        omschrijving:
-            OpmetingVeluxDakraamOmschrijvingHelper.verduisteringsgordijn(model),
+        omschrijving: 'DKL · ${model.maatCode} · kleur ${model.dklKleur.label}',
         aantal: model.effectiefDklAantal,
         prijsPerStukExclBtw: model.dklPrijsPerStukExclBtw,
       );
     }
     if (model.muggengaas) {
+      final productCode = model.muggengaasProductCode.trim().isEmpty
+          ? 'Muggengaas'
+          : model.muggengaasProductCode.trim();
       voegToe(
-        omschrijving: OpmetingVeluxDakraamOmschrijvingHelper.muggengaas(model),
+        omschrijving:
+            '$productCode · ${model.muggengaasBreedteMm} × ${model.muggengaasHoogteMm} mm',
         aantal: model.effectiefMuggengaasAantal,
         prijsPerStukExclBtw: model.muggengaasPrijsPerStukExclBtw,
       );
     }
     if (model.kux110) {
       voegToe(
-        omschrijving:
-            OpmetingVeluxDakraamOmschrijvingHelper.stroomvoorziening(),
+        omschrijving: 'KUX 110 · stroomvoorziening',
         aantal: model.kuxAantal.clamp(1, 99).toInt(),
         prijsPerStukExclBtw: model.kuxPrijsPerStukExclBtw,
       );
     }
+    if (model.afwerkingType != OpmetingVeluxAfwerkingType.geen) {
+      voegToe(
+        omschrijving: 'Afwerking · ${model.afwerkingType.label}',
+        aantal: model.veiligAantal,
+        prijsPerStukExclBtw: model.afwerkingPrijsPerStukExclBtw,
+      );
+    }
+
     return List<_VeluxCatalogusRegel>.unmodifiable(regels);
   }
 
@@ -1217,6 +798,10 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       return centimeter.toInt().toString();
     }
     return centimeter.toStringAsFixed(1).replaceAll('.', ',');
+  }
+
+  String _formatteerEuro(double bedrag) {
+    return '€ ${bedrag.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 
   Widget _bouwVasteInzethorOverzicht(
@@ -1253,30 +838,15 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     bool technischeRegelsScrollbaar = true,
     bool toonTechnischePrijsZone = true,
     bool toonPrijsPerStukVeld = true,
-    bool toonWinstEnKorting = true,
-    bool toonTechnischePrijsregelsInSamenvatting = true,
     String? basisOmschrijving,
-    double? algemeneVerkoopPrijsTotaalExclBtw,
-    double? algemeneAankoopPrijsTotaalExclBtw,
   }) {
-    final heeftAlgemenePrijsUitsplitsing =
-        algemeneVerkoopPrijsTotaalExclBtw != null &&
-        algemeneAankoopPrijsTotaalExclBtw != null;
     final prijsSamenvattingHoogte = berekenPrijzen
         ? 92.0 +
-              (((heeftAlgemenePrijsUitsplitsing ? 1 : 0) +
-                      (toonTechnischePrijsregelsInSamenvatting
-                          ? prijsResultaat.technischePrijsregels.length
-                          : 0) +
+              ((prijsResultaat.technischePrijsregels.length +
                       prijsResultaat.vrijeArtikelPrijsregels.length +
                       prijsResultaat.verdeeldePrijsregels.length +
-                      (toonWinstEnKorting &&
-                              prijsResultaat.heeftArtikelWinstmarge
-                          ? 1
-                          : 0) +
-                      (toonWinstEnKorting && prijsResultaat.heeftArtikelKorting
-                          ? 1
-                          : 0)) *
+                      (prijsResultaat.heeftArtikelWinstmarge ? 1 : 0) +
+                      (prijsResultaat.heeftArtikelKorting ? 1 : 0)) *
                   34.0)
         : 0.0;
 
@@ -1285,7 +855,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           aantalTechnischeRegels: technischeRegels.length,
           toonPrijzen: berekenPrijzen,
           prijsVeldHoogte: toonPrijsPerStukVeld ? 58 : 0,
-          prijsCorrectieVeldHoogte: toonWinstEnKorting ? 222 : 0,
+          prijsCorrectieVeldHoogte: 390,
           prijsSamenvattingHoogte: prijsSamenvattingHoogte,
         );
     final nietScrollbareTechnischeHoogte = technischeRegelsScrollbaar
@@ -1299,7 +869,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         (berekenPrijzen
             ? prijsSamenvattingHoogte +
                   (toonPrijsPerStukVeld ? 58.0 : 0.0) +
-                  (toonWinstEnKorting ? 222.0 : 0.0) +
+                  390.0 +
                   27.0
             : 0.0);
     final gemeenschappelijkeHoogte =
@@ -1322,37 +892,28 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
               resultaat: prijsResultaat,
               aantal: aantal,
               basisOmschrijving: basisOmschrijving,
-              algemeneVerkoopPrijsTotaalExclBtw:
-                  algemeneVerkoopPrijsTotaalExclBtw,
-              algemeneAankoopPrijsTotaalExclBtw:
-                  algemeneAankoopPrijsTotaalExclBtw,
-              toonWinstEnKorting: toonWinstEnKorting,
-              toonTechnischePrijsregels:
-                  toonTechnischePrijsregelsInSamenvatting,
             ),
             if (toonPrijsPerStukVeld)
               _PrijsPerStukVeld(
                 beginPrijs: prijsData.prijsPerStukExclBtw,
                 onGewijzigd: onPrijsGewijzigd,
               ),
-            if (toonWinstEnKorting)
-              OfferteArtikelKortingKaart(
-                beginWinstmargePercentage:
-                    prijsData.artikelWinstmargePercentage,
-                beginKortingPercentage: prijsData.artikelKortingPercentage,
-                winstmargeBasisExclBtw: prijsResultaat.winstmargeBasisExclBtw,
-                winstmargeBedragExclBtw: prijsResultaat.winstmargeBedragExclBtw,
-                kortingBasisExclBtw: prijsResultaat.kortingBasisExclBtw,
-                kortingBedragExclBtw: prijsResultaat.kortingBedragExclBtw,
-                onWinstmargeGewijzigd: onWinstmargeGewijzigd,
-                onKortingGewijzigd: onKortingGewijzigd,
-                winstmargeToepassenOpSamenvatting:
-                    winstmargeToepassenOpSamenvatting,
-                kortingToepassenOpSamenvatting: kortingToepassenOpSamenvatting,
-                onWinstmargeToepassenOpOpenen: onWinstmargeToepassenOpOpenen,
-                onKortingToepassenOpOpenen: onKortingToepassenOpOpenen,
-                kortingToestaan: !item.isOfferteOptie,
-              ),
+            OfferteArtikelKortingKaart(
+              beginWinstmargePercentage: prijsData.artikelWinstmargePercentage,
+              beginKortingPercentage: prijsData.artikelKortingPercentage,
+              winstmargeBasisExclBtw: prijsResultaat.winstmargeBasisExclBtw,
+              winstmargeBedragExclBtw: prijsResultaat.winstmargeBedragExclBtw,
+              kortingBasisExclBtw: prijsResultaat.kortingBasisExclBtw,
+              kortingBedragExclBtw: prijsResultaat.kortingBedragExclBtw,
+              onWinstmargeGewijzigd: onWinstmargeGewijzigd,
+              onKortingGewijzigd: onKortingGewijzigd,
+              winstmargeToepassenOpSamenvatting:
+                  winstmargeToepassenOpSamenvatting,
+              kortingToepassenOpSamenvatting: kortingToepassenOpSamenvatting,
+              onWinstmargeToepassenOpOpenen: onWinstmargeToepassenOpOpenen,
+              onKortingToepassenOpOpenen: onKortingToepassenOpOpenen,
+              kortingToestaan: !item.isOfferteOptie,
+            ),
           ]
         : const <Widget>[];
     final geblokkeerdePrijsWidgets = item.isNietRekenen
@@ -1568,15 +1129,10 @@ class _VeluxCatalogusRegel {
 }
 
 class _ArtikelActieTekstKnop extends StatelessWidget {
-  const _ArtikelActieTekstKnop({
-    required this.tekst,
-    required this.onPressed,
-    this.lichtGrijs = false,
-  });
+  const _ArtikelActieTekstKnop({required this.tekst, required this.onPressed});
 
   final String tekst;
   final VoidCallback? onPressed;
-  final bool lichtGrijs;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
@@ -1585,10 +1141,10 @@ class _ArtikelActieTekstKnop extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton(
       style: OutlinedButton.styleFrom(
-        foregroundColor: lichtGrijs ? const Color(0xFF6B7280) : _groen,
-        backgroundColor: lichtGrijs ? const Color(0xFFF3F4F6) : Colors.white,
+        foregroundColor: _groen,
+        backgroundColor: Colors.white,
         disabledForegroundColor: _groen.withValues(alpha: 0.45),
-        side: BorderSide(color: lichtGrijs ? const Color(0xFFD1D5DB) : _rand),
+        side: const BorderSide(color: _rand),
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1683,19 +1239,11 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
     required this.resultaat,
     required this.aantal,
     this.basisOmschrijving,
-    this.algemeneVerkoopPrijsTotaalExclBtw,
-    this.algemeneAankoopPrijsTotaalExclBtw,
-    this.toonWinstEnKorting = true,
-    this.toonTechnischePrijsregels = true,
   });
 
   final OfferteBerekeningResultaat resultaat;
   final int aantal;
   final String? basisOmschrijving;
-  final double? algemeneVerkoopPrijsTotaalExclBtw;
-  final double? algemeneAankoopPrijsTotaalExclBtw;
-  final bool toonWinstEnKorting;
-  final bool toonTechnischePrijsregels;
 
   static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
@@ -1722,48 +1270,34 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 7),
-          if (algemeneVerkoopPrijsTotaalExclBtw != null &&
-              algemeneAankoopPrijsTotaalExclBtw != null) ...<Widget>[
+          _PrijsSamenvattingRij(
+            omschrijving: basisOmschrijving?.trim().isNotEmpty == true
+                ? basisOmschrijving!.trim()
+                : aantal > 1
+                ? 'Prijs per stuk · $aantal stuks'
+                : 'Prijs per stuk',
+            bedrag: resultaat.basisTotaalExclBtw,
+          ),
+          ...resultaat.technischePrijsregels.map((prijsregel) {
+            final omschrijving = prijsregel.isOptie
+                ? '${prijsregel.omschrijving} · technische keuze · optie'
+                : '${prijsregel.omschrijving} · technische keuze';
+            return _PrijsSamenvattingRij(
+              omschrijving: omschrijving,
+              bedrag: prijsregel.totaalExclBtw,
+              optie: prijsregel.isOptie,
+            );
+          }),
+          if (resultaat.heeftArtikelWinstmarge)
             _PrijsSamenvattingRij(
-              omschrijving: 'Totaal verkoopprijzen',
-              bedrag: algemeneVerkoopPrijsTotaalExclBtw!,
-            ),
-            _PrijsSamenvattingRij(
-              omschrijving: 'Totaal aankoopprijzen',
-              bedrag: algemeneAankoopPrijsTotaalExclBtw!,
-            ),
-          ] else
-            _PrijsSamenvattingRij(
-              omschrijving: basisOmschrijving?.trim().isNotEmpty == true
-                  ? basisOmschrijving!.trim()
-                  : aantal > 1
-                  ? 'Prijs per stuk · $aantal stuks'
-                  : 'Prijs per stuk',
-              bedrag: resultaat.basisTotaalExclBtw,
-            ),
-          if (toonTechnischePrijsregels)
-            ...resultaat.technischePrijsregels.map((prijsregel) {
-              final omschrijving = prijsregel.isOptie
-                  ? '${prijsregel.omschrijving} · technische keuze · optie'
-                  : '${prijsregel.omschrijving} · technische keuze';
-              return _PrijsSamenvattingRij(
-                omschrijving: omschrijving,
-                bedrag: prijsregel.totaalExclBtw,
-                optie: prijsregel.isOptie,
-              );
-            }),
-          if (toonWinstEnKorting && resultaat.heeftArtikelWinstmarge)
-            _PrijsSamenvattingRij(
-              omschrijving: algemeneAankoopPrijsTotaalExclBtw != null
-                  ? 'Totale winst · ${_percentage(resultaat.winstmargePercentage)} op aankoopprijzen'
-                  : 'Winst per artikel · ${resultaat.winstmargeOmschrijving}',
+              omschrijving:
+                  'Winst per artikel · ${resultaat.winstmargeOmschrijving}',
               bedrag: resultaat.winstmargeBedragExclBtw,
             ),
-          if (toonWinstEnKorting && resultaat.heeftArtikelKorting)
+          if (resultaat.heeftArtikelKorting)
             _PrijsSamenvattingRij(
-              omschrijving: algemeneAankoopPrijsTotaalExclBtw != null
-                  ? 'Korting · ${_percentage(resultaat.kortingPercentage)} op aankoopdeel'
-                  : 'Korting per artikel · ${resultaat.kortingOmschrijving}',
+              omschrijving:
+                  'Korting per artikel · ${resultaat.kortingOmschrijving}',
               bedrag: -resultaat.kortingBedragExclBtw,
               korting: true,
             ),
@@ -1797,12 +1331,11 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
             bedrag: resultaat.totaalExclBtw,
             vet: true,
           ),
-          if (algemeneAankoopPrijsTotaalExclBtw == null &&
-              !resultaat.heeftTechnischePrijsregels &&
+          if (!resultaat.heeftTechnischePrijsregels &&
               !resultaat.heeftVrijeArtikelPrijsregels &&
               !resultaat.heeftVerdeeldePrijsregels &&
-              (!toonWinstEnKorting || !resultaat.heeftArtikelWinstmarge) &&
-              (!toonWinstEnKorting || !resultaat.heeftArtikelKorting)) ...[
+              !resultaat.heeftArtikelWinstmarge &&
+              !resultaat.heeftArtikelKorting) ...[
             const SizedBox(height: 5),
             const Text(
               'Geen bijkomende prijsregels van toepassing.',
@@ -1816,13 +1349,6 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  static String _percentage(double waarde) {
-    if (waarde == waarde.roundToDouble()) {
-      return '${waarde.toInt()}%';
-    }
-    return '${waarde.toStringAsFixed(2).replaceAll('.', ',')}%';
   }
 }
 
@@ -1894,18 +1420,12 @@ class _PrijsSamenvattingRij extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          SizedBox(
-            width: OpmetingOverzichtArtikelLayoutHelper.prijsZoneBreedte,
-            child: Text(
-              '${_formatteerBedrag(bedrag, korting: korting)} excl. btw',
-              maxLines: 1,
-              softWrap: false,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                color: korting ? _groen : _tekstDonker,
-                fontSize: vet ? 13 : 11.5,
-                fontWeight: vet ? FontWeight.w900 : FontWeight.w800,
-              ),
+          Text(
+            '${_formatteerBedrag(bedrag, korting: korting)} excl. btw',
+            style: TextStyle(
+              color: korting ? _groen : _tekstDonker,
+              fontSize: vet ? 13 : 11.5,
+              fontWeight: vet ? FontWeight.w900 : FontWeight.w800,
             ),
           ),
         ],

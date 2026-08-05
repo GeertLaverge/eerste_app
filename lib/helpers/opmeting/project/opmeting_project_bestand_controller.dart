@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMEETBESTAND-SYNC-ALTIJD-SILENT-20260805
 // THIMACO-CONTROLE: UNIFORME-OPMEETBESTAND-DIALOGEN-20260730
 // THIMACO-CONTROLE: OPENEN-ZONDER-ONTERECHTE-PRIJSVRAAG-20260724
 import 'package:flutter/material.dart';
@@ -413,7 +414,7 @@ class OpmetingProjectBestandController {
   }
 
   Future<void> openBestand() async {
-    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
+    await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return;
 
     final alleOpmetingen = await AppStorage.laadOpmetingen();
@@ -621,7 +622,7 @@ class OpmetingProjectBestandController {
   Future<void> wisBestand() async {
     final huidigeContext = context;
 
-    await OneDriveSyncService().slimmeSync(magLoginVragen: true);
+    await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return;
 
     final alleOpmetingen = await AppStorage.laadOpmetingen();
@@ -728,9 +729,7 @@ class OpmetingProjectBestandController {
     }
 
     await OneDriveSyncService.registreerLokaleWijziging();
-    final syncResultaat = await OneDriveSyncService().slimmeSync(
-      magLoginVragen: true,
-    );
+    final syncResultaat = await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return;
 
     final huidigeKlantNaam = leesKlantNaam();
@@ -780,9 +779,7 @@ class OpmetingProjectBestandController {
 
     await AppStorage.bewaarOpmetingenVoorSync(alleOpmetingen);
     await OneDriveSyncService.registreerLokaleWijziging();
-    final syncResultaat = await OneDriveSyncService().slimmeSync(
-      magLoginVragen: true,
-    );
+    final syncResultaat = await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return false;
 
     final syncOk = _isSyncGeslaagd(syncResultaat);

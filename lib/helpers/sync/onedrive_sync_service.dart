@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-NOOIT-INTERACTIEF-TIJDENS-AUTOMATISCHE-SYNC-20260805
 // THIMACO-CONTROLE: ALGEMENE-PRIJSREGELS-ONEDRIVE-SYNC-FASE5-20260805
 // THIMACO-CONTROLE: BIBLIOTHEEK-MAILTEKSTEN-ONEDRIVE-SYNC-FASE4-20260805
 // THIMACO-CONTROLE: OPMEETINSTELLINGEN-ONEDRIVE-SYNC-FASE3-20260805
@@ -1983,11 +1984,15 @@ class OneDriveSyncService {
       return slimmeSync();
     }
 
-    final token = await OneDriveAuthService().loginInteractief();
+    // Ook bij de eerste automatische synchronisatie uitsluitend silent.
+    // Alleen een expliciete handmatige Microsoft-aanmelding mag
+    // loginInteractief() gebruiken.
+    final token = await OneDriveAuthService().tokenSilent();
 
     if (token.startsWith('FOUT')) {
-      laatsteSyncActie = 'Eerste login mislukt';
-      return token;
+      laatsteSyncActie =
+          'Eerste synchronisatie overgeslagen: geen stille Microsoft-token';
+      return 'SYNC_GEEN_ONEDRIVE_LOGIN';
     }
 
     final resultaat = await downloadBackupMetToken(token, downloadFotos: true);
@@ -2159,9 +2164,10 @@ class OneDriveSyncService {
 
   Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
-      final token = magLoginVragen
-          ? await OneDriveAuthService().loginInteractief()
-          : await OneDriveAuthService().tokenSilent();
+      // Automatische synchronisatie mag nooit zelf een interactief
+      // Microsoft-venster openen. De parameter blijft alleen bestaan voor
+      // broncompatibiliteit met oudere aanroepen.
+      final token = await OneDriveAuthService().tokenSilent();
 
       if (token.startsWith('FOUT')) {
         return null;

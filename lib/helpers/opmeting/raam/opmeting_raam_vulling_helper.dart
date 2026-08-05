@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLING-VERVANGEN-HERKOPPELEN-ZONDER-OUDE-RESTEN-20260805
 import 'package:flutter/material.dart';
 
 import 'opmeting_raam_model.dart';
@@ -44,6 +45,9 @@ class OpmetingRaamVullingLegendaItem {
     required this.naam,
     required this.kleurWaarde,
     required this.transparantie,
+    required this.weergave,
+    required this.tekeningTekst,
+    required this.lijnAfstandMm,
     required this.vlakIds,
   });
 
@@ -52,6 +56,9 @@ class OpmetingRaamVullingLegendaItem {
   final String naam;
   final int kleurWaarde;
   final double transparantie;
+  final OpmetingRaamOpvullingWeergave weergave;
+  final String tekeningTekst;
+  final int lijnAfstandMm;
   final List<String> vlakIds;
 
   Color get kleur => Color(kleurWaarde);
@@ -227,25 +234,32 @@ class OpmetingRaamVullingHelper {
 
     final geselecteerdeIds = geselecteerdeLijst.map((vlak) => vlak.id).toSet();
 
-    final resultaat = bestaandeToewijzingen
-        .where((toewijzing) => !geselecteerdeIds.contains(toewijzing.vlakId))
-        .toList();
+    final resultaatPerVlak = <String, OpmetingRaamVullingToewijzing>{};
+
+    for (final toewijzing in bestaandeToewijzingen) {
+      if (geselecteerdeIds.contains(toewijzing.vlakId)) {
+        continue;
+      }
+
+      resultaatPerVlak[toewijzing.vlakId] = toewijzing;
+    }
 
     for (final vulvlak in geselecteerdeLijst) {
-      resultaat.add(
-        OpmetingRaamVullingToewijzing(
-          vlakId: vulvlak.id,
-          werkvlakId: vulvlak.werkvlakId,
-          opvullingId: opvulling.id,
-          naam: opvulling.naam,
-          kleurWaarde: opvulling.kleurWaarde,
-          transparantie: opvulling.transparantie,
-          weergave: opvulling.weergave,
-          tekeningTekst: opvulling.tekeningTekst,
-          lijnAfstandMm: opvulling.lijnAfstandMm,
-        ),
+      resultaatPerVlak[vulvlak.id] = OpmetingRaamVullingToewijzing(
+        vlakId: vulvlak.id,
+        werkvlakId: vulvlak.werkvlakId,
+        opvullingId: opvulling.id,
+        naam: opvulling.naam,
+        kleurWaarde: opvulling.kleurWaarde,
+        transparantie: opvulling.transparantie,
+        weergave: opvulling.weergave,
+        tekeningTekst: opvulling.tekeningTekst,
+        lijnAfstandMm: opvulling.lijnAfstandMm,
       );
     }
+
+    final resultaat = resultaatPerVlak.values.toList()
+      ..sort((eerste, tweede) => eerste.vlakId.compareTo(tweede.vlakId));
 
     return resultaat;
   }
@@ -256,9 +270,20 @@ class OpmetingRaamVullingHelper {
   }) {
     final teVerwijderenIds = vlakIds.toSet();
 
-    return bestaandeToewijzingen
-        .where((toewijzing) => !teVerwijderenIds.contains(toewijzing.vlakId))
-        .toList();
+    final resultaatPerVlak = <String, OpmetingRaamVullingToewijzing>{};
+
+    for (final toewijzing in bestaandeToewijzingen) {
+      if (teVerwijderenIds.contains(toewijzing.vlakId)) {
+        continue;
+      }
+
+      resultaatPerVlak[toewijzing.vlakId] = toewijzing;
+    }
+
+    final resultaat = resultaatPerVlak.values.toList()
+      ..sort((eerste, tweede) => eerste.vlakId.compareTo(tweede.vlakId));
+
+    return resultaat;
   }
 
   static List<OpmetingRaamVullingToewijzing>
@@ -268,9 +293,20 @@ class OpmetingRaamVullingHelper {
   }) {
     final huidigeVlakIds = huidigeVulvlakken.map((vlak) => vlak.id).toSet();
 
-    return bestaandeToewijzingen
-        .where((toewijzing) => huidigeVlakIds.contains(toewijzing.vlakId))
-        .toList();
+    final resultaatPerVlak = <String, OpmetingRaamVullingToewijzing>{};
+
+    for (final toewijzing in bestaandeToewijzingen) {
+      if (!huidigeVlakIds.contains(toewijzing.vlakId)) {
+        continue;
+      }
+
+      resultaatPerVlak[toewijzing.vlakId] = toewijzing;
+    }
+
+    final resultaat = resultaatPerVlak.values.toList()
+      ..sort((eerste, tweede) => eerste.vlakId.compareTo(tweede.vlakId));
+
+    return resultaat;
   }
 
   static List<OpmetingRaamVullingToewijzing>
@@ -397,13 +433,9 @@ class OpmetingRaamVullingHelper {
       gebruikteNieuweVlakIds.add(nieuwVlak.id);
 
       resultaat.add(
-        OpmetingRaamVullingToewijzing(
+        oudeToewijzing.copyWith(
           vlakId: nieuwVlak.id,
           werkvlakId: nieuwVlak.werkvlakId,
-          opvullingId: oudeToewijzing.opvullingId,
-          naam: oudeToewijzing.naam,
-          kleurWaarde: oudeToewijzing.kleurWaarde,
-          transparantie: oudeToewijzing.transparantie,
         ),
       );
     }
@@ -588,6 +620,9 @@ class OpmetingRaamVullingHelper {
           naam: eerste.naam,
           kleurWaarde: eerste.kleurWaarde,
           transparantie: eerste.transparantie,
+          weergave: eerste.weergave,
+          tekeningTekst: eerste.tekeningTekst,
+          lijnAfstandMm: eerste.lijnAfstandMm,
           vlakIds: groep.value.map((toewijzing) => toewijzing.vlakId).toList(),
         ),
       );
@@ -680,13 +715,17 @@ class OpmetingRaamVullingHelper {
   static String _groepIdVoorToewijzing(
     OpmetingRaamVullingToewijzing toewijzing,
   ) {
-    if (toewijzing.opvullingId.trim().isNotEmpty) {
-      return toewijzing.opvullingId;
-    }
+    final opvullingId = toewijzing.opvullingId.trim();
+    final basisId = opvullingId.isNotEmpty
+        ? opvullingId
+        : '${toewijzing.naam.trim().toLowerCase()}_'
+              '${toewijzing.kleurWaarde}_'
+              '${toewijzing.transparantie.toStringAsFixed(2)}';
 
-    return '${toewijzing.naam.trim().toLowerCase()}_'
-        '${toewijzing.kleurWaarde}_'
-        '${toewijzing.transparantie.toStringAsFixed(2)}';
+    return '${basisId}_'
+        '${toewijzing.weergave.name}_'
+        '${toewijzing.tekeningTekst.trim()}_'
+        '${toewijzing.lijnAfstandMm}';
   }
 
   static bool _vleugelHoortBijKaderVlak({

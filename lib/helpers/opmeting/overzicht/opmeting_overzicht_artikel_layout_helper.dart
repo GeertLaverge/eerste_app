@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OVERZICHT-RESPONSIEVE-TWEEKOLUMS-LAYOUT-20260805
 // THIMACO-CONTROLE: ALGEMENE-OVERZICHT-ARTIKEL-LAYOUT-20260720
 import 'package:flutter/material.dart';
 
@@ -159,16 +160,31 @@ class OpmetingOverzichtArtikelLayoutHelper {
     required Widget tekenvlak,
     required Widget rechterkolom,
   }) {
-    return SizedBox(
-      height: hoogte,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Expanded(flex: tekenvlakFlex, child: tekenvlak),
-          const SizedBox(width: tussenruimte),
-          Expanded(flex: technischeKolomFlex, child: rechterkolom),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compacteTweeKolommen = constraints.maxWidth < 900;
+        final linkerFlex = compacteTweeKolommen ? 42 : tekenvlakFlex;
+        final rechterFlex = compacteTweeKolommen ? 58 : technischeKolomFlex;
+        final kolomRuimte = compacteTweeKolommen ? 10.0 : tussenruimte;
+
+        return SizedBox(
+          height: hoogte,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Expanded(
+                flex: linkerFlex,
+                child: SizedBox.expand(child: tekenvlak),
+              ),
+              SizedBox(width: kolomRuimte),
+              Expanded(
+                flex: rechterFlex,
+                child: SizedBox.expand(child: rechterkolom),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -241,23 +257,44 @@ class OpmetingOverzichtArtikelLayoutHelper {
               .toList(growable: false),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Expanded(
-          child: regelWeergaven.isEmpty
-              ? bouwLegeTechnischeContainer(tekst: legeTekst)
-              : bouwTechnischeRegelsMetPrijsContainer(
-                  regelWeergaven,
-                  scrollbaar: scrollbaar,
-                  toonPrijsZone: toonPrijsZone,
-                ),
+    final technischeInhoud = regelWeergaven.isEmpty
+        ? bouwLegeTechnischeContainer(tekst: legeTekst)
+        : bouwTechnischeRegelsMetPrijsContainer(
+            regelWeergaven,
+            scrollbaar: onderWidgets.isEmpty ? scrollbaar : false,
+            toonPrijsZone: toonPrijsZone,
+          );
+
+    if (onderWidgets.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[Expanded(child: technischeInhoud)],
+      );
+    }
+
+    // Bij geprijsde artikelen mag het technische blok nooit door de
+    // prijsberekening, winstmarge en korting tot nul hoogte worden gedrukt.
+    // De volledige rechterkolom scrolt daarom als één geheel. Zo blijft het
+    // technische blok altijd bovenaan zichtbaar, terwijl beide buitenkolommen
+    // exact dezelfde hoogte en uitlijning behouden.
+    return ClipRect(
+      child: Scrollbar(
+        thumbVisibility: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(right: 2),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              technischeInhoud,
+              for (final widget in onderWidgets) ...<Widget>[
+                const SizedBox(height: 9),
+                widget,
+              ],
+              const SizedBox(height: 2),
+            ],
+          ),
         ),
-        for (final widget in onderWidgets) ...<Widget>[
-          const SizedBox(height: 9),
-          widget,
-        ],
-      ],
+      ),
     );
   }
 
