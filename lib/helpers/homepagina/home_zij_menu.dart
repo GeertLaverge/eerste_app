@@ -1,29 +1,28 @@
-// THIMACO-CONTROLE: HOME-OPSLAAN-EN-SLUITEN-KNOP-20260805
-// THIMACO-CONTROLE: HOME-IPHONE-CAPSULEMENU-20260805
-// THIMACO-CONTROLE: HOME-AFMELDKNOP-ACTIEF-20260805
-// THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-HOME-KNOP-20260802
+// THIMACO-CONTROLE: HOME-IPHONE-CAPSULEKNOPPEN-MET-BESTAANDE-ROUTES-20260805
+// THIMACO-CONTROLE: MAGAZIJN-HOME-ROUTE-20260804
 import 'package:flutter/material.dart';
 
 import '../../paginas/agenda_pagina_nieuw.dart' as agenda;
 import '../../paginas/bibliotheek_pagina.dart';
 import '../../paginas/klanten_pagina.dart';
+import '../../paginas/magazijn/magazijn_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
 import '../../paginas/opmeting_pagina.dart' as opmeting;
 
 class HomeZijMenu extends StatelessWidget {
   final bool compact;
-  final Future<void> Function() onOpslaanEnSluiten;
-  final bool opslaanEnSluitenBezig;
+  final Future<void> Function()? onAfsluiten;
+  final bool afsluitenBezig;
 
   const HomeZijMenu({
     super.key,
     required this.compact,
-    required this.onOpslaanEnSluiten,
-    required this.opslaanEnSluitenBezig,
+    this.onAfsluiten,
+    this.afsluitenBezig = false,
   });
 
-  static const groen = Color(0xFF0B7A3B);
-  static const rand = Color(0xFFE5E7EB);
+  static const Color groen = Color(0xFF0B7A3B);
+  static const Color rand = Color(0xFFE5E7EB);
 
   @override
   Widget build(BuildContext context) {
@@ -80,10 +79,10 @@ class HomeZijMenu extends StatelessWidget {
             ),
             child: _menuKnop(
               context,
-              opslaanEnSluitenBezig ? 'Bewaren…' : 'Afsluiten',
-              Icons.logout_rounded,
-              onTap: opslaanEnSluitenBezig ? null : onOpslaanEnSluiten,
-              bezig: opslaanEnSluitenBezig,
+              afsluitenBezig ? 'Bewaren…' : 'Afsluiten',
+              Icons.power_settings_new_rounded,
+              onTap: afsluitenBezig ? null : onAfsluiten,
+              bezig: afsluitenBezig,
               onderMarge: 0,
             ),
           ),
@@ -101,8 +100,10 @@ class HomeZijMenu extends StatelessWidget {
     bool bezig = false,
     double onderMarge = 10,
   }) {
-    final achtergrondKleur = actief ? const Color(0xFFEAF6EE) : Colors.white;
-    final voorgrondKleur = actief ? groen : const Color(0xFF27302B);
+    final Color achtergrondKleur = actief
+        ? const Color(0xFFEAF6EE)
+        : Colors.white;
+    final Color voorgrondKleur = actief ? groen : const Color(0xFF27302B);
 
     return Padding(
       padding: EdgeInsets.only(bottom: onderMarge),
@@ -150,6 +151,14 @@ class HomeZijMenu extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => const NotitiesBureauPagina(),
                       ),
+                    );
+                    return;
+                  }
+
+                  if (titel == 'Magazijn') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MagazijnPagina()),
                     );
                     return;
                   }

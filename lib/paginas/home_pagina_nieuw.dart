@@ -1,6 +1,7 @@
-﻿// THIMACO-CONTROLE: HOME-OPSLAAN-EN-SLUITEN-ZONDER-MICROSOFT-AFMELDING-20260805
+﻿// THIMACO-CONTROLE: HOME-SNEL-AFSLUITEN-ZONDER-FOTO-BLOKKERING-20260805
+// THIMACO-CONTROLE: HOME-ACTUELE-PAGINA-MET-IPHONE-MENU-20260805
+// THIMACO-CONTROLE: HOME-OPSLAAN-EN-SLUITEN-ZONDER-MICROSOFT-AFMELDING-20260805
 // THIMACO-CONTROLE: HOME-GROENE-STATUSBALK-20260805
-// THIMACO-CONTROLE: HOME-AFMELDEN-MET-VEILIGE-UPLOAD-20260805
 // THIMACO-CONTROLE: HOME-CENTRAAL-DOWNLOADSIGNAAL-FASE7-20260805
 // THIMACO-CONTROLE: HOME-PERIODIEKE-SYNC-FASE6-20260805
 
@@ -37,6 +38,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
   Timer? _syncTimer;
   bool _syncBezig = false;
   bool _opslaanEnSluitenBezig = false;
+  bool _programmaAfgesloten = false;
   int _laatsteVerwerkteDownloadVersie = 0;
 
   @override
@@ -75,6 +77,10 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_programmaAfgesloten) {
+      return;
+    }
+
     if (state == AppLifecycleState.resumed) {
       _voerAutomatischeSyncUit();
       return;
@@ -89,11 +95,8 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
   Future<List<List<dynamic>>> _laadDashboardGegevens() {
     final planningVandaag = HomePlanningHelper.planningVandaag();
-
     final dagTakenVandaag = HomePlanningHelper.dagTakenVandaag();
-
     final klantTakenVandaag = HomePlanningHelper.klantTakenVandaag();
-
     final kraanReservatiesVandaag =
         HomePlanningHelper.kraanReservatiesVandaag();
 
@@ -106,7 +109,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
   }
 
   Future<void> _voerAutomatischeSyncUit() async {
-    if (_syncBezig) {
+    if (_programmaAfgesloten || _syncBezig) {
       return;
     }
 
@@ -139,7 +142,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     }
 
     _laatsteVerwerkteDownloadVersie = nieuweVersie;
-
     _vernieuwDashboard();
   }
 
@@ -172,8 +174,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           content: const Text(
-            'Alle gegevens en klantenfotoâ€™s worden eerst volledig naar '
-            'OneDrive bewaard. Het Microsoft-account blijft aangemeld.',
+            'Alle gegevens worden eerst snel naar OneDrive bewaard. Foto’s '
+            'blokkeren het afsluiten niet en worden later verder verwerkt. '
+            'Het Microsoft-account blijft aangemeld.',
           ),
           actions: <Widget>[
             TextButton(
@@ -182,11 +185,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
             ),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0B7A3B),
+                backgroundColor: _groen,
                 foregroundColor: Colors.white,
               ),
               onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.logout_rounded),
+              icon: const Icon(Icons.power_settings_new_rounded),
               label: const Text('Opslaan en sluiten'),
             ),
           ],
@@ -206,7 +209,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
     try {
       final uploadResultaat = await OneDriveSyncService().uploadBackup(
-        uploadFotos: true,
+        uploadFotos: false,
       );
 
       if (!mounted) {
@@ -217,8 +220,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
         await _toonOpslaanEnSluitenFout(
           titel: 'Sluiten gestopt',
           melding:
-              'De gegevens konden niet volledig naar OneDrive worden bewaard. '
-              'Het programma blijft open en het Microsoft-account blijft aangemeld.\n\n$uploadResultaat',
+              'De gegevens konden niet naar OneDrive worden bewaard. '
+              'Het programma blijft open en het Microsoft-account blijft aangemeld.\n\n'
+              '$uploadResultaat',
         );
         _startSyncTimerOpnieuw();
         return;
@@ -228,44 +232,22 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
         return;
       }
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Text(
-              'Veilig opgeslagen',
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
-            content: const Text(
-              'Alle gegevens zijn veilig naar OneDrive bewaard. Het Microsoft-account '
-              'blijft aangemeld. Sluit op Chrome het tabblad. Op iPhone kunt u '
-              'de app na OK veilig sluiten.',
-            ),
-            actions: <Widget>[
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0B7A3B),
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      _syncTimer?.cancel();
+
+      if (!mounted) {
+        return;
+      }
 
       if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS) {
         await SystemNavigator.pop();
+        return;
       }
+
+      setState(() {
+        _programmaAfgesloten = true;
+      });
     } finally {
-      if (mounted) {
+      if (mounted && !_programmaAfgesloten) {
         setState(() {
           _opslaanEnSluitenBezig = false;
         });
@@ -311,6 +293,57 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
   @override
   Widget build(BuildContext context) {
+    if (_programmaAfgesloten) {
+      return const AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle(
+          statusBarColor: _groen,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
+        child: Scaffold(
+          backgroundColor: _groen,
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(
+                      Icons.check_circle_outline_rounded,
+                      color: Colors.white,
+                      size: 58,
+                    ),
+                    SizedBox(height: 18),
+                    Text(
+                      'Veilig afgesloten',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'De gegevens zijn naar OneDrive bewaard. '
+                      'Het Microsoft-account blijft aangemeld.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     final compactZijMenu = MediaQuery.of(context).size.width < 700;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -338,8 +371,8 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                     children: <Widget>[
                       HomeZijMenu(
                         compact: compactZijMenu,
-                        onOpslaanEnSluiten: _opslaanEnSluiten,
-                        opslaanEnSluitenBezig: _opslaanEnSluitenBezig,
+                        onAfsluiten: _opslaanEnSluiten,
+                        afsluitenBezig: _opslaanEnSluitenBezig,
                       ),
                       Expanded(
                         child: ListView(
@@ -408,4 +441,3 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     );
   }
 }
-

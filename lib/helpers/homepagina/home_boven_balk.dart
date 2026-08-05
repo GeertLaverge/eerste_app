@@ -1,5 +1,7 @@
-// THIMACO-CONTROLE: HOME-GROENE-BOVENBALK-IPHONE-STATUS-20260805
+// THIMACO-CONTROLE: HOME-VOLLEDIG-GROENE-BOVENBALK-20260805
 import 'package:flutter/material.dart';
+
+import '../../paginas/instellingen_pagina.dart';
 
 class HomeBovenBalk extends StatelessWidget {
   const HomeBovenBalk({super.key});
@@ -61,7 +63,12 @@ class HomeBovenBalk extends StatelessWidget {
           IconButton(
             tooltip: 'Instellingen',
             color: Colors.white,
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InstellingenPagina()),
+              );
+            },
             icon: const Icon(Icons.settings_outlined, size: 25),
           ),
         ],
