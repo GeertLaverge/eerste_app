@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVERSIES-CONCEPTEN-WERKVERSIE-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-HOOFDPAGINA-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-BOVENBALK-ACTIES-20260801
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-HOOFDPAGINA-20260801
@@ -879,19 +880,33 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
     if (!mounted) return;
 
-    final oneDriveResultaat = await Navigator.of(context)
-        .push<OneDriveKlantdocumentResultaat>(
-          MaterialPageRoute<OneDriveKlantdocumentResultaat>(
+    final previewResultaat = await Navigator.of(context)
+        .push<OffertePdfPreviewResultaat>(
+          MaterialPageRoute<OffertePdfPreviewResultaat>(
             builder: (context) {
               return OffertePdfPreviewPagina(
                 titelhoofd: titelhoofd,
                 posities: offertePosities,
+                werkPosities: List<OpmetingOverzichtRaamItem>.unmodifiable(
+                  _raamOpmetingen.where((positie) => !positie.isVerwijderd),
+                ),
+                onOpenVersieAlsWerkversie:
+                    _projectBestandController.openOfferteVersieAlsWerkversie,
+                onVersieBewaard:
+                    _projectBestandController.markeerOfferteVersieAlsWerkBron,
               );
             },
           ),
         );
 
-    if (!mounted || oneDriveResultaat == null) return;
+    if (!mounted || previewResultaat == null) return;
+
+    if (previewResultaat.werkversieGeopend) {
+      return;
+    }
+
+    final oneDriveResultaat = previewResultaat.oneDriveResultaat;
+    if (oneDriveResultaat == null) return;
 
     _toonMelding(
       '${oneDriveResultaat.documentType} opgeslagen in OneDrive: '

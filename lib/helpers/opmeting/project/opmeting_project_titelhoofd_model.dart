@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
 import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
 import '../../offerte/prijzen/offerte_prijs_categorie.dart';
 import '../../offerte/prijzen/offerte_prijsregel_model.dart';
@@ -34,6 +35,8 @@ class OpmetingProjectTitelhoofd {
     this.tijdelijkeProjectPrijsregels = const <OffertePrijsregelModel>[],
     this.offertePrijsinstellingenMomentopnames =
         const <String, OffertePrijsinstellingenMomentopname>{},
+    this.offerteBronVersieId = '',
+    this.offerteBronVersieNummer = 0,
     this.gewijzigdOp = '',
   });
 
@@ -78,6 +81,8 @@ class OpmetingProjectTitelhoofd {
   final List<OffertePrijsregelModel> tijdelijkeProjectPrijsregels;
   final Map<String, OffertePrijsinstellingenMomentopname>
   offertePrijsinstellingenMomentopnames;
+  final String offerteBronVersieId;
+  final int offerteBronVersieNummer;
   final String gewijzigdOp;
 
   String get klantNaamMetAanspreking {
@@ -196,6 +201,8 @@ class OpmetingProjectTitelhoofd {
     List<OffertePrijsregelModel>? tijdelijkeProjectPrijsregels,
     Map<String, OffertePrijsinstellingenMomentopname>?
     offertePrijsinstellingenMomentopnames,
+    String? offerteBronVersieId,
+    int? offerteBronVersieNummer,
     String? gewijzigdOp,
   }) {
     return OpmetingProjectTitelhoofd(
@@ -234,6 +241,9 @@ class OpmetingProjectTitelhoofd {
       offertePrijsinstellingenMomentopnames:
           offertePrijsinstellingenMomentopnames ??
           this.offertePrijsinstellingenMomentopnames,
+      offerteBronVersieId: offerteBronVersieId ?? this.offerteBronVersieId,
+      offerteBronVersieNummer:
+          offerteBronVersieNummer ?? this.offerteBronVersieNummer,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
     );
   }
@@ -305,6 +315,8 @@ class OpmetingProjectTitelhoofd {
             (formulierType, momentopname) =>
                 MapEntry(formulierType, momentopname.toJson()),
           ),
+      'offerteBronVersieId': offerteBronVersieId,
+      'offerteBronVersieNummer': offerteBronVersieNummer,
       'gewijzigdOp': gewijzigdOp,
     };
   }
@@ -377,6 +389,8 @@ class OpmetingProjectTitelhoofd {
           _leesPrijsinstellingenMomentopnames(
             json['offertePrijsinstellingenMomentopnames'],
           ),
+      offerteBronVersieId: json['offerteBronVersieId']?.toString() ?? '',
+      offerteBronVersieNummer: _leesIntVeilig(json['offerteBronVersieNummer']),
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
     );
   }
@@ -683,6 +697,12 @@ String opmetingKlantNaamSleutel(String klantNaam) {
 String opmetingProjectTitelhoofdSleutel(String klantNaam) {
   final sleutel = opmetingKlantNaamSleutel(klantNaam);
   return sleutel.isEmpty ? 'zonder_klantnaam' : sleutel;
+}
+
+int _leesIntVeilig(Object? waarde) {
+  if (waarde is int) return waarde;
+  if (waarde is num) return waarde.toInt();
+  return int.tryParse(waarde?.toString() ?? '') ?? 0;
 }
 
 bool _leesBool(Object? waarde, {required bool standaardWaarde}) {

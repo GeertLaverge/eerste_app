@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-ONEDRIVE-SYNC-20260806
 // THIMACO-CONTROLE: ONEDRIVE-NOOIT-INTERACTIEF-TIJDENS-AUTOMATISCHE-SYNC-20260805
 // THIMACO-CONTROLE: ALGEMENE-PRIJSREGELS-ONEDRIVE-SYNC-FASE5-20260805
 // THIMACO-CONTROLE: BIBLIOTHEEK-MAILTEKSTEN-ONEDRIVE-SYNC-FASE4-20260805
@@ -42,6 +43,10 @@ class OneDriveSyncService {
 
   static const String _offerteAlgemenePrijsregelsKey =
       'thimaco_offerte_algemene_prijsregels';
+
+  static const String _offerteVersiesKey = 'thimaco_offerte_versies';
+  static const String _offerteVersiesSyncMetaKey =
+      'thimaco_offerte_versies_sync_meta';
 
   static const String _notitiesKey = 'thimaco_notities';
   static const String _notitiesSyncMetaKey = 'thimaco_notities_sync_meta';
@@ -407,6 +412,16 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: cloudBackupDatum,
       );
+      final mergedOfferteVersies = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: cloudBackup,
+        lokaleDataKey: _offerteVersiesKey,
+        lokaleMetadataKey: _offerteVersiesSyncMetaKey,
+        cloudDataVeld: 'offerteVersies',
+        cloudMetadataVeld: 'offerteVersiesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: cloudBackupDatum,
+      );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: cloudBackup,
@@ -741,6 +756,12 @@ class OneDriveSyncService {
             SyncMergeService.encodeJsonRecordMetadata(
               mergedProjectKleuren.metadata,
             ),
+        'offerteVersies': AppStorage.encodeJsonMapLijstVoorSync(
+          mergedOfferteVersies.records,
+        ),
+        'offerteVersiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
+          mergedOfferteVersies.metadata,
+        ),
         'offertePrijsProfielen': AppStorage.encodeOffertePrijsProfielenVoorSync(
           mergedPrijsprofielen,
         ),
@@ -871,6 +892,12 @@ class OneDriveSyncService {
         dataKey: _opmetingProjectKleurenKey,
         metadataKey: _opmetingProjectKleurenSyncMetaKey,
         resultaat: mergedProjectKleuren,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteVersiesKey,
+        metadataKey: _offerteVersiesSyncMetaKey,
+        resultaat: mergedOfferteVersies,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
@@ -1642,6 +1669,16 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: backupDatum,
       );
+      final mergedOfferteVersies = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: data,
+        lokaleDataKey: _offerteVersiesKey,
+        lokaleMetadataKey: _offerteVersiesSyncMetaKey,
+        cloudDataVeld: 'offerteVersies',
+        cloudMetadataVeld: 'offerteVersiesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: backupDatum,
+      );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: data,
@@ -1857,6 +1894,12 @@ class OneDriveSyncService {
         dataKey: _opmetingProjectKleurenKey,
         metadataKey: _opmetingProjectKleurenSyncMetaKey,
         resultaat: mergedProjectKleuren,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteVersiesKey,
+        metadataKey: _offerteVersiesSyncMetaKey,
+        resultaat: mergedOfferteVersies,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,

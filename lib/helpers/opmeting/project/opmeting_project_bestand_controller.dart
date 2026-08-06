@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVERSIE-ALS-WERKVERSIE-20260806
 // THIMACO-CONTROLE: OPMEETBESTAND-SYNC-ALTIJD-SILENT-20260805
 // THIMACO-CONTROLE: UNIFORME-OPMEETBESTAND-DIALOGEN-20260730
 // THIMACO-CONTROLE: OPENEN-ZONDER-ONTERECHTE-PRIJSVRAAG-20260724
@@ -793,6 +794,141 @@ class OpmetingProjectBestandController {
     }
 
     return syncOk;
+  }
+
+  Future<bool> openOfferteVersieAlsWerkversie({
+    required OpmetingProjectTitelhoofd versieTitelhoofd,
+    required List<OpmetingOverzichtRaamItem> versiePosities,
+    required String bronVersieId,
+    required int bronVersieNummer,
+  }) async {
+    final huidigeKlantNaam = leesKlantNaam().trim();
+    final klantNaam = huidigeKlantNaam.isNotEmpty
+        ? huidigeKlantNaam
+        : versieTitelhoofd.klantNaam.trim();
+
+    if (klantNaam.isEmpty || versiePosities.isEmpty) {
+      toonMelding(
+        'Deze offerteversie bevat geen geldige projectgegevens.',
+        true,
+      );
+      return false;
+    }
+
+    zetLaden(true);
+
+    try {
+      final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+      final klantSleutel = klantNaam.toLowerCase();
+      final versieIds = <String>{
+        for (final positie in versiePosities)
+          if (positie.id.trim().isNotEmpty) positie.id.trim(),
+      };
+      final nu = DateTime.now().toUtc().toIso8601String();
+      final samengevoegd = <OpmetingOverzichtRaamItem>[];
+
+      for (final bestaand in alleOpmetingen) {
+        if (bestaand.klantNaam.trim().toLowerCase() != klantSleutel) {
+          samengevoegd.add(bestaand);
+          continue;
+        }
+
+        if (versieIds.contains(bestaand.id.trim())) {
+          // De momentopname hieronder vervangt deze positie.
+          continue;
+        }
+
+        if (bestaand.isVerwijderd) {
+          samengevoegd.add(bestaand);
+        } else {
+          // Posities die niet in de gekozen historische versie staan, krijgen
+          // een tombstone zodat ze na synchronisatie niet opnieuw verschijnen.
+          samengevoegd.add(
+            bestaand.copyWith(isVerwijderd: true, gewijzigdOp: nu),
+          );
+        }
+      }
+
+      final hersteldePosities = <OpmetingOverzichtRaamItem>[];
+      for (var index = 0; index < versiePosities.length; index++) {
+        final positie = versiePosities[index];
+        final id = positie.id.trim().isEmpty
+            ? 'offerteversie_${DateTime.now().microsecondsSinceEpoch}_$index'
+            : positie.id.trim();
+        hersteldePosities.add(
+          positie.copyWith(
+            id: id,
+            klantNaam: klantNaam,
+            isVerwijderd: false,
+            gewijzigdOp: nu,
+          ),
+        );
+      }
+      samengevoegd.addAll(hersteldePosities);
+
+      final hersteldTitelhoofd = versieTitelhoofd.copyWith(
+        klantNaam: klantNaam,
+        offerteBronVersieId: bronVersieId.trim(),
+        offerteBronVersieNummer: bronVersieNummer,
+        gewijzigdOp: nu,
+      );
+
+      await AppStorage.bewaarOpmetingenVoorSync(samengevoegd);
+      await AppStorage.bewaarOpmetingProjectTitelhoofd(hersteldTitelhoofd);
+
+      if (!isMounted()) return false;
+
+      artikelPrijscorrectieController.wisDoelSelecties();
+      vervangProjectState(
+        klantNaam,
+        hersteldTitelhoofd,
+        hersteldePosities,
+        <String>{},
+        false,
+      );
+
+      toonMelding(
+        'Offerteversie $bronVersieNummer is als nieuwe werkversie geopend. '
+        'De historische versie zelf blijft ongewijzigd.',
+        false,
+      );
+      return true;
+    } catch (fout) {
+      if (isMounted()) {
+        zetLaden(false);
+        toonMelding(
+          'De offerteversie kon niet als werkversie worden geopend: $fout',
+          true,
+        );
+      }
+      return false;
+    }
+  }
+
+  Future<void> markeerOfferteVersieAlsWerkBron({
+    required String versieId,
+    required int versieNummer,
+  }) async {
+    final huidigTitelhoofd = leesTitelhoofd();
+    if (huidigTitelhoofd.klantNaam.trim().isEmpty) return;
+
+    final bijgewerkt = huidigTitelhoofd
+        .copyWith(
+          offerteBronVersieId: versieId.trim(),
+          offerteBronVersieNummer: versieNummer,
+        )
+        .metWijzigingsDatum();
+
+    await AppStorage.bewaarOpmetingProjectTitelhoofd(bijgewerkt);
+    if (!isMounted()) return;
+
+    vervangProjectState(
+      leesKlantNaam(),
+      bijgewerkt,
+      List<OpmetingOverzichtRaamItem>.from(leesOpmetingen()),
+      Set<String>.from(leesVerborgenFormulierTypes()),
+      false,
+    );
   }
 
   bool _isSyncGeslaagd(String syncResultaat) {

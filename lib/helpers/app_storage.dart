@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-OPSLAG-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-APP-STORAGE-FASE-3A-20260803
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-APP-STORAGE-20260802
 // THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-APP-STORAGE-20260802
@@ -32,6 +33,7 @@ import 'opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_mode
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/mail/offerte_mail_tekst_model.dart';
+import 'offerte/versies/offerte_versie_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 
@@ -119,6 +121,11 @@ class AppStorage {
 
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
+
+  static const String _offerteVersiesKey = 'thimaco_offerte_versies';
+
+  static const String _offerteVersiesSyncMetaKey =
+      'thimaco_offerte_versies_sync_meta';
 
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
@@ -960,6 +967,56 @@ class AppStorage {
     });
 
     await bewaarOffertePrijsProfielen(profielen);
+  }
+
+  // ------------------------------------------------------------
+  // OFFERTE - ONDERTEKENDE VERSIES
+  // ------------------------------------------------------------
+
+  static Future<List<OfferteVersieModel>> laadOfferteVersies() async {
+    final prefs = await openBox();
+    final records = decodeJsonMapLijstVoorSync(
+      prefs.getString(_offerteVersiesKey),
+    );
+    final resultaat = <OfferteVersieModel>[];
+
+    for (final record in records) {
+      try {
+        final versie = OfferteVersieModel.fromJson(record);
+        if (versie.isGeldig) {
+          resultaat.add(versie);
+        }
+      } catch (_) {
+        // Eén beschadigde versie mag de overige offerteversies niet blokkeren.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      final project = eerste.projectSleutel.compareTo(tweede.projectSleutel);
+      if (project != 0) return project;
+
+      final nummer = eerste.versieNummer.compareTo(tweede.versieNummer);
+      if (nummer != 0) return nummer;
+
+      return eerste.opgeslagenOp.compareTo(tweede.opgeslagenOp);
+    });
+
+    return resultaat;
+  }
+
+  static Future<void> bewaarOfferteVersies(
+    List<OfferteVersieModel> versies,
+  ) async {
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offerteVersiesKey,
+      metadataKey: _offerteVersiesSyncMetaKey,
+      records: versies
+          .where((versie) => versie.isGeldig)
+          .map((versie) => versie.toJson())
+          .toList(growable: false),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
+    );
   }
 
   // ------------------------------------------------------------

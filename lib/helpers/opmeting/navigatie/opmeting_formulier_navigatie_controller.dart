@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SPECIALISTISCHE-FICHE-RESULTAAT-BEHOUD-NA-SYNC-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-NAVIGATIE-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-NAVIGATIE-20260801
 // THIMACO-CONTROLE: UITVALSCHERM-NAVIGATIE-20260801
@@ -8,6 +9,8 @@
 // THIMACO-CONTROLE: PLOOIWERKEN-PROJECTKLEUR-HOOFDPAGINA-20260728-2110
 import 'package:flutter/material.dart';
 
+import '../../app_storage.dart';
+import '../../sync/onedrive_sync_service.dart';
 import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
 import '../algemene_opmeting/opmeting_algemene_opmeting_fiche.dart';
 import '../overzicht/opmeting_overzicht_model.dart' as overzicht;
@@ -337,6 +340,8 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+      await _bewaarVolledigFicheResultaatOpnieuw(resultaat);
+      if (!isMounted()) return;
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -408,6 +413,8 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+      await _bewaarVolledigFicheResultaatOpnieuw(resultaat);
+      if (!isMounted()) return;
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -444,6 +451,8 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+      await _bewaarVolledigFicheResultaatOpnieuw(resultaat);
+      if (!isMounted()) return;
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -479,6 +488,8 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+      await _bewaarVolledigFicheResultaatOpnieuw(resultaat);
+      if (!isMounted()) return;
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -653,6 +664,35 @@ class OpmetingFormulierNavigatieController {
 
     final actieveKlantNaam = leesKlantNaam().trim();
     await herlaadOpmetingen(actieveKlantNaam.isEmpty ? null : actieveKlantNaam);
+  }
+
+  Future<void> _bewaarVolledigFicheResultaatOpnieuw(
+    overzicht.OpmetingOverzichtRaamItem resultaat,
+  ) async {
+    final positieId = resultaat.id.trim();
+    if (positieId.isEmpty) return;
+
+    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+    final index = alleOpmetingen.indexWhere(
+      (opmeting) => opmeting.id.trim() == positieId,
+    );
+
+    final bijgewerkteOpmetingen =
+        List<overzicht.OpmetingOverzichtRaamItem>.from(alleOpmetingen);
+
+    if (index >= 0) {
+      bijgewerkteOpmetingen[index] = resultaat;
+    } else {
+      bijgewerkteOpmetingen.add(resultaat);
+    }
+
+    // Bewaar exact het volledige item dat door de fiche werd teruggegeven.
+    // Gebruik bewust de sync-opslagvariant, zodat het bewaren hier niet eerst
+    // opnieuw een download/merge kan starten en het gespecialiseerde model
+    // opnieuw kan verliezen voordat het overzicht wordt herladen.
+    await AppStorage.bewaarOpmetingenVoorSync(bijgewerkteOpmetingen);
+    await OneDriveSyncService.registreerLokaleWijziging();
+    OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   Future<void> _wachtTotPopupEnDialogGeslotenZijn() async {
