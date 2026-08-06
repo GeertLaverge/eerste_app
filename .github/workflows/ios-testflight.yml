@@ -21,7 +21,7 @@ on:
 
 jobs:
   testflight:
-    runs-on: macos-26
+    runs-on: macos-15
 
     steps:
       - name: Checkout code
@@ -32,6 +32,21 @@ jobs:
         with:
           flutter-version: '3.41.6'
           cache: true
+
+      - name: Select latest installed Xcode 26
+        shell: bash
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' -print | sort | tail -n 1)
+
+          if [[ -z "$XCODE_PATH" ]]; then
+            echo "::error::Er werd geen geïnstalleerde Xcode 26-versie gevonden op de macOS 15-runner."
+            exit 1
+          fi
+
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          echo "Geselecteerde Xcode: $XCODE_PATH"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: Flutter pub get
         run: flutter pub get
