@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-HOME-MENU-20260806
 // THIMACO-CONTROLE: HOME-IPHONE-CAPSULEKNOPPEN-MET-BESTAANDE-ROUTES-20260805
 // THIMACO-CONTROLE: MAGAZIJN-HOME-ROUTE-20260804
 import 'package:flutter/material.dart';
@@ -13,12 +14,16 @@ class HomeZijMenu extends StatelessWidget {
   final bool compact;
   final Future<void> Function()? onAfsluiten;
   final bool afsluitenBezig;
+  final bool toonFinancieleKluis;
+  final Future<void> Function()? onFinancieleKluis;
 
   const HomeZijMenu({
     super.key,
     required this.compact,
     this.onAfsluiten,
     this.afsluitenBezig = false,
+    this.toonFinancieleKluis = false,
+    this.onFinancieleKluis,
   });
 
   static const Color groen = Color(0xFF0B7A3B);
@@ -60,6 +65,13 @@ class HomeZijMenu extends StatelessWidget {
                   _menuKnop(context, 'Opmeting', Icons.straighten_outlined),
                   _menuKnop(context, 'Puinzak', Icons.delete_outline),
                   _menuKnop(context, 'Magazijn', Icons.inventory_2_outlined),
+                  if (toonFinancieleKluis)
+                    _menuKnop(
+                      context,
+                      'Financiële\nkluis',
+                      Icons.security_outlined,
+                      onTap: onFinancieleKluis,
+                    ),
                   _menuKnop(
                     context,
                     'Bibliotheek',

@@ -1301,7 +1301,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                                       color: statusAchtergrond,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: statusKleur.withOpacity(0.28),
+                                        color: statusKleur.withValues(
+                                          alpha: 0.28,
+                                        ),
                                       ),
                                     ),
                                     child: Icon(

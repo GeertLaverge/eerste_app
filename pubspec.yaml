@@ -2,11 +2,7 @@ name: eerste_app
 description: Eerste Flutter applicatie
 publish_to: 'none'
 
-version: 1.0.0+238
-
-
-
-
+version: 1.0.0+239
 
 environment:
   sdk: '^3.11.0'
@@ -45,6 +41,15 @@ dependencies:
   timezone: ^0.9.4
   printing: ^5.14.3
   mobile_scanner: ^7.4.0
+
+  # Beveiligde financiële kluis
+  local_auth: ^3.0.2
+  flutter_secure_storage: ^10.3.1
+  cryptography: ^2.9.0
+  cryptography_flutter: ^2.3.4
+  share_plus: ^12.0.2
+  cross_file: ^0.3.5+4
+  file_picker: ^11.0.2
 
 dev_dependencies:
   flutter_test:

@@ -2,9 +2,26 @@ name: iOS TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Welke iOS-build wil je maken?'
+        required: true
+        default: normaal
+        type: choice
+        options:
+          - normaal
+          - eigenaar
+      build_number:
+        description: 'Nieuw uniek TestFlight-buildnummer, hoger dan het vorige'
+        required: true
+        type: string
   push:
     branches:
       - main
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
 
 jobs:
   testflight:
@@ -18,6 +35,7 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.6'
+          cache: true
 
       - name: Flutter pub get
         run: flutter pub get
@@ -28,36 +46,76 @@ jobs:
       - name: Create App Store Connect API key
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.APPSTORE_PRIVATE_KEY }}" > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
+          printf "%s" "${{ secrets.APPSTORE_PRIVATE_KEY }}" \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APPSTORE_KEY_ID }}.p8
 
       - name: Install signing certificate
         run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          CERTIFICATE_PATH=$RUNNER_TEMP/ios_distribution.p12
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          CERTIFICATE_PATH="$RUNNER_TEMP/ios_distribution.p12"
 
-          echo "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}" | base64 --decode > $CERTIFICATE_PATH
+          printf "%s" "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}" \
+            | base64 --decode > "$CERTIFICATE_PATH"
 
-          security create-keychain -p "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" $KEYCHAIN_PATH
+          security create-keychain \
+            -p "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" \
+            "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain \
+            -p "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" \
+            "$KEYCHAIN_PATH"
 
-          security import $CERTIFICATE_PATH \
+          security import "$CERTIFICATE_PATH" \
             -P "${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}" \
             -A \
             -t cert \
             -f pkcs12 \
-            -k $KEYCHAIN_PATH
+            -k "$KEYCHAIN_PATH"
 
-          security list-keychains -d user -s $KEYCHAIN_PATH
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Install provisioning profile
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          printf "%s" "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/thimaco.mobileprovision
+          printf "%s" "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" \
+            | base64 --decode \
+            > ~/Library/MobileDevice/Provisioning\ Profiles/thimaco.mobileprovision
 
-      - name: Build Flutter iOS without codesign
+      # Een gewone push naar main maakt altijd de gewone personeelsbuild.
+      # De financiële knop en route zijn daarin niet opgenomen.
+      - name: Build normal iOS on push
+        if: ${{ github.event_name == 'push' }}
         run: flutter build ios --release --no-codesign
+
+      # Een handmatig gestarte gewone build gebruikt het ingegeven unieke buildnummer.
+      - name: Build normal iOS manually
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_type == 'normaal' }}
+        run: |
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-number="${{ inputs.build_number }}"
+
+      # De eigenaarbuild kan uitsluitend handmatig gestart worden.
+      # Alleen de SHA-256-hash staat in GitHub; de papieren activatiecode nooit.
+      - name: Build financial owner iOS manually
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_type == 'eigenaar' }}
+        env:
+          THIMACO_FINANCE_ACTIVATION_SHA256: ${{ secrets.THIMACO_FINANCE_ACTIVATION_SHA256 }}
+        run: |
+          if [[ ! "$THIMACO_FINANCE_ACTIVATION_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "::error::GitHub Secret THIMACO_FINANCE_ACTIVATION_SHA256 ontbreekt of is geen geldige SHA-256-hash."
+            exit 1
+          fi
+
+          flutter build ios \
+            --release \
+            --no-codesign \
+            --build-number="${{ inputs.build_number }}" \
+            --dart-define=THIMACO_FINANCE_OWNER_BUILD=true \
+            --dart-define=THIMACO_FINANCE_ACTIVATION_SHA256="$THIMACO_FINANCE_ACTIVATION_SHA256"
 
       - name: Archive signed iOS app
         run: |
@@ -68,12 +126,12 @@ jobs:
             -archivePath build/ios/archive/Runner.xcarchive \
             DEVELOPMENT_TEAM=D788LU8M3B \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            
+            CODE_SIGN_IDENTITY="Apple Distribution"
 
       - name: Check archive entitlements
         run: |
-          codesign -d --entitlements :- build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+          codesign -d --entitlements :- \
+            build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
 
       - name: Export signed IPA
         run: |
@@ -84,21 +142,51 @@ jobs:
 
       - name: Check entitlements after export
         run: |
-          APP_PATH=$(find build/ios/ipa -name "*.ipa" -print -quit)
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" -print -quit)
+
+          if [[ -z "$IPA_PATH" ]]; then
+            echo "::error::Er werd geen IPA-bestand gevonden."
+            exit 1
+          fi
+
+          rm -rf build/ios/check
           mkdir -p build/ios/check
-          unzip -q "$APP_PATH" -d build/ios/check
+          unzip -q "$IPA_PATH" -d build/ios/check
           codesign -d --entitlements :- build/ios/check/Payload/Runner.app
 
-      - name: Upload IPA artifact
+      # Een eigenaar-IPA wordt bewust niet als downloadbaar GitHub-artifact bewaard.
+      - name: Upload normal IPA artifact
+        if: ${{ github.event_name == 'push' || inputs.build_type == 'normaal' }}
         uses: actions/upload-artifact@v4
         with:
           name: thimaco-ios-ipa
           path: build/ios/ipa/*.ipa
+          retention-days: 7
 
       - name: Upload to TestFlight
         run: |
           xcrun altool --upload-app \
             --type ios \
             --file build/ios/ipa/*.ipa \
-            --apiKey ${{ secrets.APPSTORE_KEY_ID }} \
-            --apiIssuer ${{ secrets.APPSTORE_ISSUER_ID }}
+            --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
+
+      - name: Build summary
+        if: always()
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_type }}" == "eigenaar" ]]; then
+            {
+              echo "### Financiële eigenaarbuild"
+              echo ""
+              echo "- Handmatig opgebouwd"
+              echo "- Buildnummer: ${{ inputs.build_number }}"
+              echo "- Geen eigenaar-IPA als GitHub-artifact bewaard"
+              echo "- Na verwerking in TestFlight uitsluitend aan de privé-eigenaargroep toevoegen"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### Gewone Thimaco-build"
+              echo ""
+              echo "- Financiële kluis niet zichtbaar"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

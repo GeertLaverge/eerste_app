@@ -1,14 +1,16 @@
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-INITIALISATIE-20260806
 import 'package:flutter/material.dart';
 
-import 'paginas/home_pagina_nieuw.dart';
-import 'helpers/agenda/agenda_melding_service.dart';
 import 'helpers/adres/postcode_helper.dart';
+import 'helpers/agenda/agenda_melding_service.dart';
+import 'helpers/financien/beveiliging/financiele_kluis_sessie_controller.dart';
+import 'paginas/home_pagina_nieuw.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await AgendaMeldingService.initialiseren();
   await PostcodeHelper.initialiseren();
+  await FinancieleKluisSessieController.instance.initialiseer();
 
   runApp(const ThimacoApp());
 }

@@ -1,4 +1,5 @@
-﻿// THIMACO-CONTROLE: HOME-SNEL-AFSLUITEN-ZONDER-FOTO-BLOKKERING-20260805
+﻿// THIMACO-CONTROLE: FINANCIELE-KLUIS-HOME-KOPPELING-20260806
+// THIMACO-CONTROLE: HOME-SNEL-AFSLUITEN-ZONDER-FOTO-BLOKKERING-20260805
 // THIMACO-CONTROLE: HOME-ACTUELE-PAGINA-MET-IPHONE-MENU-20260805
 // THIMACO-CONTROLE: HOME-OPSLAAN-EN-SLUITEN-ZONDER-MICROSOFT-AFMELDING-20260805
 // THIMACO-CONTROLE: HOME-GROENE-STATUSBALK-20260805
@@ -15,6 +16,8 @@ import '../helpers/homepagina/home_boven_balk.dart';
 import '../helpers/homepagina/home_dashboard.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
+import '../helpers/financien/beveiliging/financiele_kluis_sessie_controller.dart';
+import '../helpers/financien/paginas/financiele_kluis_pagina.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
 
@@ -41,11 +44,15 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
   bool _programmaAfgesloten = false;
   int _laatsteVerwerkteDownloadVersie = 0;
 
+  final FinancieleKluisSessieController _financieleKluisController =
+      FinancieleKluisSessieController.instance;
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
+    _financieleKluisController.addListener(_verwerkFinancieleKluisWijziging);
 
     _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
 
@@ -71,6 +78,8 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     );
 
     WidgetsBinding.instance.removeObserver(this);
+    _financieleKluisController.removeListener(_verwerkFinancieleKluisWijziging);
+    _financieleKluisController.vergrendel();
 
     super.dispose();
   }
@@ -88,7 +97,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.detached) {
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.hidden) {
+      _financieleKluisController.vergrendel();
       OneDriveSyncService().uploadBackupOpAchtergrond();
     }
   }
@@ -291,6 +302,26 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     });
   }
 
+  void _verwerkFinancieleKluisWijziging() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+  }
+
+  Future<void> _openFinancieleKluis() async {
+    if (!_financieleKluisController.magMenuTonen || !mounted) {
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const FinancieleKluisPagina()),
+    );
+
+    _financieleKluisController.vergrendel();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_programmaAfgesloten) {
@@ -373,6 +404,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                         compact: compactZijMenu,
                         onAfsluiten: _opslaanEnSluiten,
                         afsluitenBezig: _opslaanEnSluitenBezig,
+                        toonFinancieleKluis:
+                            _financieleKluisController.magMenuTonen,
+                        onFinancieleKluis: _openFinancieleKluis,
                       ),
                       Expanded(
                         child: ListView(

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-NATIVE-PRIVACY-SCHILD-20260806
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-DAGELIJKSE-IMAP-20260802
 
 import Flutter
@@ -9,16 +10,31 @@ import UIKit
   MFMailComposeViewControllerDelegate
 {
   private static let mailKanaalNaam = "be.thimaco.app/offerte_mail"
+  private static let privacyKanaalNaam = "be.thimaco.app/financiele_privacy"
+  private static let privacySchildTag = 0x54484D46
+
   private var mailResultaat: FlutterResult?
+  private var financieelSchermActief = false
 
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(appWordtInactief(_:)),
+      name: UIApplication.willResignActiveNotification,
+      object: nil
+    )
+
     return super.application(
       application,
       didFinishLaunchingWithOptions: launchOptions
     )
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
   }
 
   func didInitializeImplicitFlutterEngine(
@@ -26,9 +42,11 @@ import UIKit
   ) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
 
+    let messenger = engineBridge.applicationRegistrar.messenger()
+
     let mailKanaal = FlutterMethodChannel(
       name: Self.mailKanaalNaam,
-      binaryMessenger: engineBridge.applicationRegistrar.messenger()
+      binaryMessenger: messenger
     )
 
     mailKanaal.setMethodCallHandler { [weak self] call, result in
@@ -39,6 +57,175 @@ import UIKit
 
       self?.openMailComposer(call: call, result: result)
     }
+
+    let privacyKanaal = FlutterMethodChannel(
+      name: Self.privacyKanaalNaam,
+      binaryMessenger: messenger
+    )
+
+    privacyKanaal.setMethodCallHandler { [weak self] call, result in
+      guard let self = self else {
+        result(
+          FlutterError(
+            code: "PRIVACY_GEEN_APPDELEGATE",
+            message: "Het financiële privacyschild is niet beschikbaar.",
+            details: nil
+          )
+        )
+        return
+      }
+
+      switch call.method {
+      case "setSensitiveScreenActive":
+        let actief = call.arguments as? Bool ?? false
+        self.financieelSchermActief = actief
+
+        if !actief {
+          self.verwijderPrivacySchild()
+        }
+
+        result(nil)
+
+      case "hidePrivacyShield":
+        self.verwijderPrivacySchild()
+        result(nil)
+
+      case "excludeFromBackup":
+        guard let pad = call.arguments as? String, !pad.isEmpty else {
+          result(
+            FlutterError(
+              code: "PRIVACY_ONGELDIG_PAD",
+              message: "Het financiële opslagpad ontbreekt.",
+              details: nil
+            )
+          )
+          return
+        }
+
+        do {
+          var waarden = URLResourceValues()
+          waarden.isExcludedFromBackup = true
+          var url = URL(fileURLWithPath: pad, isDirectory: true)
+          try url.setResourceValues(waarden)
+          result(true)
+        } catch {
+          result(
+            FlutterError(
+              code: "PRIVACY_BACKUP_UITSLUITEN_MISLUKT",
+              message:
+                "De financiële opslag kon niet van iOS-reservekopieën worden uitgesloten.",
+              details: error.localizedDescription
+            )
+          )
+        }
+
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  @objc private func appWordtInactief(_ melding: Notification) {
+    guard financieelSchermActief else {
+      return
+    }
+
+    toonPrivacySchild()
+  }
+
+  private func toonPrivacySchild() {
+    let werk = {
+      for venster in self.alleZichtbareVensters() {
+        if venster.viewWithTag(Self.privacySchildTag) != nil {
+          continue
+        }
+
+        venster.endEditing(true)
+
+        let schild = UIView(frame: venster.bounds)
+        schild.tag = Self.privacySchildTag
+        schild.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        schild.backgroundColor = UIColor(
+          red: 11.0 / 255.0,
+          green: 122.0 / 255.0,
+          blue: 59.0 / 255.0,
+          alpha: 1.0
+        )
+
+        let icoon = UIImageView(
+          image: UIImage(systemName: "lock.shield.fill")
+        )
+        icoon.tintColor = .white
+        icoon.contentMode = .scaleAspectFit
+        icoon.translatesAutoresizingMaskIntoConstraints = false
+        icoon.widthAnchor.constraint(equalToConstant: 58).isActive = true
+        icoon.heightAnchor.constraint(equalToConstant: 58).isActive = true
+
+        let titel = UILabel()
+        titel.text = "Financiële kluis vergrendeld"
+        titel.textColor = .white
+        titel.font = UIFont.systemFont(ofSize: 22, weight: .bold)
+        titel.textAlignment = .center
+        titel.numberOfLines = 0
+
+        let uitleg = UILabel()
+        uitleg.text = "Open de app opnieuw en bevestig met Face ID."
+        uitleg.textColor = UIColor.white.withAlphaComponent(0.88)
+        uitleg.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        uitleg.textAlignment = .center
+        uitleg.numberOfLines = 0
+
+        let stapel = UIStackView(arrangedSubviews: [icoon, titel, uitleg])
+        stapel.axis = .vertical
+        stapel.alignment = .center
+        stapel.spacing = 12
+        stapel.translatesAutoresizingMaskIntoConstraints = false
+
+        schild.addSubview(stapel)
+        venster.addSubview(schild)
+        venster.bringSubviewToFront(schild)
+
+        NSLayoutConstraint.activate([
+          stapel.centerXAnchor.constraint(equalTo: schild.centerXAnchor),
+          stapel.centerYAnchor.constraint(equalTo: schild.centerYAnchor),
+          stapel.leadingAnchor.constraint(
+            greaterThanOrEqualTo: schild.leadingAnchor,
+            constant: 28
+          ),
+          stapel.trailingAnchor.constraint(
+            lessThanOrEqualTo: schild.trailingAnchor,
+            constant: -28
+          ),
+        ])
+      }
+    }
+
+    if Thread.isMainThread {
+      werk()
+    } else {
+      DispatchQueue.main.async(execute: werk)
+    }
+  }
+
+  private func verwijderPrivacySchild() {
+    let werk = {
+      for venster in self.alleZichtbareVensters() {
+        venster.viewWithTag(Self.privacySchildTag)?.removeFromSuperview()
+      }
+    }
+
+    if Thread.isMainThread {
+      werk()
+    } else {
+      DispatchQueue.main.async(execute: werk)
+    }
+  }
+
+  private func alleZichtbareVensters() -> [UIWindow] {
+    return UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap { $0.windows }
+      .filter { !$0.isHidden && $0.alpha > 0 }
   }
 
   private func openMailComposer(

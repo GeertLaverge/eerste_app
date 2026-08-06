@@ -60,6 +60,9 @@
 	<key>NSCameraUsageDescription</key>
 	<string>Thimaco gebruikt de camera om foto's te nemen voor werfinstructies en klantendossiers.</string>
 
+	<key>NSFaceIDUsageDescription</key>
+	<string>Face ID beschermt de vertrouwelijke financiële gegevens van Thimaco.</string>
+
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Thimaco gebruikt de fotobibliotheek om bestaande foto's toe te voegen aan klantendossiers.</string>
 
