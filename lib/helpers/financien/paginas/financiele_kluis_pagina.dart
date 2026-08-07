@@ -1,10 +1,11 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE1-20260806
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-20260807
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../beveiliging/financiele_kluis_sessie_controller.dart';
 import '../beveiliging/financiele_privacy_scherm_service.dart';
 import '../opslag/financiele_versleuteling_service.dart';
+import 'financiele_cockpit_pagina.dart';
 
 class FinancieleKluisPagina extends StatefulWidget {
   const FinancieleKluisPagina({super.key});
@@ -282,169 +283,9 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
   }
 
   Widget _bouwOntgrendeld() {
-    return ListView(
-      padding: const EdgeInsets.all(18),
-      children: <Widget>[
-        _bouwIntroKaart(
-          icoon: Icons.lock_open_rounded,
-          titel: 'Financiële kluis ontgrendeld',
-          tekst:
-              'De beveiligde fundering werkt. Rekeningstanden en facturen '
-              'worden in de volgende fase aan deze lokale kluis toegevoegd.',
-        ),
-        const SizedBox(height: 12),
-        _bouwStatusRaster(),
-        const SizedBox(height: 14),
-        _bouwSectieKaart(
-          titel: 'Noodherstel',
-          icoon: Icons.health_and_safety_outlined,
-          kinderen: <Widget>[
-            const Text(
-              'Maak na belangrijke wijzigingen een nieuwe versleutelde '
-              'noodback-up. Hiervoor moet je de papieren herstelcode opnieuw '
-              'invoeren; de app bewaart die code nooit.',
-              style: TextStyle(
-                color: _tekstGrijs,
-                height: 1.45,
-                fontSize: 12.5,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Builder(
-              builder: (knopContext) {
-                return OutlinedButton.icon(
-                  style: _secundaireKnopStijl(),
-                  onPressed: _controller.bewerkingBezig
-                      ? null
-                      : () => _maakNoodbackup(knopContext),
-                  icon: const Icon(Icons.backup_outlined),
-                  label: const Text('Versleutelde noodback-up maken'),
-                );
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        _bouwWaarschuwing(
-          'Maak geen schermafbeelding van bedragen of herstelcodes. '
-          'De kluis vergrendelt automatisch wanneer de app naar de '
-          'achtergrond gaat of twee minuten niet wordt gebruikt.',
-        ),
-        const SizedBox(height: 14),
-        OutlinedButton.icon(
-          style: _secundaireKnopStijl(),
-          onPressed: _controller.vergrendel,
-          icon: const Icon(Icons.lock_outline_rounded),
-          label: const Text('Kluis nu vergrendelen'),
-        ),
-      ],
-    );
-  }
-
-  Widget _bouwStatusRaster() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final breed = constraints.maxWidth >= 700;
-        final kaarten = <Widget>[
-          _statusKaart(
-            icoon: Icons.tablet_mac_outlined,
-            titel: 'Eigenaarstoestel',
-            waarde: 'Deze iPad',
-          ),
-          _statusKaart(
-            icoon: Icons.cloud_off_outlined,
-            titel: 'OneDrive-sync',
-            waarde: 'Uitgeschakeld',
-          ),
-          _statusKaart(
-            icoon: Icons.enhanced_encryption_outlined,
-            titel: 'Versleuteling',
-            waarde: 'AES-256-GCM',
-          ),
-          _statusKaart(
-            icoon: Icons.timer_outlined,
-            titel: 'Automatisch slot',
-            waarde: '2 minuten',
-          ),
-        ];
-
-        if (!breed) {
-          return Column(
-            children: <Widget>[
-              for (var index = 0; index < kaarten.length; index++) ...<Widget>[
-                kaarten[index],
-                if (index != kaarten.length - 1) const SizedBox(height: 8),
-              ],
-            ],
-          );
-        }
-
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: kaarten
-              .map(
-                (kaart) => SizedBox(
-                  width: (constraints.maxWidth - 8) / 2,
-                  child: kaart,
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-
-  Widget _statusKaart({
-    required IconData icoon,
-    required String titel,
-    required String waarde,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: _rand),
-      ),
-      child: Row(
-        children: <Widget>[
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icoon, color: _groen, size: 20),
-          ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  titel,
-                  style: const TextStyle(
-                    color: _tekstGrijs,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  waarde,
-                  style: const TextStyle(
-                    color: _tekstDonker,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return FinancieleCockpitPagina(
+      controller: _controller,
+      onMaakNoodbackup: () => _maakNoodbackup(context),
     );
   }
 
@@ -910,42 +751,6 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bouwSectieKaart({
-    required String titel,
-    required IconData icoon,
-    required List<Widget> kinderen,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _rand),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(icoon, color: _groen, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                titel,
-                style: const TextStyle(
-                  color: _tekstDonker,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 11),
-          ...kinderen,
         ],
       ),
     );

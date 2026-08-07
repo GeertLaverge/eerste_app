@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-20260806
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-20260807
 import 'dart:async';
 import 'dart:ui';
 
@@ -166,6 +166,43 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       rethrow;
     } finally {
       _stopBewerking();
+    }
+  }
+
+  Future<void> bewaarInhoud(Map<String, dynamic> nieuweInhoud) async {
+    registreerActiviteit();
+
+    final actieveKey = _masterKey;
+    if (!isOntgrendeld || actieveKey == null || _inhoud == null) {
+      throw const FinancieleSessieException(
+        'Ontgrendel de financiële kluis voordat je gegevens opslaat.',
+      );
+    }
+
+    final key = Uint8List.fromList(actieveKey);
+    _startBewerking();
+
+    try {
+      final bijgewerkt = Map<String, dynamic>.from(nieuweInhoud)
+        ..['gewijzigdOp'] = DateTime.now().toUtc().toIso8601String();
+
+      await _opslagService.bewaarOntsleuteld(
+        inhoud: bijgewerkt,
+        masterKey: key,
+      );
+
+      if (_status == FinancieleKluisStatus.ontgrendeld && _masterKey != null) {
+        _inhoud = bijgewerkt;
+        _foutBericht = '';
+        notifyListeners();
+      }
+    } catch (fout) {
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      key.fillRange(0, key.length, 0);
+      _stopBewerking();
+      registreerActiviteit();
     }
   }
 

@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-LOKALE-OPSLAG-20260806
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-LOKALE-OPSLAG-FASE2A-20260807
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -37,6 +37,8 @@ class FinancieleOpslagService {
       'rekeningen': <dynamic>[],
       'teBetalenFacturen': <dynamic>[],
       'teOntvangenFacturen': <dynamic>[],
+      'andereOntvangsten': <dynamic>[],
+      'vasteKosten': <dynamic>[],
       'notities': <dynamic>[],
       'herstelcodeVerifier': herstelcodeVerifier,
     };
@@ -61,7 +63,7 @@ class FinancieleOpslagService {
         // hersteltransactie is onderbroken. Wanneer de actuele combinatie van
         // sleutel en bestand werkt, is de nieuwe toestand geldig.
         await _verwijderBestandZonderFout(vorigeVersie);
-        return inhoud;
+        return _normaliseerInhoud(inhoud);
       } catch (fout) {
         huidigeFout = fout;
       }
@@ -80,7 +82,7 @@ class FinancieleOpslagService {
         // veilig en consistent.
         await _verwijderBestandZonderFout(bestand);
         await vorigeVersie.rename(bestand.path);
-        return oudeInhoud;
+        return _normaliseerInhoud(oudeInhoud);
       } catch (_) {
         // De algemene fout hieronder voorkomt dat cryptografische details
         // in de gebruikersinterface terechtkomen.
@@ -102,7 +104,7 @@ class FinancieleOpslagService {
     required Map<String, dynamic> inhoud,
     required Uint8List masterKey,
   }) async {
-    final bijgewerkt = Map<String, dynamic>.from(inhoud)
+    final bijgewerkt = _normaliseerInhoud(inhoud)
       ..['gewijzigdOp'] = DateTime.now().toUtc().toIso8601String();
 
     final envelop = await _versleutelingService.versleutelJson(
@@ -195,6 +197,27 @@ class FinancieleOpslagService {
     await _verwijderBestandZonderFout(File('${bestand.path}.tmp'));
     await _verwijderBestandZonderFout(File('${bestand.path}.bak'));
     await _verwijderBestandZonderFout(bestand);
+  }
+
+  Map<String, dynamic> _normaliseerInhoud(Map<String, dynamic> inhoud) {
+    final resultaat = Map<String, dynamic>.from(inhoud);
+
+    void zorgVoorLijst(String sleutel) {
+      if (resultaat[sleutel] is! List) {
+        resultaat[sleutel] = <dynamic>[];
+      }
+    }
+
+    resultaat['schemaVersie'] ??= 1;
+    resultaat['aangemaaktOp'] ??= DateTime.now().toUtc().toIso8601String();
+    zorgVoorLijst('rekeningen');
+    zorgVoorLijst('teBetalenFacturen');
+    zorgVoorLijst('teOntvangenFacturen');
+    zorgVoorLijst('andereOntvangsten');
+    zorgVoorLijst('vasteKosten');
+    zorgVoorLijst('notities');
+
+    return resultaat;
   }
 
   Future<Map<String, dynamic>> _leesEnvelopUitBestand(File bestand) async {
