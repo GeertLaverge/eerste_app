@@ -15,9 +15,6 @@ on:
         description: 'Nieuw uniek TestFlight-buildnummer, hoger dan het vorige'
         required: true
         type: string
-  push:
-    branches:
-      - main
 
 jobs:
   testflight:
@@ -47,6 +44,30 @@ jobs:
           echo "Geselecteerde Xcode: $XCODE_PATH"
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Controleer buildtype en buildnummer
+        shell: bash
+        run: |
+          BUILD_TYPE="${{ inputs.build_type }}"
+          BUILD_NUMBER="${{ inputs.build_number }}"
+
+          if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo "::error::Het buildnummer moet uitsluitend uit cijfers bestaan."
+            exit 1
+          fi
+
+          if [[ "$BUILD_TYPE" == "eigenaar" && $((BUILD_NUMBER % 2)) -ne 0 ]]; then
+            echo "::error::Een eigenaarbuild moet een EVEN buildnummer gebruiken."
+            exit 1
+          fi
+
+          if [[ "$BUILD_TYPE" == "normaal" && $((BUILD_NUMBER % 2)) -ne 1 ]]; then
+            echo "::error::Een normale build moet een ONEVEN buildnummer gebruiken."
+            exit 1
+          fi
+
+          echo "Buildtype: $BUILD_TYPE"
+          echo "Buildnummer: $BUILD_NUMBER"
 
       - name: Flutter pub get
         run: flutter pub get
@@ -94,25 +115,21 @@ jobs:
             | base64 --decode \
             > ~/Library/MobileDevice/Provisioning\ Profiles/thimaco.mobileprovision
 
-      # Een gewone push naar main maakt altijd de gewone personeelsbuild.
-      # De financiële knop en route zijn daarin niet opgenomen.
-      - name: Build normal iOS on push
-        if: ${{ github.event_name == 'push' }}
-        run: flutter build ios --release --no-codesign
-
-      # Een handmatig gestarte gewone build gebruikt het ingegeven unieke buildnummer.
+      # Gewone personeelsbuild: altijd handmatig gestart.
+      # ONEVEN buildnummers zijn gereserveerd voor normale builds.
       - name: Build normal iOS manually
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_type == 'normaal' }}
+        if: ${{ inputs.build_type == 'normaal' }}
         run: |
           flutter build ios \
             --release \
             --no-codesign \
             --build-number="${{ inputs.build_number }}"
 
-      # De eigenaarbuild kan uitsluitend handmatig gestart worden.
+      # Financiële eigenaarbuild: altijd handmatig gestart.
+      # EVEN buildnummers zijn gereserveerd voor eigenaarbuilds.
       # Alleen de SHA-256-hash staat in GitHub; de papieren activatiecode nooit.
       - name: Build financial owner iOS manually
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_type == 'eigenaar' }}
+        if: ${{ inputs.build_type == 'eigenaar' }}
         env:
           THIMACO_FINANCE_ACTIVATION_SHA256: ${{ secrets.THIMACO_FINANCE_ACTIVATION_SHA256 }}
         run: |
@@ -165,9 +182,9 @@ jobs:
           unzip -q "$IPA_PATH" -d build/ios/check
           codesign -d --entitlements :- build/ios/check/Payload/Runner.app
 
-      # Een eigenaar-IPA wordt bewust niet als downloadbaar GitHub-artifact bewaard.
+      # Alleen de gewone build wordt als tijdelijk GitHub-artifact bewaard.
       - name: Upload normal IPA artifact
-        if: ${{ github.event_name == 'push' || inputs.build_type == 'normaal' }}
+        if: ${{ inputs.build_type == 'normaal' }}
         uses: actions/upload-artifact@v4
         with:
           name: thimaco-ios-ipa
@@ -185,12 +202,13 @@ jobs:
       - name: Build summary
         if: always()
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.build_type }}" == "eigenaar" ]]; then
+          if [[ "${{ inputs.build_type }}" == "eigenaar" ]]; then
             {
               echo "### Financiële eigenaarbuild"
               echo ""
               echo "- Handmatig opgebouwd"
               echo "- Buildnummer: ${{ inputs.build_number }}"
+              echo "- EVEN buildnummer = eigenaarbuild"
               echo "- Geen eigenaar-IPA als GitHub-artifact bewaard"
               echo "- Na verwerking in TestFlight uitsluitend aan de privé-eigenaargroep toevoegen"
             } >> "$GITHUB_STEP_SUMMARY"
@@ -198,6 +216,9 @@ jobs:
             {
               echo "### Gewone Thimaco-build"
               echo ""
+              echo "- Handmatig opgebouwd"
+              echo "- Buildnummer: ${{ inputs.build_number }}"
+              echo "- ONEVEN buildnummer = normale build"
               echo "- Financiële kluis niet zichtbaar"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
