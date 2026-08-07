@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-KEYCHAIN-BIOMETRIE-20260806
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-EXPLICIETE-BIOMETRIE-20260807
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -187,6 +187,16 @@ class FinancieleToegangService {
     }
 
     try {
+      // Start bij ELKE kluisontgrendeling eerst een eigen biometrische
+      // controle. Zo kan een recente Touch ID/Face ID-toestelontgrendeling
+      // niet als enige controle volstaan om de financiële kluis te openen.
+      await _vereisBiometrischeAuthenticatie(
+        reden:
+            'Bevestig opnieuw met Touch ID of Face ID om de financiële kluis te openen.',
+      );
+
+      // Pas na de expliciete biometrische controle wordt de afzonderlijk
+      // beveiligde, toestelgebonden Keychain-sleutel gelezen.
       final waarde = await _masterKeyStorage.read(key: marker.keyNaam);
       if (waarde == null || waarde.trim().isEmpty) {
         throw const FinancieleToegangException(
