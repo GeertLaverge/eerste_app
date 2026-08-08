@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: TOEBEHORENKLEUR-LIJST-OPNIEUW-OPENEN-20260808-1506
+// THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-WISSEL-EN-FENEKO-FIX-20260808-1455
+// THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-RAL-ALIPLAST-WILMS-FENEKO-20260808-1433
 // THIMACO-CONTROLE: PROJECTKLEUR-RAL-ALIPLAST-WILMS-FENEKO-20260808
 // THIMACO-CONTROLE: KLANTNUMMER-IPAD-NUMERIEK-EN-LEEGMAKEN-20260729-1455
 // THIMACO-CONTROLE: OFFERTEVOLGNUMMER-VELDEN-LEEG-BIJ-FOCUS-20260726
@@ -13,7 +16,7 @@ import 'package:flutter/services.dart';
 import '../../app_storage.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import 'aliplast_kleuren.dart';
-import 'opmeting_project_kleur_bron_keuze_dialoog.dart';
+import 'opmeting_project_kleur_keuze_dialoog.dart';
 import 'opmeting_project_kleur_model.dart';
 import 'opmeting_project_titelhoofd_model.dart';
 import 'ral_classic_kleuren.dart';
@@ -119,6 +122,10 @@ class _OpmetingProjectTitelhoofdKaartState
 
   List<String> _wilmsProjectKleuren = const <String>[];
   List<String> _fenekoProjectKleuren = const <String>[];
+
+  String _toebehorenKleurBron =
+      OpmetingProjectTitelhoofd.standaardKleurBronToebehoren;
+  bool _toonAlleToebehorenKleuren = false;
 
   @override
   void initState() {
@@ -249,37 +256,146 @@ class _OpmetingProjectTitelhoofdKaartState
     }
   }
 
-  List<OpmetingProjectKleurBronOptie> get _projectKleurBronnen {
-    return <OpmetingProjectKleurBronOptie>[
-      OpmetingProjectKleurBronOptie(
-        id: 'ral',
-        label: 'RAL kleur',
-        kleuren: RalClassicKleuren.alle,
-        leegMelding: 'Er zijn geen RAL-kleuren beschikbaar.',
+  List<String> get _toebehorenKleuren {
+    return switch (_toebehorenKleurBron) {
+      OpmetingProjectTitelhoofd.kleurBronToebehorenRal =>
+        RalClassicKleuren.alle,
+      OpmetingProjectTitelhoofd.kleurBronToebehorenAliplast =>
+        AliplastKleuren.keuzeWaarden,
+      OpmetingProjectTitelhoofd.kleurBronToebehorenWilms =>
+        _wilmsProjectKleuren,
+      OpmetingProjectTitelhoofd.kleurBronToebehorenFeneko =>
+        _fenekoProjectKleuren,
+      _ => const <String>[],
+    };
+  }
+
+  String get _toebehorenKleurBronLabel {
+    return switch (_toebehorenKleurBron) {
+      OpmetingProjectTitelhoofd.kleurBronToebehorenAliplast => 'Aliplast',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenWilms => 'Wilms',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenFeneko => 'Feneko',
+      _ => 'RAL kleur',
+    };
+  }
+
+  String get _toebehorenKleurVeldLabel {
+    return switch (_toebehorenKleurBron) {
+      OpmetingProjectTitelhoofd.kleurBronToebehorenAliplast =>
+        'Aliplast-kleur toebehoren',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenWilms =>
+        'Wilms-kleur toebehoren',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenFeneko =>
+        'Feneko-kleur toebehoren',
+      _ => 'RAL-kleur toebehoren',
+    };
+  }
+
+  String get _toebehorenKleurLeegMelding {
+    return switch (_toebehorenKleurBron) {
+      OpmetingProjectTitelhoofd.kleurBronToebehorenFeneko =>
+        'Nog geen Feneko-kleuren ingevoerd. Vul ze in via Instellingen > Feneko.',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenWilms =>
+        'Nog geen Wilms-kleuren beschikbaar in Instellingen.',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenAliplast =>
+        'Er zijn geen Aliplast-kleuren beschikbaar.',
+      OpmetingProjectTitelhoofd.kleurBronToebehorenRal =>
+        'Er zijn geen RAL-kleuren beschikbaar.',
+      _ => 'Er zijn geen kleuren beschikbaar voor deze kleurbron.',
+    };
+  }
+
+  Iterable<String> _zoekToebehorenKleuren(String zoektekst) {
+    if (_toebehorenKleurBron ==
+        OpmetingProjectTitelhoofd.kleurBronToebehorenRal) {
+      return RalClassicKleuren.zoek(zoektekst);
+    }
+
+    final zoek = zoektekst.trim().toLowerCase();
+    final kleuren = _toebehorenKleuren;
+    if (zoek.isEmpty) return kleuren;
+
+    return kleuren.where((kleur) => kleur.toLowerCase().contains(zoek));
+  }
+
+  Widget _bouwToebehorenKleurBronVeld() {
+    return DropdownButtonFormField<String>(
+      key: ValueKey<String>('toebehoren-kleurbron-$_toebehorenKleurBron'),
+      initialValue: _toebehorenKleurBron,
+      isExpanded: true,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
+      style: const TextStyle(
+        color: _tekstDonker,
+        fontSize: 10.75,
+        fontWeight: FontWeight.w900,
       ),
-      OpmetingProjectKleurBronOptie(
-        id: 'aliplast',
-        label: 'Kleuren Aliplast',
-        kleuren: AliplastKleuren.keuzeWaarden,
-        leegMelding: 'Er zijn geen Aliplast-kleuren beschikbaar.',
+      decoration: InputDecoration(
+        hintText: 'Kleurbron toebehoren',
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+        isDense: true,
+        filled: true,
+        fillColor: const Color(0xFFF9FAFB),
+        prefixIcon: const Icon(
+          Icons.palette_outlined,
+          size: 16,
+          color: _tekstGrijs,
+        ),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: 30,
+          minHeight: 30,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: const BorderSide(color: _rand),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: const BorderSide(color: _rand),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(9),
+          borderSide: const BorderSide(color: _groen, width: 1.4),
+        ),
       ),
-      OpmetingProjectKleurBronOptie(
-        id: 'wilms',
-        label: 'Kleuren Wilms',
-        kleuren: _wilmsProjectKleuren,
-        leegMelding:
-            'Nog geen Wilms-kleuren beschikbaar. Vul ze in via '
-            'Instellingen > Voorzetscreens.',
-      ),
-      OpmetingProjectKleurBronOptie(
-        id: 'feneko',
-        label: 'Kleuren Feneko',
-        kleuren: _fenekoProjectKleuren,
-        leegMelding:
-            'Nog geen Feneko-kleuren ingevoerd. Vul ze in via '
-            'Instellingen > Feneko.',
-      ),
-    ];
+      items: const <DropdownMenuItem<String>>[
+        DropdownMenuItem<String>(
+          value: OpmetingProjectTitelhoofd.kleurBronToebehorenRal,
+          child: Text('RAL kleur'),
+        ),
+        DropdownMenuItem<String>(
+          value: OpmetingProjectTitelhoofd.kleurBronToebehorenAliplast,
+          child: Text('Aliplast'),
+        ),
+        DropdownMenuItem<String>(
+          value: OpmetingProjectTitelhoofd.kleurBronToebehorenWilms,
+          child: Text('Wilms'),
+        ),
+        DropdownMenuItem<String>(
+          value: OpmetingProjectTitelhoofd.kleurBronToebehorenFeneko,
+          child: Text('Feneko'),
+        ),
+      ],
+      onChanged: (waarde) async {
+        if (waarde == null || waarde == _toebehorenKleurBron) return;
+
+        _ralKleurToebehorenFocusNode.unfocus();
+        await _laadLeverancierKleuren();
+        if (!mounted) return;
+
+        _zetControllerTekst(_ralKleurToebehorenController, '');
+        if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
+          _zetControllerTekst(_kleurBuitenController, '');
+        }
+
+        setState(() {
+          _toebehorenKleurBron = waarde;
+          _toonAlleToebehorenKleuren = false;
+        });
+
+        _meldWijziging(kleurBronToebehoren: waarde);
+      },
+    );
   }
 
   @override
@@ -356,6 +472,7 @@ class _OpmetingProjectTitelhoofdKaartState
       _ralKleurToebehorenController,
       titelhoofd.ralKleurToebehoren,
     );
+    _toebehorenKleurBron = titelhoofd.kleurBronToebehoren;
     _zetControllerTekst(_kleurAfwijkingController, titelhoofd.kleurAfwijking);
     _zetControllerTekst(
       _kortingOmschrijvingController,
@@ -412,6 +529,7 @@ class _OpmetingProjectTitelhoofdKaartState
   void _meldWijziging({
     bool? berekenPrijzen,
     bool? buitenkleurGelijkAanToebehoren,
+    String? kleurBronToebehoren,
   }) {
     widget.onTitelhoofdGewijzigd(
       widget.titelhoofd.copyWith(
@@ -436,6 +554,7 @@ class _OpmetingProjectTitelhoofdKaartState
         projectKleurBinnen: _kleurBinnenController.text,
         projectKleurBuiten: _kleurBuitenController.text,
         ralKleurToebehoren: _ralKleurToebehorenController.text,
+        kleurBronToebehoren: kleurBronToebehoren ?? _toebehorenKleurBron,
         buitenkleurGelijkAanToebehoren:
             buitenkleurGelijkAanToebehoren ??
             widget.titelhoofd.buitenkleurGelijkAanToebehoren,
@@ -990,6 +1109,8 @@ class _OpmetingProjectTitelhoofdKaartState
               label: 'Buitenkleur',
               onChanged: _verwerkBuitenkleurGewijzigd,
             ),
+            const SizedBox(height: 5),
+            _bouwToebehorenKleurBronVeld(),
             const SizedBox(height: 5),
             _bouwRalKleurToebehorenVeld(),
             CheckboxListTile(
@@ -1611,13 +1732,18 @@ class _OpmetingProjectTitelhoofdKaartState
 
   Widget _bouwRalKleurToebehorenVeld() {
     return RawAutocomplete<String>(
+      key: ValueKey<String>('toebehoren-kleur-$_toebehorenKleurBron'),
       textEditingController: _ralKleurToebehorenController,
       focusNode: _ralKleurToebehorenFocusNode,
       displayStringForOption: (optie) => optie,
       optionsBuilder: (waarde) {
-        return RalClassicKleuren.zoek(waarde.text);
+        if (_toonAlleToebehorenKleuren) {
+          return _toebehorenKleuren;
+        }
+        return _zoekToebehorenKleuren(waarde.text);
       },
       onSelected: (waarde) {
+        _toonAlleToebehorenKleuren = false;
         _ralKleurToebehorenController.value = TextEditingValue(
           text: waarde,
           selection: TextSelection.collapsed(offset: waarde.length),
@@ -1636,7 +1762,7 @@ class _OpmetingProjectTitelhoofdKaartState
             fontWeight: FontWeight.w900,
           ),
           decoration: InputDecoration(
-            hintText: 'RAL-kleur toebehoren',
+            hintText: _toebehorenKleurVeldLabel,
             hintStyle: const TextStyle(
               color: _tekstGrijs,
               fontSize: 10.5,
@@ -1663,16 +1789,43 @@ class _OpmetingProjectTitelhoofdKaartState
               minHeight: 30,
             ),
             suffixIcon: IconButton(
-              tooltip: 'RAL-kleuren tonen',
+              tooltip: '$_toebehorenKleurBronLabel-kleuren tonen',
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints.tightFor(width: 30, height: 30),
               icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
               onPressed: () {
-                focusNode.requestFocus();
-                controller.selection = TextSelection(
-                  baseOffset: 0,
-                  extentOffset: controller.text.length,
+                if (_toebehorenKleuren.isEmpty) {
+                  ScaffoldMessenger.of(context)
+                    ..hideCurrentSnackBar()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(_toebehorenKleurLeegMelding),
+                        backgroundColor: _groen,
+                      ),
+                    );
+                  return;
+                }
+
+                // RawAutocomplete onthoudt na een keuze intern de geselecteerde
+                // optie. Alleen opnieuw focus geven opent de lijst dan niet meer.
+                // Door de tekst heel even programmatisch te wijzigen, wordt die
+                // interne selectie vrijgegeven. De zichtbare waarde blijft gelijk.
+                final huidigeTekst = controller.text;
+                _toonAlleToebehorenKleuren = true;
+                controller.value = TextEditingValue(
+                  text: '$huidigeTekst ',
+                  selection: TextSelection.collapsed(
+                    offset: huidigeTekst.length + 1,
+                  ),
                 );
+                controller.value = TextEditingValue(
+                  text: huidigeTekst,
+                  selection: TextSelection(
+                    baseOffset: 0,
+                    extentOffset: huidigeTekst.length,
+                  ),
+                );
+                focusNode.requestFocus();
               },
             ),
             suffixIconConstraints: const BoxConstraints(
@@ -1697,6 +1850,7 @@ class _OpmetingProjectTitelhoofdKaartState
             ),
           ),
           onChanged: (waarde) {
+            _toonAlleToebehorenKleuren = false;
             setState(() {});
             _verwerkToebehorenKleurGewijzigd(waarde);
           },
@@ -1744,40 +1898,6 @@ class _OpmetingProjectTitelhoofdKaartState
     );
   }
 
-  Future<void> _kiesProjectKleur({
-    required TextEditingController controller,
-    ValueChanged<String>? onChanged,
-  }) async {
-    await _laadLeverancierKleuren();
-
-    if (!mounted) {
-      return;
-    }
-
-    final waarde = await toonOpmetingProjectKleurBronKeuzeDialoog(
-      context: context,
-      bronnen: _projectKleurBronnen,
-      huidigeWaarde: controller.text,
-    );
-
-    if (!mounted || waarde == null) {
-      return;
-    }
-
-    setState(() {
-      controller.text = waarde;
-      controller.selection = TextSelection.collapsed(
-        offset: controller.text.length,
-      );
-    });
-
-    if (onChanged != null) {
-      onChanged(waarde);
-    } else {
-      _meldWijziging();
-    }
-  }
-
   Widget _bouwKleurVeld({
     required TextEditingController controller,
     required String label,
@@ -1787,7 +1907,31 @@ class _OpmetingProjectTitelhoofdKaartState
 
     return TextField(
       controller: controller,
-      textCapitalization: TextCapitalization.sentences,
+      readOnly: true,
+      onTap: () async {
+        final waarde = await toonOpmetingProjectKleurKeuzeDialoog(
+          context: context,
+          kleurMenus: widget.kleurMenus,
+          huidigeWaarde: controller.text,
+        );
+
+        if (!mounted || waarde == null) {
+          return;
+        }
+
+        setState(() {
+          controller.text = waarde;
+          controller.selection = TextSelection.collapsed(
+            offset: controller.text.length,
+          );
+        });
+
+        if (onChanged != null) {
+          onChanged(waarde);
+        } else {
+          _meldWijziging();
+        }
+      },
       style: const TextStyle(
         color: _tekstDonker,
         fontSize: 10.75,
@@ -1825,8 +1969,29 @@ class _OpmetingProjectTitelhoofdKaartState
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(width: 30, height: 30),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
-          onPressed: () =>
-              _kiesProjectKleur(controller: controller, onChanged: onChanged),
+          onPressed: () async {
+            final waarde = await toonOpmetingProjectKleurKeuzeDialoog(
+              context: context,
+              kleurMenus: widget.kleurMenus,
+              huidigeWaarde: controller.text,
+            );
+
+            if (!mounted || waarde == null) {
+              return;
+            }
+
+            setState(() {
+              controller.text = waarde;
+              controller.selection = TextSelection.collapsed(
+                offset: controller.text.length,
+              );
+            });
+            if (onChanged != null) {
+              onChanged(waarde);
+            } else {
+              _meldWijziging();
+            }
+          },
         ),
         suffixIconConstraints: const BoxConstraints(
           minWidth: 30,

@@ -241,17 +241,7 @@ class _BibliotheekFolderPaginaState extends State<BibliotheekFolderPagina> {
       final klanten = await AppStorage.laadAgendaKlantenVoorOpmeting();
       if (!mounted) return;
 
-      if (klanten.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Geen klanten gevonden in de blauwe agenda.'),
-            backgroundColor: _groen,
-          ),
-        );
-        return;
-      }
-
-      final klant = await showDialog<OpmetingAgendaKlantInfo>(
+      final ontvanger = await showDialog<_BibliotheekMailOntvanger>(
         context: context,
         builder: (dialogContext) => Theme(
           data: _bouwBibliotheekGroenThema(dialogContext),
@@ -259,25 +249,15 @@ class _BibliotheekFolderPaginaState extends State<BibliotheekFolderPagina> {
         ),
       );
 
-      if (!mounted || klant == null) return;
+      if (!mounted || ontvanger == null) return;
 
-      final email = klant.email.trim();
-      if (email.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Voor ${klant.klantNaamMetAanspreking} staat geen e-mailadres in de blauwe agenda.',
-            ),
-            backgroundColor: const Color(0xFFDC2626),
-          ),
-        );
-        return;
-      }
+      final email = ontvanger.email.trim();
+      if (email.isEmpty) return;
 
       final bytes = await _laadPdfVoorActie();
       if (bytes == null || !mounted) return;
 
-      final klantNaam = klant.klantNaamMetAanspreking.trim();
+      final klantNaam = ontvanger.klantNaam.trim();
       final ficheNaam = _folder.naam.trim().isEmpty
           ? 'documentatie'
           : _folder.naam.trim();
@@ -1329,11 +1309,14 @@ class _BibliotheekMailKlantKeuzeDialogState
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _zoekController = TextEditingController();
   String _zoekterm = '';
+  String _emailFout = '';
 
   @override
   void dispose() {
+    _emailController.dispose();
     _zoekController.dispose();
     super.dispose();
   }
@@ -1350,6 +1333,28 @@ class _BibliotheekMailKlantKeuzeDialogState
         .toList(growable: false);
   }
 
+  bool _geldigEmailadres(String email) {
+    final waarde = email.trim();
+    if (waarde.isEmpty || waarde.contains(' ')) return false;
+    final at = waarde.indexOf('@');
+    final punt = waarde.lastIndexOf('.');
+    return at > 0 && punt > at + 1 && punt < waarde.length - 1;
+  }
+
+  void _gebruikHandmatigEmailadres() {
+    final email = _emailController.text.trim();
+    if (!_geldigEmailadres(email)) {
+      setState(() {
+        _emailFout = 'Geef een geldig e-mailadres in.';
+      });
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pop(_BibliotheekMailOntvanger(email: email, klantNaam: ''));
+  }
+
   @override
   Widget build(BuildContext context) {
     final klanten = _zichtbareKlanten;
@@ -1360,7 +1365,7 @@ class _BibliotheekMailKlantKeuzeDialogState
       insetPadding: const EdgeInsets.all(24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 660, maxHeight: 700),
+        constraints: const BoxConstraints(maxWidth: 660, maxHeight: 760),
         child: Column(
           children: <Widget>[
             Padding(
@@ -1372,7 +1377,7 @@ class _BibliotheekMailKlantKeuzeDialogState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          'Klant kiezen voor e-mail',
+                          'E-mailadres kiezen',
                           style: TextStyle(
                             fontSize: 19,
                             fontWeight: FontWeight.w900,
@@ -1380,7 +1385,7 @@ class _BibliotheekMailKlantKeuzeDialogState
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'Klanten uit de blauwe agenda · e-mailadres wordt automatisch overgenomen.',
+                          'Kies een klant uit de blauwe agenda of geef zelf een e-mailadres in.',
                           style: TextStyle(color: _tekstGrijs),
                         ),
                       ],
@@ -1394,10 +1399,81 @@ class _BibliotheekMailKlantKeuzeDialogState
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 14),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE7F6EC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFB9E0C7)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text(
+                      'E-mailadres handmatig ingeven',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      textCapitalization: TextCapitalization.none,
+                      onChanged: (_) {
+                        if (_emailFout.isNotEmpty) {
+                          setState(() => _emailFout = '');
+                        }
+                      },
+                      onSubmitted: (_) => _gebruikHandmatigEmailadres(),
+                      decoration: InputDecoration(
+                        hintText: 'naam@voorbeeld.be',
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        errorText: _emailFout.isEmpty ? null : _emailFout,
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: _gebruikHandmatigEmailadres,
+                        icon: const Icon(Icons.check_rounded, size: 18),
+                        label: const Text('Dit e-mailadres gebruiken'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18),
+              child: Row(
+                children: <Widget>[
+                  Expanded(child: Divider(color: _rand)),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      'OF KIES EEN KLANT',
+                      style: TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  Expanded(child: Divider(color: _rand)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
               child: TextField(
                 controller: _zoekController,
-                autofocus: true,
                 onChanged: (waarde) {
                   setState(() => _zoekterm = waarde);
                 },
@@ -1433,7 +1509,18 @@ class _BibliotheekMailKlantKeuzeDialogState
             ),
             const Divider(height: 1, color: _rand),
             Expanded(
-              child: klanten.isEmpty
+              child: widget.klanten.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20),
+                        child: Text(
+                          'Geen klanten gevonden in de blauwe agenda. U kunt hierboven wel handmatig een e-mailadres ingeven.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: _tekstGrijs),
+                        ),
+                      ),
+                    )
+                  : klanten.isEmpty
                   ? const Center(
                       child: Text(
                         'Geen klant gevonden.',
@@ -1516,7 +1603,13 @@ class _BibliotheekMailKlantKeuzeDialogState
                                 )
                               : null,
                           onTap: heeftEmail
-                              ? () => Navigator.of(context).pop(klant)
+                              ? () => Navigator.of(context).pop(
+                                  _BibliotheekMailOntvanger(
+                                    email: email,
+                                    klantNaam: klant.klantNaamMetAanspreking
+                                        .trim(),
+                                  ),
+                                )
                               : null,
                         );
                       },
@@ -1527,6 +1620,16 @@ class _BibliotheekMailKlantKeuzeDialogState
       ),
     );
   }
+}
+
+class _BibliotheekMailOntvanger {
+  const _BibliotheekMailOntvanger({
+    required this.email,
+    required this.klantNaam,
+  });
+
+  final String email;
+  final String klantNaam;
 }
 
 class _FolderTeksten {

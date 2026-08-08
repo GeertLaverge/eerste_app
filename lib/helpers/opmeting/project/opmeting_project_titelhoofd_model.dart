@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
 // THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
 import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
 import '../../offerte/prijzen/offerte_prijs_categorie.dart';
@@ -24,6 +25,7 @@ class OpmetingProjectTitelhoofd {
     this.projectKleurBinnen = '',
     this.projectKleurBuiten = '',
     this.ralKleurToebehoren = '',
+    this.kleurBronToebehoren = standaardKleurBronToebehoren,
     this.buitenkleurGelijkAanToebehoren = false,
     this.kleurAfwijking = '',
     this.btwTarief = standaardBtwTarief,
@@ -44,6 +46,26 @@ class OpmetingProjectTitelhoofd {
   static const String standaardOfferteJaar = '26';
   static const String standaardOfferteVolgnummer = '01';
   static const String standaardKortingOmschrijving = 'Korting';
+
+  static const String kleurBronToebehorenRal = 'ral';
+  static const String kleurBronToebehorenAliplast = 'aliplast';
+  static const String kleurBronToebehorenWilms = 'wilms';
+  static const String kleurBronToebehorenFeneko = 'feneko';
+  static const String standaardKleurBronToebehoren = kleurBronToebehorenRal;
+
+  static const List<String> kleurBronToebehorenWaarden = <String>[
+    kleurBronToebehorenRal,
+    kleurBronToebehorenAliplast,
+    kleurBronToebehorenWilms,
+    kleurBronToebehorenFeneko,
+  ];
+
+  static String normaliseerKleurBronToebehoren(String? waarde) {
+    final sleutel = waarde?.trim().toLowerCase() ?? '';
+    return kleurBronToebehorenWaarden.contains(sleutel)
+        ? sleutel
+        : standaardKleurBronToebehoren;
+  }
 
   static const List<String> btwTarieven = <String>[
     '6 %',
@@ -70,6 +92,7 @@ class OpmetingProjectTitelhoofd {
   final String projectKleurBinnen;
   final String projectKleurBuiten;
   final String ralKleurToebehoren;
+  final String kleurBronToebehoren;
   final bool buitenkleurGelijkAanToebehoren;
   final String kleurAfwijking;
   final String btwTarief;
@@ -190,6 +213,7 @@ class OpmetingProjectTitelhoofd {
     String? projectKleurBinnen,
     String? projectKleurBuiten,
     String? ralKleurToebehoren,
+    String? kleurBronToebehoren,
     bool? buitenkleurGelijkAanToebehoren,
     String? kleurAfwijking,
     String? btwTarief,
@@ -227,6 +251,9 @@ class OpmetingProjectTitelhoofd {
       projectKleurBinnen: projectKleurBinnen ?? this.projectKleurBinnen,
       projectKleurBuiten: projectKleurBuiten ?? this.projectKleurBuiten,
       ralKleurToebehoren: ralKleurToebehoren ?? this.ralKleurToebehoren,
+      kleurBronToebehoren: normaliseerKleurBronToebehoren(
+        kleurBronToebehoren ?? this.kleurBronToebehoren,
+      ),
       buitenkleurGelijkAanToebehoren:
           buitenkleurGelijkAanToebehoren ?? this.buitenkleurGelijkAanToebehoren,
       kleurAfwijking: kleurAfwijking ?? this.kleurAfwijking,
@@ -299,6 +326,7 @@ class OpmetingProjectTitelhoofd {
       'projectKleurBinnen': projectKleurBinnen,
       'projectKleurBuiten': projectKleurBuiten,
       'ralKleurToebehoren': ralKleurToebehoren,
+      'kleurBronToebehoren': kleurBronToebehoren,
       'buitenkleurGelijkAanToebehoren': buitenkleurGelijkAanToebehoren,
       'kleurAfwijking': kleurAfwijking,
       'btwTarief': btwTarief,
@@ -355,6 +383,9 @@ class OpmetingProjectTitelhoofd {
           json['ralKleurToebehoren']?.toString() ??
           json['projectKleurToebehoren']?.toString() ??
           '',
+      kleurBronToebehoren: normaliseerKleurBronToebehoren(
+        json['kleurBronToebehoren']?.toString(),
+      ),
       buitenkleurGelijkAanToebehoren: _leesBool(
         json['buitenkleurGelijkAanToebehoren'],
         standaardWaarde: false,
