@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-COCKPIT-MODEL-FASE2A-20260807
+// THIMACO-CONTROLE: FINANCIELE-COCKPIT-PRIVE-REKENINGEN-20260808
 import 'dart:math';
 
 enum FinancieleBetalingStatus { open, gepland, betaald }
@@ -417,13 +417,22 @@ class FinancieleVasteKost {
 class FinancieleCockpitData {
   const FinancieleCockpitData({
     required this.rekeningen,
+    required this.priveRekeningen,
     required this.teBetalen,
     required this.teOntvangen,
     required this.andereOntvangsten,
     required this.vasteKosten,
   });
 
+  /// Uitsluitend zakelijke rekeningen. Alleen deze lijst telt mee in het
+  /// financiële overzicht en in de verwachte positie.
   final List<FinancieleRekening> rekeningen;
+
+  /// Privérekeningen zijn bewust volledig afgescheiden van alle zakelijke
+  /// totalen en berekeningen. Ze worden alleen op de pagina Privé rekeningen
+  /// getoond en daar lokaal opgeteld.
+  final List<FinancieleRekening> priveRekeningen;
+
   final List<FinancieleTeBetalen> teBetalen;
   final List<FinancieleTeOntvangen> teOntvangen;
   final List<FinancieleAndereOntvangst> andereOntvangsten;
@@ -433,6 +442,10 @@ class FinancieleCockpitData {
     return FinancieleCockpitData(
       rekeningen: _leesObjecten(
         kluis['rekeningen'],
+        FinancieleRekening.fromJson,
+      ),
+      priveRekeningen: _leesObjecten(
+        kluis['priveRekeningen'],
         FinancieleRekening.fromJson,
       ),
       teBetalen: _leesObjecten(
@@ -454,7 +467,13 @@ class FinancieleCockpitData {
     );
   }
 
+  /// Zakelijk totaal. Privérekeningen mogen hier nooit in terechtkomen.
   double get totaalRekeningen => rekeningen
+      .where((rekening) => rekening.actief)
+      .fold(0.0, (totaal, rekening) => totaal + rekening.saldo);
+
+  /// Alleen bedoeld voor de pagina Privé rekeningen.
+  double get totaalPriveRekeningen => priveRekeningen
       .where((rekening) => rekening.actief)
       .fold(0.0, (totaal, rekening) => totaal + rekening.saldo);
 
@@ -472,6 +491,7 @@ class FinancieleCockpitData {
   double get totaalTeOntvangen =>
       totaalKlantOntvangsten + totaalAndereOntvangsten;
 
+  /// De verwachte positie gebruikt bewust alleen zakelijke rekeningstanden.
   double get verwachtePositie =>
       totaalRekeningen + totaalTeOntvangen - totaalTeBetalen;
 
@@ -483,6 +503,9 @@ class FinancieleCockpitData {
   Map<String, dynamic> schrijfNaarKluis(Map<String, dynamic> basis) {
     return Map<String, dynamic>.from(basis)
       ..['rekeningen'] = rekeningen
+          .map((item) => item.toJson())
+          .toList(growable: false)
+      ..['priveRekeningen'] = priveRekeningen
           .map((item) => item.toJson())
           .toList(growable: false)
       ..['teBetalenFacturen'] = teBetalen
@@ -501,6 +524,7 @@ class FinancieleCockpitData {
 
   FinancieleCockpitData copyWith({
     List<FinancieleRekening>? rekeningen,
+    List<FinancieleRekening>? priveRekeningen,
     List<FinancieleTeBetalen>? teBetalen,
     List<FinancieleTeOntvangen>? teOntvangen,
     List<FinancieleAndereOntvangst>? andereOntvangsten,
@@ -508,6 +532,7 @@ class FinancieleCockpitData {
   }) {
     return FinancieleCockpitData(
       rekeningen: rekeningen ?? this.rekeningen,
+      priveRekeningen: priveRekeningen ?? this.priveRekeningen,
       teBetalen: teBetalen ?? this.teBetalen,
       teOntvangen: teOntvangen ?? this.teOntvangen,
       andereOntvangsten: andereOntvangsten ?? this.andereOntvangsten,
