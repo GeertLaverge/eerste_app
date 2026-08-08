@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-COCKPIT-PAGINA-FASE2A-20260807
+// THIMACO-CONTROLE: FINANCIELE-COCKPIT-PAGINA-FASE2B-20260808
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -13,6 +13,7 @@ enum _FinancieleSectie {
   andereOntvangsten,
   vasteKosten,
   rekeningen,
+  priveRekeningen,
 }
 
 enum _ToevoegType {
@@ -57,6 +58,16 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
   final DateFormat _datum = DateFormat('dd/MM/yyyy');
 
   _FinancieleSectie _sectie = _FinancieleSectie.overzicht;
+
+  final ScrollController _betalingenScrollController = ScrollController();
+  final ScrollController _ontvangstenScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _betalingenScrollController.dispose();
+    _ontvangstenScrollController.dispose();
+    super.dispose();
+  }
 
   FinancieleCockpitData get _data {
     return FinancieleCockpitData.fromKluis(
@@ -225,8 +236,14 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
           _navItem(
             sectie: _FinancieleSectie.rekeningen,
             icoon: Icons.account_balance_outlined,
-            label: 'Rekeningen',
+            label: 'Zakelijke rekeningen',
             badge: data.rekeningen.where((item) => item.actief).length,
+          ),
+          _navItem(
+            sectie: _FinancieleSectie.priveRekeningen,
+            icoon: Icons.account_balance_wallet_outlined,
+            label: 'Privé rekeningen',
+            badge: data.priveRekeningen.where((item) => item.actief).length,
           ),
           const SizedBox(height: 16),
           Container(
@@ -353,7 +370,12 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
       (
         _FinancieleSectie.rekeningen,
         Icons.account_balance_outlined,
-        'Rekeningen',
+        'Zakelijke rekeningen',
+      ),
+      (
+        _FinancieleSectie.priveRekeningen,
+        Icons.account_balance_wallet_outlined,
+        'Privé rekeningen',
       ),
     ];
 
@@ -403,11 +425,11 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
       _FinancieleSectie.andereOntvangsten => _bouwAndereOntvangsten(data),
       _FinancieleSectie.vasteKosten => _bouwVasteKosten(data),
       _FinancieleSectie.rekeningen => _bouwRekeningen(data),
+      _FinancieleSectie.priveRekeningen => _bouwPriveRekeningen(data),
     };
   }
 
   Widget _bouwOverzicht(FinancieleCockpitData data) {
-    final perioden = _berekenPerioden(data);
     final betalingen = data.teBetalen.where((item) => item.teltMee).toList()
       ..sort((a, b) => a.planningDatum.compareTo(b.planningDatum));
     final ontvangsten = _volgendeOntvangsten(data);
@@ -424,7 +446,7 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
         LayoutBuilder(
           builder: (context, constraints) {
             final kolommen = constraints.maxWidth >= 1120
-                ? 5
+                ? 6
                 : constraints.maxWidth >= 720
                 ? 3
                 : 1;
@@ -440,11 +462,18 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
                     '${data.rekeningen.where((item) => item.actief).length} actieve rekening(en)',
               ),
               _samenvattingKaart(
-                titel: 'Te ontvangen',
-                waarde: _euro.format(data.totaalTeOntvangen),
-                icoon: Icons.south_west_rounded,
+                titel: 'Te ontvangen van klanten',
+                waarde: _euro.format(data.totaalKlantOntvangsten),
+                icoon: Icons.people_alt_outlined,
                 kleur: _blauw,
-                detail: 'Klanten + andere ontvangsten',
+                detail: 'Openstaande klantbedragen',
+              ),
+              _samenvattingKaart(
+                titel: 'Andere te ontvangen bedragen',
+                waarde: _euro.format(data.totaalAndereOntvangsten),
+                icoon: Icons.savings_outlined,
+                kleur: _blauw,
+                detail: 'BTW, subsidies en overige ontvangsten',
               ),
               _samenvattingKaart(
                 titel: 'Te betalen',
@@ -479,35 +508,6 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
           },
         ),
         const SizedBox(height: 16),
-        _kaart(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text(
-                'Wanneer beweegt het geld?',
-                style: TextStyle(
-                  color: _tekstDonker,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Vervallen bedragen staan samen met vandaag. De andere periodes overlappen niet.',
-                style: TextStyle(color: _tekstGrijs, fontSize: 11.2),
-              ),
-              const SizedBox(height: 13),
-              _periodeKop(),
-              const Divider(height: 12, color: _rand),
-              for (final periode in perioden) ...<Widget>[
-                _periodeRij(periode),
-                if (periode != perioden.last)
-                  const Divider(height: 12, color: _rand),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
             final breed = constraints.maxWidth >= 780;
@@ -515,10 +515,8 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
               titel: 'Eerstvolgende betalingen',
               icoon: Icons.arrow_upward_rounded,
               leegTekst: 'Geen openstaande betalingen ingevoerd.',
-              kinderen: betalingen
-                  .take(5)
-                  .map(_betalingCompact)
-                  .toList(growable: false),
+              kinderen: betalingen.map(_betalingCompact).toList(growable: false),
+              scrollController: _betalingenScrollController,
               onAlles: () =>
                   setState(() => _sectie = _FinancieleSectie.teBetalen),
             );
@@ -526,10 +524,8 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
               titel: 'Eerstvolgende ontvangsten',
               icoon: Icons.arrow_downward_rounded,
               leegTekst: 'Geen openstaande ontvangsten ingevoerd.',
-              kinderen: ontvangsten
-                  .take(5)
-                  .map(_ontvangstCompact)
-                  .toList(growable: false),
+              kinderen: ontvangsten.map(_ontvangstCompact).toList(growable: false),
+              scrollController: _ontvangstenScrollController,
               onAlles: () =>
                   setState(() => _sectie = _FinancieleSectie.teOntvangen),
             );
@@ -801,15 +797,15 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
       });
 
     return _lijstSectie(
-      titel: 'Rekeningen',
+      titel: 'Zakelijke rekeningen',
       subtitel:
-          'Vul hier uitsluitend de actuele stand in. Dit is geen bankkoppeling en geen transactieregister.',
+          'Uitsluitend zakelijke rekeningstanden. Alleen deze rekeningen tellen mee in het financiële overzicht en de verwachte positie.',
       icoon: Icons.account_balance_outlined,
-      actieLabel: 'Rekening toevoegen',
+      actieLabel: 'Zakelijke rekening toevoegen',
       onToevoegen: () => _voegRekeningToe(data),
       samenvatting: <Widget>[
         _miniTotaal(
-          'Totaal actief',
+          'Totaal zakelijk',
           _euro.format(data.totaalRekeningen),
           _groen,
         ),
@@ -823,11 +819,50 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
           ? <Widget>[
               _legeStaat(
                 Icons.account_balance_outlined,
-                'Nog geen rekeningen ingevoerd.',
+                'Nog geen zakelijke rekeningen ingevoerd.',
               ),
             ]
           : items
                 .map((item) => _rekeningRij(data, item))
+                .toList(growable: false),
+    );
+  }
+
+  Widget _bouwPriveRekeningen(FinancieleCockpitData data) {
+    final items = List<FinancieleRekening>.from(data.priveRekeningen)
+      ..sort((a, b) {
+        if (a.actief != b.actief) return a.actief ? -1 : 1;
+        return a.naam.toLowerCase().compareTo(b.naam.toLowerCase());
+      });
+
+    return _lijstSectie(
+      titel: 'Privé rekeningen',
+      subtitel:
+          'Persoonlijk overzicht. Deze rekeningen worden nergens in de zakelijke totalen, verwachte positie, betalingen of ontvangsten meegerekend.',
+      icoon: Icons.account_balance_wallet_outlined,
+      actieLabel: 'Privérekening toevoegen',
+      onToevoegen: () => _voegPriveRekeningToe(data),
+      samenvatting: <Widget>[
+        _miniTotaal(
+          'Totaal privé',
+          _euro.format(data.totaalPriveRekeningen),
+          _blauw,
+        ),
+        _miniTotaal(
+          'Actieve privérekeningen',
+          '${data.priveRekeningen.where((item) => item.actief).length}',
+          _tekstDonker,
+        ),
+      ],
+      kinderen: items.isEmpty
+          ? <Widget>[
+              _legeStaat(
+                Icons.account_balance_wallet_outlined,
+                'Nog geen privérekeningen ingevoerd.',
+              ),
+            ]
+          : items
+                .map((item) => _priveRekeningRij(data, item))
                 .toList(growable: false),
     );
   }
@@ -1063,129 +1098,69 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
     );
   }
 
-  Widget _periodeKop() {
-    return const Row(
-      children: <Widget>[
-        Expanded(flex: 3, child: Text('Periode', style: _kopStijl)),
-        Expanded(
-          flex: 2,
-          child: Text(
-            'Te ontvangen',
-            textAlign: TextAlign.right,
-            style: _kopStijl,
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(
-            'Te betalen',
-            textAlign: TextAlign.right,
-            style: _kopStijl,
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text('Verschil', textAlign: TextAlign.right, style: _kopStijl),
-        ),
-      ],
-    );
-  }
-
-  Widget _periodeRij(_PeriodeSamenvatting periode) {
-    final verschil = periode.ontvangen - periode.betalen;
-    return Row(
-      children: <Widget>[
-        Expanded(
-          flex: 3,
-          child: Text(
-            periode.label,
-            style: const TextStyle(
-              color: _tekstDonker,
-              fontSize: 11.8,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(
-            _euro.format(periode.ontvangen),
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: _blauw,
-              fontSize: 11.8,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(
-            _euro.format(periode.betalen),
-            textAlign: TextAlign.right,
-            style: const TextStyle(
-              color: _oranje,
-              fontSize: 11.8,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 2,
-          child: Text(
-            _euro.format(verschil),
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              color: verschil >= 0 ? _groen : _rood,
-              fontSize: 11.8,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _komendeKaart({
     required String titel,
     required IconData icoon,
     required String leegTekst,
     required List<Widget> kinderen,
+    required ScrollController scrollController,
     required VoidCallback onAlles,
   }) {
     return _kaart(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(icoon, color: _groen, size: 19),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  titel,
-                  style: const TextStyle(
-                    color: _tekstDonker,
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w900,
+      child: SizedBox(
+        height: 410,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(icoon, color: _groen, size: 19),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    titel,
+                    style: const TextStyle(
+                      color: _tekstDonker,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              TextButton(onPressed: onAlles, child: const Text('Alles')),
-            ],
-          ),
-          const SizedBox(height: 5),
-          if (kinderen.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                leegTekst,
-                style: const TextStyle(color: _tekstGrijs, fontSize: 11.5),
-              ),
-            )
-          else
-            ...kinderen,
-        ],
+                TextButton(onPressed: onAlles, child: const Text('Alles')),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Expanded(
+              child: kinderen.isEmpty
+                  ? Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          leegTekst,
+                          style: const TextStyle(
+                            color: _tekstGrijs,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Scrollbar(
+                      controller: scrollController,
+                      thumbVisibility: true,
+                      child: ListView.separated(
+                        controller: scrollController,
+                        primary: false,
+                        padding: const EdgeInsets.only(right: 10),
+                        itemCount: kinderen.length,
+                        separatorBuilder: (_, _) =>
+                            const Divider(height: 1, color: _rand),
+                        itemBuilder: (_, index) => kinderen[index],
+                      ),
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1553,6 +1528,90 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
     );
   }
 
+
+  Widget _priveRekeningRij(FinancieleCockpitData data, FinancieleRekening item) {
+    return _kaart(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => _bewerkPriveRekening(data, item),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: item.actief ? _lichtGroen : const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.account_balance_outlined,
+                color: item.actief ? _groen : _tekstGrijs,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    item.naam,
+                    style: TextStyle(
+                      color: item.actief ? _tekstDonker : _tekstGrijs,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    <String>[
+                      if (item.rekeningNummer.isNotEmpty) item.rekeningNummer,
+                      'Stand ${_datum.format(item.saldoDatum)}',
+                    ].join(' · '),
+                    style: const TextStyle(color: _tekstGrijs, fontSize: 10.5),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                Text(
+                  _euro.format(item.saldo),
+                  style: TextStyle(
+                    color: item.saldo >= 0 ? _groen : _rood,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (item.beschikbaarKrediet > 0) ...<Widget>[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Krediet ${_euro.format(item.beschikbaarKrediet)}',
+                    style: const TextStyle(color: _tekstGrijs, fontSize: 10.2),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(width: 6),
+            PopupMenuButton<String>(
+              tooltip: 'Meer',
+              onSelected: (keuze) {
+                if (keuze == 'bewerken') _bewerkPriveRekening(data, item);
+                if (keuze == 'verwijderen') _verwijderPriveRekening(data, item);
+              },
+              itemBuilder: (_) => const <PopupMenuEntry<String>>[
+                PopupMenuItem(value: 'bewerken', child: Text('Bewerken')),
+                PopupMenuItem(value: 'verwijderen', child: Text('Verwijderen')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _detailRij({
     required IconData icoon,
     required Color icoonKleur,
@@ -1732,8 +1791,8 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
                   dialogContext,
                   _ToevoegType.rekening,
                   Icons.account_balance_outlined,
-                  'Rekening',
-                  'Actuele rekeningstand invoeren',
+                  'Zakelijke rekening',
+                  'Actuele zakelijke rekeningstand invoeren',
                 ),
               ],
             ),
@@ -1862,6 +1921,51 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
     await _bewaarData(
       data.copyWith(
         rekeningen: data.rekeningen.where((x) => x.id != item.id).toList(),
+      ),
+    );
+  }
+
+  Future<void> _voegPriveRekeningToe(FinancieleCockpitData data) async {
+    final item = await FinancieleInvoerDialogen.rekening(context);
+    if (!mounted || item == null) return;
+    await _bewaarData(
+      data.copyWith(
+        priveRekeningen: <FinancieleRekening>[...data.priveRekeningen, item],
+      ),
+    );
+  }
+
+  Future<void> _bewerkPriveRekening(
+    FinancieleCockpitData data,
+    FinancieleRekening bestaand,
+  ) async {
+    final item = await FinancieleInvoerDialogen.rekening(
+      context,
+      bestaand: bestaand,
+    );
+    if (!mounted || item == null) return;
+    await _bewaarData(
+      data.copyWith(
+        priveRekeningen: _vervangOpId(
+          data.priveRekeningen,
+          item,
+          (x) => x.id,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _verwijderPriveRekening(
+    FinancieleCockpitData data,
+    FinancieleRekening item,
+  ) async {
+    final bevestigd = await _bevestigVerwijderen('privérekening', item.naam);
+    if (!mounted || !bevestigd) return;
+    await _bewaarData(
+      data.copyWith(
+        priveRekeningen: data.priveRekeningen
+            .where((x) => x.id != item.id)
+            .toList(),
       ),
     );
   }
@@ -2095,39 +2199,6 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
     return resultaat == true;
   }
 
-  List<_PeriodeSamenvatting> _berekenPerioden(FinancieleCockpitData data) {
-    final vandaag = DateUtils.dateOnly(DateTime.now());
-    final plus7 = vandaag.add(const Duration(days: 7));
-    final plus30 = vandaag.add(const Duration(days: 30));
-
-    final resultaat = <_PeriodeSamenvatting>[
-      _PeriodeSamenvatting(label: 'Vandaag / vervallen'),
-      _PeriodeSamenvatting(label: 'Komende 7 dagen'),
-      _PeriodeSamenvatting(label: 'Komende 30 dagen'),
-      _PeriodeSamenvatting(label: 'Later'),
-    ];
-
-    int bucket(DateTime datum) {
-      final dag = DateUtils.dateOnly(datum);
-      if (!dag.isAfter(vandaag)) return 0;
-      if (!dag.isAfter(plus7)) return 1;
-      if (!dag.isAfter(plus30)) return 2;
-      return 3;
-    }
-
-    for (final item in data.teBetalen.where((item) => item.teltMee)) {
-      resultaat[bucket(item.planningDatum)].betalen += item.bedrag;
-    }
-    for (final item in data.teOntvangen.where((item) => item.openstaand > 0)) {
-      resultaat[bucket(item.planningDatum)].ontvangen += item.openstaand;
-    }
-    for (final item in data.andereOntvangsten.where((item) => item.teltMee)) {
-      resultaat[bucket(item.verwachtOp)].ontvangen += item.bedrag;
-    }
-
-    return resultaat;
-  }
-
   List<_CockpitOntvangstMoment> _volgendeOntvangsten(
     FinancieleCockpitData data,
   ) {
@@ -2164,20 +2235,6 @@ class _FinancieleCockpitPaginaState extends State<FinancieleCockpitPagina> {
     if (!dag.isAfter(vandaag.add(const Duration(days: 7)))) return _oranje;
     return _groen;
   }
-}
-
-const TextStyle _kopStijl = TextStyle(
-  color: Color(0xFF6B7280),
-  fontSize: 10.4,
-  fontWeight: FontWeight.w900,
-);
-
-class _PeriodeSamenvatting {
-  _PeriodeSamenvatting({required this.label});
-
-  final String label;
-  double ontvangen = 0;
-  double betalen = 0;
 }
 
 class _CockpitOntvangstMoment {
