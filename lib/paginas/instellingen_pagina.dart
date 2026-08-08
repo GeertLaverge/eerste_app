@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALIPLAST-FENEKO-INSTELLINGENKNOPPEN-20260808
 // THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-KOPPELING-BEHOUden-20260803
 // THIMACO-CONTROLE: VERWIJDER-FOUTIEVE-FICHEKNOP-UIT-INSTELLINGEN-20260803
 // THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGENKNOP-FASE-5-20260803
@@ -27,6 +28,8 @@ import 'instellingen/sektionale_poorten/opmeting_sektionale_poort_instellingen_p
 import 'instellingen/velux_dakramen/opmeting_velux_dakraam_instellingen_pagina.dart';
 import 'instellingen/offerte_mail/offerte_mail_teksten_pagina.dart';
 import 'instellingen/offerte_prijzen/offerte_prijzen_pagina.dart';
+import 'instellingen/kleuren/aliplast_kleuren_pagina.dart';
+import 'instellingen/kleuren/feneko_kleuren_pagina.dart';
 
 class InstellingenPagina extends StatelessWidget {
   const InstellingenPagina({super.key});
@@ -271,6 +274,34 @@ class InstellingenPagina extends StatelessWidget {
                 },
                 icon: const Icon(Icons.palette_outlined),
                 label: const Text('Kleuren raamleverancier'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AliplastKleurenPagina(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.table_chart_outlined),
+                label: const Text('Aliplast'),
+                style: _knopStijl(groen),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const FenekoKleurenPagina(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.palette_outlined),
+                label: const Text('Feneko'),
                 style: _knopStijl(groen),
               ),
               const SizedBox(height: 12),

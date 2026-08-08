@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BIBLIOTHEEK-FOLDER-AFDRUKKEN-MAIL-BLAUWE-AGENDA-20260808
 // THIMACO-CONTROLE: BIBLIOTHEEK-FOLDER-OPMEETFICHE-KOPPELINGEN-20260802
 // THIMACO-CONTROLE: BIBLIOTHEEK-FOLDER-GROENE-MENUS-20260802
 
@@ -13,6 +14,8 @@ import '../helpers/bibliotheek/bibliotheek_onedrive_service.dart';
 import '../helpers/bibliotheek/bibliotheek_pdf_kiezer_dialog.dart';
 import '../helpers/klanten/fiche/klantenfiche_model.dart';
 import '../helpers/offerte/artikelen/offerte_artikel_register.dart';
+import '../helpers/offerte/mail/offerte_mail_verzend_service.dart';
+import '../helpers/opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'klanten_fiche_pagina.dart';
 
 const Color _bibliotheekGroen = Color(0xFF0B7A3B);
@@ -115,6 +118,8 @@ class _BibliotheekFolderPaginaState extends State<BibliotheekFolderPagina> {
   late BibliotheekFolder _folder;
   Future<Uint8List>? _pdfFuture;
   bool _sluitenBezig = false;
+  bool _afdrukkenBezig = false;
+  bool _mailenBezig = false;
 
   @override
   void initState() {
@@ -151,6 +156,177 @@ class _BibliotheekFolderPaginaState extends State<BibliotheekFolderPagina> {
       );
       _herlaadPdf();
     });
+  }
+
+  Future<Uint8List?> _laadPdfVoorActie() async {
+    if (!_folder.heeftPdf) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kies eerst een PDF voor deze fiche.'),
+            backgroundColor: _groen,
+          ),
+        );
+      }
+      return null;
+    }
+
+    try {
+      final future =
+          _pdfFuture ?? _oneDriveService.downloadPdf(_folder.onedriveItemId);
+      _pdfFuture = future;
+      final bytes = await future;
+      if (bytes.isEmpty) {
+        throw StateError('De PDF is leeg.');
+      }
+      return bytes;
+    } catch (fout) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('De PDF kon niet worden geladen: $fout'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
+  String get _pdfBestandsnaam {
+    final bestaand = _folder.bestandsnaam.trim();
+    if (bestaand.isNotEmpty) {
+      return bestaand.toLowerCase().endsWith('.pdf')
+          ? bestaand
+          : '$bestaand.pdf';
+    }
+
+    final naam = _folder.naam.trim().isEmpty ? 'document' : _folder.naam.trim();
+    return '$naam.pdf';
+  }
+
+  Future<void> _drukPdfAf() async {
+    if (_afdrukkenBezig) return;
+
+    setState(() => _afdrukkenBezig = true);
+    try {
+      final bytes = await _laadPdfVoorActie();
+      if (bytes == null || !mounted) return;
+
+      await Printing.layoutPdf(
+        name: _pdfBestandsnaam,
+        onLayout: (_) async => bytes,
+      );
+    } catch (fout) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Afdrukken kon niet worden gestart: $fout'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _afdrukkenBezig = false);
+      }
+    }
+  }
+
+  Future<void> _mailPdf() async {
+    if (_mailenBezig) return;
+
+    setState(() => _mailenBezig = true);
+    try {
+      final klanten = await AppStorage.laadAgendaKlantenVoorOpmeting();
+      if (!mounted) return;
+
+      if (klanten.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Geen klanten gevonden in de blauwe agenda.'),
+            backgroundColor: _groen,
+          ),
+        );
+        return;
+      }
+
+      final klant = await showDialog<OpmetingAgendaKlantInfo>(
+        context: context,
+        builder: (dialogContext) => Theme(
+          data: _bouwBibliotheekGroenThema(dialogContext),
+          child: _BibliotheekMailKlantKeuzeDialog(klanten: klanten),
+        ),
+      );
+
+      if (!mounted || klant == null) return;
+
+      final email = klant.email.trim();
+      if (email.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Voor ${klant.klantNaamMetAanspreking} staat geen e-mailadres in de blauwe agenda.',
+            ),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+        return;
+      }
+
+      final bytes = await _laadPdfVoorActie();
+      if (bytes == null || !mounted) return;
+
+      final klantNaam = klant.klantNaamMetAanspreking.trim();
+      final ficheNaam = _folder.naam.trim().isEmpty
+          ? 'documentatie'
+          : _folder.naam.trim();
+
+      await OfferteMailVerzendService().verstuur(
+        ontvanger: email,
+        onderwerp: 'Thimaco · $ficheNaam',
+        bericht: <String>[
+          klantNaam.isEmpty ? 'Beste,' : 'Beste $klantNaam,',
+          '',
+          'In bijlage vindt u de gevraagde informatie over $ficheNaam.',
+          '',
+          'Met vriendelijke groeten',
+          'Thimaco',
+          'Ramen · deuren · zonwering',
+        ].join('\n'),
+        bijlagen: <OfferteMailBijlage>[
+          OfferteMailBijlage(bestandsnaam: _pdfBestandsnaam, bytes: bytes),
+        ],
+      );
+    } on OfferteMailGeannuleerdException catch (fout) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(fout.bericht), backgroundColor: _groen),
+        );
+      }
+    } on OfferteMailVerzendException catch (fout) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(fout.bericht),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    } catch (fout) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('De e-mail kon niet worden geopend: $fout'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _mailenBezig = false);
+      }
+    }
   }
 
   Future<void> _wijzigFoldergegevens() async {
@@ -426,6 +602,41 @@ class _BibliotheekFolderPaginaState extends State<BibliotheekFolderPagina> {
               style: const TextStyle(color: _tekstGrijs, height: 1.35),
             ),
           ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: <Widget>[
+              OutlinedButton.icon(
+                onPressed: _folder.heeftPdf && !_afdrukkenBezig
+                    ? _drukPdfAf
+                    : null,
+                icon: _afdrukkenBezig
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.print_outlined, size: 18),
+                label: const Text('Afdrukken'),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: _groen),
+                onPressed: _folder.heeftPdf && !_mailenBezig ? _mailPdf : null,
+                icon: _mailenBezig
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.mail_outline_rounded, size: 18),
+                label: const Text('Mailen'),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
@@ -1090,6 +1301,223 @@ class _KlantenficheKiezerDialogState extends State<_KlantenficheKiezerDialog> {
                             color: _groen,
                           ),
                           onTap: () => Navigator.of(context).pop(fiche),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BibliotheekMailKlantKeuzeDialog extends StatefulWidget {
+  const _BibliotheekMailKlantKeuzeDialog({required this.klanten});
+
+  final List<OpmetingAgendaKlantInfo> klanten;
+
+  @override
+  State<_BibliotheekMailKlantKeuzeDialog> createState() =>
+      _BibliotheekMailKlantKeuzeDialogState();
+}
+
+class _BibliotheekMailKlantKeuzeDialogState
+    extends State<_BibliotheekMailKlantKeuzeDialog> {
+  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _achtergrond = Color(0xFFF7F8FA);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _tekstGrijs = Color(0xFF6B7280);
+
+  final TextEditingController _zoekController = TextEditingController();
+  String _zoekterm = '';
+
+  @override
+  void dispose() {
+    _zoekController.dispose();
+    super.dispose();
+  }
+
+  List<OpmetingAgendaKlantInfo> get _zichtbareKlanten {
+    final zoek = _zoekterm.trim().toLowerCase();
+    if (zoek.isEmpty) return widget.klanten;
+
+    return widget.klanten
+        .where((klant) {
+          final naam = klant.klantNaamMetAanspreking.toLowerCase();
+          return naam.contains(zoek);
+        })
+        .toList(growable: false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final klanten = _zichtbareKlanten;
+
+    return Dialog(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      insetPadding: const EdgeInsets.all(24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 660, maxHeight: 700),
+        child: Column(
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 10, 10),
+              child: Row(
+                children: <Widget>[
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Klant kiezen voor e-mail',
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Klanten uit de blauwe agenda · e-mailadres wordt automatisch overgenomen.',
+                          style: TextStyle(color: _tekstGrijs),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 4, 18, 12),
+              child: TextField(
+                controller: _zoekController,
+                autofocus: true,
+                onChanged: (waarde) {
+                  setState(() => _zoekterm = waarde);
+                },
+                decoration: InputDecoration(
+                  hintText: 'Zoek klant op naam',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  suffixIcon: _zoekterm.trim().isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Zoekopdracht wissen',
+                          onPressed: () {
+                            _zoekController.clear();
+                            setState(() => _zoekterm = '');
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                  filled: true,
+                  fillColor: _achtergrond,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _rand),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _rand),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _groen, width: 1.6),
+                  ),
+                ),
+              ),
+            ),
+            const Divider(height: 1, color: _rand),
+            Expanded(
+              child: klanten.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'Geen klant gevonden.',
+                        style: TextStyle(color: _tekstGrijs),
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(14),
+                      itemCount: klanten.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 7),
+                      itemBuilder: (context, index) {
+                        final klant = klanten[index];
+                        final email = klant.email.trim();
+                        final heeftEmail = email.isNotEmpty;
+                        final extra = <String>[
+                          if (klant.klantnummer.trim().isNotEmpty)
+                            'Klant ${klant.klantnummer.trim()}',
+                          if (klant.plaats.trim().isNotEmpty)
+                            klant.plaats.trim(),
+                        ].join(' · ');
+
+                        return ListTile(
+                          enabled: heeftEmail,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: heeftEmail
+                                  ? _rand
+                                  : const Color(0xFFFECACA),
+                            ),
+                          ),
+                          tileColor: heeftEmail
+                              ? Colors.white
+                              : const Color(0xFFFFF7F7),
+                          leading: CircleAvatar(
+                            backgroundColor: heeftEmail
+                                ? const Color(0xFFE7F6EC)
+                                : const Color(0xFFFEE2E2),
+                            foregroundColor: heeftEmail
+                                ? _groen
+                                : const Color(0xFFDC2626),
+                            child: Icon(
+                              heeftEmail
+                                  ? Icons.mail_outline_rounded
+                                  : Icons.error_outline_rounded,
+                            ),
+                          ),
+                          title: Text(
+                            klant.klantNaamMetAanspreking,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              const SizedBox(height: 2),
+                              Text(
+                                heeftEmail
+                                    ? email
+                                    : 'Geen e-mailadres in de blauwe agenda',
+                                style: TextStyle(
+                                  color: heeftEmail
+                                      ? _groen
+                                      : const Color(0xFFDC2626),
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (extra.isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 2),
+                                Text(
+                                  extra,
+                                  style: const TextStyle(color: _tekstGrijs),
+                                ),
+                              ],
+                            ],
+                          ),
+                          trailing: heeftEmail
+                              ? const Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: _groen,
+                                )
+                              : null,
+                          onTap: heeftEmail
+                              ? () => Navigator.of(context).pop(klant)
+                              : null,
                         );
                       },
                     ),
