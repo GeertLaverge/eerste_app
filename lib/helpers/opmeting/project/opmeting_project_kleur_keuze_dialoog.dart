@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: LEGE-KLEURENSUBMENUS-ZICHTBAAR-20260808-1902
 import 'package:flutter/material.dart';
 
 import 'opmeting_project_kleur_model.dart';
@@ -52,9 +53,7 @@ class _OpmetingProjectKleurKeuzeDialoogState
 
   List<OpmetingProjectKleurSubmenu> get _zichtbareSubmenus {
     return widget.kleurMenus.where((submenu) {
-      return submenu.actief &&
-          submenu.naam.trim().isNotEmpty &&
-          submenu.actieveKleuren.isNotEmpty;
+      return submenu.actief && submenu.naam.trim().isNotEmpty;
     }).toList();
   }
 
@@ -305,10 +304,12 @@ class _OpmetingProjectKleurKeuzeDialoogState
         ),
         Expanded(
           child: kleuren.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text(
-                    'Geen kleuren gevonden.',
-                    style: TextStyle(
+                    _zoekController.text.trim().isEmpty
+                        ? 'Nog geen kleuren in dit submenu.'
+                        : 'Geen kleuren gevonden.',
+                    style: const TextStyle(
                       color: _tekstGrijs,
                       fontWeight: FontWeight.w800,
                     ),

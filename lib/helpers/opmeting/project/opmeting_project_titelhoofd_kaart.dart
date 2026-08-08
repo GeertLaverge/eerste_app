@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ALIPLAST-SUBMENUS-EN-COMPACTE-KLEURKOPPELINGEN-20260808-1902
+// THIMACO-CONTROLE: BINNEN-BUITEN-SCHUCO-FOLIE-MODEL-IMPORTFIX-20260808-1813
 // THIMACO-CONTROLE: TOEBEHORENKLEUR-LIJST-OPNIEUW-OPENEN-20260808-1506
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-WISSEL-EN-FENEKO-FIX-20260808-1455
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-RAL-ALIPLAST-WILMS-FENEKO-20260808-1433
@@ -16,10 +18,13 @@ import 'package:flutter/services.dart';
 import '../../app_storage.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import 'aliplast_kleuren.dart';
+import 'aliplast_standaard_ral_kleuren_storage.dart';
 import 'opmeting_project_kleur_keuze_dialoog.dart';
 import 'opmeting_project_kleur_model.dart';
 import 'opmeting_project_titelhoofd_model.dart';
 import 'ral_classic_kleuren.dart';
+import 'schuco_folie_kleur_model.dart';
+import 'schuco_folie_kleuren_storage.dart';
 
 class OpmetingProjectTypeSamenvatting {
   const OpmetingProjectTypeSamenvatting({
@@ -122,6 +127,9 @@ class _OpmetingProjectTitelhoofdKaartState
 
   List<String> _wilmsProjectKleuren = const <String>[];
   List<String> _fenekoProjectKleuren = const <String>[];
+  List<SchucoFolieKleur> _schucoFolieKleuren = const <SchucoFolieKleur>[];
+  List<OpmetingProjectKleur> _aliplastStandaardRalKleuren =
+      const <OpmetingProjectKleur>[];
 
   String _toebehorenKleurBron =
       OpmetingProjectTitelhoofd.standaardKleurBronToebehoren;
@@ -199,6 +207,7 @@ class _OpmetingProjectTitelhoofdKaartState
 
     _zetControllers(widget.titelhoofd);
     _laadLeverancierKleuren();
+    _laadBinnenBuitenLeverancierKleuren();
   }
 
   @override
@@ -254,6 +263,79 @@ class _OpmetingProjectTitelhoofdKaartState
         _fenekoProjectKleuren = const <String>[];
       });
     }
+  }
+
+  Future<void> _laadBinnenBuitenLeverancierKleuren() async {
+    final schuco = await SchucoFolieKleurenStorage.laad();
+    final aliplastStandaard = await AliplastStandaardRalKleurenStorage.laad();
+
+    if (!mounted) return;
+    setState(() {
+      _schucoFolieKleuren = List<SchucoFolieKleur>.unmodifiable(schuco);
+      _aliplastStandaardRalKleuren = List<OpmetingProjectKleur>.unmodifiable(
+        aliplastStandaard,
+      );
+    });
+  }
+
+  List<OpmetingProjectKleurSubmenu> get _kleurMenusVoorBinnenBuiten {
+    final schucoSubmenu = OpmetingProjectKleurSubmenu(
+      id: SchucoFolieKleuren.submenuId,
+      naam: SchucoFolieKleuren.submenuNaam,
+      kleuren: _schucoFolieKleuren
+          .map(
+            (kleur) => OpmetingProjectKleur(
+              id: 'schuco_folie_${kleur.id}',
+              naam: kleur.keuzeTekst,
+            ),
+          )
+          .toList(growable: false),
+    );
+
+    final aliplastStandaardSubmenu = OpmetingProjectKleurSubmenu(
+      id: AliplastStandaardRalKleurenStorage.submenuId,
+      naam: AliplastStandaardRalKleurenStorage.submenuNaam,
+      kleuren: _aliplastStandaardRalKleuren,
+    );
+
+    final aliplastVolledigSubmenu = OpmetingProjectKleurSubmenu(
+      id: 'thimaco_aliplast_volledige_poedercodelijst',
+      naam: 'Aliplast volledige poedercodelijst',
+      kleuren: AliplastKleuren.alle.indexed
+          .map(
+            (entry) => OpmetingProjectKleur(
+              id: 'aliplast_poeder_${entry.$1}',
+              naam: entry.$2.samenvatting,
+            ),
+          )
+          .toList(growable: false),
+    );
+
+    const gereserveerdeIds = <String>{
+      SchucoFolieKleuren.submenuId,
+      AliplastStandaardRalKleurenStorage.submenuId,
+      'thimaco_aliplast_volledige_poedercodelijst',
+    };
+
+    return <OpmetingProjectKleurSubmenu>[
+      ...widget.kleurMenus.where(
+        (submenu) => !gereserveerdeIds.contains(submenu.id),
+      ),
+      schucoSubmenu,
+      aliplastStandaardSubmenu,
+      aliplastVolledigSubmenu,
+    ];
+  }
+
+  Future<String?> _kiesBinnenBuitenKleur(String huidigeWaarde) async {
+    await _laadBinnenBuitenLeverancierKleuren();
+    if (!mounted) return null;
+
+    return toonOpmetingProjectKleurKeuzeDialoog(
+      context: context,
+      kleurMenus: _kleurMenusVoorBinnenBuiten,
+      huidigeWaarde: huidigeWaarde,
+    );
   }
 
   List<String> get _toebehorenKleuren {
@@ -529,6 +611,7 @@ class _OpmetingProjectTitelhoofdKaartState
   void _meldWijziging({
     bool? berekenPrijzen,
     bool? buitenkleurGelijkAanToebehoren,
+    bool? binnenkleurGelijkAanBuitenkleur,
     String? kleurBronToebehoren,
   }) {
     widget.onTitelhoofdGewijzigd(
@@ -558,6 +641,9 @@ class _OpmetingProjectTitelhoofdKaartState
         buitenkleurGelijkAanToebehoren:
             buitenkleurGelijkAanToebehoren ??
             widget.titelhoofd.buitenkleurGelijkAanToebehoren,
+        binnenkleurGelijkAanBuitenkleur:
+            binnenkleurGelijkAanBuitenkleur ??
+            widget.titelhoofd.binnenkleurGelijkAanBuitenkleur,
         kleurAfwijking: _kleurAfwijkingController.text,
         btwTarief: _btwTarief,
         offerteJaar: _combineerCijfers(_offerteJaarControllers),
@@ -1102,46 +1188,79 @@ class _OpmetingProjectTitelhoofdKaartState
             _bouwKleurVeld(
               controller: _kleurBinnenController,
               label: 'Binnenkleur',
+              onChanged: _verwerkBinnenkleurGewijzigd,
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 4),
             _bouwKleurVeld(
               controller: _kleurBuitenController,
               label: 'Buitenkleur',
               onChanged: _verwerkBuitenkleurGewijzigd,
             ),
             const SizedBox(height: 5),
-            _bouwToebehorenKleurBronVeld(),
-            const SizedBox(height: 5),
-            _bouwRalKleurToebehorenVeld(),
-            CheckboxListTile(
-              value: widget.titelhoofd.buitenkleurGelijkAanToebehoren,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-              controlAffinity: ListTileControlAffinity.leading,
-              activeColor: _groen,
-              title: const Text(
-                'Buitenkleur gelijk aan toebehoren',
-                style: TextStyle(
-                  color: _tekstDonker,
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                ),
+            const Text(
+              'Kleuren toebehoren',
+              style: TextStyle(
+                color: _tekstGrijs,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
               ),
-              onChanged: (waarde) {
-                final gekoppeld = waarde ?? false;
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: <Widget>[
+                Expanded(flex: 3, child: _bouwToebehorenKleurBronVeld()),
+                const SizedBox(width: 4),
+                Expanded(flex: 5, child: _bouwRalKleurToebehorenVeld()),
+              ],
+            ),
+            const SizedBox(height: 2),
+            _bouwCompacteKoppelingCheckbox(
+              value: widget.titelhoofd.buitenkleurGelijkAanToebehoren,
+              label: 'Buitenkleur gelijk aan toebehoren',
+              onChanged: (gekoppeld) {
                 if (gekoppeld) {
                   final kleur = _kleurBuitenController.text.trim().isNotEmpty
                       ? _kleurBuitenController.text
                       : _ralKleurToebehorenController.text;
                   _zetControllerTekst(_kleurBuitenController, kleur);
                   _zetControllerTekst(_ralKleurToebehorenController, kleur);
+                  if (widget.titelhoofd.binnenkleurGelijkAanBuitenkleur &&
+                      kleur.trim().isNotEmpty) {
+                    _zetControllerTekst(_kleurBinnenController, kleur);
+                  }
                 }
                 setState(() {});
                 _meldWijziging(buitenkleurGelijkAanToebehoren: gekoppeld);
               },
             ),
-            const SizedBox(height: 1),
+            _bouwCompacteKoppelingCheckbox(
+              value: widget.titelhoofd.binnenkleurGelijkAanBuitenkleur,
+              label: 'Binnenkleur - Buitenkleur gelijk',
+              onChanged: (gekoppeld) {
+                if (gekoppeld) {
+                  final binnen = _kleurBinnenController.text.trim();
+                  final buiten = _kleurBuitenController.text.trim();
+
+                  // Als slechts één van beide al gekozen is, nemen we die over.
+                  // Zijn beide leeg of verschillend ingevuld, dan bepaalt de
+                  // eerstvolgende keuze in Binnenkleur of Buitenkleur beide velden.
+                  if (binnen.isEmpty && buiten.isNotEmpty) {
+                    _zetControllerTekst(_kleurBinnenController, buiten);
+                  } else if (buiten.isEmpty && binnen.isNotEmpty) {
+                    _zetControllerTekst(_kleurBuitenController, binnen);
+                    if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
+                      _zetControllerTekst(
+                        _ralKleurToebehorenController,
+                        binnen,
+                      );
+                    }
+                  }
+                }
+                setState(() {});
+                _meldWijziging(binnenkleurGelijkAanBuitenkleur: gekoppeld);
+              },
+            ),
+            const SizedBox(height: 2),
             _bouwVeld(
               controller: _kleurAfwijkingController,
               label: 'Afwijkende posities',
@@ -1159,6 +1278,51 @@ class _OpmetingProjectTitelhoofdKaartState
               icoonKleur: _kleurAfwijkingController.text.trim().isEmpty
                   ? _tekstGrijs
                   : _oranje,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwCompacteKoppelingCheckbox({
+    required bool value,
+    required String label,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SizedBox(
+      height: 25,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => onChanged(!value),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: 24,
+              height: 24,
+              child: Checkbox(
+                value: value,
+                onChanged: (waarde) => onChanged(waarde ?? false),
+                activeColor: _groen,
+                visualDensity: const VisualDensity(
+                  horizontal: -4,
+                  vertical: -4,
+                ),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: _tekstDonker,
+                  fontSize: 9.8,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ],
         ),
@@ -1909,11 +2073,7 @@ class _OpmetingProjectTitelhoofdKaartState
       controller: controller,
       readOnly: true,
       onTap: () async {
-        final waarde = await toonOpmetingProjectKleurKeuzeDialoog(
-          context: context,
-          kleurMenus: widget.kleurMenus,
-          huidigeWaarde: controller.text,
-        );
+        final waarde = await _kiesBinnenBuitenKleur(controller.text);
 
         if (!mounted || waarde == null) {
           return;
@@ -1970,11 +2130,7 @@ class _OpmetingProjectTitelhoofdKaartState
           constraints: const BoxConstraints.tightFor(width: 30, height: 30),
           icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 16),
           onPressed: () async {
-            final waarde = await toonOpmetingProjectKleurKeuzeDialoog(
-              context: context,
-              kleurMenus: widget.kleurMenus,
-              huidigeWaarde: controller.text,
-            );
+            final waarde = await _kiesBinnenBuitenKleur(controller.text);
 
             if (!mounted || waarde == null) {
               return;
@@ -2022,7 +2178,20 @@ class _OpmetingProjectTitelhoofdKaartState
     );
   }
 
+  void _verwerkBinnenkleurGewijzigd(String waarde) {
+    if (widget.titelhoofd.binnenkleurGelijkAanBuitenkleur) {
+      _zetControllerTekst(_kleurBuitenController, waarde);
+      if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
+        _zetControllerTekst(_ralKleurToebehorenController, waarde);
+      }
+    }
+    _meldWijziging();
+  }
+
   void _verwerkBuitenkleurGewijzigd(String waarde) {
+    if (widget.titelhoofd.binnenkleurGelijkAanBuitenkleur) {
+      _zetControllerTekst(_kleurBinnenController, waarde);
+    }
     if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
       _zetControllerTekst(_ralKleurToebehorenController, waarde);
     }
@@ -2032,6 +2201,9 @@ class _OpmetingProjectTitelhoofdKaartState
   void _verwerkToebehorenKleurGewijzigd(String waarde) {
     if (widget.titelhoofd.buitenkleurGelijkAanToebehoren) {
       _zetControllerTekst(_kleurBuitenController, waarde);
+      if (widget.titelhoofd.binnenkleurGelijkAanBuitenkleur) {
+        _zetControllerTekst(_kleurBinnenController, waarde);
+      }
     }
     _meldWijziging();
   }

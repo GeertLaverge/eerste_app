@@ -1,7 +1,14 @@
+// THIMACO-CONTROLE: ALIPLAST-STANDAARD-EN-VOLLEDIGE-LIJST-SUBMENUS-20260808-1902
+// THIMACO-CONTROLE: KLEUREN-RAAMLEVERANCIERS-SUBMENUS-EN-SCHUCO-BEHEER-20260808-1829
+// THIMACO-CONTROLE: SCHUCO-FOLIEKLEUREN-APARTE-SUBMAP-20260808-1748
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
 import 'opmeting_project_kleur_model.dart';
+import 'aliplast_kleuren.dart';
+import '../../../paginas/instellingen/kleuren/aliplast_kleuren_pagina.dart';
+import '../../../paginas/instellingen/kleuren/aliplast_standaard_ral_kleuren_pagina.dart';
+import '../../../paginas/instellingen/kleuren/schuco_folie_kleuren_pagina.dart';
 
 class OpmetingProjectKleurenPagina extends StatefulWidget {
   const OpmetingProjectKleurenPagina({super.key});
@@ -222,6 +229,26 @@ class _OpmetingProjectKleurenPaginaState
     );
   }
 
+  Future<void> _openSchucoFolieKleuren() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const SchucoFolieKleurenPagina()),
+    );
+  }
+
+  Future<void> _openAliplastStandaardRalKleuren() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const AliplastStandaardRalKleurenPagina(),
+      ),
+    );
+  }
+
+  Future<void> _openAliplastVolledigePoederlijst() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(builder: (_) => const AliplastKleurenPagina()),
+    );
+  }
+
   Future<String?> _vraagTekst({
     required String titel,
     required String label,
@@ -287,7 +314,7 @@ class _OpmetingProjectKleurenPaginaState
         foregroundColor: _tekstDonker,
         elevation: 0,
         title: const Text(
-          'Kleuren raamleverancier',
+          'Kleuren raamleveranciers',
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
         actions: [
@@ -309,19 +336,86 @@ class _OpmetingProjectKleurenPaginaState
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _groen,
-                      foregroundColor: Colors.white,
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: _lichtGroen,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFCDEBD6)),
+                  ),
+                  child: const Text(
+                    'Beheer hier de kleurkeuzes voor Binnenkleur en Buitenkleur. '
+                    'Schüco en Aliplast staan als leveranciersbibliotheken bovenaan. '
+                    'Daarnaast kun je zelf extra submenu’s aanmaken en daar kleuren onder beheren.',
+                    style: TextStyle(
+                      color: _groen,
+                      fontWeight: FontWeight.w700,
+                      height: 1.35,
                     ),
-                    onPressed: _voegSubmenuToe,
-                    icon: const Icon(Icons.create_new_folder_outlined),
-                    label: const Text('Submenu toevoegen'),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+                const Text(
+                  'Leveranciersbibliotheken',
+                  style: TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _bouwLeveranciersMapKaart(
+                  titel: 'Schüco folie kleuren',
+                  subtitel:
+                      'Kleuren toevoegen, aanpassen of wissen in de aparte Schüco-lijst',
+                  icoon: Icons.layers_outlined,
+                  onTap: _openSchucoFolieKleuren,
+                ),
+                const SizedBox(height: 8),
+                _bouwLeveranciersMapKaart(
+                  titel: 'Aliplast standaard RAL kleuren',
+                  subtitel:
+                      'Lege startlijst · vul later zelf de standaardkleuren in',
+                  icoon: Icons.format_color_fill_outlined,
+                  onTap: _openAliplastStandaardRalKleuren,
+                ),
+                const SizedBox(height: 8),
+                _bouwLeveranciersMapKaart(
+                  titel: 'Aliplast volledige poedercodelijst',
+                  subtitel:
+                      '${AliplastKleuren.alle.length} poedercodes uit de bestaande Aliplast-instellingen',
+                  icoon: Icons.table_rows_outlined,
+                  onTap: _openAliplastVolledigePoederlijst,
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: <Widget>[
+                    const Expanded(
+                      child: Text(
+                        'Eigen submenu’s',
+                        style: TextStyle(
+                          color: _tekstDonker,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: _groen,
+                        foregroundColor: Colors.white,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: _voegSubmenuToe,
+                      icon: const Icon(
+                        Icons.create_new_folder_outlined,
+                        size: 18,
+                      ),
+                      label: const Text('Submenu toevoegen'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 if (_submenus.isEmpty)
                   Container(
                     padding: const EdgeInsets.all(18),
@@ -331,7 +425,7 @@ class _OpmetingProjectKleurenPaginaState
                       border: Border.all(color: _rand),
                     ),
                     child: const Text(
-                      'Nog geen submenu’s. Maak bijvoorbeeld PVC kleuren of ALU kleuren aan.',
+                      'Nog geen eigen submenu’s. Gebruik “Submenu toevoegen” om bijvoorbeeld PVC, ALU of een andere leverancier aan te maken.',
                       style: TextStyle(
                         color: _tekstGrijs,
                         fontWeight: FontWeight.w700,
@@ -342,6 +436,74 @@ class _OpmetingProjectKleurenPaginaState
                   ..._submenus.map(_bouwSubmenuKaart),
               ],
             ),
+    );
+  }
+
+  Widget _bouwLeveranciersMapKaart({
+    required String titel,
+    required String subtitel,
+    required IconData icoon,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _rand),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x07000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _lichtGroen,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icoon, color: _groen, size: 20),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      titel,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitel,
+                      style: const TextStyle(
+                        color: _tekstGrijs,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: _tekstGrijs),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

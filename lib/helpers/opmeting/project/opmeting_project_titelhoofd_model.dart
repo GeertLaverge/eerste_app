@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
 // THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
 import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
@@ -27,6 +28,7 @@ class OpmetingProjectTitelhoofd {
     this.ralKleurToebehoren = '',
     this.kleurBronToebehoren = standaardKleurBronToebehoren,
     this.buitenkleurGelijkAanToebehoren = false,
+    this.binnenkleurGelijkAanBuitenkleur = false,
     this.kleurAfwijking = '',
     this.btwTarief = standaardBtwTarief,
     this.offerteJaar = standaardOfferteJaar,
@@ -94,6 +96,7 @@ class OpmetingProjectTitelhoofd {
   final String ralKleurToebehoren;
   final String kleurBronToebehoren;
   final bool buitenkleurGelijkAanToebehoren;
+  final bool binnenkleurGelijkAanBuitenkleur;
   final String kleurAfwijking;
   final String btwTarief;
   final String offerteJaar;
@@ -215,6 +218,7 @@ class OpmetingProjectTitelhoofd {
     String? ralKleurToebehoren,
     String? kleurBronToebehoren,
     bool? buitenkleurGelijkAanToebehoren,
+    bool? binnenkleurGelijkAanBuitenkleur,
     String? kleurAfwijking,
     String? btwTarief,
     String? offerteJaar,
@@ -256,6 +260,9 @@ class OpmetingProjectTitelhoofd {
       ),
       buitenkleurGelijkAanToebehoren:
           buitenkleurGelijkAanToebehoren ?? this.buitenkleurGelijkAanToebehoren,
+      binnenkleurGelijkAanBuitenkleur:
+          binnenkleurGelijkAanBuitenkleur ??
+          this.binnenkleurGelijkAanBuitenkleur,
       kleurAfwijking: kleurAfwijking ?? this.kleurAfwijking,
       btwTarief: btwTarief ?? this.btwTarief,
       offerteJaar: offerteJaar ?? this.offerteJaar,
@@ -328,6 +335,7 @@ class OpmetingProjectTitelhoofd {
       'ralKleurToebehoren': ralKleurToebehoren,
       'kleurBronToebehoren': kleurBronToebehoren,
       'buitenkleurGelijkAanToebehoren': buitenkleurGelijkAanToebehoren,
+      'binnenkleurGelijkAanBuitenkleur': binnenkleurGelijkAanBuitenkleur,
       'kleurAfwijking': kleurAfwijking,
       'btwTarief': btwTarief,
       'offerteJaar': offerteJaar,
@@ -388,6 +396,10 @@ class OpmetingProjectTitelhoofd {
       ),
       buitenkleurGelijkAanToebehoren: _leesBool(
         json['buitenkleurGelijkAanToebehoren'],
+        standaardWaarde: false,
+      ),
+      binnenkleurGelijkAanBuitenkleur: _leesBool(
+        json['binnenkleurGelijkAanBuitenkleur'],
         standaardWaarde: false,
       ),
       kleurAfwijking: json['kleurAfwijking']?.toString() ?? '',
