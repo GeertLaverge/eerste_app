@@ -1,4 +1,6 @@
-// THIMACO-CONTROLE: BUITENJALOEZIE-DEFINITIEVE-PDF-ROUTING-20260803
+// THIMACO-CONTROLE: OFFERTE-PDF-4-ANALYZER-ISSUES-FIX-20260809-1918
+// THIMACO-CONTROLE: OFFERTE-GELDIGHEID-14-KALENDERDAGEN-20260809-1908
+// THIMACO-CONTROLE: OFFERTE-PDF-PAGINANUMMER-VASTE-CAPTURE-20260809-1855
 // THIMACO-CONTROLE: BUITENJALOEZIE-PDF-ROUTING-FASE-6-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-PDF-ROUTING-WINSTMARGE-20260802
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-PDF-KOPPELING-20260801
@@ -106,8 +108,12 @@ class OffertePdfService {
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.zero,
         theme: pdfThema,
-        build: (context) =>
-            _bouwVoorblad(data: data, logo: logo, toonzaal: toonzaal),
+        build: (context) => _bouwVoorblad(
+          data: data,
+          logo: logo,
+          toonzaal: toonzaal,
+          totaalPaginaAantal: totaalPaginaAantal,
+        ),
       ),
     );
 
@@ -118,6 +124,8 @@ class OffertePdfService {
       detailIndex++
     ) {
       final pagina = detailPaginas[detailIndex];
+      final huidigPaginaNummer = paginaNummer;
+      final toonEindBerekening = detailIndex == detailPaginas.length - 1;
       document.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -127,9 +135,9 @@ class OffertePdfService {
             data: data,
             logo: logo,
             pagina: pagina,
-            paginaNummer: paginaNummer,
+            paginaNummer: huidigPaginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
-            toonEindBerekening: detailIndex == detailPaginas.length - 1,
+            toonEindBerekening: toonEindBerekening,
           ),
         ),
       );
@@ -141,6 +149,7 @@ class OffertePdfService {
     // `positieBehouden` staan al op hun oorspronkelijke plaats tussen de
     // gewone artikelen. Een artikelblok wordt nooit opgesplitst.
     for (final optiePagina in optiePaginas) {
+      final huidigPaginaNummer = paginaNummer;
       document.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
@@ -150,7 +159,7 @@ class OffertePdfService {
             data: data,
             logo: logo,
             pagina: optiePagina,
-            paginaNummer: paginaNummer,
+            paginaNummer: huidigPaginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
           ),
         ),
@@ -158,6 +167,7 @@ class OffertePdfService {
       paginaNummer++;
     }
 
+    final goedkeuringsPaginaNummer = paginaNummer;
     document.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -167,7 +177,7 @@ class OffertePdfService {
           data: data,
           logo: logo,
           goedkeuring: goedkeuring,
-          paginaNummer: paginaNummer,
+          paginaNummer: goedkeuringsPaginaNummer,
           totaalPaginaAantal: totaalPaginaAantal,
         ),
       ),
@@ -203,6 +213,8 @@ class OffertePdfService {
 
         for (var index = 0; index < paginas.length; index++) {
           final pagina = paginas[index];
+          final huidigPaginaNummer = index + 1;
+          final isEerstePagina = index == 0;
           document.addPage(
             pw.Page(
               pageFormat: PdfPageFormat.a4,
@@ -212,9 +224,9 @@ class OffertePdfService {
                 data: data,
                 logo: logo,
                 pagina: pagina,
-                paginaNummer: index + 1,
+                paginaNummer: huidigPaginaNummer,
                 totaalPaginaAantal: totaalPaginaAantal,
-                eerstePagina: index == 0,
+                eerstePagina: isEerstePagina,
               ),
             ),
           );
@@ -229,6 +241,7 @@ class OffertePdfService {
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
     required pw.ImageProvider toonzaal,
+    required int totaalPaginaAantal,
   }) {
     return pw.Container(
       width: PdfPageFormat.a4.width,
@@ -314,6 +327,15 @@ class OffertePdfService {
                               _bouwWelkomBlok(),
                               pw.SizedBox(height: 18),
                               _bouwVoetregel(),
+                              pw.SizedBox(height: 6),
+                              pw.Text(
+                                'Pagina 1 van $totaalPaginaAantal',
+                                textAlign: pw.TextAlign.center,
+                                style: const pw.TextStyle(
+                                  color: tekstGrijs,
+                                  fontSize: 8.3,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -1651,6 +1673,11 @@ class OffertePdfService {
     required String offerteNummer,
   }) {
     final isOndertekend = goedkeuring?.isOndertekend ?? false;
+    final geldigTot = DateTime(
+      data.offerteDatum.year,
+      data.offerteDatum.month,
+      data.offerteDatum.day + 14,
+    );
 
     return pw.Container(
       padding: const pw.EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -1701,6 +1728,24 @@ class OffertePdfService {
             ],
           ),
           pw.SizedBox(height: 8),
+          pw.Text(
+            'Geldigheidsduur offerte',
+            style: const pw.TextStyle(color: tekstDonker, fontSize: 8.0),
+          ),
+          pw.SizedBox(height: 3),
+          pw.Text(
+            'Deze offerte is geldig gedurende 14 kalenderdagen vanaf de '
+            'offertedatum.\n'
+            'Geldig tot en met: ${_formatteerDatum(geldigTot)}\n'
+            'Na het verstrijken van deze termijn behouden wij ons het recht '
+            'voor om prijzen, levertermijnen en voorwaarden te herzien.',
+            style: const pw.TextStyle(
+              color: tekstGrijs,
+              fontSize: 7.7,
+              lineSpacing: 1.6,
+            ),
+          ),
+          pw.SizedBox(height: 10),
           _goedkeuringsInfoRegel(
             label: 'Totaal inclusief btw',
             waarde: _formatteerEuro(data.totaalInclusiefBtw),
