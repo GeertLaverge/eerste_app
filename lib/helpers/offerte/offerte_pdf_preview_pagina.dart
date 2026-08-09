@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-MEERDERE-GESCHIEDENISVERSIES-20260809
 // THIMACO-CONTROLE: OFFERTE-CONCEPTVERSIES-EN-WERKVERSIES-20260806
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-MENU-20260806
 // THIMACO-CONTROLE: OFFERTE-MAIL-VERZENDOVERZICHT-EN-BIBLIOTHEEK-20260802
@@ -539,6 +540,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       return;
     }
 
+    final mailVersies = soort == OfferteMailVerzendSoort.offerte
+        ? await _versieService.laadVoorProject(widget.titelhoofd)
+        : const <OfferteVersieModel>[];
+    if (!mounted) return;
+
     final verstuurd = await OfferteMailVerzendDialog.toon(
       context: context,
       data: data,
@@ -546,6 +552,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       offerteBestandsnaam: _maakBestandsnaam(),
       soort: soort,
       goedkeuring: _goedkeuring,
+      historischeOffertes: _bouwHistorischeMailOffertes(mailVersies),
     );
 
     if (!mounted || verstuurd != true) return;
@@ -554,6 +561,92 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         content: Text('De e-mail is verstuurd.'),
         backgroundColor: _groen,
       ),
+    );
+  }
+
+  List<OfferteMailHistorischeOfferte> _bouwHistorischeMailOffertes(
+    Iterable<OfferteVersieModel> versies,
+  ) {
+    final resultaat = versies
+        .map((versie) {
+          final naam = versie.weergaveNaam.trim().isEmpty
+              ? 'Offerteversie ${versie.versieNummer}'
+              : versie.weergaveNaam.trim();
+          final nummer = versie.offerteNummer.trim().isEmpty
+              ? widget.titelhoofd.samengesteldOffertenummer.trim()
+              : versie.offerteNummer.trim();
+          final bestandsnaam = _maakHistorischeOfferteBestandsnaam(
+            offerteNummer: nummer,
+            versieNummer: versie.versieNummer,
+            naam: naam,
+          );
+
+          return OfferteMailHistorischeOfferte(
+            id: versie.id,
+            versieNummer: versie.versieNummer,
+            naam: naam,
+            statusLabel: versie.isOndertekend ? 'Ondertekend' : 'Concept',
+            opgeslagenOp: versie.opgeslagenOp,
+            omschrijving: versie.omschrijving,
+            bestandsnaam: bestandsnaam,
+            pdfLader: () => _bouwPdfVoorHistorischeVersie(versie),
+          );
+        })
+        .toList(growable: false);
+
+    return List<OfferteMailHistorischeOfferte>.unmodifiable(resultaat);
+  }
+
+  String _maakHistorischeOfferteBestandsnaam({
+    required String offerteNummer,
+    required int versieNummer,
+    required String naam,
+  }) {
+    var basis = <String>[
+      'Offerte',
+      if (offerteNummer.trim().isNotEmpty) offerteNummer.trim(),
+      'V$versieNummer',
+      naam.trim(),
+    ].where((deel) => deel.trim().isNotEmpty).join(' - ');
+
+    basis = basis.replaceAll(RegExp(r'[\\/:*?"<>|]+'), '_');
+    basis = basis.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (basis.isEmpty) basis = 'Offerte versie $versieNummer';
+    return '$basis.pdf';
+  }
+
+  Future<Uint8List> _bouwPdfVoorHistorischeVersie(
+    OfferteVersieModel versie,
+  ) async {
+    final titelhoofd = _versieService.titelhoofdVan(versie);
+    final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
+      _versieService.positiesVan(versie),
+    );
+
+    final pvcRaamTekeningen =
+        await OffertePvcRaamTekeningService.maakTekeningen(posities);
+    final projectPrijsResultaat =
+        OfferteProjectPrijsService.berekenAlleOndersteundeUitTitelhoofd(
+          titelhoofd: titelhoofd,
+          alleOpmetingen: posities,
+        );
+    final data = OfferteDocumentData(
+      klant: OfferteKlantgegevens.vanTitelhoofd(titelhoofd),
+      offerteNummer: titelhoofd.samengesteldOffertenummer,
+      offerteDatum: versie.offerteDatum,
+      btwTarief: titelhoofd.btwTarief,
+      kortingOmschrijving: titelhoofd.kortingOmschrijving,
+      projectKleurBinnen: titelhoofd.projectKleurBinnen,
+      projectKleurBuiten: titelhoofd.projectKleurBuiten,
+      ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
+      posities: posities,
+      projectPrijsregels: projectPrijsResultaat.prijsregels,
+      pvcRaamTekeningen: pvcRaamTekeningen,
+    );
+
+    return OffertePdfService.bouwPdf(
+      data,
+      goedkeuring: versie.isOndertekend ? versie.goedkeuring : null,
     );
   }
 

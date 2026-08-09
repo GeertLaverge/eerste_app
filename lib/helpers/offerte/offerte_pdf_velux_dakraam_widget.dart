@@ -32,6 +32,17 @@ class OffertePdfVeluxDakraamWidget {
         '${_afmetingCm(model)}';
   }
 
+  static String _notitiesVoorPdf(
+    OpmetingOverzichtRaamItem positie,
+    OpmetingVeluxDakraamModel model,
+  ) {
+    final overzichtNotities = positie.notities.trim();
+    if (overzichtNotities.isNotEmpty) {
+      return overzichtNotities;
+    }
+    return model.notities.trim();
+  }
+
   static double berekenKolomHoogte(OpmetingOverzichtRaamItem positie) {
     final model = positie.veluxDakraamData;
     if (model == null) {
@@ -40,7 +51,7 @@ class OffertePdfVeluxDakraamWidget {
 
     return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
       regels: _regelsVoorOfferte(positie, model),
-      notities: positie.notities,
+      notities: _notitiesVoorPdf(positie, model),
     );
   }
 
@@ -91,7 +102,7 @@ class OffertePdfVeluxDakraamWidget {
       technischeKolom: OffertePdfArtikelLayoutHelper.bouwTechnischeKolom(
         hoogte: hoogte,
         regels: regels,
-        notities: positie.notities,
+        notities: _notitiesVoorPdf(positie, model),
         legeTekst: 'Geen Velux-catalogusartikelen gekozen.',
       ),
       prijsBlok: _bouwPrijsBlok(
@@ -229,10 +240,9 @@ class OffertePdfVeluxDakraamWidget {
                 pw.Expanded(
                   child: pw.Text(
                     'Totaal positie',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                      fontSize: 8.4,
-                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 8.0,
                     ),
                   ),
                 ),
@@ -243,30 +253,16 @@ class OffertePdfVeluxDakraamWidget {
                     textAlign: pw.TextAlign.right,
                     style: const pw.TextStyle(
                       color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                      fontSize: 7.4,
+                      fontSize: 8.0,
                     ),
                   )
                 else
-                  pw.RichText(
+                  pw.Text(
+                    '€ ${_bedragMetPunt(totaalVoorKorting)} excl. btw',
                     textAlign: pw.TextAlign.right,
-                    text: pw.TextSpan(
-                      children: <pw.InlineSpan>[
-                        pw.TextSpan(
-                          text: '€ ${_bedragMetPunt(totaalVoorKorting)}',
-                          style: pw.TextStyle(
-                            color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                            fontSize: 12.2,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        const pw.TextSpan(
-                          text: ' excl. btw',
-                          style: pw.TextStyle(
-                            color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                            fontSize: 6.4,
-                          ),
-                        ),
-                      ],
+                    style: const pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                      fontSize: 8.0,
                     ),
                   ),
               ],

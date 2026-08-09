@@ -18,6 +18,17 @@ class OffertePdfPlooiwerkenWidget {
   static const double _basisPrijsRegelHoogte = 34;
   static const double _basisOptiePrijsRegelHoogte = 78;
 
+  static String _notitiesVoorPdf(
+    OpmetingOverzichtRaamItem positie,
+    OpmetingPlooiwerkenModel model,
+  ) {
+    final overzichtNotities = positie.notities.trim();
+    if (overzichtNotities.isNotEmpty) {
+      return overzichtNotities;
+    }
+    return model.notities.trim();
+  }
+
   static double berekenKolomHoogte(OpmetingOverzichtRaamItem positie) {
     final model = positie.plooiwerkenData;
 
@@ -27,7 +38,7 @@ class OffertePdfPlooiwerkenWidget {
 
     return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
       regels: _technischeRegelsVoorOfferte(positie, model),
-      notities: positie.notities,
+      notities: _notitiesVoorPdf(positie, model),
     );
   }
 
@@ -75,7 +86,7 @@ class OffertePdfPlooiwerkenWidget {
       technischeKolom: OffertePdfArtikelLayoutHelper.bouwTechnischeKolom(
         hoogte: hoogte,
         regels: regels,
-        notities: positie.notities,
+        notities: _notitiesVoorPdf(positie, model),
         legeTekst: 'Geen technische keuzes ingevuld.',
       ),
       prijsBlok: _bouwPrijsBlok(
@@ -213,10 +224,9 @@ class OffertePdfPlooiwerkenWidget {
                 pw.Expanded(
                   child: pw.Text(
                     'Totaal positie',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                      fontSize: 8.4,
-                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 8.0,
                     ),
                   ),
                 ),
@@ -227,30 +237,16 @@ class OffertePdfPlooiwerkenWidget {
                     textAlign: pw.TextAlign.right,
                     style: const pw.TextStyle(
                       color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                      fontSize: 7.4,
+                      fontSize: 8.0,
                     ),
                   )
                 else
-                  pw.RichText(
+                  pw.Text(
+                    '€ ${_bedragMetPunt(totaalVoorKorting)} excl. btw',
                     textAlign: pw.TextAlign.right,
-                    text: pw.TextSpan(
-                      children: <pw.InlineSpan>[
-                        pw.TextSpan(
-                          text: '€ ${_bedragMetPunt(totaalVoorKorting)}',
-                          style: pw.TextStyle(
-                            color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                            fontSize: 12.2,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        const pw.TextSpan(
-                          text: ' excl. btw',
-                          style: pw.TextStyle(
-                            color: OffertePdfArtikelLayoutHelper.tekstGrijs,
-                            fontSize: 6.4,
-                          ),
-                        ),
-                      ],
+                    style: const pw.TextStyle(
+                      color: OffertePdfArtikelLayoutHelper.tekstDonker,
+                      fontSize: 8.0,
                     ),
                   ),
               ],

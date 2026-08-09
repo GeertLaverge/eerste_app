@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-MAIL-MEERDERE-GESCHIEDENISVERSIES-20260809
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-MET-BIJLAGEN-20260802
 // THIMACO-CONTROLE: EEN-OPGESLAGEN-MAILBERICHT-PER-VERZENDING-20260802
 
@@ -17,6 +18,30 @@ import 'offerte_mail_verzend_service.dart';
 
 enum OfferteMailVerzendSoort { offerte, bevestiging }
 
+typedef OfferteMailHistorischePdfLader = Future<Uint8List> Function();
+
+class OfferteMailHistorischeOfferte {
+  const OfferteMailHistorischeOfferte({
+    required this.id,
+    required this.versieNummer,
+    required this.naam,
+    required this.statusLabel,
+    required this.opgeslagenOp,
+    required this.bestandsnaam,
+    required this.pdfLader,
+    this.omschrijving = '',
+  });
+
+  final String id;
+  final int versieNummer;
+  final String naam;
+  final String statusLabel;
+  final DateTime opgeslagenOp;
+  final String bestandsnaam;
+  final OfferteMailHistorischePdfLader pdfLader;
+  final String omschrijving;
+}
+
 class OfferteMailVerzendDialog extends StatefulWidget {
   const OfferteMailVerzendDialog({
     super.key,
@@ -25,6 +50,7 @@ class OfferteMailVerzendDialog extends StatefulWidget {
     required this.offerteBestandsnaam,
     required this.soort,
     this.goedkeuring,
+    this.historischeOffertes = const <OfferteMailHistorischeOfferte>[],
   });
 
   final OfferteDocumentData data;
@@ -32,6 +58,7 @@ class OfferteMailVerzendDialog extends StatefulWidget {
   final String offerteBestandsnaam;
   final OfferteMailVerzendSoort soort;
   final OfferteGoedkeuring? goedkeuring;
+  final List<OfferteMailHistorischeOfferte> historischeOffertes;
 
   static Future<bool?> toon({
     required BuildContext context,
@@ -40,6 +67,8 @@ class OfferteMailVerzendDialog extends StatefulWidget {
     required String offerteBestandsnaam,
     required OfferteMailVerzendSoort soort,
     OfferteGoedkeuring? goedkeuring,
+    List<OfferteMailHistorischeOfferte> historischeOffertes =
+        const <OfferteMailHistorischeOfferte>[],
   }) {
     return showDialog<bool>(
       context: context,
@@ -51,6 +80,7 @@ class OfferteMailVerzendDialog extends StatefulWidget {
           offerteBestandsnaam: offerteBestandsnaam,
           soort: soort,
           goedkeuring: goedkeuring,
+          historischeOffertes: historischeOffertes,
         );
       },
     );
@@ -83,6 +113,8 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
   List<_BeschikbareBibliotheekFolder> _folders =
       const <_BeschikbareBibliotheekFolder>[];
   final Set<String> _geselecteerdeFolderIds = <String>{};
+  final Set<String> _geselecteerdeHistorischeOfferteIds = <String>{};
+  bool _huidigeOfferteGeselecteerd = true;
 
   String? _geselecteerdBerichtId;
   bool _laden = true;
@@ -190,6 +222,18 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
     return widget.soort == OfferteMailVerzendSoort.offerte
         ? OfferteMailBerichtGebruik.offerte
         : OfferteMailBerichtGebruik.bevestiging;
+  }
+
+  bool get _magOfferteversiesKiezen =>
+      widget.soort == OfferteMailVerzendSoort.offerte;
+
+  int get _aantalGeselecteerdeOffertes {
+    return (_huidigeOfferteGeselecteerd ? 1 : 0) +
+        _geselecteerdeHistorischeOfferteIds.length;
+  }
+
+  int get _aantalGeselecteerdeDocumenten {
+    return _aantalGeselecteerdeOffertes + _geselecteerdeFolderIds.length;
   }
 
   Future<void> _laadOverzicht() async {
@@ -481,6 +525,10 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
       _toonFout('Vul de ontvanger, het onderwerp en het bericht volledig in.');
       return;
     }
+    if (_aantalGeselecteerdeOffertes == 0) {
+      _toonFout('Selecteer minstens één offerte om te versturen.');
+      return;
+    }
 
     setState(() {
       _versturen = true;
@@ -490,22 +538,60 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
     });
 
     try {
-      final bijlagen = <OfferteMailBijlage>[
-        OfferteMailBijlage(
-          bestandsnaam: _veiligePdfNaam(
-            widget.offerteBestandsnaam,
-            'Offerte.pdf',
+      final bijlagen = <OfferteMailBijlage>[];
+      final gebruikteNamen = <String>{};
+
+      if (_huidigeOfferteGeselecteerd) {
+        final huidigeNaam = _maakUniekeBestandsnaam(
+          _veiligePdfNaam(widget.offerteBestandsnaam, 'Offerte.pdf'),
+          gebruikteNamen,
+        );
+        gebruikteNamen.add(huidigeNaam.toLowerCase());
+        bijlagen.add(
+          OfferteMailBijlage(
+            bestandsnaam: huidigeNaam,
+            bytes: widget.offerteBytes,
           ),
-          bytes: widget.offerteBytes,
-        ),
-      ];
+        );
+      }
+
+      final geselecteerdeHistorischeOffertes = widget.historischeOffertes
+          .where(
+            (item) => _geselecteerdeHistorischeOfferteIds.contains(item.id),
+          )
+          .toList(growable: false);
+
+      for (
+        var index = 0;
+        index < geselecteerdeHistorischeOffertes.length;
+        index++
+      ) {
+        final item = geselecteerdeHistorischeOffertes[index];
+        if (!mounted) return;
+        setState(() {
+          _status =
+              'Offertevariant ${index + 1} van '
+              '${geselecteerdeHistorischeOffertes.length} voorbereiden…';
+          _voortgang =
+              0.03 +
+              (geselecteerdeHistorischeOffertes.isEmpty
+                  ? 0
+                  : (index / geselecteerdeHistorischeOffertes.length) * 0.14);
+        });
+
+        final bytes = await item.pdfLader();
+        var naam = _veiligePdfNaam(
+          item.bestandsnaam,
+          'Offerte versie ${item.versieNummer} - ${item.naam}.pdf',
+        );
+        naam = _maakUniekeBestandsnaam(naam, gebruikteNamen);
+        gebruikteNamen.add(naam.toLowerCase());
+        bijlagen.add(OfferteMailBijlage(bestandsnaam: naam, bytes: bytes));
+      }
 
       final geselecteerdeFolders = _folders
           .where((item) => _geselecteerdeFolderIds.contains(item.folder.id))
           .toList(growable: false);
-      final gebruikteNamen = <String>{
-        bijlagen.first.bestandsnaam.toLowerCase(),
-      };
 
       for (var index = 0; index < geselecteerdeFolders.length; index++) {
         final item = geselecteerdeFolders[index];
@@ -514,10 +600,10 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
           _status =
               'Folder ${index + 1} van ${geselecteerdeFolders.length} ophalen…';
           _voortgang =
-              0.03 +
+              0.18 +
               (geselecteerdeFolders.isEmpty
                   ? 0
-                  : (index / geselecteerdeFolders.length) * 0.17);
+                  : (index / geselecteerdeFolders.length) * 0.10);
         });
 
         final bytes = await _oneDriveService.downloadPdf(
@@ -541,7 +627,7 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
           if (!mounted) return;
           setState(() {
             _status = status;
-            _voortgang = 0.20 + voortgang * 0.80;
+            _voortgang = 0.30 + voortgang * 0.70;
           });
         },
       );
@@ -834,22 +920,123 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
   }
 
   Widget _bouwDocumentKeuzes() {
+    final historischeOffertes = widget.historischeOffertes;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        const Text(
+          'Offertes',
+          style: TextStyle(
+            color: _tekstDonker,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
         CheckboxListTile(
-          value: true,
+          value: _huidigeOfferteGeselecteerd,
           activeColor: _groen,
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
           secondary: const Icon(Icons.picture_as_pdf_outlined, color: _groen),
-          title: const Text(
-            'Offerte-PDF',
-            style: TextStyle(fontWeight: FontWeight.w900),
+          title: Text(
+            widget.soort == OfferteMailVerzendSoort.bevestiging
+                ? 'Ondertekende huidige offerte'
+                : 'Huidige offerte',
+            style: const TextStyle(fontWeight: FontWeight.w900),
           ),
           subtitle: Text(widget.offerteBestandsnaam),
-          onChanged: null,
+          onChanged: !_magOfferteversiesKiezen || _versturen
+              ? null
+              : (waarde) {
+                  setState(() {
+                    _huidigeOfferteGeselecteerd = waarde == true;
+                    _fout = '';
+                  });
+                },
         ),
-        const Divider(height: 1, color: _rand),
+        if (_magOfferteversiesKiezen) ...<Widget>[
+          const Divider(height: 1, color: _rand),
+          const Padding(
+            padding: EdgeInsets.only(top: 12, bottom: 5),
+            child: Text(
+              'Offertegeschiedenis',
+              style: TextStyle(
+                color: _tekstDonker,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          if (historischeOffertes.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Text(
+                'Er staan nog geen eerdere offertes in de geschiedenis.',
+                style: TextStyle(color: _tekstGrijs),
+              ),
+            )
+          else
+            ...historischeOffertes.map((item) {
+              final geselecteerd = _geselecteerdeHistorischeOfferteIds.contains(
+                item.id,
+              );
+              final omschrijving = item.omschrijving.trim();
+              final details = StringBuffer()
+                ..write('Versie ${item.versieNummer} · ${item.statusLabel} · ')
+                ..write(_formatteerDatumTijd(item.opgeslagenOp));
+              if (omschrijving.isNotEmpty) {
+                details
+                  ..write('\n')
+                  ..write(omschrijving);
+              }
+
+              return CheckboxListTile(
+                value: geselecteerd,
+                activeColor: _groen,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                secondary: Icon(
+                  item.statusLabel.toLowerCase().contains('ondertekend')
+                      ? Icons.verified_outlined
+                      : Icons.history_rounded,
+                  color: _groen,
+                ),
+                title: Text(
+                  item.naam,
+                  style: const TextStyle(
+                    color: _tekstDonker,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                subtitle: Text(details.toString()),
+                isThreeLine: omschrijving.isNotEmpty,
+                onChanged: _versturen
+                    ? null
+                    : (waarde) {
+                        setState(() {
+                          if (waarde == true) {
+                            _geselecteerdeHistorischeOfferteIds.add(item.id);
+                          } else {
+                            _geselecteerdeHistorischeOfferteIds.remove(item.id);
+                          }
+                          _fout = '';
+                        });
+                      },
+              );
+            }),
+        ],
+        const Divider(height: 22, color: _rand),
+        const Text(
+          'Folders en productinformatie',
+          style: TextStyle(
+            color: _tekstDonker,
+            fontSize: 13,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 3),
         if (_folders.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 13),
@@ -899,6 +1086,13 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
     );
   }
 
+  static String _formatteerDatumTijd(DateTime datum) {
+    final lokaal = datum.toLocal();
+    String twee(int waarde) => waarde.toString().padLeft(2, '0');
+    return '${twee(lokaal.day)}/${twee(lokaal.month)}/${lokaal.year} · '
+        '${twee(lokaal.hour)}:${twee(lokaal.minute)}';
+  }
+
   Widget _bouwVoet() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 11, 16, 13),
@@ -938,7 +1132,8 @@ class _OfferteMailVerzendDialogState extends State<OfferteMailVerzendDialog> {
             children: <Widget>[
               Expanded(
                 child: Text(
-                  '${1 + _geselecteerdeFolderIds.length} document(en) geselecteerd',
+                  '$_aantalGeselecteerdeDocumenten document(en) geselecteerd · '
+                  '$_aantalGeselecteerdeOffertes offerte(s)',
                   style: const TextStyle(
                     color: _tekstGrijs,
                     fontWeight: FontWeight.w700,

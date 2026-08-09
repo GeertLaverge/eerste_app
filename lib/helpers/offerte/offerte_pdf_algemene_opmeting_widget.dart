@@ -316,19 +316,17 @@ class OffertePdfAlgemeneOpmetingWidget {
           pw.Expanded(
             child: pw.Text(
               isOptie ? 'Totaal optie' : 'Totaal positie',
-              style: pw.TextStyle(
+              style: const pw.TextStyle(
                 color: OffertePdfArtikelLayoutHelper.tekstDonker,
-                fontSize: 8.6,
-                fontWeight: pw.FontWeight.bold,
+                fontSize: 8.0,
               ),
             ),
           ),
           pw.Text(
             '${_euro(totaal)} excl. btw',
-            style: pw.TextStyle(
+            style: const pw.TextStyle(
               color: OffertePdfArtikelLayoutHelper.tekstDonker,
-              fontSize: 10.2,
-              fontWeight: pw.FontWeight.bold,
+              fontSize: 8.0,
             ),
           ),
         ],
