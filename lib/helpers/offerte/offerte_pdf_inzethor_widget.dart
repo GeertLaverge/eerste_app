@@ -41,10 +41,25 @@ class OffertePdfInzethorWidget {
 
     final regels = _technischeRegelsVoorOfferte(positie, model);
 
-    return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
-      regels: regels,
-      notities: _notitiesVoorPdf(positie, model),
-    );
+    final notities = _notitiesVoorPdf(positie, model);
+
+    final basisHoogte =
+        OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
+          regels: regels,
+          notities: notities,
+        );
+
+    // Het opmerkingenblok bevat naast de tekst ook een scheidingslijn, titel en
+    // tussenruimtes. Reserveer extra hoogte zodat opmerkingen bij een volle
+    // technische kolom niet buiten de zichtbare PDF-zone vallen.
+    final extraNotitieHoogte = notities.isEmpty ? 0.0 : 20.0;
+
+    return (basisHoogte + extraNotitieHoogte)
+        .clamp(
+          OffertePdfArtikelLayoutHelper.minimumKolomHoogte,
+          OffertePdfArtikelLayoutHelper.maximumKolomHoogte,
+        )
+        .toDouble();
   }
 
   static double berekenTotalePositieHoogte(

@@ -33,10 +33,27 @@ class OffertePdfVoorzetscreenWidget {
     final model = positie.voorzetscreenData;
     if (model == null) return OffertePdfArtikelLayoutHelper.minimumKolomHoogte;
 
-    return OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
-      regels: _technischeRegelsVoorOfferte(positie, model),
-      notities: _notitiesVoorPdf(positie, model),
-    );
+    final notities = _notitiesVoorPdf(positie, model);
+    final basisHoogte =
+        OffertePdfArtikelLayoutHelper.berekenTechnischeKolomHoogte(
+          regels: _technischeRegelsVoorOfferte(positie, model),
+          notities: notities,
+        );
+
+    // Het opmerkingenblok staat onder alle technische regels en bevat naast de
+    // eigenlijke tekst ook een scheidingslijn, titel en tussenruimtes. De
+    // gezamenlijke hoogteberekening reserveert hiervoor bij een volle
+    // Voorzetscreen-kolom net te weinig ruimte, waardoor de opmerkingen onder
+    // de vaste kolomhoogte konden verdwijnen. Reserveer daarom dezelfde extra
+    // ruimte die ook bij de Schuifvliegendeur wordt gebruikt.
+    final extraNotitieHoogte = notities.isEmpty ? 0.0 : 20.0;
+
+    return (basisHoogte + extraNotitieHoogte)
+        .clamp(
+          OffertePdfArtikelLayoutHelper.minimumKolomHoogte,
+          OffertePdfArtikelLayoutHelper.maximumKolomHoogte,
+        )
+        .toDouble();
   }
 
   static double berekenTotalePositieHoogte(
