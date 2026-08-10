@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETINGEN-ATOMAIRE-OPSLAG-GLOBAAL-20260810
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-OPSLAG-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-APP-STORAGE-FASE-3A-20260803
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-APP-STORAGE-20260802
@@ -8,6 +9,7 @@
 // THIMACO-CONTROLE: APP-STORAGE-VELUX-DAKRAMEN-CATALOGUS-20260729
 // THIMACO-CONTROLE: APP-STORAGE-SEKTIONALE-POORTEN-20260729
 // THIMACO-CONTROLE: APP-STORAGE-PLOOIWERKEN-KLEURLIJSTEN-DEFINITIEF-20260728-2110
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +38,20 @@ import 'offerte/mail/offerte_mail_tekst_model.dart';
 import 'offerte/versies/offerte_versie_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
+
+class AppStorageOpmetingMutatieResultaat<T> {
+  const AppStorageOpmetingMutatieResultaat({
+    required this.resultaat,
+    required this.opmetingen,
+    required this.gewijzigd,
+    this.startSync = true,
+  });
+
+  final T resultaat;
+  final List<OpmetingOverzichtRaamItem> opmetingen;
+  final bool gewijzigd;
+  final bool startSync;
+}
 
 class AppStorage {
   static const String _agendaItemsNieuwKey = 'agenda_items_nieuw';
@@ -1907,6 +1923,55 @@ class AppStorage {
   // OPMETINGEN - ALGEMENE OPSLAG
   // ------------------------------------------------------------
 
+  // Alle wijzigingen aan de positielijst lopen door exact dezelfde wachtrij.
+  // Daardoor kan geen fiche, prijsberekening, kopieeractie of sync nog tussen
+  // het lezen en schrijven van een andere opmetingsmutatie terechtkomen.
+  static Future<void> _opmetingenWachtrij = Future<void>.value();
+
+  // Houd enkele geladen basisversies bij. Oudere gespecialiseerde fiches geven
+  // bij bewaren nog hun oorspronkelijke [gewijzigdOp] mee. Daarmee kan
+  // [werkOpmetingBij] een drie-weg-merge uitvoeren en uitsluitend de velden
+  // toepassen die de fiche werkelijk heeft gewijzigd.
+  static final Map<String, OpmetingOverzichtRaamItem>
+  _opmetingBasisMomentopnames = <String, OpmetingOverzichtRaamItem>{};
+
+  static const int _maxOpmetingBasisMomentopnames = 4000;
+
+  static String _opmetingMomentopnameSleutel(
+    OpmetingOverzichtRaamItem opmeting,
+  ) {
+    return '${opmeting.id.trim()}\u0000${opmeting.gewijzigdOp.trim()}';
+  }
+
+  static void _onthoudOpmetingMomentopnames(
+    Iterable<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    for (final opmeting in opmetingen) {
+      final id = opmeting.id.trim();
+      if (id.isEmpty) continue;
+
+      _opmetingBasisMomentopnames[_opmetingMomentopnameSleutel(opmeting)] =
+          opmeting;
+    }
+
+    while (_opmetingBasisMomentopnames.length >
+        _maxOpmetingBasisMomentopnames) {
+      _opmetingBasisMomentopnames.remove(
+        _opmetingBasisMomentopnames.keys.first,
+      );
+    }
+  }
+
+  static OpmetingOverzichtRaamItem? _zoekOpmetingBasisMomentopname(
+    OpmetingOverzichtRaamItem opmeting,
+  ) {
+    final id = opmeting.id.trim();
+    final gewijzigdOp = opmeting.gewijzigdOp.trim();
+    if (id.isEmpty || gewijzigdOp.isEmpty) return null;
+
+    return _opmetingBasisMomentopnames['$id\u0000$gewijzigdOp'];
+  }
+
   static List<OpmetingOverzichtRaamItem> _decodeOpmetingen(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) {
       return <OpmetingOverzichtRaamItem>[];
@@ -1939,11 +2004,57 @@ class AppStorage {
     return jsonEncode(opmetingen.map((opmeting) => opmeting.toJson()).toList());
   }
 
+  static Future<T> muteerOpmetingenAtomair<T>(
+    FutureOr<AppStorageOpmetingMutatieResultaat<T>> Function(
+      List<OpmetingOverzichtRaamItem> actueleOpmetingen,
+    )
+    mutatie,
+  ) {
+    final completer = Completer<T>();
+
+    _opmetingenWachtrij = _opmetingenWachtrij.then((_) async {
+      try {
+        final prefs = await openBox();
+        final actueel = _decodeOpmetingen(prefs.getString(_opmetingenKey));
+        _onthoudOpmetingMomentopnames(actueel);
+
+        final mutatieResultaat = await mutatie(
+          List<OpmetingOverzichtRaamItem>.from(actueel),
+        );
+
+        if (mutatieResultaat.gewijzigd) {
+          final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+            mutatieResultaat.opmetingen,
+          );
+          await prefs.setString(
+            _opmetingenKey,
+            encodeOpmetingenVoorSync(nieuweLijst),
+          );
+          _onthoudOpmetingMomentopnames(nieuweLijst);
+
+          if (mutatieResultaat.startSync) {
+            await _syncBackup();
+          }
+        }
+
+        completer.complete(mutatieResultaat.resultaat);
+      } catch (fout, stackTrace) {
+        completer.completeError(fout, stackTrace);
+      }
+    });
+
+    return completer.future;
+  }
+
   static Future<List<OpmetingOverzichtRaamItem>>
   laadOpmetingenVoorSync() async {
-    final prefs = await openBox();
+    // Een lezer krijgt nooit een toestand van vóór een reeds gestarte mutatie.
+    await _opmetingenWachtrij;
 
-    return _decodeOpmetingen(prefs.getString(_opmetingenKey));
+    final prefs = await openBox();
+    final opmetingen = _decodeOpmetingen(prefs.getString(_opmetingenKey));
+    _onthoudOpmetingMomentopnames(opmetingen);
+    return opmetingen;
   }
 
   static Future<List<OpmetingOverzichtRaamItem>> laadOpmetingen() async {
@@ -1956,139 +2067,494 @@ class AppStorage {
     }).toList();
   }
 
+  /// Veilige lijstsave voor bestaande aanroepers die nog een volledige lijst
+  /// aanleveren. Nieuwere records die ondertussen in de opslag zijn gekomen
+  /// worden nooit verwijderd door een oudere snapshot.
   static Future<void> bewaarOpmetingen(
     List<OpmetingOverzichtRaamItem> opmetingen,
   ) async {
-    final prefs = await openBox();
+    await muteerOpmetingenAtomair<void>((actueel) {
+      final samengevoegd = _voegOpmetingLijstenVeiligSamen(
+        actueel: actueel,
+        inkomend: opmetingen,
+        inkomendWintBijGelijkeDatum: true,
+      );
 
-    await prefs.setString(_opmetingenKey, encodeOpmetingenVoorSync(opmetingen));
-
-    await _syncBackup();
+      final gewijzigd = !_opmetingLijstenGelijk(actueel, samengevoegd);
+      return AppStorageOpmetingMutatieResultaat<void>(
+        resultaat: null,
+        opmetingen: samengevoegd,
+        gewijzigd: gewijzigd,
+      );
+    });
   }
 
+  /// Sync-variant: merge de aangeleverde syncmomentopname nog één keer met de
+  /// allernieuwste lokale opslag binnen dezelfde atomaire lock. Zo kan een
+  /// lokale invoer die tijdens een OneDrive-download ontstond niet verdwijnen.
   static Future<void> bewaarOpmetingenVoorSync(
     List<OpmetingOverzichtRaamItem> opmetingen,
   ) async {
-    final prefs = await openBox();
+    await muteerOpmetingenAtomair<void>((actueel) {
+      final samengevoegd = _voegOpmetingLijstenVeiligSamen(
+        actueel: actueel,
+        inkomend: opmetingen,
+        inkomendWintBijGelijkeDatum: false,
+      );
 
-    await prefs.setString(_opmetingenKey, encodeOpmetingenVoorSync(opmetingen));
+      return AppStorageOpmetingMutatieResultaat<void>(
+        resultaat: null,
+        opmetingen: samengevoegd,
+        gewijzigd: !_opmetingLijstenGelijk(actueel, samengevoegd),
+        startSync: false,
+      );
+    });
   }
 
   static Future<OpmetingOverzichtRaamItem> voegOpmetingToe(
     OpmetingOverzichtRaamItem opmeting,
-  ) async {
-    final bestaandeOpmetingen = await laadOpmetingenVoorSync();
+  ) {
+    return muteerOpmetingenAtomair<OpmetingOverzichtRaamItem>((actueel) {
+      var id = opmeting.id.trim();
 
-    final id = opmeting.id.trim().isEmpty
-        ? DateTime.now().microsecondsSinceEpoch.toString()
-        : opmeting.id.trim();
+      if (id.isEmpty || actueel.any((bestaand) => bestaand.id == id)) {
+        final basis = DateTime.now().microsecondsSinceEpoch.toString();
+        id = basis;
+        var teller = 2;
+        while (actueel.any((bestaand) => bestaand.id == id)) {
+          id = '${basis}_$teller';
+          teller++;
+        }
+      }
 
-    final opmetingVoorOpslag = opmeting.copyWith(
-      id: id,
-      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
-      isVerwijderd: false,
-    );
+      final opmetingVoorOpslag = opmeting.copyWith(
+        id: id,
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+        isVerwijderd: false,
+      );
 
-    final resultaat = List<OpmetingOverzichtRaamItem>.from(bestaandeOpmetingen);
+      final resultaat = List<OpmetingOverzichtRaamItem>.from(actueel)
+        ..add(opmetingVoorOpslag);
 
-    final bestaandeIndex = resultaat.indexWhere((bestaand) {
-      return bestaand.id == opmetingVoorOpslag.id;
+      return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+        resultaat: opmetingVoorOpslag,
+        opmetingen: resultaat,
+        gewijzigd: true,
+      );
     });
-
-    if (bestaandeIndex >= 0) {
-      // Bestaande positie bijwerken zonder deze in de lijst te verplaatsen.
-      resultaat[bestaandeIndex] = opmetingVoorOpslag;
-    } else {
-      // Nieuwe positie altijd onderaan toevoegen.
-      resultaat.add(opmetingVoorOpslag);
-    }
-
-    await bewaarOpmetingen(resultaat);
-
-    return opmetingVoorOpslag;
   }
 
   static Future<OpmetingOverzichtRaamItem> werkOpmetingBij(
     OpmetingOverzichtRaamItem opmeting,
-  ) async {
-    return voegOpmetingToe(opmeting);
+  ) {
+    return muteerOpmetingenAtomair<OpmetingOverzichtRaamItem>((actueel) {
+      final id = opmeting.id.trim();
+      if (id.isEmpty) {
+        throw StateError('Een bestaande opmeting kan niet zonder ID bewaren.');
+      }
+
+      final index = actueel.indexWhere((bestaand) => bestaand.id == id);
+      if (index < 0) {
+        // Een oude, reeds verwijderde fiche mag niet stil opnieuw aangemaakt
+        // worden. Alleen echte nieuwe fiches horen via [voegOpmetingToe] te lopen.
+        throw StateError('Positie $id bestaat niet meer in de opslag.');
+      }
+
+      final huidige = actueel[index];
+      final basis = _zoekOpmetingBasisMomentopname(opmeting);
+
+      OpmetingOverzichtRaamItem kandidaat;
+      if (basis != null) {
+        kandidaat = _driewegSamenvoegenPositie(
+          basis: basis,
+          gewijzigd: opmeting,
+          actueel: huidige,
+        );
+      } else if (opmeting.gewijzigdOp.trim() == huidige.gewijzigdOp.trim()) {
+        kandidaat = opmeting;
+      } else {
+        final inkomendeDatum = DateTime.tryParse(opmeting.gewijzigdOp);
+        final huidigeDatum = DateTime.tryParse(huidige.gewijzigdOp);
+
+        // Zonder bekende basisversie krijgt een aantoonbaar nieuwere invoer
+        // voorrang. Een oudere onbekende snapshot mag nooit nieuwere gegevens
+        // terug overschrijven.
+        kandidaat =
+            inkomendeDatum != null &&
+                (huidigeDatum == null || inkomendeDatum.isAfter(huidigeDatum))
+            ? opmeting
+            : huidige;
+      }
+
+      kandidaat = kandidaat.copyWith(
+        id: huidige.id,
+        isVerwijderd: huidige.isVerwijderd,
+      );
+
+      if (_positieInhoudGelijk(huidige, kandidaat)) {
+        return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+          resultaat: huidige,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
+      }
+
+      final bijgewerkt = kandidaat.copyWith(
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      );
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(actueel);
+      nieuweLijst[index] = bijgewerkt;
+
+      return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+        resultaat: bijgewerkt,
+        opmetingen: nieuweLijst,
+        gewijzigd: true,
+      );
+    });
   }
 
   static Future<bool> verplaatsOpmetingBinnenKlant({
     required String klantNaam,
     required String opmetingId,
     required int richting,
-  }) async {
+  }) {
     if (richting != -1 && richting != 1) {
-      return false;
+      return Future<bool>.value(false);
     }
 
-    final alleOpmetingen = await laadOpmetingenVoorSync();
-    final klantSleutel = klantNaam.trim().toLowerCase();
-    final klantIndices = <int>[];
+    return muteerOpmetingenAtomair<bool>((actueel) {
+      final klantSleutel = klantNaam.trim().toLowerCase();
+      final klantIndices = <int>[];
 
-    for (var index = 0; index < alleOpmetingen.length; index++) {
-      final opmeting = alleOpmetingen[index];
+      for (var index = 0; index < actueel.length; index++) {
+        final opmeting = actueel[index];
 
-      if (opmeting.isVerwijderd) {
-        continue;
+        if (opmeting.isVerwijderd) continue;
+        if (opmeting.klantNaam.trim().toLowerCase() != klantSleutel) continue;
+
+        klantIndices.add(index);
       }
 
-      if (opmeting.klantNaam.trim().toLowerCase() != klantSleutel) {
-        continue;
+      final huidigePositie = klantIndices.indexWhere(
+        (index) => actueel[index].id == opmetingId,
+      );
+      if (huidigePositie < 0) {
+        return AppStorageOpmetingMutatieResultaat<bool>(
+          resultaat: false,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
       }
 
-      klantIndices.add(index);
-    }
+      final nieuwePositie = huidigePositie + richting;
+      if (nieuwePositie < 0 || nieuwePositie >= klantIndices.length) {
+        return AppStorageOpmetingMutatieResultaat<bool>(
+          resultaat: false,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
+      }
 
-    final huidigePositie = klantIndices.indexWhere((index) {
-      return alleOpmetingen[index].id == opmetingId;
+      final huidigeIndex = klantIndices[huidigePositie];
+      final nieuweIndex = klantIndices[nieuwePositie];
+      final nu = DateTime.now().toUtc().toIso8601String();
+      final huidige = actueel[huidigeIndex];
+      final andere = actueel[nieuweIndex];
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(actueel);
+
+      nieuweLijst[huidigeIndex] = andere.copyWith(gewijzigdOp: nu);
+      nieuweLijst[nieuweIndex] = huidige.copyWith(gewijzigdOp: nu);
+
+      return AppStorageOpmetingMutatieResultaat<bool>(
+        resultaat: true,
+        opmetingen: nieuweLijst,
+        gewijzigd: true,
+      );
     });
-
-    if (huidigePositie < 0) {
-      return false;
-    }
-
-    final nieuwePositie = huidigePositie + richting;
-
-    if (nieuwePositie < 0 || nieuwePositie >= klantIndices.length) {
-      return false;
-    }
-
-    final huidigeIndex = klantIndices[huidigePositie];
-    final nieuweIndex = klantIndices[nieuwePositie];
-    final nu = DateTime.now().toUtc().toIso8601String();
-    final huidige = alleOpmetingen[huidigeIndex];
-    final andere = alleOpmetingen[nieuweIndex];
-
-    alleOpmetingen[huidigeIndex] = andere.copyWith(gewijzigdOp: nu);
-    alleOpmetingen[nieuweIndex] = huidige.copyWith(gewijzigdOp: nu);
-
-    await bewaarOpmetingen(alleOpmetingen);
-
-    return true;
   }
 
   static Future<void> verwijderOpmeting(String id) async {
-    final bestaandeOpmetingen = await laadOpmetingenVoorSync();
+    await verwijderOpmetingen(<String>{id});
+  }
 
-    final resultaat = <OpmetingOverzichtRaamItem>[];
-    var gevonden = false;
+  static Future<int> verwijderOpmetingen(
+    Iterable<String> ids, {
+    bool startSync = true,
+  }) {
+    final teWissen = ids
+        .map((id) => id.trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
 
-    for (final opmeting in bestaandeOpmetingen) {
-      if (opmeting.id != id) {
-        resultaat.add(opmeting);
+    return muteerOpmetingenAtomair<int>((actueel) {
+      if (teWissen.isEmpty) {
+        return AppStorageOpmetingMutatieResultaat<int>(
+          resultaat: 0,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
+      }
+
+      final nu = DateTime.now().toUtc().toIso8601String();
+      var aantal = 0;
+      final nieuweLijst = <OpmetingOverzichtRaamItem>[];
+
+      for (final opmeting in actueel) {
+        if (!teWissen.contains(opmeting.id) || opmeting.isVerwijderd) {
+          nieuweLijst.add(opmeting);
+          continue;
+        }
+
+        aantal++;
+        nieuweLijst.add(opmeting.copyWith(isVerwijderd: true, gewijzigdOp: nu));
+      }
+
+      return AppStorageOpmetingMutatieResultaat<int>(
+        resultaat: aantal,
+        opmetingen: nieuweLijst,
+        gewijzigd: aantal > 0,
+        startSync: startSync,
+      );
+    });
+  }
+
+  static List<OpmetingOverzichtRaamItem> _voegOpmetingLijstenVeiligSamen({
+    required List<OpmetingOverzichtRaamItem> actueel,
+    required List<OpmetingOverzichtRaamItem> inkomend,
+    required bool inkomendWintBijGelijkeDatum,
+  }) {
+    final actuelePerId = <String, OpmetingOverzichtRaamItem>{
+      for (final item in actueel)
+        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+    };
+    final inkomendePerId = <String, OpmetingOverzichtRaamItem>{
+      for (final item in inkomend)
+        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+    };
+
+    final winnaarPerId = <String, OpmetingOverzichtRaamItem>{};
+    final nu = DateTime.now().toUtc().toIso8601String();
+
+    for (final id in <String>{...actuelePerId.keys, ...inkomendePerId.keys}) {
+      final huidig = actuelePerId[id];
+      final kandidaat = inkomendePerId[id];
+
+      if (huidig == null) {
+        if (kandidaat == null) continue;
+
+        // Als deze versie eerder door dit proces geladen werd maar intussen
+        // volledig uit de opslag verdwenen is, is dit een oude momentopname.
+        // Die mag een verwijderd record niet opnieuw aanmaken.
+        final bekendeBasis = _zoekOpmetingBasisMomentopname(kandidaat);
+        if (bekendeBasis == null) {
+          winnaarPerId[id] = kandidaat;
+        }
         continue;
       }
 
-      gevonden = true;
-      resultaat.add(opmeting.metNieuweWijzigingsDatum(isVerwijderd: true));
+      if (kandidaat == null) {
+        // Ontbreken in een aangeleverde volledige lijst is nooit voldoende om
+        // een positie te verwijderen. Verwijderen gebeurt altijd via tombstones.
+        winnaarPerId[id] = huidig;
+        continue;
+      }
+
+      final basis = _zoekOpmetingBasisMomentopname(kandidaat);
+      if (basis != null) {
+        if (_positieInhoudGelijk(basis, kandidaat)) {
+          // De aanroeper heeft dit record zelf niet gewijzigd. Bewaar dus
+          // altijd wat ondertussen werkelijk in de opslag staat.
+          winnaarPerId[id] = huidig;
+          continue;
+        }
+
+        // De aanroeper vertrok aantoonbaar van [basis]. Pas alleen zijn echte
+        // veldwijzigingen toe op de nieuwste versie. Dit beschermt zowel
+        // gespecialiseerde fiches als achtergrondberekeningen.
+        var samengevoegd = _driewegSamenvoegenPositie(
+          basis: basis,
+          gewijzigd: kandidaat,
+          actueel: huidig,
+        ).copyWith(id: huidig.id);
+
+        if (_positieInhoudGelijk(huidig, samengevoegd)) {
+          winnaarPerId[id] = huidig;
+        } else {
+          samengevoegd = samengevoegd.copyWith(gewijzigdOp: nu);
+          winnaarPerId[id] = samengevoegd;
+        }
+        continue;
+      }
+
+      final huidigeDatum = DateTime.tryParse(huidig.gewijzigdOp);
+      final inkomendeDatum = DateTime.tryParse(kandidaat.gewijzigdOp);
+
+      if (inkomendeDatum != null &&
+          (huidigeDatum == null || inkomendeDatum.isAfter(huidigeDatum))) {
+        winnaarPerId[id] = kandidaat;
+      } else if (huidigeDatum != null &&
+          inkomendeDatum != null &&
+          huidigeDatum.isAfter(inkomendeDatum)) {
+        winnaarPerId[id] = huidig;
+      } else {
+        winnaarPerId[id] = inkomendWintBijGelijkeDatum ? kandidaat : huidig;
+      }
     }
 
-    if (!gevonden) {
-      return;
+    // Een verouderde volledige lijst mag ook de recent gewijzigde volgorde
+    // niet terugzetten. Daarom blijft de actuele opslagvolgorde leidend. Nieuwe
+    // records uit de inkomende lijst worden daarna in hun inkomende volgorde
+    // toegevoegd. Expliciet verplaatsen/kopiëren gebruikt de atomaire API en
+    // kan de volgorde dus wel doelbewust wijzigen.
+    final resultaat = <OpmetingOverzichtRaamItem>[];
+    final toegevoegd = <String>{};
+
+    for (final item in actueel) {
+      final id = item.id.trim();
+      final winnaar = winnaarPerId[id];
+      if (id.isEmpty || winnaar == null || !toegevoegd.add(id)) continue;
+      resultaat.add(winnaar);
     }
 
-    await bewaarOpmetingen(resultaat);
+    for (final item in inkomend) {
+      final id = item.id.trim();
+      final winnaar = winnaarPerId[id];
+      if (id.isEmpty || winnaar == null || !toegevoegd.add(id)) continue;
+      resultaat.add(winnaar);
+    }
+
+    return resultaat;
+  }
+
+  static bool _opmetingLijstenGelijk(
+    List<OpmetingOverzichtRaamItem> eerste,
+    List<OpmetingOverzichtRaamItem> tweede,
+  ) {
+    if (eerste.length != tweede.length) return false;
+
+    for (var index = 0; index < eerste.length; index++) {
+      if (!_jsonGelijk(eerste[index].toJson(), tweede[index].toJson())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static OpmetingOverzichtRaamItem _driewegSamenvoegenPositie({
+    required OpmetingOverzichtRaamItem basis,
+    required OpmetingOverzichtRaamItem gewijzigd,
+    required OpmetingOverzichtRaamItem actueel,
+  }) {
+    final json = _voegMapWijzigingenSamen(
+      basis: basis.toJson(),
+      gewijzigd: gewijzigd.toJson(),
+      actueel: actueel.toJson(),
+      hoofdNiveau: true,
+    );
+
+    json['id'] = actueel.id;
+    json['gewijzigdOp'] = actueel.gewijzigdOp;
+    return OpmetingOverzichtRaamItem.fromJson(json);
+  }
+
+  static Map<String, dynamic> _voegMapWijzigingenSamen({
+    required Map<String, dynamic> basis,
+    required Map<String, dynamic> gewijzigd,
+    required Map<String, dynamic> actueel,
+    bool hoofdNiveau = false,
+  }) {
+    final resultaat = <String, dynamic>{
+      for (final entry in actueel.entries)
+        entry.key: _kopieJsonWaarde(entry.value),
+    };
+    final sleutels = <String>{...basis.keys, ...gewijzigd.keys};
+
+    for (final sleutel in sleutels) {
+      if (hoofdNiveau && (sleutel == 'id' || sleutel == 'gewijzigdOp')) {
+        continue;
+      }
+
+      final basisHeeft = basis.containsKey(sleutel);
+      final gewijzigdHeeft = gewijzigd.containsKey(sleutel);
+
+      if (basisHeeft == gewijzigdHeeft &&
+          _jsonGelijk(basis[sleutel], gewijzigd[sleutel])) {
+        continue;
+      }
+
+      if (!gewijzigdHeeft) {
+        resultaat.remove(sleutel);
+        continue;
+      }
+
+      final basisWaarde = basis[sleutel];
+      final gewijzigdeWaarde = gewijzigd[sleutel];
+      final actueleWaarde = resultaat[sleutel];
+
+      if (basisWaarde is Map &&
+          gewijzigdeWaarde is Map &&
+          actueleWaarde is Map) {
+        resultaat[sleutel] = _voegMapWijzigingenSamen(
+          basis: Map<String, dynamic>.from(basisWaarde),
+          gewijzigd: Map<String, dynamic>.from(gewijzigdeWaarde),
+          actueel: Map<String, dynamic>.from(actueleWaarde),
+        );
+        continue;
+      }
+
+      resultaat[sleutel] = _kopieJsonWaarde(gewijzigdeWaarde);
+    }
+
+    return resultaat;
+  }
+
+  static bool _positieInhoudGelijk(
+    OpmetingOverzichtRaamItem eerste,
+    OpmetingOverzichtRaamItem tweede,
+  ) {
+    final eersteJson = Map<String, dynamic>.from(eerste.toJson())
+      ..remove('gewijzigdOp');
+    final tweedeJson = Map<String, dynamic>.from(tweede.toJson())
+      ..remove('gewijzigdOp');
+
+    return _jsonGelijk(eersteJson, tweedeJson);
+  }
+
+  static bool _jsonGelijk(Object? eerste, Object? tweede) {
+    if (identical(eerste, tweede)) return true;
+
+    if (eerste is Map && tweede is Map) {
+      if (eerste.length != tweede.length) return false;
+      for (final sleutel in eerste.keys) {
+        if (!tweede.containsKey(sleutel) ||
+            !_jsonGelijk(eerste[sleutel], tweede[sleutel])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (eerste is List && tweede is List) {
+      if (eerste.length != tweede.length) return false;
+      for (var index = 0; index < eerste.length; index++) {
+        if (!_jsonGelijk(eerste[index], tweede[index])) return false;
+      }
+      return true;
+    }
+
+    return eerste == tweede;
+  }
+
+  static Object? _kopieJsonWaarde(Object? waarde) {
+    if (waarde is Map) {
+      return <String, dynamic>{
+        for (final entry in waarde.entries)
+          entry.key.toString(): _kopieJsonWaarde(entry.value),
+      };
+    }
+    if (waarde is List) {
+      return waarde.map(_kopieJsonWaarde).toList(growable: false);
+    }
+    return waarde;
   }
 }

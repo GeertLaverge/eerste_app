@@ -1,13 +1,14 @@
+// THIMACO-CONTROLE: POSITIEBEHEER-ATOMAIR-20260810
 // THIMACO-CONTROLE: NIET-REKENEN-TERUG-ACTIVEREN-HUIDIGE-PAGINA-20260810_0942
 // THIMACO-CONTROLE: POSITIEBEHEER-MET-WISSEL-NIET-REKENEN-20260728
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
-import '../../sync/onedrive_sync_service.dart';
 import '../offerte_controller.dart';
 import '../prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../prijzen/offerte_toegepaste_prijsregel_model.dart';
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
+import '../../opmeting/opslag/opmeting_veilige_mutatie_service.dart';
 
 class OffertePositieBeheerController {
   OffertePositieBeheerController({
@@ -152,52 +153,85 @@ class OffertePositieBeheerController {
 
     if (plaats == null) return;
 
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    final bronIndex = alleOpmetingen.indexWhere(
-      (huidig) => huidig.id == item.id,
-    );
-    if (bronIndex < 0) return;
+    final gekopieerdePositie =
+        await AppStorage.muteerOpmetingenAtomair<OpmetingOverzichtRaamItem?>((
+          actueleOpmetingen,
+        ) {
+          final bronIndex = actueleOpmetingen.indexWhere(
+            (huidig) => huidig.id == item.id && !huidig.isVerwijderd,
+          );
+          if (bronIndex < 0) {
+            return AppStorageOpmetingMutatieResultaat<
+              OpmetingOverzichtRaamItem?
+            >(resultaat: null, opmetingen: actueleOpmetingen, gewijzigd: false);
+          }
 
-    final nieuweId = DateTime.now().microsecondsSinceEpoch.toString();
-    final kopieBronId =
-        item.isOfferteOptie && item.offerteOptieHoofdpositieId.trim().isNotEmpty
-        ? item.offerteOptieHoofdpositieId.trim()
-        : item.id;
+          // Kopieer altijd de nieuwste werkelijk opgeslagen versie, niet het
+          // mogelijk verouderde kaartobject waarmee de dialoog werd geopend.
+          final bron = actueleOpmetingen[bronIndex];
+          final basisId = DateTime.now().microsecondsSinceEpoch.toString();
+          var nieuweId = basisId;
+          var teller = 2;
+          while (actueleOpmetingen.any((huidig) => huidig.id == nieuweId)) {
+            nieuweId = '${basisId}_$teller';
+            teller++;
+          }
 
-    var kopie = item.copyWith(
-      id: nieuweId,
-      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
-      isVerwijderd: false,
-      gekopieerdVanPositieId: kopieBronId,
-    );
+          final kopieBronId =
+              bron.isOfferteOptie &&
+                  bron.offerteOptieHoofdpositieId.trim().isNotEmpty
+              ? bron.offerteOptieHoofdpositieId.trim()
+              : bron.id;
 
-    if (kopie.isOfferteOptie) {
-      kopie = _wisOptiePrijsgegevens(kopie, wisVerdeeldePrijsregels: false);
+          var kopie = bron.copyWith(
+            id: nieuweId,
+            gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+            isVerwijderd: false,
+            gekopieerdVanPositieId: kopieBronId,
+          );
+
+          if (kopie.isOfferteOptie) {
+            kopie = _wisOptiePrijsgegevens(
+              kopie,
+              wisVerdeeldePrijsregels: false,
+            );
+          }
+
+          var invoegIndex = bronIndex + 1;
+          if (plaats == _PositieKopiePlaats.boven) {
+            invoegIndex = bronIndex;
+          } else if (plaats == _PositieKopiePlaats.laatste) {
+            final klantSleutel = bron.klantNaam.trim().toLowerCase();
+            var laatsteIndex = bronIndex;
+            for (var index = 0; index < actueleOpmetingen.length; index++) {
+              final huidig = actueleOpmetingen[index];
+              if (!huidig.isVerwijderd &&
+                  huidig.klantNaam.trim().toLowerCase() == klantSleutel) {
+                laatsteIndex = index;
+              }
+            }
+            invoegIndex = laatsteIndex + 1;
+          }
+
+          final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+            actueleOpmetingen,
+          );
+          nieuweLijst.insert(
+            invoegIndex.clamp(0, nieuweLijst.length).toInt(),
+            kopie,
+          );
+
+          return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem?>(
+            resultaat: kopie,
+            opmetingen: nieuweLijst,
+            gewijzigd: true,
+          );
+        });
+
+    if (gekopieerdePositie == null) {
+      toonMelding('De te kopiëren positie bestaat niet meer.');
+      return;
     }
-
-    var invoegIndex = bronIndex + 1;
-    if (plaats == _PositieKopiePlaats.boven) {
-      invoegIndex = bronIndex;
-    } else if (plaats == _PositieKopiePlaats.laatste) {
-      final klantSleutel = item.klantNaam.trim().toLowerCase();
-      var laatsteIndex = bronIndex;
-      for (var index = 0; index < alleOpmetingen.length; index++) {
-        final huidig = alleOpmetingen[index];
-        if (!huidig.isVerwijderd &&
-            huidig.klantNaam.trim().toLowerCase() == klantSleutel) {
-          laatsteIndex = index;
-        }
-      }
-      invoegIndex = laatsteIndex + 1;
-    }
-
-    alleOpmetingen.insert(
-      invoegIndex.clamp(0, alleOpmetingen.length).toInt(),
-      kopie,
-    );
-    await AppStorage.bewaarOpmetingen(alleOpmetingen);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
 
     if (!isMounted()) return;
     await herlaadOpmetingen(leesKlantNaam());
@@ -306,33 +340,72 @@ class OffertePositieBeheerController {
     }
 
     final wordtOptie = actie != _OfferteOptieActie.hoofdofferte;
-    final plaatsing = switch (actie) {
-      _OfferteOptieActie.positieBehouden =>
-        OfferteOptiePlaatsing.positieBehouden,
-      _OfferteOptieActie.apartePagina => OfferteOptiePlaatsing.apartePagina,
-      _OfferteOptieActie.hoofdofferte => item.offerteOptiePlaatsing,
-    };
 
-    final hoofdpositieId = wordtOptie ? _bepaalOptieHoofdpositieId(item) : '';
-    var bijgewerkt = item.copyWith(
-      isOfferteOptie: wordtOptie,
-      isNietRekenen: false,
-      offerteOptiePlaatsing: plaatsing,
-      offerteOptieHoofdpositieId: hoofdpositieId,
-    );
-
-    if (wordtOptie) {
-      bijgewerkt = _wisOptiePrijsgegevens(
-        bijgewerkt,
-        wisVerdeeldePrijsregels: true,
+    await AppStorage.muteerOpmetingenAtomair<OpmetingOverzichtRaamItem?>((
+      actueleOpmetingen,
+    ) {
+      final index = actueleOpmetingen.indexWhere(
+        (positie) => positie.id == item.id && !positie.isVerwijderd,
       );
-    }
+      if (index < 0) {
+        return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem?>(
+          resultaat: null,
+          opmetingen: actueleOpmetingen,
+          gewijzigd: false,
+        );
+      }
 
-    bijgewerkt = bijgewerkt.metNieuweWijzigingsDatum();
+      final actueel = actueleOpmetingen[index];
+      final klantSleutel = actueel.klantNaam.trim().toLowerCase();
+      final actueleKlantPosities = actueleOpmetingen
+          .where(
+            (positie) =>
+                !positie.isVerwijderd &&
+                positie.klantNaam.trim().toLowerCase() == klantSleutel,
+          )
+          .toList(growable: false);
 
-    await AppStorage.werkOpmetingBij(bijgewerkt);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+      final plaatsing = switch (actie) {
+        _OfferteOptieActie.positieBehouden =>
+          OfferteOptiePlaatsing.positieBehouden,
+        _OfferteOptieActie.apartePagina => OfferteOptiePlaatsing.apartePagina,
+        _OfferteOptieActie.hoofdofferte => actueel.offerteOptiePlaatsing,
+      };
+      final hoofdpositieId = wordtOptie
+          ? offerteController.bepaalOptieHoofdpositieId(
+              posities: actueleKlantPosities,
+              positieId: actueel.id,
+            )
+          : '';
+
+      var bijgewerkt = actueel.copyWith(
+        isOfferteOptie: wordtOptie,
+        isNietRekenen: false,
+        offerteOptiePlaatsing: plaatsing,
+        offerteOptieHoofdpositieId: hoofdpositieId,
+      );
+
+      if (wordtOptie) {
+        bijgewerkt = _wisOptiePrijsgegevens(
+          bijgewerkt,
+          wisVerdeeldePrijsregels: true,
+        );
+      }
+
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+        actueleOpmetingen,
+      );
+      bijgewerkt = bijgewerkt.copyWith(
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      );
+      nieuweLijst[index] = bijgewerkt;
+
+      return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem?>(
+        resultaat: bijgewerkt,
+        opmetingen: nieuweLijst,
+        gewijzigd: true,
+      );
+    });
 
     if (!isMounted()) return;
     await herlaadOpmetingen(leesKlantNaam());
@@ -441,91 +514,27 @@ class OffertePositieBeheerController {
       }
     }
 
-    // Lees onmiddellijk vóór het opslaan opnieuw de laatste versie van deze
-    // positie uit de opslag. Andere prijs-, sync- of navigatieacties kunnen
-    // intussen een nieuwer exemplaar met dezelfde ID hebben opgeslagen.
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    final opgeslagenIndex = alleOpmetingen.indexWhere(
-      (opmeting) => opmeting.id == item.id,
+    await OpmetingVeiligeMutatieService.wijzigPositie(
+      positieId: item.id,
+      wijziging: (actueel) {
+        return actueel.copyWith(
+          isNietRekenen: gewensteNietRekenen,
+
+          // Een groep kan niet tegelijk optie én volledig uitgesloten zijn.
+          isOfferteOptie: gewensteNietRekenen ? false : actueel.isOfferteOptie,
+          offerteOptieHoofdpositieId: gewensteNietRekenen
+              ? ''
+              : actueel.offerteOptieHoofdpositieId,
+        );
+      },
     );
-    final actueleOpmeting = opgeslagenIndex >= 0
-        ? alleOpmetingen[opgeslagenIndex]
-        : item;
 
-    if (actueleOpmeting.isNietRekenen != gewensteNietRekenen) {
-      final bijgewerkt = actueleOpmeting
-          .copyWith(
-            isNietRekenen: gewensteNietRekenen,
+    if (!isMounted()) return;
 
-            // Een groep kan niet tegelijk een offerteoptie en volledig
-            // uitgesloten zijn.
-            isOfferteOptie: gewensteNietRekenen
-                ? false
-                : actueleOpmeting.isOfferteOptie,
-
-            // Wanneer de groep niet gerekend wordt, heeft een koppeling met
-            // een hoofdpositie geen betekenis.
-            offerteOptieHoofdpositieId: gewensteNietRekenen
-                ? ''
-                : actueleOpmeting.offerteOptieHoofdpositieId,
-          )
-          .metNieuweWijzigingsDatum();
-
-      // AppStorage bewaart de positie en start zelf de normale sync-backup.
-      // Hier dus geen tweede losse OneDrive-sync meer starten.
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-
-    if (!isMounted()) {
-      return;
-    }
-
-    // Eén normale herlaadcyclus volstaat. De pagina voert tijdens die cyclus
-    // zelf reeds de noodzakelijke prijs- en verdeelkostherberekening uit.
-    // De vroegere tweede expliciete herberekening maakte deze statuswijziging
-    // onnodig kwetsbaar voor een race tussen twee opslagcycli.
+    // Herladen vertrekt pas nadat de ene atomaire veldmutatie volledig klaar is.
     await herlaadOpmetingen(leesKlantNaam());
 
-    if (!isMounted()) {
-      return;
-    }
-
-    // Controleer na de volledige cyclus wat werkelijk opgeslagen is.
-    // Mocht een gelijktijdige actie de status toch opnieuw veranderd hebben,
-    // herstel dan uitsluitend deze vlag op het nieuwste object.
-    final controleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-    final controleIndex = controleOpmetingen.indexWhere(
-      (opmeting) => opmeting.id == item.id,
-    );
-
-    if (controleIndex >= 0 &&
-        controleOpmetingen[controleIndex].isNietRekenen !=
-            gewensteNietRekenen) {
-      final nieuwste = controleOpmetingen[controleIndex];
-      final hersteld = nieuwste
-          .copyWith(
-            isNietRekenen: gewensteNietRekenen,
-            isOfferteOptie: gewensteNietRekenen
-                ? false
-                : nieuwste.isOfferteOptie,
-            offerteOptieHoofdpositieId: gewensteNietRekenen
-                ? ''
-                : nieuwste.offerteOptieHoofdpositieId,
-          )
-          .metNieuweWijzigingsDatum();
-
-      await AppStorage.werkOpmetingBij(hersteld);
-
-      if (!isMounted()) {
-        return;
-      }
-
-      await herlaadOpmetingen(leesKlantNaam());
-
-      if (!isMounted()) {
-        return;
-      }
-    }
+    if (!isMounted()) return;
 
     toonMelding(
       gewensteNietRekenen
@@ -565,13 +574,6 @@ class OffertePositieBeheerController {
     }
 
     verplaatsArtikelLokaal(huidigeIndex, nieuweIndex);
-  }
-
-  String _bepaalOptieHoofdpositieId(OpmetingOverzichtRaamItem item) {
-    return offerteController.bepaalOptieHoofdpositieId(
-      posities: leesArtikelen(),
-      positieId: item.id,
-    );
   }
 }
 

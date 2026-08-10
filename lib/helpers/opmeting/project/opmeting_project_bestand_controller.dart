@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: GLOBALE-ATOMAIRE-OPMETINGOPSLAG-20260810
 // THIMACO-CONTROLE: OFFERTEVERSIE-ALS-WERKVERSIE-20260806
 // THIMACO-CONTROLE: OPMEETBESTAND-SYNC-ALTIJD-SILENT-20260805
 // THIMACO-CONTROLE: UNIFORME-OPMEETBESTAND-DIALOGEN-20260730
@@ -12,6 +13,7 @@ import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
 import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
 import '../../sync/onedrive_sync_service.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
+import '../opslag/opmeting_veilige_mutatie_service.dart';
 import 'opmeting_project_kleur_model.dart';
 import 'opmeting_project_titelhoofd_controller.dart';
 import 'opmeting_project_titelhoofd_model.dart';
@@ -208,18 +210,23 @@ class OpmetingProjectBestandController {
       await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
     }
 
+    var definitieveOpmetingen = opmetingenNaProjectkleurSynchronisatie;
+
     if (momentopnameResultaat.gewijzigd || projectkleurResultaat.gewijzigd) {
-      await AppStorage.bewaarOpmetingenVoorSync(
-        opmetingenNaProjectkleurSynchronisatie,
-      );
-      await OneDriveSyncService.registreerLokaleWijziging();
-      OneDriveSyncService().uploadBackupOpAchtergrond();
+      // De prijs- en projectkleurberekening start op een momentopname. Pas
+      // daarom uitsluitend de berekende verschillen toe op de nieuwste opslag.
+      final veiligResultaat =
+          await OpmetingVeiligeMutatieService.bewaarBerekendeWijzigingen(
+            basis: alleOpmetingenVoorSync,
+            gewijzigd: opmetingenNaProjectkleurSynchronisatie,
+          );
+      definitieveOpmetingen = veiligResultaat.opmetingen;
     }
 
     final klantFilter = actieveKlantNaam.toLowerCase();
     final zichtbareOpmetingen = klantFilter.isEmpty
         ? <OpmetingOverzichtRaamItem>[]
-        : opmetingenNaProjectkleurSynchronisatie.where((opmeting) {
+        : definitieveOpmetingen.where((opmeting) {
             return !opmeting.isVerwijderd &&
                 opmeting.klantNaam.trim().toLowerCase() == klantFilter;
           }).toList();
@@ -725,9 +732,13 @@ class OpmetingProjectBestandController {
     if (bevestigen != true) return;
 
     zetLaden(true);
-    for (final opmeting in teWissenOpmetingen) {
-      await AppStorage.verwijderOpmeting(opmeting.id);
-    }
+
+    // Eén atomaire batch: er bestaat geen tussenstand waarin een deel reeds
+    // gewist is en een andere sync de overige posities terug kan plaatsen.
+    await AppStorage.verwijderOpmetingen(
+      teWissenOpmetingen.map((opmeting) => opmeting.id),
+      startSync: false,
+    );
 
     await OneDriveSyncService.registreerLokaleWijziging();
     final syncResultaat = await OneDriveSyncService().slimmeSync();
@@ -778,7 +789,9 @@ class OpmetingProjectBestandController {
       return false;
     }
 
-    await AppStorage.bewaarOpmetingenVoorSync(alleOpmetingen);
+    // De posities staan na iedere fichewijziging al lokaal opgeslagen. Hier
+    // geen volledige snapshot nogmaals terugschrijven: alleen de bestaande
+    // toestand markeren voor synchronisatie.
     await OneDriveSyncService.registreerLokaleWijziging();
     final syncResultaat = await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return false;
@@ -818,53 +831,71 @@ class OpmetingProjectBestandController {
     zetLaden(true);
 
     try {
-      final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
       final klantSleutel = klantNaam.toLowerCase();
       final versieIds = <String>{
         for (final positie in versiePosities)
           if (positie.id.trim().isNotEmpty) positie.id.trim(),
       };
       final nu = DateTime.now().toUtc().toIso8601String();
-      final samengevoegd = <OpmetingOverzichtRaamItem>[];
 
-      for (final bestaand in alleOpmetingen) {
-        if (bestaand.klantNaam.trim().toLowerCase() != klantSleutel) {
-          samengevoegd.add(bestaand);
-          continue;
-        }
+      // De volledige omschakeling naar een historische werkversie gebeurt in
+      // één centrale opslagtransactie. Posities die gelijktijdig bij een andere
+      // klant wijzigen, kunnen hierdoor nooit verloren gaan.
+      final hersteldePosities =
+          await AppStorage.muteerOpmetingenAtomair<
+            List<OpmetingOverzichtRaamItem>
+          >((actueleOpmetingen) {
+            final samengevoegd = <OpmetingOverzichtRaamItem>[];
 
-        if (versieIds.contains(bestaand.id.trim())) {
-          // De momentopname hieronder vervangt deze positie.
-          continue;
-        }
+            for (final bestaand in actueleOpmetingen) {
+              if (bestaand.klantNaam.trim().toLowerCase() != klantSleutel) {
+                samengevoegd.add(bestaand);
+                continue;
+              }
 
-        if (bestaand.isVerwijderd) {
-          samengevoegd.add(bestaand);
-        } else {
-          // Posities die niet in de gekozen historische versie staan, krijgen
-          // een tombstone zodat ze na synchronisatie niet opnieuw verschijnen.
-          samengevoegd.add(
-            bestaand.copyWith(isVerwijderd: true, gewijzigdOp: nu),
-          );
-        }
-      }
+              if (versieIds.contains(bestaand.id.trim())) {
+                continue;
+              }
 
-      final hersteldePosities = <OpmetingOverzichtRaamItem>[];
-      for (var index = 0; index < versiePosities.length; index++) {
-        final positie = versiePosities[index];
-        final id = positie.id.trim().isEmpty
-            ? 'offerteversie_${DateTime.now().microsecondsSinceEpoch}_$index'
-            : positie.id.trim();
-        hersteldePosities.add(
-          positie.copyWith(
-            id: id,
-            klantNaam: klantNaam,
-            isVerwijderd: false,
-            gewijzigdOp: nu,
-          ),
-        );
-      }
-      samengevoegd.addAll(hersteldePosities);
+              if (bestaand.isVerwijderd) {
+                samengevoegd.add(bestaand);
+              } else {
+                samengevoegd.add(
+                  bestaand.copyWith(isVerwijderd: true, gewijzigdOp: nu),
+                );
+              }
+            }
+
+            final hersteld = <OpmetingOverzichtRaamItem>[];
+            for (var index = 0; index < versiePosities.length; index++) {
+              final positie = versiePosities[index];
+              var id = positie.id.trim();
+              if (id.isEmpty ||
+                  samengevoegd.any((bestaand) => bestaand.id == id)) {
+                id =
+                    'offerteversie_${DateTime.now().microsecondsSinceEpoch}_$index';
+              }
+
+              hersteld.add(
+                positie.copyWith(
+                  id: id,
+                  klantNaam: klantNaam,
+                  isVerwijderd: false,
+                  gewijzigdOp: nu,
+                ),
+              );
+            }
+            samengevoegd.addAll(hersteld);
+
+            return AppStorageOpmetingMutatieResultaat<
+              List<OpmetingOverzichtRaamItem>
+            >(
+              resultaat: List<OpmetingOverzichtRaamItem>.unmodifiable(hersteld),
+              opmetingen: samengevoegd,
+              gewijzigd: true,
+              startSync: false,
+            );
+          });
 
       final hersteldTitelhoofd = versieTitelhoofd.copyWith(
         klantNaam: klantNaam,
@@ -873,7 +904,6 @@ class OpmetingProjectBestandController {
         gewijzigdOp: nu,
       );
 
-      await AppStorage.bewaarOpmetingenVoorSync(samengevoegd);
       await AppStorage.bewaarOpmetingProjectTitelhoofd(hersteldTitelhoofd);
 
       if (!isMounted()) return false;

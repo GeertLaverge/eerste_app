@@ -1,6 +1,5 @@
+// THIMACO-CONTROLE: GLOBALE-ATOMAIRE-POSITIE-MUTATIES-20260810
 // THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
-import 'dart:async';
-
 import '../../app_storage.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 
@@ -32,56 +31,46 @@ class OpmetingVeiligeLijstResultaat {
 class OpmetingVeiligeMutatieService {
   const OpmetingVeiligeMutatieService._();
 
-  // Mutaties die via deze helper lopen worden achter elkaar uitgevoerd.
-  // Een nieuwe ingave kan zo niet midden in de lees/schrijfcyclus van een
-  // vorige ingave terechtkomen.
-  static Future<void> _wachtrij = Future<void>.value();
-
-  static Future<T> _voerGeserialiseerdUit<T>(Future<T> Function() actie) {
-    final completer = Completer<T>();
-
-    _wachtrij = _wachtrij.then((_) async {
-      try {
-        completer.complete(await actie());
-      } catch (fout, stackTrace) {
-        completer.completeError(fout, stackTrace);
-      }
-    });
-
-    return completer.future;
-  }
-
-  /// Haalt eerst de nieuwste opgeslagen positie op en voert pas daarna de
-  /// bedoelde wijziging uit.
+  /// Voert de wijziging binnen dezelfde globale AppStorage-lock uit als alle
+  /// andere fiche-, lijst- en syncmutaties.
   static Future<OpmetingVeiligeMutatieResultaat> wijzigPositie({
     required String positieId,
     required OpmetingPositieMutatie wijziging,
   }) {
-    return _voerGeserialiseerdUit(() async {
-      final id = positieId.trim();
-      if (id.isEmpty) {
-        throw StateError('Positie-ID ontbreekt bij veilige mutatie.');
-      }
+    final id = positieId.trim();
+    if (id.isEmpty) {
+      return Future<OpmetingVeiligeMutatieResultaat>.error(
+        StateError('Positie-ID ontbreekt bij veilige mutatie.'),
+      );
+    }
 
-      final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-      final index = alleOpmetingen.indexWhere((item) => item.id == id);
+    return AppStorage.muteerOpmetingenAtomair<OpmetingVeiligeMutatieResultaat>((
+      actueleOpmetingen,
+    ) {
+      final index = actueleOpmetingen.indexWhere((item) => item.id == id);
 
       if (index < 0) {
         throw StateError('Positie $id bestaat niet meer in de opslag.');
       }
 
-      final actueel = alleOpmetingen[index];
+      final actueel = actueleOpmetingen[index];
       final mutatieResultaat = wijziging(actueel);
-
-      // Identiteit/tijdstip mogen nooit uit een verouderd UI-object komen.
       final kandidaat = mutatieResultaat.copyWith(
         id: actueel.id,
         gewijzigdOp: actueel.gewijzigdOp,
+        isVerwijderd: actueel.isVerwijderd,
       );
 
       if (_positieInhoudGelijk(actueel, kandidaat)) {
-        return OpmetingVeiligeMutatieResultaat(
+        final resultaat = OpmetingVeiligeMutatieResultaat(
           positie: actueel,
+          gewijzigd: false,
+        );
+        return AppStorageOpmetingMutatieResultaat<
+          OpmetingVeiligeMutatieResultaat
+        >(
+          resultaat: resultaat,
+          opmetingen: actueleOpmetingen,
           gewijzigd: false,
         );
       }
@@ -89,48 +78,47 @@ class OpmetingVeiligeMutatieService {
       final bijgewerkt = kandidaat.copyWith(
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       );
-
-      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(alleOpmetingen);
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+        actueleOpmetingen,
+      );
       nieuweLijst[index] = bijgewerkt;
 
-      // AppStorage start hierbij zelf precies één normale backup/sync.
-      await AppStorage.bewaarOpmetingen(nieuweLijst);
-
-      return OpmetingVeiligeMutatieResultaat(
+      final resultaat = OpmetingVeiligeMutatieResultaat(
         positie: bijgewerkt,
         gewijzigd: true,
       );
+      return AppStorageOpmetingMutatieResultaat<
+        OpmetingVeiligeMutatieResultaat
+      >(resultaat: resultaat, opmetingen: nieuweLijst, gewijzigd: true);
     });
   }
 
-  /// Drie-weg-save voor een bestaande fiche.
-  ///
-  /// [basis] is de toestand waarmee het scherm geopend werd.
-  /// [gewijzigd] is wat het scherm nu wil bewaren.
-  /// De helper haalt zelf de nieuwste [actuele] positie uit de opslag.
-  ///
-  /// Alleen verschillen tussen basis en gewijzigd worden toegepast op actueel.
+  /// Drie-weg-save voor een bestaande fiche. Alleen verschillen tussen [basis]
+  /// en [gewijzigd] worden op de nieuwste opgeslagen positie toegepast.
   static Future<OpmetingVeiligeMutatieResultaat> bewaarFicheWijzigingen({
     required OpmetingOverzichtRaamItem basis,
     required OpmetingOverzichtRaamItem gewijzigd,
   }) {
-    return _voerGeserialiseerdUit(() async {
-      final id = basis.id.trim();
+    final id = basis.id.trim();
 
-      if (id.isEmpty || gewijzigd.id.trim() != id) {
-        throw StateError(
+    if (id.isEmpty || gewijzigd.id.trim() != id) {
+      return Future<OpmetingVeiligeMutatieResultaat>.error(
+        StateError(
           'De basisfiche en gewijzigde fiche hebben geen geldige gelijke ID.',
-        );
-      }
+        ),
+      );
+    }
 
-      final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-      final index = alleOpmetingen.indexWhere((item) => item.id == id);
+    return AppStorage.muteerOpmetingenAtomair<OpmetingVeiligeMutatieResultaat>((
+      actueleOpmetingen,
+    ) {
+      final index = actueleOpmetingen.indexWhere((item) => item.id == id);
 
       if (index < 0) {
         throw StateError('Positie $id bestaat niet meer in de opslag.');
       }
 
-      final actueel = alleOpmetingen[index];
+      final actueel = actueleOpmetingen[index];
       final samengevoegd = _driewegSamenvoegenPositie(
         basis: basis,
         gewijzigd: gewijzigd,
@@ -138,52 +126,59 @@ class OpmetingVeiligeMutatieService {
       );
 
       if (_positieInhoudGelijk(actueel, samengevoegd)) {
-        return OpmetingVeiligeMutatieResultaat(
+        final resultaat = OpmetingVeiligeMutatieResultaat(
           positie: actueel,
+          gewijzigd: false,
+        );
+        return AppStorageOpmetingMutatieResultaat<
+          OpmetingVeiligeMutatieResultaat
+        >(
+          resultaat: resultaat,
+          opmetingen: actueleOpmetingen,
           gewijzigd: false,
         );
       }
 
       final bijgewerkt = samengevoegd.copyWith(
         id: actueel.id,
+        isVerwijderd: actueel.isVerwijderd,
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       );
-
-      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(alleOpmetingen);
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+        actueleOpmetingen,
+      );
       nieuweLijst[index] = bijgewerkt;
 
-      await AppStorage.bewaarOpmetingen(nieuweLijst);
-
-      return OpmetingVeiligeMutatieResultaat(
+      final resultaat = OpmetingVeiligeMutatieResultaat(
         positie: bijgewerkt,
         gewijzigd: true,
       );
+      return AppStorageOpmetingMutatieResultaat<
+        OpmetingVeiligeMutatieResultaat
+      >(resultaat: resultaat, opmetingen: nieuweLijst, gewijzigd: true);
     });
   }
 
-  /// Veilige batch-save voor een berekening die op een volledige lijst start.
-  /// Een oude berekeningssnapshot mag de nieuwste invoer niet terug overschrijven.
+  /// Veilige batch-save voor prijs- of projectberekeningen die op een eerder
+  /// geladen volledige lijst gestart zijn.
   static Future<OpmetingVeiligeLijstResultaat> bewaarBerekendeWijzigingen({
     required List<OpmetingOverzichtRaamItem> basis,
     required List<OpmetingOverzichtRaamItem> gewijzigd,
   }) {
-    return _voerGeserialiseerdUit(() async {
-      final actueleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
-
+    return AppStorage.muteerOpmetingenAtomair<OpmetingVeiligeLijstResultaat>((
+      actueleOpmetingen,
+    ) {
       final basisPerId = <String, OpmetingOverzichtRaamItem>{
         for (final item in basis)
           if (item.id.trim().isNotEmpty) item.id: item,
       };
-
       final gewijzigdPerId = <String, OpmetingOverzichtRaamItem>{
         for (final item in gewijzigd)
           if (item.id.trim().isNotEmpty) item.id: item,
       };
-
       final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
         actueleOpmetingen,
       );
-
       final indexPerId = <String, int>{
         for (var index = 0; index < nieuweLijst.length; index++)
           if (nieuweLijst[index].id.trim().isNotEmpty)
@@ -196,11 +191,9 @@ class OpmetingVeiligeMutatieService {
         final basisPositie = basisPerId[entry.key];
         final actueleIndex = indexPerId[entry.key];
 
-        // Geen oude berekening gebruiken om verwijderde of nieuwe posities
-        // opnieuw te creëren of te verwijderen.
-        if (basisPositie == null || actueleIndex == null) {
-          continue;
-        }
+        // Een oude berekening mag geen ondertussen verwijderde of nieuw
+        // aangemaakte positie opnieuw creëren of verwijderen.
+        if (basisPositie == null || actueleIndex == null) continue;
 
         final actuelePositie = nieuweLijst[actueleIndex];
         final samengevoegd = _driewegSamenvoegenPositie(
@@ -209,25 +202,23 @@ class OpmetingVeiligeMutatieService {
           actueel: actuelePositie,
         );
 
-        if (_positieInhoudGelijk(actuelePositie, samengevoegd)) {
-          continue;
-        }
+        if (_positieInhoudGelijk(actuelePositie, samengevoegd)) continue;
 
         nieuweLijst[actueleIndex] = samengevoegd.copyWith(
           id: actuelePositie.id,
+          isVerwijderd: actuelePositie.isVerwijderd,
           gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
         );
-
         heeftWijziging = true;
       }
 
-      if (heeftWijziging) {
-        // Eén batchopslag = één normale sync.
-        await AppStorage.bewaarOpmetingen(nieuweLijst);
-      }
-
-      return OpmetingVeiligeLijstResultaat(
+      final resultaat = OpmetingVeiligeLijstResultaat(
         opmetingen: List<OpmetingOverzichtRaamItem>.unmodifiable(nieuweLijst),
+        gewijzigd: heeftWijziging,
+      );
+      return AppStorageOpmetingMutatieResultaat<OpmetingVeiligeLijstResultaat>(
+        resultaat: resultaat,
+        opmetingen: nieuweLijst,
         gewijzigd: heeftWijziging,
       );
     });
