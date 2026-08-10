@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTE-GESCHIEDENIS-CONCEPTEN-WISSEN-ONDERTEKEND-BESCHERMD-20260809_2057
+// THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-DOORGEVEN-AAN-PDF-20260809-2030
 // THIMACO-CONTROLE: OFFERTE-MAIL-MEERDERE-GESCHIEDENISVERSIES-20260809
 // THIMACO-CONTROLE: OFFERTE-CONCEPTVERSIES-EN-WERKVERSIES-20260806
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-MENU-20260806
@@ -633,6 +635,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final data = OfferteDocumentData(
       klant: OfferteKlantgegevens.vanTitelhoofd(titelhoofd),
       offerteNummer: titelhoofd.samengesteldOffertenummer,
+      offerteOmschrijving: titelhoofd.offerteOmschrijving,
       offerteDatum: versie.offerteDatum,
       btwTarief: titelhoofd.btwTarief,
       kortingOmschrijving: titelhoofd.kortingOmschrijving,
@@ -981,19 +984,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   Future<void> _verwijderConceptVersie(OfferteVersieModel versie) async {
-    if (!versie.isConcept) return;
-    if (versie.inhoudSignatuur == _huidigeInhoudSignatuur ||
-        versie.id == widget.titelhoofd.offerteBronVersieId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'De huidige of gebruikte bronversie kan niet worden verwijderd.',
-          ),
-          backgroundColor: _groen,
-        ),
-      );
-      return;
-    }
+    // Dubbele beveiliging: deze actie mag uitsluitend op niet-ondertekende
+    // conceptoffertes worden uitgevoerd. Ondertekende offertes worden ook door
+    // de opslagservice geweigerd.
+    if (!versie.isConcept || versie.isOndertekend) return;
 
     final bevestigen = await showDialog<bool>(
       context: context,
@@ -1002,13 +996,14 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           title: const Text(
-            'Conceptversie verwijderen?',
+            'Offerte verwijderen?',
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           content: Text(
             'Versie ${versie.versieNummer} · ${versie.weergaveNaam} wordt '
-            'uit de geschiedenis verwijderd. Ondertekende versies kunnen '
-            'nooit via deze actie worden gewist.',
+            'definitief uit de geschiedenis verwijderd.\n\n'
+            'Deze actie kan niet ongedaan worden gemaakt. Ondertekende '
+            'offertes kunnen nooit worden gewist.',
           ),
           actions: <Widget>[
             TextButton(
@@ -1020,7 +1015,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                 backgroundColor: const Color(0xFFDC2626),
               ),
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Concept verwijderen'),
+              child: const Text('Offerte verwijderen'),
             ),
           ],
         );
@@ -1040,7 +1035,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Conceptversie ${versie.versieNummer} is verwijderd.'),
+          content: Text(
+            'Versie ${versie.versieNummer} · ${versie.weergaveNaam} '
+            'is uit de geschiedenis verwijderd.',
+          ),
           backgroundColor: _groen,
         ),
       );
@@ -1048,7 +1046,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Conceptversie verwijderen is niet gelukt.\n$fout'),
+          content: Text('Offerte verwijderen is niet gelukt.\n$fout'),
           backgroundColor: const Color(0xFFDC2626),
         ),
       );
@@ -1361,9 +1359,6 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                                       widget.archiefVersieNummer
                                 : versie.inhoudSignatuur ==
                                       _huidigeInhoudSignatuur;
-                            final isBronVoorLatereVersie = _versies.any(
-                              (andere) => andere.bronVersieId == versie.id,
-                            );
                             final statusKleur = versie.isOndertekend
                                 ? _groen
                                 : _oranje;
@@ -1587,13 +1582,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                                                 ),
                                               ),
                                             ),
-                                          if (versie.isConcept &&
-                                              !isHuidig &&
-                                              !isBronVoorLatereVersie &&
-                                              versie.id !=
-                                                  widget
-                                                      .titelhoofd
-                                                      .offerteBronVersieId)
+                                          if (versie.isConcept)
                                             const PopupMenuItem<_VersieActie>(
                                               value: _VersieActie.verwijderen,
                                               child: ListTile(
@@ -1603,7 +1592,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                                                   color: Color(0xFFDC2626),
                                                 ),
                                                 title: Text(
-                                                  'Concept verwijderen',
+                                                  'Offerte verwijderen',
                                                 ),
                                               ),
                                             ),
@@ -2018,6 +2007,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final data = OfferteDocumentData(
       klant: OfferteKlantgegevens.vanTitelhoofd(titelhoofd),
       offerteNummer: titelhoofd.samengesteldOffertenummer,
+      offerteOmschrijving: titelhoofd.offerteOmschrijving,
       offerteDatum: datum,
       btwTarief: titelhoofd.btwTarief,
       kortingOmschrijving: titelhoofd.kortingOmschrijving,

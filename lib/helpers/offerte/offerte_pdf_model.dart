@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-IN-PDF-DATA-20260809-2030
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OFFERTE-PDF-MODEL-20260728
 import 'dart:typed_data';
 
@@ -94,6 +95,7 @@ class OfferteDocumentData {
     required this.offerteNummer,
     required this.offerteDatum,
     required this.btwTarief,
+    this.offerteOmschrijving = '',
     required this.posities,
     this.projectKleurBinnen = '',
     this.projectKleurBuiten = '',
@@ -116,6 +118,7 @@ class OfferteDocumentData {
   final String offerteNummer;
   final DateTime offerteDatum;
   final String btwTarief;
+  final String offerteOmschrijving;
   final String kortingOmschrijving;
   final String projectKleurBinnen;
   final String projectKleurBuiten;

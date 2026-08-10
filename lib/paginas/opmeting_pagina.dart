@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VERBORGEN-NIET-REKENEN-POSITIES-BLIJVEND-BEWAREN-20260809-2040
 // THIMACO-CONTROLE: OFFERTEVERSIES-CONCEPTEN-WERKVERSIE-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-HOOFDPAGINA-FASE-3B-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-BOVENBALK-ACTIES-20260801
@@ -181,6 +182,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
         setState(() {
           _projectTitelhoofd = titelhoofd;
+          _verborgenNietRekenenPositieIds = Set<String>.from(
+            titelhoofd.verborgenNietRekenenPositieIds,
+          );
         });
       },
       toonMelding: (tekst, fout) {
@@ -236,6 +240,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           _raamOpmetingen
             ..clear()
             ..addAll(opmetingen);
+          _verborgenNietRekenenPositieIds = Set<String>.from(
+            titelhoofd.verborgenNietRekenenPositieIds,
+          );
         });
       },
       herlaadOpmetingen: (klantNaam) {
@@ -271,7 +278,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
                 ..clear()
                 ..addAll(opmetingen);
               _verborgenFormulierTypes = verborgenFormulierTypes;
-              _verborgenNietRekenenPositieIds = <String>{};
+              _verborgenNietRekenenPositieIds = Set<String>.from(
+                titelhoofd.verborgenNietRekenenPositieIds,
+              );
               _laden = laden;
             });
           },
@@ -513,11 +522,15 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    setState(() {
-      _verborgenNietRekenenPositieIds = Set<String>.from(
-        _verborgenNietRekenenPositieIds,
-      )..remove(item.id);
-    });
+    final nieuweVerborgenPositieIds = Set<String>.from(
+      _verborgenNietRekenenPositieIds,
+    )..remove(item.id);
+
+    _projectTitelhoofdController.verwerkWijziging(
+      _projectTitelhoofd.copyWith(
+        verborgenNietRekenenPositieIds: nieuweVerborgenPositieIds,
+      ),
+    );
   }
 
   Future<void> _verplaatsRaamopmeting(
@@ -599,19 +612,21 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   void _toggleNietRekenenPositieZichtbaarheid(String positieId) {
-    setState(() {
-      final nieuweVerborgenPositieIds = Set<String>.from(
-        _verborgenNietRekenenPositieIds,
-      );
+    final nieuweVerborgenPositieIds = Set<String>.from(
+      _verborgenNietRekenenPositieIds,
+    );
 
-      if (nieuweVerborgenPositieIds.contains(positieId)) {
-        nieuweVerborgenPositieIds.remove(positieId);
-      } else {
-        nieuweVerborgenPositieIds.add(positieId);
-      }
+    if (nieuweVerborgenPositieIds.contains(positieId)) {
+      nieuweVerborgenPositieIds.remove(positieId);
+    } else {
+      nieuweVerborgenPositieIds.add(positieId);
+    }
 
-      _verborgenNietRekenenPositieIds = nieuweVerborgenPositieIds;
-    });
+    _projectTitelhoofdController.verwerkWijziging(
+      _projectTitelhoofd.copyWith(
+        verborgenNietRekenenPositieIds: nieuweVerborgenPositieIds,
+      ),
+    );
   }
 
   Future<bool> _bevestigOfferteMetOntbrekendePrijsgegevens(

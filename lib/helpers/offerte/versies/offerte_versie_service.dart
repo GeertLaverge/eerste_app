@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-GESCHIEDENIS-CONCEPTEN-WISSEN-ONDERTEKEND-BESCHERMD-20260809_2057
 // THIMACO-CONTROLE: OFFERTEVERSIE-CONCEPT-BEWAREN-HEROPENEN-20260806
 import 'dart:convert';
 
@@ -181,23 +182,21 @@ class OfferteVersieService {
   }
 
   Future<void> verwijderConceptVersie(OfferteVersieModel versie) async {
-    if (!versie.isConcept) {
+    // Ondertekende offertes zijn definitief beschermd. Deze controle staat
+    // bewust ook in de service, zodat ze nooit via een andere UI-route of een
+    // toekomstige aanroep gewist kunnen worden.
+    if (!versie.isConcept || versie.isOndertekend) {
       throw StateError(
         'Een ondertekende offerteversie kan niet worden gewist.',
       );
     }
 
     final alleVersies = await AppStorage.laadOfferteVersies();
-    final wordtAlsBronGebruikt = alleVersies.any(
-      (bestaand) => bestaand.bronVersieId == versie.id,
-    );
-    if (wordtAlsBronGebruikt) {
-      throw StateError(
-        'Deze conceptversie wordt gebruikt als bron van een latere versie '
-        'en kan daarom niet worden gewist.',
-      );
-    }
 
+    // Een conceptversie is een volledige momentopname. Latere versies bewaren
+    // hun eigen titelhoofd, posities en prijzen en blijven dus bruikbaar als
+    // een oude conceptversie uit de geschiedenis wordt opgeruimd. De
+    // bronverwijzing is uitsluitend historische informatie.
     await AppStorage.bewaarOfferteVersies(
       alleVersies.where((bestaand) => bestaand.id != versie.id).toList(),
     );

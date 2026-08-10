@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-EN-VERBORGEN-NIET-REKENEN-20260809-2030
 // THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
 // THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
@@ -34,6 +35,9 @@ class OpmetingProjectTitelhoofd {
     this.offerteJaar = standaardOfferteJaar,
     this.klantnummer = '',
     this.offerteVolgnummer = standaardOfferteVolgnummer,
+    this.offerteVersie = standaardOfferteVersie,
+    this.offerteOmschrijving = '',
+    this.verborgenNietRekenenPositieIds = const <String>{},
     this.kortingOmschrijving = standaardKortingOmschrijving,
     this.berekenPrijzen = false,
     this.tijdelijkeProjectPrijsregels = const <OffertePrijsregelModel>[],
@@ -47,6 +51,7 @@ class OpmetingProjectTitelhoofd {
   static const String standaardBtwTarief = '21 %';
   static const String standaardOfferteJaar = '26';
   static const String standaardOfferteVolgnummer = '01';
+  static const String standaardOfferteVersie = '01';
   static const String standaardKortingOmschrijving = 'Korting';
 
   static const String kleurBronToebehorenRal = 'ral';
@@ -102,6 +107,9 @@ class OpmetingProjectTitelhoofd {
   final String offerteJaar;
   final String klantnummer;
   final String offerteVolgnummer;
+  final String offerteVersie;
+  final String offerteOmschrijving;
+  final Set<String> verborgenNietRekenenPositieIds;
   final String kortingOmschrijving;
   final bool berekenPrijzen;
   final List<OffertePrijsregelModel> tijdelijkeProjectPrijsregels;
@@ -160,7 +168,13 @@ class OpmetingProjectTitelhoofd {
   }
 
   String get samengesteldOffertenummer {
-    return '$offerteJaar$klantnummer$offerteVolgnummer';
+    final versie = _beperkTotCijfers(
+      offerteVersie,
+      maxLengte: 2,
+      standaardWaarde: standaardOfferteVersie,
+    );
+    return '$offerteJaar$klantnummer$offerteVolgnummer'
+        'V$versie';
   }
 
   bool get heeftKlantGegevens {
@@ -192,6 +206,8 @@ class OpmetingProjectTitelhoofd {
         !heeftProjectAdres &&
         !heeftProjectKleuren &&
         kleurAfwijking.trim().isEmpty &&
+        offerteOmschrijving.trim().isEmpty &&
+        verborgenNietRekenenPositieIds.isEmpty &&
         tijdelijkeProjectPrijsregels.isEmpty &&
         !berekenPrijzen;
   }
@@ -224,6 +240,9 @@ class OpmetingProjectTitelhoofd {
     String? offerteJaar,
     String? klantnummer,
     String? offerteVolgnummer,
+    String? offerteVersie,
+    String? offerteOmschrijving,
+    Set<String>? verborgenNietRekenenPositieIds,
     String? kortingOmschrijving,
     bool? berekenPrijzen,
     List<OffertePrijsregelModel>? tijdelijkeProjectPrijsregels,
@@ -268,6 +287,10 @@ class OpmetingProjectTitelhoofd {
       offerteJaar: offerteJaar ?? this.offerteJaar,
       klantnummer: klantnummer ?? this.klantnummer,
       offerteVolgnummer: offerteVolgnummer ?? this.offerteVolgnummer,
+      offerteVersie: offerteVersie ?? this.offerteVersie,
+      offerteOmschrijving: offerteOmschrijving ?? this.offerteOmschrijving,
+      verborgenNietRekenenPositieIds:
+          verborgenNietRekenenPositieIds ?? this.verborgenNietRekenenPositieIds,
       kortingOmschrijving: kortingOmschrijving ?? this.kortingOmschrijving,
       berekenPrijzen: berekenPrijzen ?? this.berekenPrijzen,
       tijdelijkeProjectPrijsregels:
@@ -341,6 +364,11 @@ class OpmetingProjectTitelhoofd {
       'offerteJaar': offerteJaar,
       'klantnummer': klantnummer,
       'offerteVolgnummer': offerteVolgnummer,
+      'offerteVersie': offerteVersie,
+      'offerteOmschrijving': offerteOmschrijving,
+      'verborgenNietRekenenPositieIds': (verborgenNietRekenenPositieIds.toList(
+        growable: false,
+      )..sort()),
       'kortingOmschrijving': kortingOmschrijving,
       'berekenPrijzen': berekenPrijzen,
       'tijdelijkeProjectPrijsregels': tijdelijkeProjectPrijsregels
@@ -420,6 +448,15 @@ class OpmetingProjectTitelhoofd {
         json['offerteVolgnummer']?.toString() ?? '',
         maxLengte: 2,
         standaardWaarde: standaardOfferteVolgnummer,
+      ),
+      offerteVersie: _beperkTotCijfers(
+        json['offerteVersie']?.toString() ?? '',
+        maxLengte: 2,
+        standaardWaarde: standaardOfferteVersie,
+      ),
+      offerteOmschrijving: json['offerteOmschrijving']?.toString() ?? '',
+      verborgenNietRekenenPositieIds: _leesStringSet(
+        json['verborgenNietRekenenPositieIds'],
       ),
       kortingOmschrijving: _normaliseerKortingOmschrijving(
         json['kortingOmschrijving']?.toString(),
@@ -740,6 +777,18 @@ String opmetingKlantNaamSleutel(String klantNaam) {
 String opmetingProjectTitelhoofdSleutel(String klantNaam) {
   final sleutel = opmetingKlantNaamSleutel(klantNaam);
   return sleutel.isEmpty ? 'zonder_klantnaam' : sleutel;
+}
+
+Set<String> _leesStringSet(Object? waarde) {
+  if (waarde is! List) {
+    return const <String>{};
+  }
+
+  final resultaat = waarde
+      .map((item) => item?.toString().trim() ?? '')
+      .where((item) => item.isNotEmpty)
+      .toSet();
+  return Set<String>.unmodifiable(resultaat);
 }
 
 int _leesIntVeilig(Object? waarde) {

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-ONDER-OFFERTENUMMER-20260809-2030
 // THIMACO-CONTROLE: OFFERTE-PDF-4-ANALYZER-ISSUES-FIX-20260809-1918
 // THIMACO-CONTROLE: OFFERTE-GELDIGHEID-14-KALENDERDAGEN-20260809-1908
 // THIMACO-CONTROLE: OFFERTE-PDF-PAGINANUMMER-VASTE-CAPTURE-20260809-1855
@@ -438,6 +439,8 @@ class OffertePdfService {
           pw.SizedBox(height: 10),
           _klantRegel('Offertedatum', datum),
           _klantRegel('Offertenummer', data.offerteNummer),
+          if (data.offerteOmschrijving.trim().isNotEmpty)
+            _klantRegel('Omschrijving', data.offerteOmschrijving.trim()),
         ],
       ),
     );
