@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: OPVULLING-PATROON-TEKST-VERGELIJKING-20260805
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
 // THIMACO-CONTROLE: FORMULIER-LAYOUT-RELATIEVE-IMPORT-FIX-20260727
@@ -9,6 +10,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../helpers/app_storage.dart';
+import '../helpers/opmeting/opslag/opmeting_veilige_mutatie_service.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_actieve_keuze_controller.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_keuze_dialog.dart';
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_model.dart';
@@ -1558,7 +1560,15 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     if (widget.bestaandeOpmeting == null) {
       bewaardeOpmeting = await AppStorage.voegOpmetingToe(opmeting);
     } else {
-      bewaardeOpmeting = await AppStorage.werkOpmetingBij(opmeting);
+      // Een bestaande fiche wordt niet meer als oude volledige momentopname
+      // teruggeschreven. Alleen wijzigingen uit deze fiche worden drie-weg
+      // samengevoegd met de nieuwste opgeslagen positie.
+      final veiligResultaat =
+          await OpmetingVeiligeMutatieService.bewaarFicheWijzigingen(
+            basis: widget.bestaandeOpmeting!,
+            gewijzigd: opmeting,
+          );
+      bewaardeOpmeting = veiligResultaat.positie;
     }
 
     await OpmetingDeurpaneelToewijzingStorageHelper.bewaarVoorOpmetingId(

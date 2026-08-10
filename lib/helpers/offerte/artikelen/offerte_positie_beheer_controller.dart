@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NIET-REKENEN-TERUG-ACTIVEREN-HUIDIGE-PAGINA-20260810_0942
 // THIMACO-CONTROLE: POSITIEBEHEER-MET-WISSEL-NIET-REKENEN-20260728
 import 'package:flutter/material.dart';
 
@@ -378,9 +379,12 @@ class OffertePositieBeheerController {
   }
 
   Future<void> wisselNietRekenen(OpmetingOverzichtRaamItem item) async {
-    final wordtNietRekenen = !item.isNietRekenen;
+    // Bepaal eerst expliciet welke eindtoestand de gebruiker heeft gekozen.
+    // Zo kan een ouder kaartobject de status tijdens een herlaad- of
+    // herberekeningscyclus niet opnieuw in de verkeerde richting toggelen.
+    final gewensteNietRekenen = !item.isNietRekenen;
 
-    if (wordtNietRekenen) {
+    if (gewensteNietRekenen) {
       final bevestigen = await showDialog<bool>(
         context: context,
         builder: (dialogContext) {
@@ -437,46 +441,94 @@ class OffertePositieBeheerController {
       }
     }
 
-    final bijgewerkt = item
-        .copyWith(
-          isNietRekenen: wordtNietRekenen,
+    // Lees onmiddellijk vóór het opslaan opnieuw de laatste versie van deze
+    // positie uit de opslag. Andere prijs-, sync- of navigatieacties kunnen
+    // intussen een nieuwer exemplaar met dezelfde ID hebben opgeslagen.
+    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+    final opgeslagenIndex = alleOpmetingen.indexWhere(
+      (opmeting) => opmeting.id == item.id,
+    );
+    final actueleOpmeting = opgeslagenIndex >= 0
+        ? alleOpmetingen[opgeslagenIndex]
+        : item;
 
-          // Een groep kan niet tegelijk een offerteoptie en
-          // een volledig uitgesloten positie zijn.
-          isOfferteOptie: wordtNietRekenen ? false : item.isOfferteOptie,
+    if (actueleOpmeting.isNietRekenen != gewensteNietRekenen) {
+      final bijgewerkt = actueleOpmeting
+          .copyWith(
+            isNietRekenen: gewensteNietRekenen,
 
-          // Bij uitsluiting heeft de koppeling met een hoofdpositie
-          // geen betekenis meer.
-          offerteOptieHoofdpositieId: wordtNietRekenen
-              ? ''
-              : item.offerteOptieHoofdpositieId,
-        )
-        .metNieuweWijzigingsDatum();
+            // Een groep kan niet tegelijk een offerteoptie en volledig
+            // uitgesloten zijn.
+            isOfferteOptie: gewensteNietRekenen
+                ? false
+                : actueleOpmeting.isOfferteOptie,
 
-    await AppStorage.werkOpmetingBij(bijgewerkt);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+            // Wanneer de groep niet gerekend wordt, heeft een koppeling met
+            // een hoofdpositie geen betekenis.
+            offerteOptieHoofdpositieId: gewensteNietRekenen
+                ? ''
+                : actueleOpmeting.offerteOptieHoofdpositieId,
+          )
+          .metNieuweWijzigingsDatum();
+
+      // AppStorage bewaart de positie en start zelf de normale sync-backup.
+      // Hier dus geen tweede losse OneDrive-sync meer starten.
+      await AppStorage.werkOpmetingBij(bijgewerkt);
+    }
 
     if (!isMounted()) {
       return;
     }
 
+    // Eén normale herlaadcyclus volstaat. De pagina voert tijdens die cyclus
+    // zelf reeds de noodzakelijke prijs- en verdeelkostherberekening uit.
+    // De vroegere tweede expliciete herberekening maakte deze statuswijziging
+    // onnodig kwetsbaar voor een race tussen twee opslagcycli.
     await herlaadOpmetingen(leesKlantNaam());
 
     if (!isMounted()) {
       return;
     }
 
-    // Projectkosten en verdeelde interne kosten moeten onmiddellijk
-    // opnieuw berekend worden zonder deze groep.
-    await herberekenPrijsMomentopnames(item.klantNaam);
+    // Controleer na de volledige cyclus wat werkelijk opgeslagen is.
+    // Mocht een gelijktijdige actie de status toch opnieuw veranderd hebben,
+    // herstel dan uitsluitend deze vlag op het nieuwste object.
+    final controleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+    final controleIndex = controleOpmetingen.indexWhere(
+      (opmeting) => opmeting.id == item.id,
+    );
 
-    if (!isMounted()) {
-      return;
+    if (controleIndex >= 0 &&
+        controleOpmetingen[controleIndex].isNietRekenen !=
+            gewensteNietRekenen) {
+      final nieuwste = controleOpmetingen[controleIndex];
+      final hersteld = nieuwste
+          .copyWith(
+            isNietRekenen: gewensteNietRekenen,
+            isOfferteOptie: gewensteNietRekenen
+                ? false
+                : nieuwste.isOfferteOptie,
+            offerteOptieHoofdpositieId: gewensteNietRekenen
+                ? ''
+                : nieuwste.offerteOptieHoofdpositieId,
+          )
+          .metNieuweWijzigingsDatum();
+
+      await AppStorage.werkOpmetingBij(hersteld);
+
+      if (!isMounted()) {
+        return;
+      }
+
+      await herlaadOpmetingen(leesKlantNaam());
+
+      if (!isMounted()) {
+        return;
+      }
     }
 
     toonMelding(
-      wordtNietRekenen
+      gewensteNietRekenen
           ? 'Groep wordt niet meer meegerekend en verschijnt niet op de offerte.'
           : 'Groep is opnieuw actief en wordt opnieuw meegerekend.',
     );

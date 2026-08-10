@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: VERBORGEN-NIET-REKENEN-POSITIES-BLIJVEND-BEWAREN-20260809-2040
 // THIMACO-CONTROLE: OFFERTEVERSIES-CONCEPTEN-WERKVERSIE-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-HOOFDPAGINA-FASE-3B-20260803
@@ -22,12 +23,13 @@ import '../helpers/offerte/offerte_pdf_preview_pagina.dart';
 import '../helpers/offerte/opmeting_pdf_preview_pagina.dart';
 import 'offerte_prijs_overzicht_pagina.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
+import '../helpers/offerte/prijzen/offerte_artikel_prijs_mutatie_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
 import '../helpers/offerte/prijzen/offerte_project_prijsregel_controller.dart';
 import '../helpers/offerte/prijzen/offerte_prijsinstellingen_controller.dart';
 import '../helpers/sync/onedrive_klantdocument_service.dart';
-import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
+import '../helpers/opmeting/opslag/opmeting_veilige_mutatie_service.dart';
 import '../helpers/offerte/artikelen/offerte_artikel_register.dart';
 import '../helpers/offerte/artikelen/offerte_positie_beheer_controller.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_bovenbalk.dart';
@@ -55,6 +57,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   String _klantNaam = '';
   bool _laden = false;
+
+  int _veiligePrijsHerberekenGeneratie = 0;
 
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
@@ -449,11 +453,12 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
+    // Bewaar exact de toestand waarop deze berekening gestart is.
+    final basisOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
     final resultaat = await _prijsinstellingenController
         .werkTechnischePrijsMomentopnamesBij(
-          alleOpmetingen: alleOpmetingen,
+          alleOpmetingen: basisOpmetingen,
           klantNaam: klantNaam,
           berekenPrijzen: true,
           tijdelijkeProjectPrijsregels:
@@ -464,9 +469,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    await AppStorage.bewaarOpmetingenVoorSync(resultaat.opmetingen);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    // Nooit meer de volledige oude berekeningslijst blind terugschrijven.
+    // Alleen echte berekeningsverschillen worden op de nieuwste opslag gezet.
+    final veiligResultaat =
+        await OpmetingVeiligeMutatieService.bewaarBerekendeWijzigingen(
+          basis: basisOpmetingen,
+          gewijzigd: resultaat.opmetingen,
+        );
 
     if (!mounted ||
         _klantNaam.trim().toLowerCase() != klantNaam.trim().toLowerCase()) {
@@ -475,7 +484,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
     final klantSleutel = klantNaam.trim().toLowerCase();
 
-    final zichtbareOpmetingen = resultaat.opmetingen
+    final zichtbareOpmetingen = veiligResultaat.opmetingen
         .where((opmeting) {
           return !opmeting.isVerwijderd &&
               opmeting.klantNaam.trim().toLowerCase() == klantSleutel;
@@ -543,8 +552,74 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Future<void> _wijzigArtikelPrijs(
     OpmetingOverzichtRaamItem item,
     double prijs,
-  ) {
-    return _artikelPrijscorrectieController.wijzigArtikelPrijs(item, prijs);
+  ) async {
+    final positieId = item.id.trim();
+    if (positieId.isEmpty) {
+      return;
+    }
+
+    OpmetingVeiligeMutatieResultaat veiligResultaat;
+
+    try {
+      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
+        positieId: positieId,
+        wijziging: (actueel) {
+          final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(
+            actueel,
+          );
+
+          if (adapter == null) {
+            return actueel;
+          }
+
+          // De nieuwe prijs wordt op de nieuwste opgeslagen positie gezet.
+          return adapter.schrijfPrijsPerStuk(
+            artikel: actueel,
+            prijsPerStukExclBtw: prijs,
+          );
+        },
+      );
+    } catch (fout) {
+      if (mounted) {
+        _toonMelding(
+          'Eenheidsprijs bewaren is niet gelukt.\n$fout',
+          fout: true,
+        );
+      }
+      return;
+    }
+
+    if (!veiligResultaat.gewijzigd || !mounted) {
+      return;
+    }
+
+    // Lokaal eveneens slechts deze ene positie vervangen.
+    final lokaal = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
+    final index = lokaal.indexWhere(
+      (opmeting) => opmeting.id == veiligResultaat.positie.id,
+    );
+
+    if (index >= 0) {
+      lokaal[index] = veiligResultaat.positie;
+
+      setState(() {
+        _raamOpmetingen
+          ..clear()
+          ..addAll(lokaal);
+      });
+    }
+
+    // Debounce behouden zonder een oudere positielijst vast te houden.
+    final generatie = ++_veiligePrijsHerberekenGeneratie;
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+
+    if (!mounted || generatie != _veiligePrijsHerberekenGeneratie) {
+      return;
+    }
+
+    await _herberekenPrijsMomentopnamesNaPrijswijziging(
+      klantNaam: veiligResultaat.positie.klantNaam,
+    );
   }
 
   Future<void> _wijzigArtikelWinstmarge(
