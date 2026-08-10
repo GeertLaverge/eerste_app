@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PROJECT-TITELHOOFD-ATOMAIRE-OPSLAG-BEREKEN-20260810
 // THIMACO-CONTROLE: OPMETINGEN-ATOMAIRE-OPSLAG-GLOBAAL-20260810
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-OPSLAG-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-APP-STORAGE-FASE-3A-20260803
@@ -49,6 +50,20 @@ class AppStorageOpmetingMutatieResultaat<T> {
 
   final T resultaat;
   final List<OpmetingOverzichtRaamItem> opmetingen;
+  final bool gewijzigd;
+  final bool startSync;
+}
+
+class AppStorageProjectTitelhoofdMutatieResultaat<T> {
+  const AppStorageProjectTitelhoofdMutatieResultaat({
+    required this.resultaat,
+    required this.titelhoofden,
+    required this.gewijzigd,
+    this.startSync = true,
+  });
+
+  final T resultaat;
+  final Map<String, OpmetingProjectTitelhoofd> titelhoofden;
   final bool gewijzigd;
   final bool startSync;
 }
@@ -1039,6 +1054,56 @@ class AppStorage {
   // OPMETING - PROJECT TITELHOOFD
   // ------------------------------------------------------------
 
+  // Projecttitelhoofden bevatten o.a. de keuze "Bereken". Ook deze opslag
+  // krijgt één centrale wachtrij, zodat een vertraagde UI-save en een sync
+  // nooit tegelijk dezelfde volledige projectmap kunnen terugschrijven.
+  static Future<void> _projectTitelhoofdenWachtrij = Future<void>.value();
+
+  static final Map<String, OpmetingProjectTitelhoofd>
+  _projectTitelhoofdBasisMomentopnames = <String, OpmetingProjectTitelhoofd>{};
+
+  static const int _maxProjectTitelhoofdBasisMomentopnames = 1000;
+
+  static String _projectTitelhoofdMomentopnameSleutel(
+    String projectSleutel,
+    OpmetingProjectTitelhoofd titelhoofd,
+  ) {
+    return '${projectSleutel.trim()}\u0000${titelhoofd.gewijzigdOp.trim()}';
+  }
+
+  static void _onthoudProjectTitelhoofdMomentopnames(
+    Map<String, OpmetingProjectTitelhoofd> titelhoofden,
+  ) {
+    for (final entry in titelhoofden.entries) {
+      final sleutel = entry.key.trim();
+      final gewijzigdOp = entry.value.gewijzigdOp.trim();
+      if (sleutel.isEmpty || gewijzigdOp.isEmpty) continue;
+
+      _projectTitelhoofdBasisMomentopnames[_projectTitelhoofdMomentopnameSleutel(
+            sleutel,
+            entry.value,
+          )] =
+          entry.value;
+    }
+
+    while (_projectTitelhoofdBasisMomentopnames.length >
+        _maxProjectTitelhoofdBasisMomentopnames) {
+      _projectTitelhoofdBasisMomentopnames.remove(
+        _projectTitelhoofdBasisMomentopnames.keys.first,
+      );
+    }
+  }
+
+  static OpmetingProjectTitelhoofd? _zoekProjectTitelhoofdBasisMomentopname(
+    OpmetingProjectTitelhoofd titelhoofd,
+  ) {
+    final gewijzigdOp = titelhoofd.gewijzigdOp.trim();
+    if (gewijzigdOp.isEmpty) return null;
+
+    final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+    return _projectTitelhoofdBasisMomentopnames['$sleutel\u0000$gewijzigdOp'];
+  }
+
   static Map<String, OpmetingProjectTitelhoofd>
   decodeOpmetingProjectTitelhoofdenVoorSync(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) {
@@ -1082,24 +1147,80 @@ class AppStorage {
     );
   }
 
+  static Future<T> _muteerProjectTitelhoofdenAtomair<T>(
+    FutureOr<AppStorageProjectTitelhoofdMutatieResultaat<T>> Function(
+      Map<String, OpmetingProjectTitelhoofd> actueleTitelhoofden,
+    )
+    mutatie,
+  ) {
+    final completer = Completer<T>();
+
+    _projectTitelhoofdenWachtrij = _projectTitelhoofdenWachtrij.then((_) async {
+      try {
+        final prefs = await openBox();
+        final actueel = decodeOpmetingProjectTitelhoofdenVoorSync(
+          prefs.getString(_opmetingProjectTitelhoofdenKey),
+        );
+        _onthoudProjectTitelhoofdMomentopnames(actueel);
+
+        final mutatieResultaat = await mutatie(
+          Map<String, OpmetingProjectTitelhoofd>.from(actueel),
+        );
+
+        if (mutatieResultaat.gewijzigd) {
+          final nieuweMap = Map<String, OpmetingProjectTitelhoofd>.from(
+            mutatieResultaat.titelhoofden,
+          );
+          await prefs.setString(
+            _opmetingProjectTitelhoofdenKey,
+            encodeOpmetingProjectTitelhoofdenVoorSync(nieuweMap),
+          );
+          _onthoudProjectTitelhoofdMomentopnames(nieuweMap);
+
+          if (mutatieResultaat.startSync) {
+            await _syncBackup();
+          }
+        }
+
+        completer.complete(mutatieResultaat.resultaat);
+      } catch (fout, stackTrace) {
+        completer.completeError(fout, stackTrace);
+      }
+    });
+
+    return completer.future;
+  }
+
   static Future<Map<String, OpmetingProjectTitelhoofd>>
   laadOpmetingProjectTitelhoofdenVoorSync() async {
-    final prefs = await openBox();
+    await _projectTitelhoofdenWachtrij;
 
-    return decodeOpmetingProjectTitelhoofdenVoorSync(
+    final prefs = await openBox();
+    final titelhoofden = decodeOpmetingProjectTitelhoofdenVoorSync(
       prefs.getString(_opmetingProjectTitelhoofdenKey),
     );
+    _onthoudProjectTitelhoofdMomentopnames(titelhoofden);
+    return titelhoofden;
   }
 
   static Future<void> bewaarOpmetingProjectTitelhoofdenVoorSync(
     Map<String, OpmetingProjectTitelhoofd> titelhoofden,
   ) async {
-    final prefs = await openBox();
+    await _muteerProjectTitelhoofdenAtomair<void>((actueel) {
+      // OneDrive heeft al een merge uitgevoerd. Controleer hier nogmaals tegen
+      // de allernieuwste lokale toestand die tijdens die sync kan zijn ontstaan.
+      final samengevoegd = SyncMergeService.mergeProjectTitelhoofden(
+        actueel,
+        titelhoofden,
+      );
 
-    await prefs.setString(
-      _opmetingProjectTitelhoofdenKey,
-      encodeOpmetingProjectTitelhoofdenVoorSync(titelhoofden),
-    );
+      return AppStorageProjectTitelhoofdMutatieResultaat<void>(
+        resultaat: null,
+        titelhoofden: samengevoegd,
+        gewijzigd: !_projectTitelhoofdMapsGelijk(actueel, samengevoegd),
+        startSync: false,
+      );
+    });
   }
 
   static Future<OpmetingProjectTitelhoofd> laadOpmetingProjectTitelhoofd(
@@ -1107,27 +1228,161 @@ class AppStorage {
   ) async {
     final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
     final sleutel = opmetingProjectTitelhoofdSleutel(klantNaam);
-
-    return titelhoofden[sleutel] ??
+    final titelhoofd =
+        titelhoofden[sleutel] ??
         OpmetingProjectTitelhoofd(klantNaam: klantNaam.trim());
+
+    if (titelhoofd.gewijzigdOp.trim().isNotEmpty) {
+      _projectTitelhoofdBasisMomentopnames[_projectTitelhoofdMomentopnameSleutel(
+            sleutel,
+            titelhoofd,
+          )] =
+          titelhoofd;
+    }
+    return titelhoofd;
   }
 
+  /// Bestaande publieke save blijft bruikbaar, maar schrijft nooit meer buiten
+  /// de centrale titelhoofd-wachtrij. Een aantoonbaar oudere snapshot kan een
+  /// nieuwere opgeslagen toestand niet terug overschrijven.
   static Future<void> bewaarOpmetingProjectTitelhoofd(
     OpmetingProjectTitelhoofd titelhoofd,
   ) async {
-    final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
-    final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+    await _muteerProjectTitelhoofdenAtomair<void>((actueel) {
+      final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+      final huidig = actueel[sleutel];
 
-    titelhoofden[sleutel] = titelhoofd.metWijzigingsDatum();
+      OpmetingProjectTitelhoofd kandidaat = titelhoofd;
+      if (huidig != null) {
+        final basis = _zoekProjectTitelhoofdBasisMomentopname(titelhoofd);
+        if (basis != null) {
+          kandidaat = _driewegSamenvoegenProjectTitelhoofd(
+            basis: basis,
+            gewijzigd: titelhoofd,
+            actueel: huidig,
+          );
+        } else {
+          final huidigeDatum = DateTime.tryParse(huidig.gewijzigdOp);
+          final inkomendeDatum = DateTime.tryParse(titelhoofd.gewijzigdOp);
 
-    final prefs = await openBox();
+          if (huidigeDatum != null &&
+              inkomendeDatum != null &&
+              huidigeDatum.isAfter(inkomendeDatum)) {
+            kandidaat = huidig;
+          }
+        }
 
-    await prefs.setString(
-      _opmetingProjectTitelhoofdenKey,
-      encodeOpmetingProjectTitelhoofdenVoorSync(titelhoofden),
+        if (_projectTitelhoofdInhoudGelijk(huidig, kandidaat)) {
+          return AppStorageProjectTitelhoofdMutatieResultaat<void>(
+            resultaat: null,
+            titelhoofden: actueel,
+            gewijzigd: false,
+          );
+        }
+      }
+
+      final opgeslagen = kandidaat.copyWith(
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      );
+      final nieuweMap = Map<String, OpmetingProjectTitelhoofd>.from(actueel);
+      nieuweMap[sleutel] = opgeslagen;
+
+      return AppStorageProjectTitelhoofdMutatieResultaat<void>(
+        resultaat: null,
+        titelhoofden: nieuweMap,
+        gewijzigd: true,
+      );
+    });
+  }
+
+  /// Expliciete drie-weg-save voor het titelhoofd. [basis] is de toestand vóór
+  /// een reeks UI-wijzigingen en [gewijzigd] bevat de uiteindelijke invoer.
+  /// Alleen velden die werkelijk tussen basis en gewijzigd veranderden worden
+  /// op de nieuwste opgeslagen versie toegepast. Daardoor kan een vertraagde
+  /// save bijvoorbeeld "Bereken" niet opnieuw uitvinken.
+  static Future<OpmetingProjectTitelhoofd>
+  bewaarOpmetingProjectTitelhoofdWijzigingen({
+    required OpmetingProjectTitelhoofd basis,
+    required OpmetingProjectTitelhoofd gewijzigd,
+  }) {
+    return _muteerProjectTitelhoofdenAtomair<OpmetingProjectTitelhoofd>((
+      actueel,
+    ) {
+      final oudeSleutel = opmetingProjectTitelhoofdSleutel(basis.klantNaam);
+      final nieuweSleutel = opmetingProjectTitelhoofdSleutel(
+        gewijzigd.klantNaam,
+      );
+      final huidig = actueel[oudeSleutel] ?? actueel[nieuweSleutel] ?? basis;
+
+      final kandidaat = _driewegSamenvoegenProjectTitelhoofd(
+        basis: basis,
+        gewijzigd: gewijzigd,
+        actueel: huidig,
+      );
+
+      final sleutelGewijzigd = oudeSleutel != nieuweSleutel;
+      if (!sleutelGewijzigd &&
+          _projectTitelhoofdInhoudGelijk(huidig, kandidaat)) {
+        return AppStorageProjectTitelhoofdMutatieResultaat<
+          OpmetingProjectTitelhoofd
+        >(resultaat: huidig, titelhoofden: actueel, gewijzigd: false);
+      }
+
+      final opgeslagen = kandidaat.copyWith(
+        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+      );
+      final nieuweMap = Map<String, OpmetingProjectTitelhoofd>.from(actueel);
+
+      if (sleutelGewijzigd) {
+        nieuweMap.remove(oudeSleutel);
+      }
+      nieuweMap[nieuweSleutel] = opgeslagen;
+
+      return AppStorageProjectTitelhoofdMutatieResultaat<
+        OpmetingProjectTitelhoofd
+      >(resultaat: opgeslagen, titelhoofden: nieuweMap, gewijzigd: true);
+    });
+  }
+
+  static OpmetingProjectTitelhoofd _driewegSamenvoegenProjectTitelhoofd({
+    required OpmetingProjectTitelhoofd basis,
+    required OpmetingProjectTitelhoofd gewijzigd,
+    required OpmetingProjectTitelhoofd actueel,
+  }) {
+    final json = _voegMapWijzigingenSamen(
+      basis: basis.toJson(),
+      gewijzigd: gewijzigd.toJson(),
+      actueel: actueel.toJson(),
+      hoofdNiveau: true,
     );
+    json['gewijzigdOp'] = actueel.gewijzigdOp;
+    return OpmetingProjectTitelhoofd.fromJson(json);
+  }
 
-    await _syncBackup();
+  static bool _projectTitelhoofdInhoudGelijk(
+    OpmetingProjectTitelhoofd eerste,
+    OpmetingProjectTitelhoofd tweede,
+  ) {
+    final eersteJson = Map<String, dynamic>.from(eerste.toJson())
+      ..remove('gewijzigdOp');
+    final tweedeJson = Map<String, dynamic>.from(tweede.toJson())
+      ..remove('gewijzigdOp');
+    return _jsonGelijk(eersteJson, tweedeJson);
+  }
+
+  static bool _projectTitelhoofdMapsGelijk(
+    Map<String, OpmetingProjectTitelhoofd> eerste,
+    Map<String, OpmetingProjectTitelhoofd> tweede,
+  ) {
+    if (eerste.length != tweede.length) return false;
+
+    for (final entry in eerste.entries) {
+      final ander = tweede[entry.key];
+      if (ander == null || !_jsonGelijk(entry.value.toJson(), ander.toJson())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // ------------------------------------------------------------

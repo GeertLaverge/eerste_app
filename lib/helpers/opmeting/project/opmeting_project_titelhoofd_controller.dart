@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BEREKEN-STATUS-VEILIG-BEWAREN-20260810
 // THIMACO-CONTROLE: TOEBEHOREN-PROJECTKLEUR-SYNC-SCHUIFVLIEGENDEUR-20260728
 import 'dart:async';
 
@@ -39,9 +40,11 @@ class OpmetingProjectTitelhoofdController {
   final void Function(String tekst, bool fout) toonMelding;
 
   Timer? _bewaarTimer;
+  OpmetingProjectTitelhoofd? _bewaarBasisTitelhoofd;
 
   void dispose() {
     _bewaarTimer?.cancel();
+    _bewaarBasisTitelhoofd = null;
   }
 
   String normaliseerKlantNaam(String waarde) {
@@ -101,8 +104,8 @@ class OpmetingProjectTitelhoofdController {
     final bestaandeKlantNaam = leesKlantNaam().trim();
     final huidigTitelhoofd = leesTitelhoofd();
     final nieuweKlantNaam = titelhoofd.klantNaam.trim();
-    final berekeningWerdAangezet =
-        !huidigTitelhoofd.berekenPrijzen && titelhoofd.berekenPrijzen;
+    final berekeningGewijzigd =
+        huidigTitelhoofd.berekenPrijzen != titelhoofd.berekenPrijzen;
     final ralKleurToebehorenGewijzigd =
         huidigTitelhoofd.ralKleurToebehoren.trim() !=
         titelhoofd.ralKleurToebehoren.trim();
@@ -113,6 +116,11 @@ class OpmetingProjectTitelhoofdController {
     final titelhoofdVoorState = titelhoofd.copyWith(
       gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
     );
+
+    // Vanaf de eerste nog niet opgeslagen UI-wijziging bewaren we één basis.
+    // Als binnen 700 ms meerdere velden wijzigen, bevat de uiteindelijke save
+    // zo alle wijzigingen sinds die basis in plaats van alleen de laatste.
+    _bewaarBasisTitelhoofd ??= huidigTitelhoofd;
 
     var bijgewerkteOpmetingen = List<OpmetingOverzichtRaamItem>.from(
       leesOpmetingen(),
@@ -143,16 +151,36 @@ class OpmetingProjectTitelhoofdController {
     );
 
     _bewaarTimer?.cancel();
-    _bewaarTimer = Timer(const Duration(milliseconds: 700), () {
-      unawaited(_bewaarTitelhoofdOpAchtergrond(titelhoofdVoorState));
-    });
+
+    if (berekeningGewijzigd && naamVoorBestand.isNotEmpty) {
+      // Een expliciete wijziging van "Bereken" mag niet 700 ms wachten. Bewaar
+      // ze onmiddellijk, samen met eventueel nog openstaande titelwijzigingen.
+      // Er loopt bewust geen tweede vertraagde save met dezelfde oude snapshot.
+      final basisVoorBewaren = _bewaarBasisTitelhoofd ?? huidigTitelhoofd;
+      _bewaarBasisTitelhoofd = null;
+      unawaited(
+        _bewaarTitelhoofdDirect(
+          basis: basisVoorBewaren,
+          gewijzigd: titelhoofdVoorState,
+          herlaadNaOpslaan: titelhoofdVoorState.berekenPrijzen,
+        ),
+      );
+    } else {
+      final basisVoorBewaren = _bewaarBasisTitelhoofd ?? huidigTitelhoofd;
+      _bewaarTimer = Timer(const Duration(milliseconds: 700), () {
+        final basis = _bewaarBasisTitelhoofd ?? basisVoorBewaren;
+        _bewaarBasisTitelhoofd = null;
+        unawaited(
+          _bewaarTitelhoofdOpAchtergrond(
+            basis: basis,
+            gewijzigd: titelhoofdVoorState,
+          ),
+        );
+      });
+    }
 
     if (ralKleurToebehorenGewijzigd) {
       unawaited(_bewaarRalKleurToebehorenInPosities());
-    }
-
-    if (berekeningWerdAangezet && naamVoorBestand.isNotEmpty) {
-      unawaited(_activeerPrijsberekening(titelhoofdVoorState));
     }
   }
 
@@ -455,28 +483,34 @@ class OpmetingProjectTitelhoofdController {
     OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
-  Future<void> _activeerPrijsberekening(
-    OpmetingProjectTitelhoofd titelhoofd,
-  ) async {
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
+  Future<void> _bewaarTitelhoofdDirect({
+    required OpmetingProjectTitelhoofd basis,
+    required OpmetingProjectTitelhoofd gewijzigd,
+    required bool herlaadNaOpslaan,
+  }) async {
+    await _bewaarTitelhoofdOpAchtergrond(basis: basis, gewijzigd: gewijzigd);
 
-    if (!isMounted()) {
+    if (!herlaadNaOpslaan || !isMounted()) {
       return;
     }
 
-    await herlaadOpmetingen(titelhoofd.klantNaam);
+    await herlaadOpmetingen(gewijzigd.klantNaam);
   }
 
-  Future<void> _bewaarTitelhoofdOpAchtergrond(
-    OpmetingProjectTitelhoofd titelhoofd,
-  ) async {
-    final klantNaam = titelhoofd.klantNaam.trim();
+  Future<void> _bewaarTitelhoofdOpAchtergrond({
+    required OpmetingProjectTitelhoofd basis,
+    required OpmetingProjectTitelhoofd gewijzigd,
+  }) async {
+    final klantNaam = gewijzigd.klantNaam.trim();
 
     if (klantNaam.isEmpty) {
       return;
     }
 
-    await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
+    await AppStorage.bewaarOpmetingProjectTitelhoofdWijzigingen(
+      basis: basis,
+      gewijzigd: gewijzigd,
+    );
 
     final opmetingen = leesOpmetingen();
     if (opmetingen.isNotEmpty) {
