@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-SPATIES-BEHOUDEN-20260810_0817
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-CIJFERFOCUS-OP-LAATSTE-KLEURVERSIE-20260809-2048
 // THIMACO-CONTROLE: ALIPLAST-SUBMENUS-EN-COMPACTE-KLEURKOPPELINGEN-20260808-1902
 // THIMACO-CONTROLE: BINNEN-BUITEN-SCHUCO-FOLIE-MODEL-IMPORTFIX-20260808-1813
@@ -645,7 +646,7 @@ class _OpmetingProjectTitelhoofdKaartState
         klantnummer: _combineerCijfers(_klantnummerControllers),
         offerteVolgnummer: _combineerCijfers(_offerteVolgnummerControllers),
         offerteVersie: _combineerCijfers(_offerteVersieControllers),
-        offerteOmschrijving: _offerteOmschrijvingController.text.trim(),
+        offerteOmschrijving: _offerteOmschrijvingController.text,
         kortingOmschrijving: _kortingOmschrijvingController.text.trim().isEmpty
             ? OpmetingProjectTitelhoofd.standaardKortingOmschrijving
             : _kortingOmschrijvingController.text.trim(),
