@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-VALIDATIE-20260811
 // THIMACO-CONTROLE: BUITENJALOEZIE-DOWNLOADSIGNAAL-FASE11-20260805
 // THIMACO-CONTROLE: BUITENJALOEZIE-INSTELLINGEN-KASTTABEL-165-185-20260803
 
@@ -193,8 +194,72 @@ class _OpmetingBuitenjaloezieInstellingenPaginaState
     });
   }
 
+  String? _validatieFoutVoorTabellen() {
+    final kleurRegels = _parseNietLegeRegels(_kleurenController.text);
+    for (var index = 0; index < kleurRegels.length; index++) {
+      final delen = kleurRegels[index].split(RegExp(r'[\t;]+'));
+      if (delen.length < 4) {
+        return 'Lamelkleur regel ${index + 1} is onvolledig. Gebruik: '
+            'code · naam · hexkleur · lameltypes. De invoer is niet gewist.';
+      }
+      final code = delen[0].trim();
+      final naam = delen[1].trim();
+      final hex = _normaliseerHex(delen[2]);
+      final types = _parseTypes(delen[3]);
+      if (code.isEmpty || naam.isEmpty || hex == null || types.isEmpty) {
+        return 'Lamelkleur regel ${index + 1} bevat een ongeldige waarde. '
+            'Controleer code, naam, hexkleur en lameltypes. De invoer is niet gewist.';
+      }
+    }
+
+    final geleiderRegels = _parseNietLegeRegels(_geleidersController.text);
+    for (var index = 0; index < geleiderRegels.length; index++) {
+      final delen = geleiderRegels[index].split(RegExp(r'[\t;]+'));
+      if (delen.length < 4) {
+        return 'Geleider regel ${index + 1} is onvolledig. Gebruik: '
+            'code · breedte · diepte · lameltypes. De invoer is niet gewist.';
+      }
+      final code = delen[0].trim();
+      final breedte = int.tryParse(delen[1].trim());
+      final diepte = int.tryParse(delen[2].trim());
+      final types = _parseTypes(delen[3]);
+      if (code.isEmpty ||
+          breedte == null ||
+          breedte <= 0 ||
+          diepte == null ||
+          diepte <= 0 ||
+          types.isEmpty) {
+        return 'Geleider regel ${index + 1} bevat een ongeldige waarde. '
+            'Controleer code, breedte, diepte en lameltypes. De invoer is niet gewist.';
+      }
+    }
+
+    String? controleerGetallen(String tekst, String naam) {
+      final delen = tekst
+          .split(RegExp(r'[,;\s]+'))
+          .map((deel) => deel.trim())
+          .where((deel) => deel.isNotEmpty);
+      for (final deel in delen) {
+        final waarde = int.tryParse(deel);
+        if (waarde == null || waarde < 0) {
+          return '$naam bevat een ongeldige waarde: "$deel". De invoer is niet gewist.';
+        }
+      }
+      return null;
+    }
+
+    return controleerGetallen(_kabelsController.text, 'Motorkabellengtes') ??
+        controleerGetallen(_afschuiningController.text, 'Afschuining');
+  }
+
   Future<void> _bewaar() async {
     if (_bewaren) return;
+
+    final validatieFout = _validatieFoutVoorTabellen();
+    if (validatieFout != null) {
+      _toonFout(validatieFout);
+      return;
+    }
 
     final kleuren = _parseKleuren();
     final geleiders = _parseGeleiders();

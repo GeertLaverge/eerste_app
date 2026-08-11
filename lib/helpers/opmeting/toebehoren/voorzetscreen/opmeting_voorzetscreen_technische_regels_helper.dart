@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-ZONNECEL-ZONDER-KABELREGELS-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-TECHNISCHE-REGELS-BEDIENING-20260730-2115
 import '../../overzicht/opmeting_overzicht_model.dart';
 import 'opmeting_voorzetscreen_model.dart';
@@ -29,8 +30,10 @@ class OpmetingVoorzetscreenTechnischeRegelsHelper {
     voegToe('Zonnecel', model.zonnecel ? 'Ja' : 'Nee');
     voegToe('Bediening', model.bedieningSamenvatting);
     voegToe('Type motor', model.motorSamenvatting);
-    voegToe('Kabellengte', model.kabellengteSamenvatting);
-    voegToe('Uitgang kabel', model.uitgangKabel);
+    if (!model.zonnecel) {
+      voegToe('Kabellengte', model.kabellengteSamenvatting);
+      voegToe('Uitgang kabel', model.uitgangKabel);
+    }
 
     return List<OpmetingOverzichtTechnischeRegel>.unmodifiable(regels);
   }

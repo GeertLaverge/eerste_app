@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-BEDIENINGEN-UITGEBREID-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-INSTELLINGENMODEL-BEDIENINGEN-20260730-2115
 class OpmetingVoorzetscreenPoederkleur {
   const OpmetingVoorzetscreenPoederkleur({
@@ -186,6 +187,9 @@ class OpmetingVoorzetscreenInstellingen {
   final List<OpmetingVoorzetscreenMotor> zonnecelMotoren;
   final List<String> bedieningen;
   final String gewijzigdOp;
+
+  List<String> get beschikbareBedieningen =>
+      _normaliseerTekstLijst(<String>[...standaardBedieningen, ...bedieningen]);
 
   static final List<OpmetingVoorzetscreenPoederkleur> standaardPoederkleuren =
       List<OpmetingVoorzetscreenPoederkleur>.unmodifiable(
@@ -2804,10 +2808,15 @@ class OpmetingVoorzetscreenInstellingen {
       );
 
   static const List<String> standaardBedieningen = <String>[
+    'Geen',
     'Inbouwschakelaar',
     'Handzender Somfy situo 1',
     'Handzender Somfy situo 5',
     'Muurzender Somfy Amy',
+    'Handzender Brel 1 kanaals',
+    'Handzender Brel 15 kanaals',
+    'Wandzender Brel 1 kanaals',
+    'Wandzender Brel 15 kanaals',
   ];
 
   factory OpmetingVoorzetscreenInstellingen.standaard() {

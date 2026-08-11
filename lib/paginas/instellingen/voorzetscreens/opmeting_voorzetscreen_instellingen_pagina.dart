@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-INSTELLINGEN-VEILIG-BEWAREN-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-DOWNLOADSIGNAAL-FASE13-20260805
 // THIMACO-CONTROLE: INSTELLINGEN-VOORZETSCREENS-SCROLLBARE-TABELLEN-20260730-1625
 import 'package:flutter/material.dart';
@@ -306,6 +307,11 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     for (var index = 0; index + 1 < losseWaarden.length; index += 2) {
       voegToe(losseWaarden[index], losseWaarden[index + 1]);
     }
+    if (losseWaarden.length.isOdd) {
+      // Een doekcode zonder kleuromschrijving is geldig. Het model ondersteunt
+      // een lege kleur en toont dan enkel de code in de keuzelijst.
+      voegToe(losseWaarden.last, '');
+    }
     return List<OpmetingVoorzetscreenDoek>.unmodifiable(resultaat);
   }
 
@@ -346,8 +352,52 @@ class _OpmetingVoorzetscreenInstellingenPaginaState
     return List<OpmetingVoorzetscreenMotor>.unmodifiable(resultaat);
   }
 
+  int _aantalOnvolledigeLosseWaarden(
+    TextEditingController controller,
+    int vereistAantalKolommen,
+  ) {
+    var aantal = 0;
+    for (final regel in _nietLegeRegels(controller.text)) {
+      final waarden = _kolommen(regel);
+      if (waarden.isEmpty || _isKoptekst(waarden.first)) continue;
+      if (waarden.length >= vereistAantalKolommen) continue;
+      aantal += waarden.length;
+    }
+    return aantal % vereistAantalKolommen;
+  }
+
+  String? _validatieFoutVoorBewaren() {
+    if (_aantalOnvolledigeLosseWaarden(_poederController, 4) != 0) {
+      return 'Poederkleuren bevatten een onvolledige regel. Gebruik per kleur: '
+          'benaming · poedercode · poederlak x/- · natlak x/-. De invoer is niet gewist.';
+    }
+    if (_aantalOnvolledigeLosseWaarden(_motorenController, 3) != 0) {
+      return 'Motoren bevatten een onvolledige regel. Gebruik per motor: '
+          'type · merk · omschrijving. De invoer is niet gewist.';
+    }
+    if (_aantalOnvolledigeLosseWaarden(_zonnecelMotorenController, 3) != 0) {
+      return 'Motoren met zonnecel bevatten een onvolledige regel. Gebruik per motor: '
+          'type · merk · omschrijving. De invoer is niet gewist.';
+    }
+    return null;
+  }
+
+  void _toonBewaarFout(String tekst) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(backgroundColor: const Color(0xFFB91C1C), content: Text(tekst)),
+    );
+  }
+
   Future<void> _bewaar() async {
     if (_bewaren) return;
+
+    final validatieFout = _validatieFoutVoorBewaren();
+    if (validatieFout != null) {
+      _toonBewaarFout(validatieFout);
+      return;
+    }
+
     setState(() => _bewaren = true);
 
     try {

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-KAST-ZONNECEL-BEDIENING-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-ALLE-KEUZES-RADIOKNOPPEN-20260730-2155
 import 'dart:math' as math;
 
@@ -192,9 +193,9 @@ class _OpmetingVoorzetscreenRechterkolomState
                     _bouwAfmetingen(),
                     _bouwZonnecel(),
                     _bouwMotor(),
-                    _bouwKabellengte(),
+                    if (!widget.model.zonnecel) _bouwKabellengte(),
                     _bouwBediening(),
-                    _bouwUitgangKabel(),
+                    if (!widget.model.zonnecel) _bouwUitgangKabel(),
                   ],
                 ),
               ),
@@ -264,6 +265,7 @@ class _OpmetingVoorzetscreenRechterkolomState
             spacing: 18,
             runSpacing: 8,
             children: OpmetingVoorzetscreenKastmaat.values
+                .where((maat) => maat != OpmetingVoorzetscreenKastmaat.mm85)
                 .map((maat) {
                   return _EenvoudigeRadioKeuze<OpmetingVoorzetscreenKastmaat>(
                     waarde: maat,
@@ -280,9 +282,13 @@ class _OpmetingVoorzetscreenRechterkolomState
   Widget _bouwKastvorm() {
     return _SectieKaart(
       titel: 'Kastvorm',
-      onderschrift: widget.model.kastmaat == OpmetingVoorzetscreenKastmaat.mm120
-          ? 'Rechte kast bestaat niet in 120 × 120 mm.'
-          : null,
+      onderschrift: switch (widget.model.kastmaat) {
+        OpmetingVoorzetscreenKastmaat.mm95 =>
+          'Bij 95 × 95 mm is alleen de rechte kast beschikbaar.',
+        OpmetingVoorzetscreenKastmaat.mm120 =>
+          'Rechte kast bestaat niet in 120 × 120 mm.',
+        _ => null,
+      },
       children: <Widget>[
         RadioGroup<OpmetingVoorzetscreenKastvorm>(
           groupValue: widget.model.kastvorm,
@@ -664,7 +670,7 @@ class _OpmetingVoorzetscreenRechterkolomState
   }
 
   Widget _bouwBediening() {
-    final bedieningen = widget.instellingen.bedieningen;
+    final bedieningen = widget.instellingen.beschikbareBedieningen;
     return _SectieKaart(
       titel: 'Bediening',
       children: <Widget>[

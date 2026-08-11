@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-KASTREGELS-ZONNECEL-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-MODEL-BEDIENING-20260730-2115
 import '../../fotos/opmeting_foto_model.dart';
 
@@ -208,23 +209,31 @@ class OpmetingVoorzetscreenModel {
   }
 
   List<OpmetingVoorzetscreenKastvorm> get beschikbareKastvormen {
+    if (kastmaat == OpmetingVoorzetscreenKastmaat.mm95) {
+      return const <OpmetingVoorzetscreenKastvorm>[
+        OpmetingVoorzetscreenKastvorm.recht,
+      ];
+    }
     if (kastmaat == OpmetingVoorzetscreenKastmaat.mm120) {
       return const <OpmetingVoorzetscreenKastvorm>[
         OpmetingVoorzetscreenKastvorm.schuin,
         OpmetingVoorzetscreenKastvorm.rond,
       ];
     }
+    // mm85 blijft alleen bestaan om oudere opgeslagen fiches te kunnen lezen.
     return OpmetingVoorzetscreenKastvorm.values;
   }
 
   OpmetingVoorzetscreenModel metKastmaat(
     OpmetingVoorzetscreenKastmaat nieuweMaat,
   ) {
-    final nieuweVorm =
-        nieuweMaat == OpmetingVoorzetscreenKastmaat.mm120 &&
-            kastvorm == OpmetingVoorzetscreenKastvorm.recht
-        ? OpmetingVoorzetscreenKastvorm.schuin
-        : kastvorm;
+    final nieuweVorm = switch (nieuweMaat) {
+      OpmetingVoorzetscreenKastmaat.mm95 => OpmetingVoorzetscreenKastvorm.recht,
+      OpmetingVoorzetscreenKastmaat.mm120
+          when kastvorm == OpmetingVoorzetscreenKastvorm.recht =>
+        OpmetingVoorzetscreenKastvorm.schuin,
+      _ => kastvorm,
+    };
 
     final zonnecelToestaan = nieuweMaat != OpmetingVoorzetscreenKastmaat.mm85;
 
@@ -241,8 +250,7 @@ class OpmetingVoorzetscreenModel {
   OpmetingVoorzetscreenModel metKastvorm(
     OpmetingVoorzetscreenKastvorm nieuweVorm,
   ) {
-    if (kastmaat == OpmetingVoorzetscreenKastmaat.mm120 &&
-        nieuweVorm == OpmetingVoorzetscreenKastvorm.recht) {
+    if (!beschikbareKastvormen.contains(nieuweVorm)) {
       return this;
     }
     return copyWith(kastvorm: nieuweVorm);
@@ -279,7 +287,9 @@ class OpmetingVoorzetscreenModel {
   }) {
     final nieuweKastmaat = kastmaat ?? this.kastmaat;
     var nieuweKastvorm = kastvorm ?? this.kastvorm;
-    if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm120 &&
+    if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm95) {
+      nieuweKastvorm = OpmetingVoorzetscreenKastvorm.recht;
+    } else if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm120 &&
         nieuweKastvorm == OpmetingVoorzetscreenKastvorm.recht) {
       nieuweKastvorm = OpmetingVoorzetscreenKastvorm.schuin;
     }
