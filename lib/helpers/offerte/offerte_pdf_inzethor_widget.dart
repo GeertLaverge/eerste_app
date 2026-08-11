@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VASTE-INZETHOR-PDF-TOTAAL-UNIFORM-20260811
 // THIMACO-CONTROLE: VASTE-INZETHOR-PDF-GAAS-EN-LABELS-20260723
 import 'dart:math' as math;
 
@@ -235,10 +236,9 @@ class OffertePdfInzethorWidget {
                 pw.Expanded(
                   child: pw.Text(
                     'Totaal positie',
-                    style: pw.TextStyle(
+                    style: const pw.TextStyle(
                       color: tekstDonker,
-                      fontSize: 8.4,
-                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 8.0,
                     ),
                   ),
                 ),
@@ -247,29 +247,15 @@ class OffertePdfInzethorWidget {
                   pw.Text(
                     'Prijs nog in te vullen',
                     textAlign: pw.TextAlign.right,
-                    style: const pw.TextStyle(color: tekstGrijs, fontSize: 7.4),
+                    style: const pw.TextStyle(color: tekstGrijs, fontSize: 8.0),
                   )
                 else
-                  pw.RichText(
+                  pw.Text(
+                    '€ ${_bedragMetPunt(totaalVoorKorting)} excl. btw',
                     textAlign: pw.TextAlign.right,
-                    text: pw.TextSpan(
-                      children: [
-                        pw.TextSpan(
-                          text: '€ ${_bedragMetPunt(totaalVoorKorting)}',
-                          style: pw.TextStyle(
-                            color: tekstDonker,
-                            fontSize: 12.2,
-                            fontWeight: pw.FontWeight.bold,
-                          ),
-                        ),
-                        pw.TextSpan(
-                          text: ' excl. btw',
-                          style: const pw.TextStyle(
-                            color: tekstGrijs,
-                            fontSize: 6.4,
-                          ),
-                        ),
-                      ],
+                    style: const pw.TextStyle(
+                      color: tekstDonker,
+                      fontSize: 8.0,
                     ),
                   ),
               ],
