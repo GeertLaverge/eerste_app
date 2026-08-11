@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OFFERTEVARIANTEN-BEWERKEN-OPSLAAN-ALS-NIEUW-20260811
+// THIMACO-CONTROLE: OFFERTE-IPAD-PRINT-A4-VAST-20260811
 // THIMACO-CONTROLE: OFFERTE-GESCHIEDENIS-CONCEPTEN-WISSEN-ONDERTEKEND-BESCHERMD-20260809_2057
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-DOORGEVEN-AAN-PDF-20260809-2030
 // THIMACO-CONTROLE: OFFERTE-MAIL-MEERDERE-GESCHIEDENISVERSIES-20260809
@@ -102,6 +104,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   late Future<Uint8List> _pdfFuture;
   late DateTime _offerteDatum;
+  late OpmetingProjectTitelhoofd _actiefTitelhoofd;
   late String _huidigeInhoudSignatuur;
   OfferteDocumentData? _laatsteDocumentData;
   OfferteGoedkeuring? _goedkeuring;
@@ -112,19 +115,17 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   bool _versieBewarenBezig = false;
   bool _versiesLaden = true;
   bool _conceptWeergave = false;
-  bool _archiefConceptOndertekend = false;
 
   bool get _isArchief => widget.archiefVersieNummer != null;
 
-  bool get _actiefArchiefIsConcept =>
-      widget.archiefIsConcept && !_archiefConceptOndertekend;
+  bool get _actiefArchiefIsConcept => widget.archiefIsConcept;
 
   bool get _magOndertekenen => !widget.alleenLezen || _actiefArchiefIsConcept;
 
   bool get _isOndertekend => _goedkeuring?.isOndertekend ?? false;
 
-  bool get _heeftOndertekendeVersies =>
-      _versies.any((versie) => versie.isOndertekend);
+  List<OfferteVersieModel> get _varianten =>
+      _versieService.variantenUit(_versies);
 
   OfferteVersieModel? get _overeenkomendeOndertekendeVersie {
     return _versieService.vindOvereenkomendeVersie(
@@ -142,39 +143,53 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     );
   }
 
-  OfferteVersieModel? get _overeenkomendeVersie =>
-      _overeenkomendeOndertekendeVersie ?? _overeenkomendeConceptVersie;
-
-  OfferteVersieModel? get _bronVersie {
-    final bronId = widget.titelhoofd.offerteBronVersieId.trim();
-    if (bronId.isEmpty) return null;
-
-    for (final versie in _versies) {
-      if (versie.id == bronId) return versie;
+  OfferteVersieModel? get _actieveVariant {
+    if (_isArchief && widget.archiefIsConcept) {
+      return _versieService.variantVoorId(
+        versies: _versies,
+        variantId: widget.archiefVersieId,
+      );
     }
-    return null;
+    return _versieService.variantVoorId(
+      versies: _versies,
+      variantId: _actiefTitelhoofd.offerteBronVersieId,
+    );
   }
 
-  bool get _isGewijzigdVanWerkBron {
-    final bron = _bronVersie;
-    return !_isArchief &&
-        bron != null &&
-        bron.inhoudSignatuur != _huidigeInhoudSignatuur;
+  List<OfferteVersieModel> get _ondertekendeVanActieveVariant {
+    final variant = _actieveVariant;
+    if (variant == null) return const <OfferteVersieModel>[];
+    return _versieService.ondertekendeMomentopnamesVoorVariant(
+      versies: _versies,
+      variantId: variant.id,
+    );
   }
 
-  bool get _isGewijzigdNaOndertekening {
-    return !_isArchief &&
-        _heeftOndertekendeVersies &&
-        _overeenkomendeOndertekendeVersie == null;
+  bool get _actieveVariantHeeftActueleOndertekening {
+    final variant = _actieveVariant;
+    if (variant == null) return false;
+    return _ondertekendeVanActieveVariant.any(
+      (snapshot) => snapshot.inhoudSignatuur == variant.inhoudSignatuur,
+    );
+  }
+
+  bool get _heeftOnopgeslagenWijzigingen {
+    if (_isArchief) return false;
+    final variant = _actieveVariant;
+    if (variant != null) {
+      return variant.inhoudSignatuur != _huidigeInhoudSignatuur;
+    }
+    return _overeenkomendeConceptVersie == null;
   }
 
   @override
   void initState() {
     super.initState();
     _offerteDatum = widget.initieleOfferteDatum ?? DateTime.now();
+    _actiefTitelhoofd = widget.titelhoofd;
     _goedkeuring = widget.initieleGoedkeuring;
     _huidigeInhoudSignatuur = _versieService.maakInhoudSignatuur(
-      titelhoofd: widget.titelhoofd,
+      titelhoofd: _actiefTitelhoofd,
       posities: widget.posities,
     );
     _pdfFuture = _bouwPdf();
@@ -196,10 +211,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     if (oldWidget.titelhoofd != widget.titelhoofd ||
         oldWidget.posities != widget.posities) {
       _conceptWeergave = false;
+      _actiefTitelhoofd = widget.titelhoofd;
       _goedkeuring = widget.initieleGoedkeuring;
       _offerteDatum = widget.initieleOfferteDatum ?? DateTime.now();
       _huidigeInhoudSignatuur = _versieService.maakInhoudSignatuur(
-        titelhoofd: widget.titelhoofd,
+        titelhoofd: _actiefTitelhoofd,
         posities: widget.posities,
       );
       _versiesLaden = true;
@@ -220,24 +236,18 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   Future<void> _laadVersies() async {
     try {
-      final versies = await _versieService.laadVoorProject(widget.titelhoofd);
+      final versies = await _versieService.laadVoorProject(_actiefTitelhoofd);
       if (!mounted) return;
-
-      final overeenkomst = _versieService.vindOvereenkomendeVersie(
-        versies: versies,
-        inhoudSignatuur: _huidigeInhoudSignatuur,
-        status: OfferteVersieStatus.ondertekend,
-      );
 
       setState(() {
         _versies = versies;
         _versiesLaden = false;
 
+        // Een ondertekende momentopname staat voortaan naast de bewerkbare
+        // variant. Bij normaal openen tonen we dus nooit automatisch de
+        // handtekening van een vroegere momentopname over de werkvariant heen.
         if (!_isArchief && !_conceptWeergave) {
-          _goedkeuring = overeenkomst?.goedkeuring;
-          if (overeenkomst != null) {
-            _offerteDatum = overeenkomst.offerteDatum;
-          }
+          _goedkeuring = widget.initieleGoedkeuring;
           _maakNieuwePdfFuture();
         }
       });
@@ -259,8 +269,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   String _maakBestandsnaam() {
-    final offerteNummer = widget.titelhoofd.samengesteldOffertenummer;
-    final veiligeNaam = widget.titelhoofd.klantNaam.trim().replaceAll(
+    final offerteNummer = _actiefTitelhoofd.samengesteldOffertenummer;
+    final veiligeNaam = _actiefTitelhoofd.klantNaam.trim().replaceAll(
       RegExp(r'[^a-zA-Z0-9_-]+'),
       '_',
     );
@@ -270,13 +280,17 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
     String versieDeel = '';
     if (_isArchief) {
-      final soort = _actiefArchiefIsConcept ? 'Concept' : 'Ondertekend';
-      versieDeel = '_${soort}_v${widget.archiefVersieNummer}';
+      final soort = _actiefArchiefIsConcept ? 'Offerte' : 'Ondertekend';
+      versieDeel = '_${soort}_${widget.archiefVersieNummer}';
     } else if (_isOndertekend) {
-      final nummer = _overeenkomendeOndertekendeVersie?.versieNummer;
-      versieDeel = nummer == null ? '_Ondertekend' : '_Ondertekend_v$nummer';
-    } else if (_overeenkomendeConceptVersie != null) {
-      versieDeel = '_Concept_v${_overeenkomendeConceptVersie!.versieNummer}';
+      final nummer =
+          _actieveVariant?.versieNummer ??
+          _overeenkomendeOndertekendeVersie?.versieNummer;
+      versieDeel = nummer == null
+          ? '_Ondertekend'
+          : '_Ondertekend_Offerte_$nummer';
+    } else if (_actieveVariant != null) {
+      versieDeel = '_Offerte_${_actieveVariant!.versieNummer}';
     }
 
     return veiligeNaam.isEmpty
@@ -296,8 +310,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       final gekozenMap = await OneDriveMapKiezerDialog.toon(
         context: context,
         service: _oneDriveService,
-        klantNaam: widget.titelhoofd.klantNaam,
-        klantnummer: widget.titelhoofd.klantnummer,
+        klantNaam: _actiefTitelhoofd.klantNaam,
+        klantnummer: _actiefTitelhoofd.klantnummer,
         initieleBestandsnaam: _maakBestandsnaam(),
       );
 
@@ -344,8 +358,117 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     }
   }
 
+  Future<OfferteVersieModel?> _zorgVariantBewaardVoorOndertekening() async {
+    if (_isArchief) return _actieveVariant;
+
+    final actief = _actieveVariant;
+    if (actief == null) {
+      final keuze = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          title: const Text(
+            'Eerst als offerte opslaan',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          content: const Text(
+            'Een ondertekende offerte moet altijd gekoppeld zijn aan een '
+            'bewerkbare offertevariant. Sla deze offerte daarom eerst als '
+            'nieuwe offerte op.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: _groen),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Opslaan als nieuwe offerte'),
+            ),
+          ],
+        ),
+      );
+      if (keuze != true || !mounted) return null;
+      return _bewaarAlsNieuweVariant();
+    }
+
+    if (!_heeftOnopgeslagenWijzigingen) return actief;
+
+    final keuze = await showDialog<_OndertekenBewaarKeuze>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        title: Text(
+          'Offerte ${actief.versieNummer} eerst opslaan?',
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          'Offerte ${actief.versieNummer} bevat nog niet-opgeslagen '
+          'wijzigingen. Om exact deze inhoud te laten ondertekenen, moet ze '
+          'eerst worden opgeslagen.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, _OndertekenBewaarKeuze.annuleren),
+            child: const Text('Annuleren'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              _OndertekenBewaarKeuze.nieuweVariant,
+            ),
+            child: const Text('Opslaan als nieuwe offerte'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _groen),
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              _OndertekenBewaarKeuze.huidigeVariant,
+            ),
+            child: Text('Opslaan in Offerte ${actief.versieNummer}'),
+          ),
+        ],
+      ),
+    );
+
+    if (keuze == null || keuze == _OndertekenBewaarKeuze.annuleren) {
+      return null;
+    }
+    if (keuze == _OndertekenBewaarKeuze.nieuweVariant) {
+      return _bewaarAlsNieuweVariant();
+    }
+    return _bewaarHuidigeVariant();
+  }
+
   Future<void> _laatOndertekenen() async {
     if (_ondertekenenBezig || !_magOndertekenen) return;
+
+    if (!_isArchief && _versiesLaden) {
+      await _laadVersies();
+      if (!mounted) return;
+    }
+
+    OfferteVersieModel? variant;
+    String variantId;
+    int variantNummer;
+    String variantNaam;
+
+    if (_isArchief && widget.archiefIsConcept) {
+      variantId = widget.archiefVersieId.trim();
+      variantNummer = widget.archiefVersieNummer ?? 0;
+      variantNaam = widget.archiefVersieNaam;
+      if (variantId.isEmpty || variantNummer <= 0) return;
+    } else {
+      variant = await _zorgVariantBewaardVoorOndertekening();
+      if (variant == null || !mounted) return;
+      variantId = variant.id;
+      variantNummer = variant.versieNummer;
+      variantNaam = variant.naam;
+    }
 
     setState(() {
       _ondertekenenBezig = true;
@@ -360,24 +483,23 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         context: context,
         klantNaam: _goedkeuring?.naam.trim().isNotEmpty == true
             ? _goedkeuring!.naam.trim()
-            : widget.titelhoofd.klantNaam.trim(),
+            : _actiefTitelhoofd.klantNaam.trim(),
         offerteNummer: data.offerteNummer,
         totaalTekst: _formatteerEuro(data.totaalInclusiefBtw),
       );
 
       if (resultaat == null || !mounted) return;
 
-      final bestaandeConceptId = _actiefArchiefIsConcept
-          ? widget.archiefVersieId
-          : _overeenkomendeConceptVersie?.id ?? '';
-      final versie = await _versieService.bewaarOndertekendeVersie(
-        titelhoofd: widget.titelhoofd,
+      final snapshot = await _versieService.bewaarOndertekendeVersie(
+        titelhoofd: _actiefTitelhoofd,
         posities: widget.posities,
         werkPosities: widget.werkPosities,
         offerteDatum: _offerteDatum,
         totaalInclusiefBtw: data.totaalInclusiefBtw,
         goedkeuring: resultaat,
-        bestaandeConceptVersieId: bestaandeConceptId,
+        variantId: variantId,
+        variantNummer: variantNummer,
+        variantNaam: variantNaam,
       );
 
       if (!mounted) return;
@@ -385,41 +507,27 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       setState(() {
         _goedkeuring = resultaat;
         _conceptWeergave = false;
-        _archiefConceptOndertekend =
-            _archiefConceptOndertekend ||
-            (_isArchief && widget.archiefIsConcept);
         _versies =
             <OfferteVersieModel>[
-              versie,
-              ..._versies.where((bestaand) => bestaand.id != versie.id),
+              snapshot,
+              ..._versies.where((bestaand) => bestaand.id != snapshot.id),
             ]..sort((eerste, tweede) {
-              return tweede.versieNummer.compareTo(eerste.versieNummer);
+              final nummer = tweede.versieNummer.compareTo(eerste.versieNummer);
+              if (nummer != 0) return nummer;
+              if (eerste.isVariant != tweede.isVariant) {
+                return eerste.isVariant ? -1 : 1;
+              }
+              return tweede.opgeslagenOp.compareTo(eerste.opgeslagenOp);
             });
         _maakNieuwePdfFuture();
       });
-
-      if (!_isArchief && widget.onVersieBewaard != null) {
-        try {
-          await widget.onVersieBewaard!(
-            versieId: versie.id,
-            versieNummer: versie.versieNummer,
-          );
-        } catch (_) {
-          // De versie zelf is al veilig opgeslagen. Een mislukte markering van
-          // de werkbron mag de ondertekening niet terugdraaien.
-        }
-      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            bestaandeConceptId.trim().isNotEmpty
-                ? 'Conceptversie ${versie.versieNummer} is ondertekend en '
-                      'blijft als dezelfde historische versie bewaard.'
-                : 'Ondertekende offerteversie ${versie.versieNummer} is '
-                      'bewaard. Latere wijzigingen overschrijven deze versie '
-                      'niet.',
+            'Ondertekende momentopname van Offerte $variantNummer is '
+            'bewaard. De bewerkbare Offerte $variantNummer blijft bestaan.',
           ),
           backgroundColor: _groen,
         ),
@@ -471,7 +579,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                 Text(
                   versieNummer == null
                       ? 'Ondertekende offerte'
-                      : 'Ondertekende offerte · Versie $versieNummer',
+                      : 'Ondertekende Offerte $versieNummer',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
@@ -488,7 +596,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   leading: const Icon(Icons.draw_outlined, color: _groen),
                   title: const Text('Opnieuw laten ondertekenen'),
                   subtitle: const Text(
-                    'Er wordt een nieuwe ondertekende versie toegevoegd.',
+                    'Er wordt een nieuwe onveranderbare momentopname toegevoegd.',
                   ),
                   onTap: () =>
                       Navigator.pop(context, _OndertekeningKeuze.opnieuw),
@@ -498,9 +606,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                     Icons.description_outlined,
                     color: _oranje,
                   ),
-                  title: const Text('Niet-ondertekend concept bekijken'),
+                  title: const Text('Bewerkbare offerte bekijken'),
                   subtitle: const Text(
-                    'De bewaarde ondertekende versie blijft in Offerteversies.',
+                    'De ondertekende momentopname blijft definitief bewaard.',
                   ),
                   onTap: () =>
                       Navigator.pop(context, _OndertekeningKeuze.concept),
@@ -543,7 +651,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     }
 
     final mailVersies = soort == OfferteMailVerzendSoort.offerte
-        ? await _versieService.laadVoorProject(widget.titelhoofd)
+        ? await _versieService.laadVoorProject(_actiefTitelhoofd)
         : const <OfferteVersieModel>[];
     if (!mounted) return;
 
@@ -572,10 +680,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final resultaat = versies
         .map((versie) {
           final naam = versie.weergaveNaam.trim().isEmpty
-              ? 'Offerteversie ${versie.versieNummer}'
+              ? 'Offerte ${versie.versieNummer}'
               : versie.weergaveNaam.trim();
           final nummer = versie.offerteNummer.trim().isEmpty
-              ? widget.titelhoofd.samengesteldOffertenummer.trim()
+              ? _actiefTitelhoofd.samengesteldOffertenummer.trim()
               : versie.offerteNummer.trim();
           final bestandsnaam = _maakHistorischeOfferteBestandsnaam(
             offerteNummer: nummer,
@@ -587,7 +695,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             id: versie.id,
             versieNummer: versie.versieNummer,
             naam: naam,
-            statusLabel: versie.isOndertekend ? 'Ondertekend' : 'Concept',
+            statusLabel: versie.isOndertekend
+                ? 'Ondertekend'
+                : 'Bewerkbare offerte',
             opgeslagenOp: versie.opgeslagenOp,
             omschrijving: versie.omschrijving,
             bestandsnaam: bestandsnaam,
@@ -613,14 +723,26 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
     basis = basis.replaceAll(RegExp(r'[\\/:*?"<>|]+'), '_');
     basis = basis.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (basis.isEmpty) basis = 'Offerte versie $versieNummer';
+    if (basis.isEmpty) basis = 'Offerte $versieNummer';
     return '$basis.pdf';
   }
 
   Future<Uint8List> _bouwPdfVoorHistorischeVersie(
     OfferteVersieModel versie,
   ) async {
-    final titelhoofd = _versieService.titelhoofdVan(versie);
+    var titelhoofd = _versieService.titelhoofdVan(versie);
+    if (versie.isVariant) {
+      titelhoofd = titelhoofd.metActieveOfferteVariant(
+        versieId: versie.id,
+        versieNummer: versie.versieNummer,
+      );
+    } else if (versie.versieNummer > 0) {
+      titelhoofd = titelhoofd.copyWith(
+        offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorVariantNummer(
+          versie.versieNummer,
+        ),
+      );
+    }
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
       _versieService.positiesVan(versie),
     );
@@ -653,40 +775,149 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     );
   }
 
-  Future<OfferteVersieModel?> _bewaarInGeschiedenis() async {
+  int get _volgendeVariantNummer {
+    return _versies.fold<int>(
+          0,
+          (hoogste, versie) =>
+              versie.versieNummer > hoogste ? versie.versieNummer : hoogste,
+        ) +
+        1;
+  }
+
+  Future<void> _registreerVariantAlsActief(OfferteVersieModel variant) async {
+    final nieuwTitelhoofd = _versieService
+        .titelhoofdVan(variant)
+        .metActieveOfferteVariant(
+          versieId: variant.id,
+          versieNummer: variant.versieNummer,
+        );
+
+    if (mounted) {
+      setState(() {
+        _actiefTitelhoofd = nieuwTitelhoofd;
+        _huidigeInhoudSignatuur = _versieService.maakInhoudSignatuur(
+          titelhoofd: _actiefTitelhoofd,
+          posities: widget.posities,
+        );
+        _goedkeuring = null;
+        _conceptWeergave = false;
+        _versies =
+            <OfferteVersieModel>[
+              variant,
+              ..._versies.where((bestaand) => bestaand.id != variant.id),
+            ]..sort((eerste, tweede) {
+              final nummer = tweede.versieNummer.compareTo(eerste.versieNummer);
+              if (nummer != 0) return nummer;
+              if (eerste.isVariant != tweede.isVariant) {
+                return eerste.isVariant ? -1 : 1;
+              }
+              return tweede.opgeslagenOp.compareTo(eerste.opgeslagenOp);
+            });
+        _maakNieuwePdfFuture();
+      });
+    }
+
+    if (widget.onVersieBewaard != null) {
+      try {
+        await widget.onVersieBewaard!(
+          versieId: variant.id,
+          versieNummer: variant.versieNummer,
+        );
+      } catch (_) {
+        // De variant zelf staat al veilig in de atomaire variantopslag.
+      }
+    }
+  }
+
+  Future<OfferteVersieModel?> _bewaarHuidigeVariant({
+    bool toonMelding = true,
+  }) async {
     if (_isArchief || _versieBewarenBezig) return null;
 
-    final bestaand = _overeenkomendeVersie;
-    if (bestaand != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            bestaand.isOndertekend
-                ? 'Deze offerte staat al als ondertekende versie '
-                      '${bestaand.versieNummer} in de geschiedenis.'
-                : 'Deze offerte staat al als conceptversie '
-                      '${bestaand.versieNummer} in de geschiedenis.',
+    final actief = _actieveVariant;
+    if (actief == null) {
+      if (toonMelding && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Er is nog geen actieve offertevariant. Gebruik '
+              '“Opslaan als nieuwe offerte”.',
+            ),
+            backgroundColor: _oranje,
           ),
-          backgroundColor: _groen,
-        ),
-      );
-      return bestaand;
+        );
+      }
+      return null;
+    }
+
+    if (actief.inhoudSignatuur == _huidigeInhoudSignatuur) {
+      if (toonMelding && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Offerte ${actief.versieNummer} is al opgeslagen.'),
+            backgroundColor: _groen,
+          ),
+        );
+      }
+      return actief;
     }
 
     await _pdfFuture;
     final data = _laatsteDocumentData;
     if (data == null || !mounted) return null;
 
-    final hoogsteNummer = _versies.fold<int>(
-      0,
-      (hoogste, versie) =>
-          versie.versieNummer > hoogste ? versie.versieNummer : hoogste,
-    );
-    final standaardNaam = widget.titelhoofd.offerteBronVersieNummer > 0
-        ? 'Gewijzigd vanuit versie '
-              '${widget.titelhoofd.offerteBronVersieNummer}'
-        : 'Variant ${hoogsteNummer + 1}';
-    final naamController = TextEditingController(text: standaardNaam);
+    setState(() => _versieBewarenBezig = true);
+    try {
+      final variant = await _versieService.werkVariantBij(
+        variantId: actief.id,
+        titelhoofd: _actiefTitelhoofd,
+        posities: widget.posities,
+        werkPosities: widget.werkPosities,
+        offerteDatum: _offerteDatum,
+        totaalInclusiefBtw: data.totaalInclusiefBtw,
+      );
+
+      if (!mounted) return variant;
+      await _registreerVariantAlsActief(variant);
+
+      if (toonMelding && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Offerte ${variant.versieNummer} is bijgewerkt. '
+              'Eerdere ondertekende momentopnames blijven ongewijzigd.',
+            ),
+            backgroundColor: _groen,
+          ),
+        );
+      }
+      return variant;
+    } catch (fout) {
+      if (toonMelding && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Offerte opslaan is niet gelukt.\n$fout'),
+            backgroundColor: const Color(0xFFDC2626),
+          ),
+        );
+      }
+      return null;
+    } finally {
+      if (mounted) setState(() => _versieBewarenBezig = false);
+    }
+  }
+
+  Future<OfferteVersieModel?> _bewaarAlsNieuweVariant({
+    bool toonMelding = true,
+  }) async {
+    if (_isArchief || _versieBewarenBezig) return null;
+
+    await _pdfFuture;
+    final data = _laatsteDocumentData;
+    if (data == null || !mounted) return null;
+
+    final nummer = _volgendeVariantNummer;
+    final naamController = TextEditingController();
     final omschrijvingController = TextEditingController();
 
     final invoer = await showDialog<_ConceptVersieInvoer>(
@@ -698,14 +929,14 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Row(
+          title: Row(
             children: <Widget>[
-              Icon(Icons.bookmark_add_outlined, color: _groen),
-              SizedBox(width: 10),
+              const Icon(Icons.add_circle_outline, color: _groen),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Offerte in geschiedenis plaatsen',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+                  'Opslaan als nieuwe offerte · Offerte $nummer',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -714,12 +945,13 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             width: 500,
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const Text(
-                  'Alleen deze bewust gekozen versie wordt bewaard. '
-                  'Een gewone PDF-vernieuwing of tussentijdse controle komt '
-                  'niet automatisch in de geschiedenis.',
-                  style: TextStyle(color: _tekstGrijs, height: 1.4),
+                Text(
+                  'Er wordt een nieuwe bewerkbare offertevariant gemaakt. '
+                  'Het offertenummer krijgt automatisch '
+                  'V${OpmetingProjectTitelhoofd.offerteVersieVoorVariantNummer(nummer)}.',
+                  style: const TextStyle(color: _tekstGrijs, height: 1.4),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -727,8 +959,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   autofocus: true,
                   maxLength: 80,
                   decoration: const InputDecoration(
-                    labelText: 'Naam van deze versie',
-                    hintText: 'Bijvoorbeeld: Variant met schuifraam',
+                    labelText: 'Korte naam (optioneel)',
+                    hintText: 'Bijvoorbeeld: Rolluiken of Screens',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -740,31 +972,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   maxLength: 300,
                   decoration: const InputDecoration(
                     labelText: 'Interne omschrijving (optioneel)',
-                    hintText: 'Wat onderscheidt deze variant?',
+                    hintText: 'Wat onderscheidt deze offerte?',
                     border: OutlineInputBorder(),
                   ),
                 ),
-                if (widget.titelhoofd.offerteBronVersieNummer > 0)
-                  Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFED7AA)),
-                    ),
-                    child: Text(
-                      'Deze nieuwe versie krijgt automatisch de verwijzing '
-                      '“gewijzigd vanuit versie '
-                      '${widget.titelhoofd.offerteBronVersieNummer}”.',
-                      style: const TextStyle(
-                        color: _oranje,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -775,19 +986,15 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             ),
             FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: _groen),
-              onPressed: () {
-                final naam = naamController.text.trim();
-                if (naam.isEmpty) return;
-                Navigator.pop(
-                  dialogContext,
-                  _ConceptVersieInvoer(
-                    naam: naam,
-                    omschrijving: omschrijvingController.text.trim(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.history_rounded),
-              label: const Text('In geschiedenis plaatsen'),
+              onPressed: () => Navigator.pop(
+                dialogContext,
+                _ConceptVersieInvoer(
+                  naam: naamController.text.trim(),
+                  omschrijving: omschrijvingController.text.trim(),
+                ),
+              ),
+              icon: const Icon(Icons.bookmark_add_outlined),
+              label: Text('Offerte $nummer opslaan'),
             ),
           ],
         );
@@ -796,16 +1003,12 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
     naamController.dispose();
     omschrijvingController.dispose();
-
     if (invoer == null || !mounted) return null;
 
-    setState(() {
-      _versieBewarenBezig = true;
-    });
-
+    setState(() => _versieBewarenBezig = true);
     try {
-      final versie = await _versieService.bewaarConceptVersie(
-        titelhoofd: widget.titelhoofd,
+      final variant = await _versieService.bewaarNieuweVariant(
+        titelhoofd: _actiefTitelhoofd,
         posities: widget.posities,
         werkPosities: widget.werkPosities,
         offerteDatum: _offerteDatum,
@@ -814,73 +1017,46 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
         omschrijving: invoer.omschrijving,
       );
 
-      if (!mounted) return versie;
+      if (!mounted) return variant;
+      await _registreerVariantAlsActief(variant);
 
-      setState(() {
-        _versies =
-            <OfferteVersieModel>[
-              versie,
-              ..._versies.where((bestaand) => bestaand.id != versie.id),
-            ]..sort((eerste, tweede) {
-              return tweede.versieNummer.compareTo(eerste.versieNummer);
-            });
-      });
-
-      if (widget.onVersieBewaard != null) {
-        try {
-          await widget.onVersieBewaard!(
-            versieId: versie.id,
-            versieNummer: versie.versieNummer,
-          );
-        } catch (_) {
-          // De historische versie zelf is reeds veilig opgeslagen.
-        }
-      }
-
-      if (mounted) {
+      if (toonMelding && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Conceptversie ${versie.versieNummer} · '
-              '${versie.weergaveNaam} is in de geschiedenis geplaatst.',
+              '${variant.offerteVariantLabel} is opgeslagen en is nu de '
+              'actieve bewerkbare offerte.',
             ),
             backgroundColor: _groen,
           ),
         );
       }
-      return versie;
+      return variant;
     } catch (fout) {
-      if (mounted) {
+      if (toonMelding && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'De offerte kon niet in de geschiedenis worden geplaatst.\n'
-              '$fout',
-            ),
+            content: Text('Nieuwe offerte opslaan is niet gelukt.\n$fout'),
             backgroundColor: const Color(0xFFDC2626),
           ),
         );
       }
       return null;
     } finally {
-      if (mounted) {
-        setState(() {
-          _versieBewarenBezig = false;
-        });
-      }
+      if (mounted) setState(() => _versieBewarenBezig = false);
     }
   }
 
   Future<void> _openVersieAlsWerkversie(OfferteVersieModel versie) async {
     final callback = widget.onOpenVersieAlsWerkversie;
-    if (_isArchief || callback == null) return;
+    if (_isArchief || callback == null || !versie.isVariant) return;
 
-    if (versie.inhoudSignatuur == _huidigeInhoudSignatuur) {
+    final actief = _actieveVariant;
+    if (actief?.id == versie.id && !_heeftOnopgeslagenWijzigingen) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Versie ${versie.versieNummer} komt al overeen met de huidige '
-            'werkversie.',
+            'Offerte ${versie.versieNummer} is al de actieve offertevariant.',
           ),
           backgroundColor: _groen,
         ),
@@ -888,7 +1064,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       return;
     }
 
-    final huidigeWerkversieNietBewaard = _overeenkomendeVersie == null;
+    final heeftOnopgeslagen = _heeftOnopgeslagenWijzigingen;
     final keuze = await showDialog<_WerkversieKeuze>(
       context: context,
       builder: (dialogContext) {
@@ -899,22 +1075,22 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            'Versie ${versie.versieNummer} als werkversie openen?',
+            '${versie.offerteVariantLabel} openen om te bewerken?',
             style: const TextStyle(fontWeight: FontWeight.w900),
           ),
           content: SizedBox(
-            width: 520,
+            width: 540,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text(
-                  'De historische versie blijft ongewijzigd. De inhoud ervan '
-                  'wordt als nieuwe bewerkbare werkversie in het '
-                  'overzichtsblad geplaatst.',
-                  style: const TextStyle(color: _tekstGrijs, height: 1.4),
+                const Text(
+                  'De gekozen offertevariant wordt volledig terug als '
+                  'werkbestand geopend. Andere opgeslagen offertevarianten '
+                  'blijven ongewijzigd.',
+                  style: TextStyle(color: _tekstGrijs, height: 1.4),
                 ),
-                if (huidigeWerkversieNietBewaard) ...<Widget>[
+                if (heeftOnopgeslagen) ...<Widget>[
                   const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -923,13 +1099,19 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: const Color(0xFFFED7AA)),
                     ),
-                    child: const Text(
-                      'De huidige werkversie staat nog niet in de '
-                      'geschiedenis. Je kunt ze eerst bewaren om niets te '
-                      'verliezen.',
-                      style: TextStyle(
+                    child: Text(
+                      actief == null
+                          ? 'De huidige offerte is nog niet als variant '
+                                'opgeslagen. Sla ze eerst als nieuwe offerte '
+                                'op of kies bewust om de wijzigingen te negeren.'
+                          : 'Offerte ${actief.versieNummer} bevat nog '
+                                'niet-opgeslagen wijzigingen. Bewaar deze in '
+                                'Offerte ${actief.versieNummer}, maak er een '
+                                'nieuwe offerte van, of negeer ze bewust.',
+                      style: const TextStyle(
                         color: _oranje,
                         fontWeight: FontWeight.w800,
+                        height: 1.35,
                       ),
                     ),
                   ),
@@ -943,17 +1125,29 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   Navigator.pop(dialogContext, _WerkversieKeuze.annuleren),
               child: const Text('Annuleren'),
             ),
-            if (huidigeWerkversieNietBewaard)
+            if (heeftOnopgeslagen && actief != null)
               OutlinedButton(
                 onPressed: () =>
-                    Navigator.pop(dialogContext, _WerkversieKeuze.eerstBewaren),
-                child: const Text('Huidige eerst bewaren'),
+                    Navigator.pop(dialogContext, _WerkversieKeuze.opslaan),
+                child: Text('Opslaan in Offerte ${actief.versieNummer}'),
+              ),
+            if (heeftOnopgeslagen)
+              OutlinedButton(
+                onPressed: () => Navigator.pop(
+                  dialogContext,
+                  _WerkversieKeuze.opslaanAlsNieuw,
+                ),
+                child: const Text('Opslaan als nieuwe offerte'),
               ),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: _groen),
               onPressed: () =>
                   Navigator.pop(dialogContext, _WerkversieKeuze.openen),
-              child: Text('Versie ${versie.versieNummer} openen'),
+              child: Text(
+                heeftOnopgeslagen
+                    ? 'Wijzigingen negeren en openen'
+                    : 'Offerte ${versie.versieNummer} openen',
+              ),
             ),
           ],
         );
@@ -964,8 +1158,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       return;
     }
 
-    if (keuze == _WerkversieKeuze.eerstBewaren) {
-      final bewaard = await _bewaarInGeschiedenis();
+    if (keuze == _WerkversieKeuze.opslaan) {
+      final bewaard = await _bewaarHuidigeVariant();
+      if (bewaard == null || !mounted) return;
+    } else if (keuze == _WerkversieKeuze.opslaanAlsNieuw) {
+      final bewaard = await _bewaarAlsNieuweVariant();
       if (bewaard == null || !mounted) return;
     }
 
@@ -984,10 +1181,37 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   Future<void> _verwijderConceptVersie(OfferteVersieModel versie) async {
-    // Dubbele beveiliging: deze actie mag uitsluitend op niet-ondertekende
-    // conceptoffertes worden uitgevoerd. Ondertekende offertes worden ook door
-    // de opslagservice geweigerd.
-    if (!versie.isConcept || versie.isOndertekend) return;
+    if (!versie.isVariant || versie.isOndertekend) return;
+
+    if (!_isArchief && _actieveVariant?.id == versie.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Offerte ${versie.versieNummer} is momenteel geopend. Open eerst '
+            'een andere offertevariant voordat u deze verwijdert.',
+          ),
+          backgroundColor: _oranje,
+        ),
+      );
+      return;
+    }
+
+    final ondertekende = _versieService.ondertekendeMomentopnamesVoorVariant(
+      versies: _versies,
+      variantId: versie.id,
+    );
+    if (ondertekende.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${versie.offerteVariantLabel} heeft een ondertekende '
+            'momentopname en kan niet worden verwijderd.',
+          ),
+          backgroundColor: _oranje,
+        ),
+      );
+      return;
+    }
 
     final bevestigen = await showDialog<bool>(
       context: context,
@@ -1000,10 +1224,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             style: TextStyle(fontWeight: FontWeight.w900),
           ),
           content: Text(
-            'Versie ${versie.versieNummer} · ${versie.weergaveNaam} wordt '
-            'definitief uit de geschiedenis verwijderd.\n\n'
-            'Deze actie kan niet ongedaan worden gemaakt. Ondertekende '
-            'offertes kunnen nooit worden gewist.',
+            '${versie.offerteVariantLabel} wordt definitief verwijderd.\n\n'
+            'Deze actie kan niet ongedaan worden gemaakt. Een offertevariant '
+            'met een ondertekende momentopname kan nooit worden gewist.',
           ),
           actions: <Widget>[
             TextButton(
@@ -1035,10 +1258,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Versie ${versie.versieNummer} · ${versie.weergaveNaam} '
-            'is uit de geschiedenis verwijderd.',
-          ),
+          content: Text('${versie.offerteVariantLabel} is verwijderd.'),
           backgroundColor: _groen,
         ),
       );
@@ -1058,7 +1278,20 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     bool startOndertekenen = false,
   }) async {
     try {
-      final titelhoofd = _versieService.titelhoofdVan(versie);
+      var titelhoofd = _versieService.titelhoofdVan(versie);
+      if (versie.isVariant) {
+        titelhoofd = titelhoofd.metActieveOfferteVariant(
+          versieId: versie.id,
+          versieNummer: versie.versieNummer,
+        );
+      } else if (versie.isOndertekend && versie.versieNummer > 0) {
+        titelhoofd = titelhoofd.copyWith(
+          offerteVersie:
+              OpmetingProjectTitelhoofd.offerteVersieVoorVariantNummer(
+                versie.versieNummer,
+              ),
+        );
+      }
       final posities = _versieService.positiesVan(versie);
       if (!mounted) return;
 
@@ -1102,7 +1335,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Deze offerteversie kon niet worden geopend.\n$fout'),
+          content: Text('Deze offerte kon niet worden geopend.\n$fout'),
           backgroundColor: const Color(0xFFDC2626),
         ),
       );
@@ -1116,7 +1349,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
     final vergelijking = _versieService.vergelijkMetHuidig(
       versie: versie,
-      huidigTitelhoofd: widget.titelhoofd,
+      huidigTitelhoofd: _actiefTitelhoofd,
       huidigePosities: widget.posities,
       huidigTotaalInclusiefBtw: data.totaalInclusiefBtw,
     );
@@ -1128,7 +1361,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           title: Text(
-            'Vergelijk met versie ${versie.versieNummer}',
+            'Vergelijk met Offerte ${versie.versieNummer}',
             style: const TextStyle(fontWeight: FontWeight.w900),
           ),
           content: SizedBox(
@@ -1181,7 +1414,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                           Expanded(
                             child: Text(
                               'Er zijn geen inhoudelijke verschillen met deze '
-                              'historische versie.',
+                              'opgeslagen offerte.',
                               style: TextStyle(fontWeight: FontWeight.w800),
                             ),
                           ),
@@ -1266,11 +1499,342 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     );
   }
 
+  List<OfferteVersieModel> get _losseOndertekendeMomentopnames {
+    final varianten = _varianten;
+    final resultaat =
+        _versies.where((versie) {
+          if (!versie.isOndertekend) return false;
+          return !varianten.any(
+            (variant) => versie.hoortBijVariant(
+              variant.id,
+              variantNummer: variant.versieNummer,
+            ),
+          );
+        }).toList()..sort((eerste, tweede) {
+          final nummer = tweede.versieNummer.compareTo(eerste.versieNummer);
+          if (nummer != 0) return nummer;
+          return tweede.opgeslagenOp.compareTo(eerste.opgeslagenOp);
+        });
+    return resultaat;
+  }
+
+  Widget _bouwVariantKaart(
+    BuildContext dialogContext,
+    OfferteVersieModel variant,
+  ) {
+    final ondertekende = _versieService.ondertekendeMomentopnamesVoorVariant(
+      versies: _versies,
+      variantId: variant.id,
+    );
+    final isActief = !_isArchief && _actieveVariant?.id == variant.id;
+    final komtOvereen = variant.inhoudSignatuur == _huidigeInhoudSignatuur;
+    final heeftHandtekening = ondertekende.isNotEmpty;
+    final heeftActueleHandtekening = ondertekende.any(
+      (snapshot) => snapshot.inhoudSignatuur == variant.inhoudSignatuur,
+    );
+    final statusKleur = heeftActueleHandtekening ? _groen : _oranje;
+    final statusAchtergrond = heeftActueleHandtekening
+        ? const Color(0xFFE7F6EC)
+        : const Color(0xFFFFF7ED);
+    final statusTekst = heeftActueleHandtekening
+        ? 'Ondertekend'
+        : heeftHandtekening
+        ? 'Gewijzigd na ondertekening'
+        : 'Bewerkbaar';
+    final kanVerwijderen = variant.isVariant && !heeftHandtekening && !isActief;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(13, 11, 7, 11),
+      decoration: BoxDecoration(
+        color: isActief ? const Color(0xFFF0FDF4) : const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isActief ? const Color(0xFF86D39D) : _rand),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: statusAchtergrond,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: statusKleur.withValues(alpha: 0.28)),
+            ),
+            child: Icon(
+              heeftActueleHandtekening
+                  ? Icons.verified_outlined
+                  : heeftHandtekening
+                  ? Icons.edit_note_rounded
+                  : Icons.description_outlined,
+              color: statusKleur,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        variant.offerteVariantLabel,
+                        style: const TextStyle(
+                          color: _tekstDonker,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusAchtergrond,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(
+                        statusTekst,
+                        style: TextStyle(
+                          color: statusKleur,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Laatst opgeslagen ${_formatteerDatumTijd(variant.opgeslagenOp)} '
+                  '· ${_formatteerEuro(variant.totaalInclusiefBtw)}',
+                  style: const TextStyle(color: _tekstGrijs, fontSize: 12),
+                ),
+                if (variant.omschrijving.trim().isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    variant.omschrijving.trim(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _tekstDonker, fontSize: 11.5),
+                  ),
+                ],
+                if (variant.bronVersieNummer > 0 &&
+                    variant.bronVersieId.trim() != variant.id) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Gemaakt vanuit Offerte ${variant.bronVersieNummer}',
+                    style: const TextStyle(
+                      color: _oranje,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                if (isActief) ...<Widget>[
+                  const SizedBox(height: 4),
+                  Text(
+                    _heeftOnopgeslagenWijzigingen
+                        ? 'Actieve offerte · niet-opgeslagen wijzigingen'
+                        : 'Actieve offerte · volledig opgeslagen',
+                    style: TextStyle(
+                      color: _heeftOnopgeslagenWijzigingen ? _oranje : _groen,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ] else if (komtOvereen) ...<Widget>[
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Inhoud komt overeen met de geopende offerte',
+                    style: TextStyle(
+                      color: _groen,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+                if (ondertekende.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  ...ondertekende.map((snapshot) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        Navigator.pop(dialogContext);
+                        _openVersie(snapshot);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(
+                              Icons.lock_outline_rounded,
+                              color: _groen,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Ondertekend door ${snapshot.goedkeuring.naam} '
+                                '· ${_formatteerDatumTijd(snapshot.goedkeuring.getekendOp)}',
+                                style: const TextStyle(
+                                  color: _groen,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            const Icon(
+                              Icons.open_in_new_rounded,
+                              size: 15,
+                              color: _tekstGrijs,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ],
+            ),
+          ),
+          PopupMenuButton<_VersieActie>(
+            tooltip: 'Acties voor deze offerte',
+            color: Colors.white,
+            onSelected: (actie) {
+              Navigator.pop(dialogContext);
+              switch (actie) {
+                case _VersieActie.openen:
+                  _openVersie(variant);
+                  break;
+                case _VersieActie.ondertekenen:
+                  _openVersie(variant, startOndertekenen: true);
+                  break;
+                case _VersieActie.vergelijken:
+                  _vergelijkVersie(variant);
+                  break;
+                case _VersieActie.werkversie:
+                  _openVersieAlsWerkversie(variant);
+                  break;
+                case _VersieActie.verwijderen:
+                  _verwijderConceptVersie(variant);
+                  break;
+              }
+            },
+            itemBuilder: (_) => <PopupMenuEntry<_VersieActie>>[
+              const PopupMenuItem<_VersieActie>(
+                value: _VersieActie.openen,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.picture_as_pdf_outlined, color: _groen),
+                  title: Text('PDF bekijken'),
+                ),
+              ),
+              if (!_isArchief && widget.onOpenVersieAlsWerkversie != null)
+                const PopupMenuItem<_VersieActie>(
+                  value: _VersieActie.werkversie,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.edit_note_rounded, color: _groen),
+                    title: Text('Openen en bewerken'),
+                  ),
+                ),
+              const PopupMenuItem<_VersieActie>(
+                value: _VersieActie.ondertekenen,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.draw_outlined, color: _groen),
+                  title: Text('Openen en ondertekenen'),
+                ),
+              ),
+              if (!_isArchief && !komtOvereen)
+                const PopupMenuItem<_VersieActie>(
+                  value: _VersieActie.vergelijken,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.compare_arrows_rounded, color: _oranje),
+                    title: Text('Vergelijk met huidige'),
+                  ),
+                ),
+              if (kanVerwijderen)
+                const PopupMenuItem<_VersieActie>(
+                  value: _VersieActie.verwijderen,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: Color(0xFFDC2626),
+                    ),
+                    title: Text('Offerte verwijderen'),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwLosseOndertekendeKaart(
+    BuildContext dialogContext,
+    OfferteVersieModel versie,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(13, 11, 7, 11),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _rand),
+      ),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.lock_outline_rounded, color: _groen),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Ondertekende Offerte ${versie.versieNummer} · oud archief',
+                  style: const TextStyle(
+                    color: _tekstDonker,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '${versie.goedkeuring.naam} · '
+                  '${_formatteerDatumTijd(versie.goedkeuring.getekendOp)} · '
+                  '${_formatteerEuro(versie.totaalInclusiefBtw)}',
+                  style: const TextStyle(color: _tekstGrijs, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Ondertekende PDF openen',
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _openVersie(versie);
+            },
+            icon: const Icon(Icons.picture_as_pdf_outlined, color: _groen),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _toonVersiesMenu() async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         final scherm = MediaQuery.sizeOf(dialogContext);
+        final varianten = _varianten;
+        final losseOndertekende = _losseOndertekendeMomentopnames;
+        final totaalItems = varianten.length + losseOndertekende.length;
+
         return Dialog(
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
@@ -1283,8 +1847,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             side: const BorderSide(color: _rand),
           ),
           child: SizedBox(
-            width: math.min(760.0, scherm.width - 40).toDouble(),
-            height: math.min(650.0, scherm.height - 56).toDouble(),
+            width: math.min(780.0, scherm.width - 40).toDouble(),
+            height: math.min(680.0, scherm.height - 56).toDouble(),
             child: Column(
               children: <Widget>[
                 Container(
@@ -1300,11 +1864,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   ),
                   child: Row(
                     children: <Widget>[
-                      const Icon(Icons.history_rounded, color: _groen),
+                      const Icon(Icons.folder_outlined, color: _groen),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Offertegeschiedenis (${_versies.length})',
+                          'Offertes (${varianten.length})',
                           style: const TextStyle(
                             color: _groen,
                             fontSize: 18,
@@ -1329,15 +1893,14 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                       ? const Center(
                           child: CircularProgressIndicator(color: _groen),
                         )
-                      : _versies.isEmpty
+                      : totaalItems == 0
                       ? const Center(
                           child: Padding(
                             padding: EdgeInsets.all(24),
                             child: Text(
-                              'Er staan nog geen offerteversies in de '
-                              'geschiedenis. Gebruik “In geschiedenis” om een '
-                              'gekozen concept te bewaren. Ondertekende '
-                              'offertes worden automatisch bewaard.',
+                              'Er zijn nog geen offertevarianten opgeslagen. '
+                              'Gebruik “Opslaan als nieuwe offerte” om de '
+                              'eerste offerte te bewaren.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: _tekstGrijs,
@@ -1349,257 +1912,19 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                         )
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 18),
-                          itemCount: _versies.length,
+                          itemCount: totaalItems,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 8),
                           itemBuilder: (_, index) {
-                            final versie = _versies[index];
-                            final isHuidig = _isArchief
-                                ? versie.versieNummer ==
-                                      widget.archiefVersieNummer
-                                : versie.inhoudSignatuur ==
-                                      _huidigeInhoudSignatuur;
-                            final statusKleur = versie.isOndertekend
-                                ? _groen
-                                : _oranje;
-                            final statusAchtergrond = versie.isOndertekend
-                                ? const Color(0xFFE7F6EC)
-                                : const Color(0xFFFFF7ED);
-
-                            return Container(
-                              padding: const EdgeInsets.fromLTRB(13, 11, 7, 11),
-                              decoration: BoxDecoration(
-                                color: isHuidig
-                                    ? const Color(0xFFF0FDF4)
-                                    : const Color(0xFFF9FAFB),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isHuidig
-                                      ? const Color(0xFF86D39D)
-                                      : _rand,
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Container(
-                                    width: 42,
-                                    height: 42,
-                                    decoration: BoxDecoration(
-                                      color: statusAchtergrond,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: statusKleur.withValues(
-                                          alpha: 0.28,
-                                        ),
-                                      ),
-                                    ),
-                                    child: Icon(
-                                      versie.isOndertekend
-                                          ? Icons.verified_outlined
-                                          : Icons.description_outlined,
-                                      color: statusKleur,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: <Widget>[
-                                        Row(
-                                          children: <Widget>[
-                                            Expanded(
-                                              child: Text(
-                                                'Versie ${versie.versieNummer} '
-                                                '· ${versie.weergaveNaam}',
-                                                style: const TextStyle(
-                                                  color: _tekstDonker,
-                                                  fontWeight: FontWeight.w900,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 3,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: statusAchtergrond,
-                                                borderRadius:
-                                                    BorderRadius.circular(99),
-                                              ),
-                                              child: Text(
-                                                versie.isOndertekend
-                                                    ? 'Ondertekend'
-                                                    : 'Concept',
-                                                style: TextStyle(
-                                                  color: statusKleur,
-                                                  fontSize: 10.5,
-                                                  fontWeight: FontWeight.w900,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          versie.isOndertekend
-                                              ? '${versie.goedkeuring.naam} · '
-                                                    '${_formatteerDatumTijd(versie.goedkeuring.getekendOp)} '
-                                                    '· ${_formatteerEuro(versie.totaalInclusiefBtw)}'
-                                              : '${_formatteerDatumTijd(versie.opgeslagenOp)} '
-                                                    '· ${_formatteerEuro(versie.totaalInclusiefBtw)}',
-                                          style: const TextStyle(
-                                            color: _tekstGrijs,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        if (versie.omschrijving
-                                            .trim()
-                                            .isNotEmpty) ...<Widget>[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            versie.omschrijving.trim(),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: _tekstDonker,
-                                              fontSize: 11.5,
-                                            ),
-                                          ),
-                                        ],
-                                        if (versie.bronVersieNummer > 0) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Gewijzigd vanuit versie '
-                                            '${versie.bronVersieNummer}',
-                                            style: const TextStyle(
-                                              color: _oranje,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ],
-                                        if (isHuidig) ...<Widget>[
-                                          const SizedBox(height: 4),
-                                          const Text(
-                                            'Komt overeen met de geopende '
-                                            'offerte',
-                                            style: TextStyle(
-                                              color: _groen,
-                                              fontSize: 11.5,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuButton<_VersieActie>(
-                                    tooltip: 'Acties voor deze versie',
-                                    color: Colors.white,
-                                    onSelected: (actie) {
-                                      Navigator.pop(dialogContext);
-                                      switch (actie) {
-                                        case _VersieActie.openen:
-                                          _openVersie(versie);
-                                          break;
-                                        case _VersieActie.ondertekenen:
-                                          _openVersie(
-                                            versie,
-                                            startOndertekenen: true,
-                                          );
-                                          break;
-                                        case _VersieActie.vergelijken:
-                                          _vergelijkVersie(versie);
-                                          break;
-                                        case _VersieActie.werkversie:
-                                          _openVersieAlsWerkversie(versie);
-                                          break;
-                                        case _VersieActie.verwijderen:
-                                          _verwijderConceptVersie(versie);
-                                          break;
-                                      }
-                                    },
-                                    itemBuilder: (_) =>
-                                        <PopupMenuEntry<_VersieActie>>[
-                                          const PopupMenuItem<_VersieActie>(
-                                            value: _VersieActie.openen,
-                                            child: ListTile(
-                                              contentPadding: EdgeInsets.zero,
-                                              leading: Icon(
-                                                Icons.picture_as_pdf_outlined,
-                                                color: _groen,
-                                              ),
-                                              title: Text('PDF openen'),
-                                            ),
-                                          ),
-                                          if (versie.isConcept)
-                                            const PopupMenuItem<_VersieActie>(
-                                              value: _VersieActie.ondertekenen,
-                                              child: ListTile(
-                                                contentPadding: EdgeInsets.zero,
-                                                leading: Icon(
-                                                  Icons.draw_outlined,
-                                                  color: _groen,
-                                                ),
-                                                title: Text(
-                                                  'Openen en ondertekenen',
-                                                ),
-                                              ),
-                                            ),
-                                          if (!_isArchief && !isHuidig)
-                                            const PopupMenuItem<_VersieActie>(
-                                              value: _VersieActie.vergelijken,
-                                              child: ListTile(
-                                                contentPadding: EdgeInsets.zero,
-                                                leading: Icon(
-                                                  Icons.compare_arrows_rounded,
-                                                  color: _oranje,
-                                                ),
-                                                title: Text(
-                                                  'Vergelijk met huidige',
-                                                ),
-                                              ),
-                                            ),
-                                          if (!_isArchief &&
-                                              !isHuidig &&
-                                              widget.onOpenVersieAlsWerkversie !=
-                                                  null)
-                                            const PopupMenuItem<_VersieActie>(
-                                              value: _VersieActie.werkversie,
-                                              child: ListTile(
-                                                contentPadding: EdgeInsets.zero,
-                                                leading: Icon(
-                                                  Icons.edit_note_rounded,
-                                                  color: _groen,
-                                                ),
-                                                title: Text(
-                                                  'Als basis openen om te '
-                                                  'wijzigen',
-                                                ),
-                                              ),
-                                            ),
-                                          if (versie.isConcept)
-                                            const PopupMenuItem<_VersieActie>(
-                                              value: _VersieActie.verwijderen,
-                                              child: ListTile(
-                                                contentPadding: EdgeInsets.zero,
-                                                leading: Icon(
-                                                  Icons.delete_outline,
-                                                  color: Color(0xFFDC2626),
-                                                ),
-                                                title: Text(
-                                                  'Offerte verwijderen',
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                  ),
-                                ],
-                              ),
+                            if (index < varianten.length) {
+                              return _bouwVariantKaart(
+                                dialogContext,
+                                varianten[index],
+                              );
+                            }
+                            return _bouwLosseOndertekendeKaart(
+                              dialogContext,
+                              losseOndertekende[index - varianten.length],
                             );
                           },
                         ),
@@ -1622,68 +1947,105 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
     if (_isArchief) {
       final nummer = widget.archiefVersieNummer ?? 0;
-      if (_actiefArchiefIsConcept) {
+      if (_actiefArchiefIsConcept && !_isOndertekend) {
         achtergrond = const Color(0xFFFFF7ED);
         rand = const Color(0xFFFED7AA);
         kleur = _oranje;
         icoon = Icons.description_outlined;
-        titel = 'Conceptversie $nummer · ${widget.archiefVersieNaam}';
+        titel = widget.archiefVersieNaam.trim().isEmpty
+            ? 'Offerte $nummer'
+            : 'Offerte $nummer · ${widget.archiefVersieNaam}';
         uitleg =
-            'Dit is een vaste historische momentopname. Je kunt deze '
-            'exacte versie laten ondertekenen; inhoudelijke wijzigingen maak '
-            'je via “Als basis openen om te wijzigen”.';
+            'Dit is de opgeslagen bewerkbare offertevariant. Bekijk hier de '
+            'PDF of laat exact deze variant ondertekenen.';
       } else {
         achtergrond = const Color(0xFFE7F6EC);
         rand = const Color(0xFFB9E1C6);
         kleur = _groen;
         icoon = Icons.lock_outline_rounded;
-        titel = 'Ondertekende versie $nummer';
+        titel = 'Ondertekende Offerte $nummer';
         uitleg =
-            'Deze versie is vastgelegd en alleen-lezen. Latere '
-            'wijzigingen overschrijven haar nooit.';
+            'Dit is een onveranderbare ondertekende momentopname. Latere '
+            'wijzigingen aan de bewerkbare offerte overschrijven ze nooit.';
       }
-    } else if (_isGewijzigdVanWerkBron || _isGewijzigdNaOndertekening) {
-      achtergrond = const Color(0xFFFFF7ED);
-      rand = const Color(0xFFFED7AA);
-      kleur = _oranje;
-      icoon = Icons.edit_note_rounded;
-      titel = widget.titelhoofd.offerteBronVersieNummer > 0
-          ? 'Werkversie gewijzigd vanuit versie '
-                '${widget.titelhoofd.offerteBronVersieNummer}'
-          : 'Huidige offerte is gewijzigd';
-      uitleg =
-          'De eerdere versies blijven hieronder bewaard. Plaats deze '
-          'variant bewust in de geschiedenis of laat ze opnieuw '
-          'ondertekenen.';
     } else if (_isOndertekend) {
+      final nummer =
+          _actieveVariant?.versieNummer ??
+          _overeenkomendeOndertekendeVersie?.versieNummer ??
+          _actiefTitelhoofd.offerteBronVersieNummer;
       achtergrond = const Color(0xFFE7F6EC);
       rand = const Color(0xFFB9E1C6);
       kleur = _groen;
       icoon = Icons.verified_rounded;
-      titel = 'Huidige offerte is ondertekend';
+      titel = nummer > 0
+          ? 'Ondertekende momentopname van Offerte $nummer'
+          : 'Ondertekende offerte';
       uitleg =
-          'Deze inhoud komt overeen met ondertekende versie '
-          '${_overeenkomendeOndertekendeVersie?.versieNummer ?? ''}.';
-    } else if (_overeenkomendeConceptVersie != null) {
+          'De bewerkbare offertevariant blijft daarnaast afzonderlijk '
+          'beschikbaar en kan later opnieuw worden geopend.';
+    } else if (_heeftOnopgeslagenWijzigingen) {
+      final actief = _actieveVariant;
       achtergrond = const Color(0xFFFFF7ED);
       rand = const Color(0xFFFED7AA);
       kleur = _oranje;
-      icoon = Icons.bookmark_added_outlined;
-      titel =
-          'Opgeslagen als conceptversie '
-          '${_overeenkomendeConceptVersie!.versieNummer}';
+      icoon = Icons.edit_note_rounded;
+      titel = actief == null
+          ? 'Nog niet als offertevariant opgeslagen'
+          : 'Offerte ${actief.versieNummer} bevat wijzigingen';
+      uitleg = actief == null
+          ? 'Gebruik “Opslaan als nieuwe offerte” om deze inhoud als eerste '
+                'bewerkbare offertevariant te bewaren.'
+          : 'Gebruik “Opslaan” om Offerte ${actief.versieNummer} bij te werken '
+                'of “Opslaan als nieuwe” om een aparte variant te maken.';
+    } else if (_actieveVariant != null) {
+      final actief = _actieveVariant!;
+      final ondertekendAantal = _ondertekendeVanActieveVariant.length;
+      final actueleOndertekening = _actieveVariantHeeftActueleOndertekening;
+      achtergrond = actueleOndertekening || ondertekendAantal == 0
+          ? const Color(0xFFF0FDF4)
+          : const Color(0xFFFFF7ED);
+      rand = actueleOndertekening || ondertekendAantal == 0
+          ? const Color(0xFFB9E1C6)
+          : const Color(0xFFFED7AA);
+      kleur = actueleOndertekening || ondertekendAantal == 0 ? _groen : _oranje;
+      icoon = actueleOndertekening
+          ? Icons.verified_outlined
+          : ondertekendAantal > 0
+          ? Icons.edit_note_rounded
+          : Icons.check_circle_outline;
+      titel = actueleOndertekening
+          ? '${actief.offerteVariantLabel} is opgeslagen en ondertekend'
+          : ondertekendAantal > 0
+          ? '${actief.offerteVariantLabel} is gewijzigd na ondertekening'
+          : '${actief.offerteVariantLabel} is opgeslagen';
+      uitleg = ondertekendAantal == 0
+          ? 'Deze offertevariant kan opnieuw worden geopend, aangepast of '
+                'als basis voor een nieuwe offerte worden gebruikt.'
+          : actueleOndertekening
+          ? '$ondertekendAantal ondertekende momentopname${ondertekendAantal == 1 ? '' : 's'} '
+                'blij${ondertekendAantal == 1 ? 'ft' : 'ven'} definitief bewaard.'
+          : 'Er ${ondertekendAantal == 1 ? 'bestaat' : 'bestaan'} '
+                '$ondertekendAantal eerdere ondertekende momentopname${ondertekendAantal == 1 ? '' : 's'}, '
+                'maar de huidige opgeslagen inhoud is daarna gewijzigd.';
+    } else if (_overeenkomendeConceptVersie != null) {
+      final variant = _overeenkomendeConceptVersie!;
+      achtergrond = const Color(0xFFF0FDF4);
+      rand = const Color(0xFFB9E1C6);
+      kleur = _groen;
+      icoon = Icons.check_circle_outline;
+      titel = 'Inhoud komt overeen met ${variant.offerteVariantLabel}';
       uitleg =
-          'Deze werkversie staat bewust in de geschiedenis en kan later '
-          'worden geopend, aangepast of ondertekend.';
+          'Open deze offertevariant via “Offertes” als u ze opnieuw actief '
+          'wilt bewerken.';
     } else {
       achtergrond = const Color(0xFFF9FAFB);
       rand = _rand;
       kleur = _tekstGrijs;
-      icoon = Icons.history_rounded;
-      titel = 'Nog niet in de geschiedenis geplaatst';
+      icoon = Icons.bookmark_add_outlined;
+      titel = 'Nog geen offertevariant opgeslagen';
       uitleg =
-          'Tussentijds genereren blijft een controle. Alleen via '
-          '“In geschiedenis” wordt deze versie als concept bewaard.';
+          'Gebruik “Opslaan als nieuwe offerte” om deze offerte blijvend '
+          'bewaarbaar en later opnieuw bewerkbaar te maken.';
     }
 
     return Container(
@@ -1724,17 +2086,17 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   }
 
   Widget _bouwOndertekenActie(BuildContext context) {
-    if (_isArchief && !_magOndertekenen) {
+    if (_isArchief && (_isOndertekend || !_magOndertekenen)) {
       return const SizedBox.shrink();
     }
 
     final toonTekst = MediaQuery.sizeOf(context).width >= 920;
     final icoon = _isOndertekend ? Icons.verified_rounded : Icons.draw_outlined;
-    final label = _isArchief && _actiefArchiefIsConcept
-        ? 'Deze versie ondertekenen'
+    final label = _isArchief && _actiefArchiefIsConcept && !_isOndertekend
+        ? 'Deze offerte ondertekenen'
         : _isOndertekend
         ? 'Ondertekend'
-        : _heeftOndertekendeVersies
+        : _ondertekendeVanActieveVariant.isNotEmpty
         ? 'Opnieuw ondertekenen'
         : 'Laten ondertekenen';
     final tooltip = _isOndertekend ? 'Ondertekende offerte beheren' : label;
@@ -1782,23 +2144,22 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     );
   }
 
-  Widget _bouwGeschiedenisBewaarActie(BuildContext context) {
+  Widget _bouwOpslaanActie(BuildContext context) {
     if (_isArchief) return const SizedBox.shrink();
 
-    final toonTekst = MediaQuery.sizeOf(context).width >= 1120;
-    final bestaand = _overeenkomendeVersie;
-    final tooltip = bestaand == null
-        ? 'Deze offerte bewust in de geschiedenis plaatsen'
-        : 'Deze offerte staat al in de geschiedenis';
+    final actief = _actieveVariant;
+    final toonTekst = MediaQuery.sizeOf(context).width >= 1180;
+    final kanOpslaan = actief != null && !_versieBewarenBezig;
+    final tooltip = actief == null
+        ? 'Gebruik eerst Opslaan als nieuwe offerte'
+        : _heeftOnopgeslagenWijzigingen
+        ? 'Wijzigingen opslaan in Offerte ${actief.versieNummer}'
+        : 'Offerte ${actief.versieNummer} is opgeslagen';
 
     if (!toonTekst) {
       return IconButton(
         tooltip: tooltip,
-        onPressed: _versieBewarenBezig
-            ? null
-            : () {
-                _bewaarInGeschiedenis();
-              },
+        onPressed: kanOpslaan ? () => _bewaarHuidigeVariant() : null,
         icon: _versieBewarenBezig
             ? const SizedBox(
                 width: 20,
@@ -1809,10 +2170,50 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                 ),
               )
             : Icon(
-                bestaand == null
-                    ? Icons.bookmark_add_outlined
-                    : Icons.bookmark_added_outlined,
+                _heeftOnopgeslagenWijzigingen
+                    ? Icons.save_outlined
+                    : Icons.check_circle_outline,
               ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.white,
+          disabledForegroundColor: const Color(0x99FFFFFF),
+          backgroundColor: const Color(0x26FFFFFF),
+          padding: const EdgeInsets.symmetric(horizontal: 13),
+        ),
+        onPressed: kanOpslaan ? () => _bewaarHuidigeVariant() : null,
+        icon: _versieBewarenBezig
+            ? const SizedBox(
+                width: 17,
+                height: 17,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Icon(Icons.save_outlined, size: 19),
+        label: Text(
+          actief == null ? 'Opslaan' : 'Opslaan · ${actief.versieNummer}',
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwOpslaanAlsNieuweActie(BuildContext context) {
+    if (_isArchief) return const SizedBox.shrink();
+
+    final toonTekst = MediaQuery.sizeOf(context).width >= 1250;
+    if (!toonTekst) {
+      return IconButton(
+        tooltip: 'Opslaan als nieuwe offerte',
+        onPressed: _versieBewarenBezig ? null : () => _bewaarAlsNieuweVariant(),
+        icon: const Icon(Icons.bookmark_add_outlined),
       );
     }
 
@@ -1824,40 +2225,22 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           backgroundColor: const Color(0x26FFFFFF),
           padding: const EdgeInsets.symmetric(horizontal: 13),
         ),
-        onPressed: _versieBewarenBezig
-            ? null
-            : () {
-                _bewaarInGeschiedenis();
-              },
-        icon: _versieBewarenBezig
-            ? const SizedBox(
-                width: 17,
-                height: 17,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Icon(
-                bestaand == null
-                    ? Icons.bookmark_add_outlined
-                    : Icons.bookmark_added_outlined,
-                size: 19,
-              ),
-        label: Text(
-          bestaand == null ? 'In geschiedenis' : 'Bewaard',
-          style: const TextStyle(fontWeight: FontWeight.w800),
+        onPressed: _versieBewarenBezig ? null : () => _bewaarAlsNieuweVariant(),
+        icon: const Icon(Icons.bookmark_add_outlined, size: 19),
+        label: const Text(
+          'Opslaan als nieuwe',
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
     );
   }
 
   Widget _bouwVersiesActie(BuildContext context) {
-    final toonTekst = MediaQuery.sizeOf(context).width >= 1040;
+    final toonTekst = MediaQuery.sizeOf(context).width >= 1080;
 
     if (!toonTekst) {
       return IconButton(
-        tooltip: 'Offertegeschiedenis (${_versies.length})',
+        tooltip: 'Offertes (${_varianten.length})',
         onPressed: _toonVersiesMenu,
         icon: _versiesLaden
             ? const SizedBox(
@@ -1869,9 +2252,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                 ),
               )
             : Badge(
-                label: Text('${_versies.length}'),
-                isLabelVisible: _versies.isNotEmpty,
-                child: const Icon(Icons.history_rounded),
+                label: Text('${_varianten.length}'),
+                isLabelVisible: _varianten.isNotEmpty,
+                child: const Icon(Icons.folder_outlined),
               ),
       );
     }
@@ -1894,9 +2277,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   color: Colors.white,
                 ),
               )
-            : const Icon(Icons.history_rounded, size: 19),
+            : const Icon(Icons.folder_outlined, size: 19),
         label: Text(
-          'Geschiedenis (${_versies.length})',
+          'Offertes (${_varianten.length})',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -1990,7 +2373,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   Future<Uint8List> _bouwPdf() async {
     final datum = _offerteDatum;
-    final titelhoofd = widget.titelhoofd;
+    final titelhoofd = _actiefTitelhoofd;
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
       widget.posities,
     );
@@ -2025,32 +2408,32 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   Widget? _bouwStatusBalk() {
     if (_isArchief) {
-      final concept = _actiefArchiefIsConcept;
+      final variant = _actiefArchiefIsConcept && !_isOndertekend;
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        color: concept ? const Color(0xFFFFF7ED) : const Color(0xFFE7F6EC),
+        color: variant ? const Color(0xFFFFF7ED) : const Color(0xFFE7F6EC),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             Icon(
-              concept ? Icons.description_outlined : Icons.lock_outline_rounded,
-              color: concept ? _oranje : _groen,
+              variant ? Icons.description_outlined : Icons.lock_outline_rounded,
+              color: variant ? _oranje : _groen,
               size: 18,
             ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                concept
-                    ? 'Conceptversie ${widget.archiefVersieNummer ?? ''} · '
-                          '${widget.archiefVersieNaam} · vaste historische '
-                          'momentopname'
-                    : 'Ondertekende versie '
-                          '${widget.archiefVersieNummer ?? ''} · vastgelegd '
-                          'en alleen-lezen',
+                variant
+                    ? 'Offerte ${widget.archiefVersieNummer ?? ''} · '
+                          '${widget.archiefVersieNaam} · opgeslagen '
+                          'bewerkbare variant'
+                    : 'Ondertekende Offerte '
+                          '${widget.archiefVersieNummer ?? ''} · '
+                          'onveranderbare momentopname',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: concept ? _oranje : _groen,
+                  color: variant ? _oranje : _groen,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -2060,8 +2443,39 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       );
     }
 
-    if (_isGewijzigdVanWerkBron || _isGewijzigdNaOndertekening) {
-      final bronNummer = widget.titelhoofd.offerteBronVersieNummer;
+    if (_isOndertekend) {
+      final nummer =
+          _actieveVariant?.versieNummer ??
+          _actiefTitelhoofd.offerteBronVersieNummer;
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        color: const Color(0xFFE7F6EC),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Icon(Icons.verified_rounded, color: _groen, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                nummer > 0
+                    ? 'Ondertekende momentopname van Offerte $nummer · '
+                          'de bewerkbare variant blijft behouden.'
+                    : 'Ondertekende offerte · onveranderbare momentopname.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: _groen,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final actief = _actieveVariant;
+    if (_heeftOnopgeslagenWijzigingen) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
@@ -2073,13 +2487,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                bronNummer > 0
-                    ? 'Werkversie gewijzigd vanuit versie $bronNummer · '
-                          'plaats deze variant in de geschiedenis of laat ze '
-                          'ondertekenen.'
-                    : 'Gewijzigd na ondertekening · opnieuw laten '
-                          'ondertekenen. De eerdere versie blijft bewaard in '
-                          'de geschiedenis.',
+                actief == null
+                    ? 'Deze offerte is nog niet als variant opgeslagen · '
+                          'gebruik Opslaan als nieuwe.'
+                    : 'Offerte ${actief.versieNummer} bevat niet-opgeslagen '
+                          'wijzigingen · gebruik Opslaan of Opslaan als nieuwe.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: _oranje,
@@ -2092,24 +2504,43 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       );
     }
 
-    final concept = _overeenkomendeConceptVersie;
-    if (!_isOndertekend && concept != null) {
+    if (actief != null) {
+      final heeftOndertekend = _ondertekendeVanActieveVariant.isNotEmpty;
+      final actueleOndertekening = _actieveVariantHeeftActueleOndertekening;
+      final waarschuwNaOndertekening =
+          heeftOndertekend && !actueleOndertekening;
+      final statusKleur = waarschuwNaOndertekening ? _oranje : _groen;
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        color: const Color(0xFFFFF7ED),
+        color: waarschuwNaOndertekening
+            ? const Color(0xFFFFF7ED)
+            : const Color(0xFFF0FDF4),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            const Icon(Icons.bookmark_added_outlined, color: _oranje, size: 18),
+            Icon(
+              actueleOndertekening
+                  ? Icons.verified_outlined
+                  : waarschuwNaOndertekening
+                  ? Icons.edit_note_rounded
+                  : Icons.check_circle_outline,
+              color: statusKleur,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
-                'Opgeslagen als conceptversie ${concept.versieNummer} · '
-                '${concept.weergaveNaam}',
+                actueleOndertekening
+                    ? '${actief.offerteVariantLabel} · opgeslagen · '
+                          'huidige inhoud is ondertekend'
+                    : waarschuwNaOndertekening
+                    ? '${actief.offerteVariantLabel} · opgeslagen · '
+                          'gewijzigd na eerdere ondertekening'
+                    : '${actief.offerteVariantLabel} · opgeslagen',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: _oranje,
+                style: TextStyle(
+                  color: statusKleur,
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -2124,17 +2555,25 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   String _appBarTitel() {
     if (_isArchief) {
-      final soort = _actiefArchiefIsConcept ? 'Concept' : 'Ondertekend';
-      return '$soort · Versie ${widget.archiefVersieNummer ?? ''}';
+      return _actiefArchiefIsConcept && !_isOndertekend
+          ? 'Offerte ${widget.archiefVersieNummer ?? ''}'
+          : 'Ondertekende Offerte ${widget.archiefVersieNummer ?? ''}';
     }
-    if (_isOndertekend) return 'Offertevoorbeeld · Ondertekend';
-    if (_isGewijzigdVanWerkBron || _isGewijzigdNaOndertekening) {
-      return 'Offertevoorbeeld · Gewijzigd';
+    if (_isOndertekend) {
+      final nummer =
+          _actieveVariant?.versieNummer ??
+          _actiefTitelhoofd.offerteBronVersieNummer;
+      return nummer > 0
+          ? 'Offertevoorbeeld · Ondertekende Offerte $nummer'
+          : 'Offertevoorbeeld · Ondertekend';
     }
-    if (_overeenkomendeConceptVersie != null) {
-      return 'Offertevoorbeeld · Concept bewaard';
+    final actief = _actieveVariant;
+    if (actief != null) {
+      return _heeftOnopgeslagenWijzigingen
+          ? 'Offertevoorbeeld · Offerte ${actief.versieNummer} gewijzigd'
+          : 'Offertevoorbeeld · Offerte ${actief.versieNummer}';
     }
-    return 'Offertevoorbeeld';
+    return 'Offertevoorbeeld · Nieuwe offerte';
   }
 
   @override
@@ -2152,7 +2591,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: <Widget>[
-          _bouwGeschiedenisBewaarActie(context),
+          _bouwOpslaanActie(context),
+          _bouwOpslaanAlsNieuweActie(context),
           _bouwVersiesActie(context),
           _bouwOndertekenActie(context),
           _bouwMailActie(),
@@ -2189,6 +2629,10 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                 return PdfPreview(
                   key: ValueKey<int>(_pdfVersie),
                   initialPageFormat: PdfPageFormat.a4,
+                  pageFormats: const <String, PdfPageFormat>{
+                    'A4': PdfPageFormat.a4,
+                  },
+                  dynamicLayout: false,
                   maxPageWidth: passendePaginaBreedte,
                   canChangePageFormat: false,
                   canChangeOrientation: false,
@@ -2251,9 +2695,11 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
 enum _OndertekeningKeuze { opnieuw, concept }
 
+enum _OndertekenBewaarKeuze { annuleren, huidigeVariant, nieuweVariant }
+
 enum _VersieActie { openen, ondertekenen, vergelijken, werkversie, verwijderen }
 
-enum _WerkversieKeuze { annuleren, eerstBewaren, openen }
+enum _WerkversieKeuze { annuleren, opslaan, opslaanAlsNieuw, openen }
 
 class _ConceptVersieInvoer {
   const _ConceptVersieInvoer({required this.naam, required this.omschrijving});

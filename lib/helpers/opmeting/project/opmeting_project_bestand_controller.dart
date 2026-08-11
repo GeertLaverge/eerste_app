@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-BEWERKEN-20260811
 // THIMACO-CONTROLE: GLOBALE-ATOMAIRE-OPMETINGOPSLAG-20260810
 // THIMACO-CONTROLE: OFFERTEVERSIE-ALS-WERKVERSIE-20260806
 // THIMACO-CONTROLE: OPMEETBESTAND-SYNC-ALTIJD-SILENT-20260805
@@ -897,12 +898,13 @@ class OpmetingProjectBestandController {
             );
           });
 
-      final hersteldTitelhoofd = versieTitelhoofd.copyWith(
-        klantNaam: klantNaam,
-        offerteBronVersieId: bronVersieId.trim(),
-        offerteBronVersieNummer: bronVersieNummer,
-        gewijzigdOp: nu,
-      );
+      final hersteldTitelhoofd = versieTitelhoofd
+          .copyWith(klantNaam: klantNaam)
+          .metActieveOfferteVariant(
+            versieId: bronVersieId,
+            versieNummer: bronVersieNummer,
+          )
+          .copyWith(gewijzigdOp: nu);
 
       await AppStorage.bewaarOpmetingProjectTitelhoofd(hersteldTitelhoofd);
 
@@ -918,8 +920,7 @@ class OpmetingProjectBestandController {
       );
 
       toonMelding(
-        'Offerteversie $bronVersieNummer is als nieuwe werkversie geopend. '
-        'De historische versie zelf blijft ongewijzigd.',
+        'Offerte $bronVersieNummer is geopend om te bewerken.',
         false,
       );
       return true;
@@ -943,9 +944,9 @@ class OpmetingProjectBestandController {
     if (huidigTitelhoofd.klantNaam.trim().isEmpty) return;
 
     final bijgewerkt = huidigTitelhoofd
-        .copyWith(
-          offerteBronVersieId: versieId.trim(),
-          offerteBronVersieNummer: versieNummer,
+        .metActieveOfferteVariant(
+          versieId: versieId,
+          versieNummer: versieNummer,
         )
         .metWijzigingsDatum();
 

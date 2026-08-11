@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVARIANTEN-OPSLAAN-BIJSCHRIJVEN-ONDERTEKEND-APART-20260811
 // THIMACO-CONTROLE: OFFERTE-GESCHIEDENIS-CONCEPTEN-WISSEN-ONDERTEKEND-BESCHERMD-20260809_2057
 // THIMACO-CONTROLE: OFFERTEVERSIE-CONCEPT-BEWAREN-HEROPENEN-20260806
 import 'dart:convert';
@@ -52,12 +53,122 @@ class OfferteVersieService {
     resultaat.sort((eerste, tweede) {
       final nummer = tweede.versieNummer.compareTo(eerste.versieNummer);
       if (nummer != 0) return nummer;
+      if (eerste.isVariant != tweede.isVariant) {
+        return eerste.isVariant ? -1 : 1;
+      }
       return tweede.opgeslagenOp.compareTo(eerste.opgeslagenOp);
     });
 
     return List<OfferteVersieModel>.unmodifiable(resultaat);
   }
 
+  List<OfferteVersieModel> variantenUit(Iterable<OfferteVersieModel> versies) {
+    final resultaat = versies.where((versie) => versie.isVariant).toList();
+    resultaat.sort(
+      (eerste, tweede) => tweede.versieNummer.compareTo(eerste.versieNummer),
+    );
+    return List<OfferteVersieModel>.unmodifiable(resultaat);
+  }
+
+  List<OfferteVersieModel> ondertekendeMomentopnamesVoorVariant({
+    required Iterable<OfferteVersieModel> versies,
+    required String variantId,
+  }) {
+    final variant = variantVoorId(versies: versies, variantId: variantId);
+    if (variant == null) return const <OfferteVersieModel>[];
+    final resultaat =
+        versies
+            .where(
+              (versie) => versie.hoortBijVariant(
+                variant.id,
+                variantNummer: variant.versieNummer,
+              ),
+            )
+            .toList()
+          ..sort(
+            (eerste, tweede) =>
+                tweede.opgeslagenOp.compareTo(eerste.opgeslagenOp),
+          );
+    return List<OfferteVersieModel>.unmodifiable(resultaat);
+  }
+
+  OfferteVersieModel? variantVoorId({
+    required Iterable<OfferteVersieModel> versies,
+    required String variantId,
+  }) {
+    final id = variantId.trim();
+    if (id.isEmpty) return null;
+    for (final versie in versies) {
+      if (versie.id == id && versie.isVariant) return versie;
+    }
+    return null;
+  }
+
+  bool heeftOndertekendeMomentopname({
+    required Iterable<OfferteVersieModel> versies,
+    required String variantId,
+  }) {
+    final variant = variantVoorId(versies: versies, variantId: variantId);
+    if (variant == null) return false;
+    return versies.any(
+      (versie) => versie.hoortBijVariant(
+        variant.id,
+        variantNummer: variant.versieNummer,
+      ),
+    );
+  }
+
+  Future<OfferteVersieModel> bewaarNieuweVariant({
+    required OpmetingProjectTitelhoofd titelhoofd,
+    required List<OpmetingOverzichtRaamItem> posities,
+    required List<OpmetingOverzichtRaamItem> werkPosities,
+    required DateTime offerteDatum,
+    required double totaalInclusiefBtw,
+    required String naam,
+    required String omschrijving,
+  }) {
+    return AppStorage.muteerOfferteVersiesAtomair<OfferteVersieModel>((
+      alleVersies,
+    ) {
+      final projectSleutel = projectSleutelVoor(titelhoofd);
+      final hoogsteNummer = alleVersies
+          .where((versie) => versie.projectSleutel == projectSleutel)
+          .fold<int>(
+            0,
+            (hoogste, versie) =>
+                versie.versieNummer > hoogste ? versie.versieNummer : hoogste,
+          );
+      final versieNummer = hoogsteNummer + 1;
+      final titelhoofdVoorVariant = titelhoofd.copyWith(
+        offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorVariantNummer(
+          versieNummer,
+        ),
+      );
+      final versie = _maakNieuweVersie(
+        titelhoofd: titelhoofdVoorVariant,
+        posities: posities,
+        werkPosities: werkPosities,
+        offerteDatum: offerteDatum,
+        totaalInclusiefBtw: totaalInclusiefBtw,
+        status: OfferteVersieStatus.concept,
+        versieNummer: versieNummer,
+        naam: naam.trim(),
+        omschrijving: omschrijving.trim(),
+        bronVersieId: titelhoofd.offerteBronVersieId.trim(),
+        bronVersieNummer: titelhoofd.offerteBronVersieNummer,
+        goedkeuring: OfferteGoedkeuring.leeg(),
+      );
+
+      return AppStorageOfferteVersieMutatieResultaat<OfferteVersieModel>(
+        resultaat: versie,
+        versies: <OfferteVersieModel>[...alleVersies, versie],
+        gewijzigd: true,
+      );
+    });
+  }
+
+  /// Oude aanroepnaam blijft bestaan zodat andere code niet onverwacht breekt.
+  /// Een `concept` is voortaan een bewerkbare offertevariant.
   Future<OfferteVersieModel> bewaarConceptVersie({
     required OpmetingProjectTitelhoofd titelhoofd,
     required List<OpmetingOverzichtRaamItem> posities,
@@ -66,32 +177,85 @@ class OfferteVersieService {
     required double totaalInclusiefBtw,
     required String naam,
     required String omschrijving,
-  }) async {
-    final schoneNaam = naam.trim();
-    if (schoneNaam.isEmpty) {
-      throw StateError('Geef een herkenbare naam aan deze offerteversie.');
-    }
-
-    final alleVersies = await AppStorage.laadOfferteVersies();
-    final versie = _maakNieuweVersie(
-      alleVersies: alleVersies,
+  }) {
+    return bewaarNieuweVariant(
       titelhoofd: titelhoofd,
       posities: posities,
       werkPosities: werkPosities,
       offerteDatum: offerteDatum,
       totaalInclusiefBtw: totaalInclusiefBtw,
-      status: OfferteVersieStatus.concept,
-      naam: schoneNaam,
-      omschrijving: omschrijving.trim(),
-      goedkeuring: OfferteGoedkeuring.leeg(),
+      naam: naam,
+      omschrijving: omschrijving,
     );
+  }
 
-    await AppStorage.bewaarOfferteVersies(<OfferteVersieModel>[
-      ...alleVersies,
-      versie,
-    ]);
+  Future<OfferteVersieModel> werkVariantBij({
+    required String variantId,
+    required OpmetingProjectTitelhoofd titelhoofd,
+    required List<OpmetingOverzichtRaamItem> posities,
+    required List<OpmetingOverzichtRaamItem> werkPosities,
+    required DateTime offerteDatum,
+    required double totaalInclusiefBtw,
+    String? naam,
+    String? omschrijving,
+  }) {
+    final gevraagdeId = variantId.trim();
+    if (gevraagdeId.isEmpty) {
+      throw StateError('Er is geen actieve offertevariant om bij te werken.');
+    }
 
-    return versie;
+    return AppStorage.muteerOfferteVersiesAtomair<OfferteVersieModel>((
+      alleVersies,
+    ) {
+      final index = alleVersies.indexWhere(
+        (versie) => versie.id == gevraagdeId && versie.isVariant,
+      );
+      if (index < 0) {
+        throw StateError(
+          'De gekozen offertevariant bestaat niet meer in de opslag.',
+        );
+      }
+
+      final bestaand = alleVersies[index];
+      final titelhoofdVoorVariant = titelhoofd.metActieveOfferteVariant(
+        versieId: bestaand.id,
+        versieNummer: bestaand.versieNummer,
+      );
+      final bijgewerkt = bestaand.copyWith(
+        offerteNummer: titelhoofdVoorVariant.samengesteldOffertenummer,
+        klantNaam: titelhoofdVoorVariant.klantNaam,
+        offerteDatum: offerteDatum,
+        opgeslagenOp: DateTime.now(),
+        totaalInclusiefBtw: totaalInclusiefBtw,
+        inhoudSignatuur: maakInhoudSignatuur(
+          titelhoofd: titelhoofdVoorVariant,
+          posities: posities,
+        ),
+        status: OfferteVersieStatus.concept,
+        naam: naam?.trim() ?? bestaand.naam,
+        omschrijving: omschrijving?.trim() ?? bestaand.omschrijving,
+        bronVersieId: bestaand.bronVersieId,
+        bronVersieNummer: bestaand.bronVersieNummer,
+        goedkeuring: OfferteGoedkeuring.leeg(),
+        titelhoofdJson: Map<String, dynamic>.from(
+          titelhoofdVoorVariant.toJson(),
+        ),
+        positiesJson: posities
+            .map((positie) => Map<String, dynamic>.from(positie.toJson()))
+            .toList(growable: false),
+        werkPositiesJson: werkPosities
+            .map((positie) => Map<String, dynamic>.from(positie.toJson()))
+            .toList(growable: false),
+      );
+      final nieuweLijst = List<OfferteVersieModel>.from(alleVersies);
+      nieuweLijst[index] = bijgewerkt;
+
+      return AppStorageOfferteVersieMutatieResultaat<OfferteVersieModel>(
+        resultaat: bijgewerkt,
+        versies: nieuweLijst,
+        gewijzigd: true,
+      );
+    });
   }
 
   Future<OfferteVersieModel> bewaarOndertekendeVersie({
@@ -102,104 +266,153 @@ class OfferteVersieService {
     required double totaalInclusiefBtw,
     required OfferteGoedkeuring goedkeuring,
     String bestaandeConceptVersieId = '',
-  }) async {
+    String variantId = '',
+    int variantNummer = 0,
+    String variantNaam = '',
+  }) {
     if (!goedkeuring.isOndertekend) {
       throw StateError('De offerte heeft geen geldige handtekening.');
     }
 
-    final alleVersies = await AppStorage.laadOfferteVersies();
-    final projectSleutel = projectSleutelVoor(titelhoofd);
-    final inhoudSignatuur = maakInhoudSignatuur(
-      titelhoofd: titelhoofd,
-      posities: posities,
-    );
+    return AppStorage.muteerOfferteVersiesAtomair<OfferteVersieModel>((
+      alleVersies,
+    ) {
+      final projectSleutel = projectSleutelVoor(titelhoofd);
+      final gevraagdeId = variantId.trim().isNotEmpty
+          ? variantId.trim()
+          : bestaandeConceptVersieId.trim();
+      OfferteVersieModel? variant;
 
-    OfferteVersieModel? bestaandConcept;
-    final gevraagdeId = bestaandeConceptVersieId.trim();
-    if (gevraagdeId.isNotEmpty) {
-      for (final versie in alleVersies) {
-        if (versie.id == gevraagdeId &&
-            versie.projectSleutel == projectSleutel &&
-            versie.inhoudSignatuur == inhoudSignatuur &&
-            versie.isConcept) {
-          bestaandConcept = versie;
-          break;
+      if (gevraagdeId.isNotEmpty) {
+        for (final kandidaat in alleVersies) {
+          if (kandidaat.id == gevraagdeId &&
+              kandidaat.projectSleutel == projectSleutel &&
+              kandidaat.isVariant) {
+            variant = kandidaat;
+            break;
+          }
         }
       }
-    }
 
-    bestaandConcept ??= _nieuwsteOvereenkomendeConcept(
-      alleVersies,
-      projectSleutel: projectSleutel,
-      inhoudSignatuur: inhoudSignatuur,
-    );
+      final titelhoofdVoorControle = variant == null
+          ? titelhoofd
+          : titelhoofd.metActieveOfferteVariant(
+              versieId: variant.id,
+              versieNummer: variant.versieNummer,
+            );
+      final inhoudSignatuur = maakInhoudSignatuur(
+        titelhoofd: titelhoofdVoorControle,
+        posities: posities,
+      );
 
-    if (bestaandConcept != null) {
-      final opgewaardeerd = bestaandConcept.copyWith(
-        status: OfferteVersieStatus.ondertekend,
-        goedkeuring: goedkeuring,
+      if (variant == null) {
+        for (final kandidaat in alleVersies) {
+          if (kandidaat.projectSleutel == projectSleutel &&
+              kandidaat.isVariant &&
+              kandidaat.inhoudSignatuur == inhoudSignatuur) {
+            variant = kandidaat;
+            break;
+          }
+        }
+      }
+
+      if (variant == null) {
+        throw StateError(
+          'Sla deze offerte eerst op als offertevariant voordat u ze '
+          'ondertekent.',
+        );
+      }
+
+      final effectiefNummer = variantNummer > 0
+          ? variantNummer
+          : variant.versieNummer;
+      if (effectiefNummer != variant.versieNummer) {
+        throw StateError('Het nummer van de offertevariant is gewijzigd.');
+      }
+
+      final definitiefTitelhoofd = titelhoofd.metActieveOfferteVariant(
+        versieId: variant.id,
+        versieNummer: variant.versieNummer,
+      );
+      final definitieveSignatuur = maakInhoudSignatuur(
+        titelhoofd: definitiefTitelhoofd,
+        posities: posities,
+      );
+      final opgeslagenVariantTitelhoofd = titelhoofdVan(variant)
+          .metActieveOfferteVariant(
+            versieId: variant.id,
+            versieNummer: variant.versieNummer,
+          );
+      final opgeslagenVariantSignatuur = maakInhoudSignatuur(
+        titelhoofd: opgeslagenVariantTitelhoofd,
+        posities: positiesVan(variant),
+      );
+      if (opgeslagenVariantSignatuur != definitieveSignatuur) {
+        throw StateError(
+          'Deze offerte bevat nog niet-opgeslagen wijzigingen. Sla de '
+          'offertevariant eerst op en probeer daarna opnieuw.',
+        );
+      }
+
+      final snapshot = _maakNieuweVersie(
+        titelhoofd: definitiefTitelhoofd,
+        posities: posities,
+        werkPosities: werkPosities,
         offerteDatum: offerteDatum,
         totaalInclusiefBtw: totaalInclusiefBtw,
-        offerteNummer: titelhoofd.samengesteldOffertenummer,
-        klantNaam: titelhoofd.klantNaam,
-        inhoudSignatuur: inhoudSignatuur,
-        titelhoofdJson: Map<String, dynamic>.from(titelhoofd.toJson()),
-        positiesJson: posities
-            .map((positie) => Map<String, dynamic>.from(positie.toJson()))
-            .toList(growable: false),
-        werkPositiesJson: werkPosities
-            .map((positie) => Map<String, dynamic>.from(positie.toJson()))
-            .toList(growable: false),
+        status: OfferteVersieStatus.ondertekend,
+        versieNummer: variant.versieNummer,
+        naam: variantNaam.trim().isNotEmpty ? variantNaam.trim() : variant.naam,
+        omschrijving:
+            'Ondertekende momentopname van '
+            '${variant.offerteVariantLabel}',
+        bronVersieId: variant.id,
+        bronVersieNummer: variant.versieNummer,
+        goedkeuring: goedkeuring,
+        idSoort: 'signed',
       );
-      final bijgewerkt = alleVersies
-          .map(
-            (versie) => versie.id == opgewaardeerd.id ? opgewaardeerd : versie,
-          )
-          .toList(growable: false);
-      await AppStorage.bewaarOfferteVersies(bijgewerkt);
-      return opgewaardeerd;
-    }
 
-    final versie = _maakNieuweVersie(
-      alleVersies: alleVersies,
-      titelhoofd: titelhoofd,
-      posities: posities,
-      werkPosities: werkPosities,
-      offerteDatum: offerteDatum,
-      totaalInclusiefBtw: totaalInclusiefBtw,
-      status: OfferteVersieStatus.ondertekend,
-      naam: 'Ondertekende offerte',
-      omschrijving: '',
-      goedkeuring: goedkeuring,
-    );
-
-    await AppStorage.bewaarOfferteVersies(<OfferteVersieModel>[
-      ...alleVersies,
-      versie,
-    ]);
-
-    return versie;
+      return AppStorageOfferteVersieMutatieResultaat<OfferteVersieModel>(
+        resultaat: snapshot,
+        versies: <OfferteVersieModel>[...alleVersies, snapshot],
+        gewijzigd: true,
+      );
+    });
   }
 
   Future<void> verwijderConceptVersie(OfferteVersieModel versie) async {
-    // Ondertekende offertes zijn definitief beschermd. Deze controle staat
-    // bewust ook in de service, zodat ze nooit via een andere UI-route of een
-    // toekomstige aanroep gewist kunnen worden.
-    if (!versie.isConcept || versie.isOndertekend) {
-      throw StateError(
-        'Een ondertekende offerteversie kan niet worden gewist.',
-      );
+    if (!versie.isVariant || versie.isOndertekend) {
+      throw StateError('Een ondertekende offerte kan niet worden gewist.');
     }
 
-    final alleVersies = await AppStorage.laadOfferteVersies();
+    await AppStorage.muteerOfferteVersiesAtomair<void>((alleVersies) {
+      final actueel = variantVoorId(versies: alleVersies, variantId: versie.id);
+      if (actueel == null) {
+        return AppStorageOfferteVersieMutatieResultaat<void>(
+          resultaat: null,
+          versies: alleVersies,
+          gewijzigd: false,
+        );
+      }
 
-    // Een conceptversie is een volledige momentopname. Latere versies bewaren
-    // hun eigen titelhoofd, posities en prijzen en blijven dus bruikbaar als
-    // een oude conceptversie uit de geschiedenis wordt opgeruimd. De
-    // bronverwijzing is uitsluitend historische informatie.
-    await AppStorage.bewaarOfferteVersies(
-      alleVersies.where((bestaand) => bestaand.id != versie.id).toList(),
-    );
+      if (heeftOndertekendeMomentopname(
+        versies: alleVersies,
+        variantId: actueel.id,
+      )) {
+        throw StateError(
+          'Deze offertevariant heeft een ondertekende momentopname en kan '
+          'daarom niet worden verwijderd.',
+        );
+      }
+
+      return AppStorageOfferteVersieMutatieResultaat<void>(
+        resultaat: null,
+        versies: alleVersies
+            .where((bestaand) => bestaand.id != actueel.id)
+            .toList(growable: false),
+        gewijzigd: true,
+      );
+    });
   }
 
   OfferteVersieModel? vindOvereenkomendeVersie({
@@ -316,31 +529,27 @@ class OfferteVersieService {
   }
 
   OfferteVersieModel _maakNieuweVersie({
-    required List<OfferteVersieModel> alleVersies,
     required OpmetingProjectTitelhoofd titelhoofd,
     required List<OpmetingOverzichtRaamItem> posities,
     required List<OpmetingOverzichtRaamItem> werkPosities,
     required DateTime offerteDatum,
     required double totaalInclusiefBtw,
     required OfferteVersieStatus status,
+    required int versieNummer,
     required String naam,
     required String omschrijving,
+    required String bronVersieId,
+    required int bronVersieNummer,
     required OfferteGoedkeuring goedkeuring,
+    String idSoort = 'variant',
   }) {
     final projectSleutel = projectSleutelVoor(titelhoofd);
-    final hoogsteVersie = alleVersies
-        .where((versie) => versie.projectSleutel == projectSleutel)
-        .fold<int>(
-          0,
-          (hoogste, versie) =>
-              versie.versieNummer > hoogste ? versie.versieNummer : hoogste,
-        );
     final opgeslagenOp = DateTime.now();
-    final versieNummer = hoogsteVersie + 1;
+    final soort = _veiligeId(idSoort).isEmpty ? 'record' : _veiligeId(idSoort);
 
     return OfferteVersieModel(
       id:
-          '${_veiligeId(projectSleutel)}_v${versieNummer}_'
+          '${_veiligeId(projectSleutel)}_v${versieNummer}_${soort}_'
           '${opgeslagenOp.toUtc().microsecondsSinceEpoch}',
       projectSleutel: projectSleutel,
       versieNummer: versieNummer,
@@ -356,8 +565,8 @@ class OfferteVersieService {
       status: status,
       naam: naam,
       omschrijving: omschrijving,
-      bronVersieId: titelhoofd.offerteBronVersieId,
-      bronVersieNummer: titelhoofd.offerteBronVersieNummer,
+      bronVersieId: bronVersieId,
+      bronVersieNummer: bronVersieNummer,
       goedkeuring: goedkeuring,
       titelhoofdJson: Map<String, dynamic>.from(titelhoofd.toJson()),
       positiesJson: posities
@@ -367,25 +576,6 @@ class OfferteVersieService {
           .map((positie) => Map<String, dynamic>.from(positie.toJson()))
           .toList(growable: false),
     );
-  }
-
-  static OfferteVersieModel? _nieuwsteOvereenkomendeConcept(
-    Iterable<OfferteVersieModel> versies, {
-    required String projectSleutel,
-    required String inhoudSignatuur,
-  }) {
-    OfferteVersieModel? resultaat;
-    for (final versie in versies) {
-      if (versie.projectSleutel != projectSleutel ||
-          versie.inhoudSignatuur != inhoudSignatuur ||
-          !versie.isConcept) {
-        continue;
-      }
-      if (resultaat == null || versie.versieNummer > resultaat.versieNummer) {
-        resultaat = versie;
-      }
-    }
-    return resultaat;
   }
 
   static Map<String, dynamic> _zonderVluchtigeVelden(

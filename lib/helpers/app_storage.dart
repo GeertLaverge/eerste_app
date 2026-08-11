@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVARIANTEN-ATOMAIRE-OPSLAG-20260811
 // THIMACO-CONTROLE: PROJECT-TITELHOOFD-ATOMAIRE-OPSLAG-BEREKEN-20260810
 // THIMACO-CONTROLE: OPMETINGEN-ATOMAIRE-OPSLAG-GLOBAAL-20260810
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-OPSLAG-20260806
@@ -64,6 +65,20 @@ class AppStorageProjectTitelhoofdMutatieResultaat<T> {
 
   final T resultaat;
   final Map<String, OpmetingProjectTitelhoofd> titelhoofden;
+  final bool gewijzigd;
+  final bool startSync;
+}
+
+class AppStorageOfferteVersieMutatieResultaat<T> {
+  const AppStorageOfferteVersieMutatieResultaat({
+    required this.resultaat,
+    required this.versies,
+    required this.gewijzigd,
+    this.startSync = true,
+  });
+
+  final T resultaat;
+  final List<OfferteVersieModel> versies;
   final bool gewijzigd;
   final bool startSync;
 }
@@ -1001,26 +1016,103 @@ class AppStorage {
   }
 
   // ------------------------------------------------------------
-  // OFFERTE - ONDERTEKENDE VERSIES
+  // OFFERTE - BEWERKBARE VARIANTEN + ONDERTEKENDE MOMENTOPNAMES
   // ------------------------------------------------------------
 
-  static Future<List<OfferteVersieModel>> laadOfferteVersies() async {
-    final prefs = await openBox();
-    final records = decodeJsonMapLijstVoorSync(
-      prefs.getString(_offerteVersiesKey),
-    );
+  // Net zoals de opmetingen krijgen offertevarianten één centrale wachtrij.
+  // Daardoor kan een update van Offerte 2 nooit een gelijktijdig aangemaakte
+  // Offerte 3 of ondertekende momentopname overschrijven.
+  static Future<void> _offerteVersiesWachtrij = Future<void>.value();
+
+  static List<OfferteVersieModel> _decodeOfferteVersies(String? jsonString) {
+    final records = decodeJsonMapLijstVoorSync(jsonString);
     final resultaat = <OfferteVersieModel>[];
 
     for (final record in records) {
       try {
         final versie = OfferteVersieModel.fromJson(record);
-        if (versie.isGeldig) {
-          resultaat.add(versie);
-        }
+        if (versie.isGeldig) resultaat.add(versie);
       } catch (_) {
-        // Eén beschadigde versie mag de overige offerteversies niet blokkeren.
+        // Eén beschadigde versie mag de overige offertevarianten niet blokkeren.
       }
     }
+
+    return resultaat;
+  }
+
+  static Future<T> muteerOfferteVersiesAtomair<T>(
+    FutureOr<AppStorageOfferteVersieMutatieResultaat<T>> Function(
+      List<OfferteVersieModel> actueleVersies,
+    )
+    mutatie,
+  ) {
+    final completer = Completer<T>();
+
+    _offerteVersiesWachtrij = _offerteVersiesWachtrij.then((_) async {
+      try {
+        final prefs = await openBox();
+        final oudeRecords = decodeJsonMapLijstVoorSync(
+          prefs.getString(_offerteVersiesKey),
+        );
+        final actueel = _decodeOfferteVersies(
+          prefs.getString(_offerteVersiesKey),
+        );
+
+        final mutatieResultaat = await mutatie(
+          List<OfferteVersieModel>.from(actueel),
+        );
+
+        if (mutatieResultaat.gewijzigd) {
+          final nieuweVersies = mutatieResultaat.versies
+              .where((versie) => versie.isGeldig)
+              .toList(growable: false);
+          final nieuweRecords = nieuweVersies
+              .map((versie) => versie.toJson())
+              .toList(growable: false);
+          final bestaandeMetadata = SyncMergeService.decodeJsonRecordMetadata(
+            prefs.getString(_offerteVersiesSyncMetaKey),
+          );
+          final gewijzigdOp = DateTime.now().toUtc().toIso8601String();
+          final nieuweMetadata = SyncMergeService.updateJsonRecordMetadata(
+            oudeRecords: oudeRecords,
+            nieuweRecords: nieuweRecords,
+            bestaandeMetadata: bestaandeMetadata,
+            idVoorRecord: _standaardSyncId,
+            gewijzigdOp: gewijzigdOp,
+          );
+
+          await prefs.setString(
+            _offerteVersiesKey,
+            encodeJsonMapLijstVoorSync(nieuweRecords),
+          );
+          await prefs.setString(
+            _offerteVersiesSyncMetaKey,
+            SyncMergeService.encodeJsonRecordMetadata(nieuweMetadata),
+          );
+
+          if (mutatieResultaat.startSync) {
+            await _syncBackup();
+          }
+        }
+
+        completer.complete(mutatieResultaat.resultaat);
+      } catch (fout, stackTrace) {
+        completer.completeError(fout, stackTrace);
+      }
+    });
+
+    return completer.future;
+  }
+
+  static Future<List<OfferteVersieModel>> laadOfferteVersies() async {
+    // Een lezer krijgt nooit een toestand van vóór een reeds gestarte
+    // variantmutatie.
+    await _offerteVersiesWachtrij;
+
+    final prefs = await openBox();
+    final resultaat = _decodeOfferteVersies(
+      prefs.getString(_offerteVersiesKey),
+    );
 
     resultaat.sort((eerste, tweede) {
       final project = eerste.projectSleutel.compareTo(tweede.projectSleutel);
@@ -1035,19 +1127,18 @@ class AppStorage {
     return resultaat;
   }
 
+  /// Compatibele volledige save. Nieuwe offertecode gebruikt bij voorkeur
+  /// [muteerOfferteVersiesAtomair] zodat één variant gericht wordt gewijzigd.
   static Future<void> bewaarOfferteVersies(
     List<OfferteVersieModel> versies,
   ) async {
-    await _bewaarJsonMapLijstMetSyncMetadata(
-      dataKey: _offerteVersiesKey,
-      metadataKey: _offerteVersiesSyncMetaKey,
-      records: versies
-          .where((versie) => versie.isGeldig)
-          .map((versie) => versie.toJson())
-          .toList(growable: false),
-      idVoorRecord: _standaardSyncId,
-      sync: true,
-    );
+    await muteerOfferteVersiesAtomair<void>((_) {
+      return AppStorageOfferteVersieMutatieResultaat<void>(
+        resultaat: null,
+        versies: List<OfferteVersieModel>.from(versies),
+        gewijzigd: true,
+      );
+    });
   }
 
   // ------------------------------------------------------------

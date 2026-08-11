@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVARIANTEN-BEWERKBAAR-ONDERTEKEND-APART-20260811
 // THIMACO-CONTROLE: OFFERTEVERSIE-CONCEPT-ONDERTEKEND-LIJNAGE-20260806
 import '../offerte_goedkeuring_model.dart';
 
@@ -67,15 +68,42 @@ class OfferteVersieModel {
   final List<Map<String, dynamic>> positiesJson;
   final List<Map<String, dynamic>> werkPositiesJson;
 
+  // `concept` blijft bewust de opslagwaarde voor achterwaartse
+  // compatibiliteit. In de UI betekent dit voortaan een bewerkbare
+  // offertevariant, niet meer een historische conceptmomentopname.
   bool get isConcept => status == OfferteVersieStatus.concept;
+
+  bool get isVariant => isConcept;
 
   bool get isOndertekend =>
       status == OfferteVersieStatus.ondertekend && goedkeuring.isOndertekend;
 
+  bool get isOndertekendeMomentopname => isOndertekend;
+
   String get weergaveNaam {
     final ingevuld = naam.trim();
     if (ingevuld.isNotEmpty) return ingevuld;
-    return isOndertekend ? 'Ondertekende offerte' : 'Conceptofferte';
+    return isOndertekend
+        ? 'Ondertekende offerte $versieNummer'
+        : 'Offerte $versieNummer';
+  }
+
+  String get offerteVariantLabel {
+    final ingevuld = naam.trim();
+    return ingevuld.isEmpty
+        ? 'Offerte $versieNummer'
+        : 'Offerte $versieNummer · $ingevuld';
+  }
+
+  bool hoortBijVariant(String variantId, {int? variantNummer}) {
+    final sleutel = variantId.trim();
+    if (!isOndertekend || sleutel.isEmpty || bronVersieId.trim() != sleutel) {
+      return false;
+    }
+    if (variantNummer != null && variantNummer > 0) {
+      return bronVersieNummer == variantNummer && versieNummer == variantNummer;
+    }
+    return true;
   }
 
   bool get isGeldig {

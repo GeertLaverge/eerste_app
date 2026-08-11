@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-KOPPELING-VERSIENUMMER-20260811
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-EN-VERBORGEN-NIET-REKENEN-20260809-2030
 // THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
@@ -168,11 +169,7 @@ class OpmetingProjectTitelhoofd {
   }
 
   String get samengesteldOffertenummer {
-    final versie = _beperkTotCijfers(
-      offerteVersie,
-      maxLengte: 2,
-      standaardWaarde: standaardOfferteVersie,
-    );
+    final versie = _normaliseerOfferteVersie(offerteVersie);
     return '$offerteJaar$klantnummer$offerteVolgnummer'
         'V$versie';
   }
@@ -307,6 +304,24 @@ class OpmetingProjectTitelhoofd {
 
   OpmetingProjectTitelhoofd metWijzigingsDatum() {
     return copyWith(gewijzigdOp: DateTime.now().toUtc().toIso8601String());
+  }
+
+  static String offerteVersieVoorVariantNummer(int nummer) {
+    final veilig = nummer < 1 ? 1 : nummer;
+    return veilig.toString().padLeft(2, '0');
+  }
+
+  /// Koppelt het geopende werkbestand aan één bewerkbare offertevariant.
+  /// Het PDF-offertenummer volgt daarbij hetzelfde variantnummer (V01, V02, ...).
+  OpmetingProjectTitelhoofd metActieveOfferteVariant({
+    required String versieId,
+    required int versieNummer,
+  }) {
+    return copyWith(
+      offerteBronVersieId: versieId.trim(),
+      offerteBronVersieNummer: versieNummer,
+      offerteVersie: offerteVersieVoorVariantNummer(versieNummer),
+    );
   }
 
   OffertePrijsinstellingenMomentopname? prijsinstellingenMomentopnameVoor(
@@ -449,10 +464,8 @@ class OpmetingProjectTitelhoofd {
         maxLengte: 2,
         standaardWaarde: standaardOfferteVolgnummer,
       ),
-      offerteVersie: _beperkTotCijfers(
+      offerteVersie: _normaliseerOfferteVersie(
         json['offerteVersie']?.toString() ?? '',
-        maxLengte: 2,
-        standaardWaarde: standaardOfferteVersie,
       ),
       offerteOmschrijving: json['offerteOmschrijving']?.toString() ?? '',
       verborgenNietRekenenPositieIds: _leesStringSet(
@@ -899,6 +912,13 @@ String _normaliseerBtwTarief(String? waarde) {
   }
 
   return OpmetingProjectTitelhoofd.standaardBtwTarief;
+}
+
+String _normaliseerOfferteVersie(String waarde) {
+  final cijfers = waarde.replaceAll(RegExp(r'\D'), '');
+  return cijfers.isEmpty
+      ? OpmetingProjectTitelhoofd.standaardOfferteVersie
+      : cijfers;
 }
 
 String _beperkTotCijfers(
