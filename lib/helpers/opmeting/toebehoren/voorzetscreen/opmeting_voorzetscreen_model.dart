@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-KASTVORM-BEPERKING-ALLEEN-MET-ZONNECEL-20260812
 // THIMACO-CONTROLE: VOORZETSCREEN-KASTREGELS-ZONNECEL-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-MODEL-BEDIENING-20260730-2115
 import '../../fotos/opmeting_foto_model.dart';
@@ -209,38 +210,48 @@ class OpmetingVoorzetscreenModel {
   }
 
   List<OpmetingVoorzetscreenKastvorm> get beschikbareKastvormen {
+    // Zonder zonnecel gelden de zonnecelbeperkingen niet.
+    // Recht, Schuin en Rond zijn dan opnieuw normaal selecteerbaar.
+    if (!zonnecel) {
+      return OpmetingVoorzetscreenKastvorm.values;
+    }
+
     if (kastmaat == OpmetingVoorzetscreenKastmaat.mm95) {
       return const <OpmetingVoorzetscreenKastvorm>[
         OpmetingVoorzetscreenKastvorm.recht,
       ];
     }
+
     if (kastmaat == OpmetingVoorzetscreenKastmaat.mm120) {
       return const <OpmetingVoorzetscreenKastvorm>[
         OpmetingVoorzetscreenKastvorm.schuin,
         OpmetingVoorzetscreenKastvorm.rond,
       ];
     }
-    // mm85 blijft alleen bestaan om oudere opgeslagen fiches te kunnen lezen.
+
     return OpmetingVoorzetscreenKastvorm.values;
   }
 
   OpmetingVoorzetscreenModel metKastmaat(
     OpmetingVoorzetscreenKastmaat nieuweMaat,
   ) {
-    final nieuweVorm = switch (nieuweMaat) {
-      OpmetingVoorzetscreenKastmaat.mm95 => OpmetingVoorzetscreenKastvorm.recht,
-      OpmetingVoorzetscreenKastmaat.mm120
-          when kastvorm == OpmetingVoorzetscreenKastvorm.recht =>
-        OpmetingVoorzetscreenKastvorm.schuin,
-      _ => kastvorm,
-    };
-
     final zonnecelToestaan = nieuweMaat != OpmetingVoorzetscreenKastmaat.mm85;
+    final nieuweZonnecel = zonnecelToestaan ? zonnecel : false;
+
+    var nieuweVorm = kastvorm;
+    if (nieuweZonnecel) {
+      if (nieuweMaat == OpmetingVoorzetscreenKastmaat.mm95) {
+        nieuweVorm = OpmetingVoorzetscreenKastvorm.recht;
+      } else if (nieuweMaat == OpmetingVoorzetscreenKastmaat.mm120 &&
+          nieuweVorm == OpmetingVoorzetscreenKastvorm.recht) {
+        nieuweVorm = OpmetingVoorzetscreenKastvorm.schuin;
+      }
+    }
 
     return copyWith(
       kastmaat: nieuweMaat,
       kastvorm: nieuweVorm,
-      zonnecel: zonnecelToestaan ? zonnecel : false,
+      zonnecel: nieuweZonnecel,
       motorType: zonnecelToestaan ? motorType : '',
       motorMerk: zonnecelToestaan ? motorMerk : '',
       motorOmschrijving: zonnecelToestaan ? motorOmschrijving : '',
@@ -286,17 +297,23 @@ class OpmetingVoorzetscreenModel {
     List<OpmetingFoto>? fotos,
   }) {
     final nieuweKastmaat = kastmaat ?? this.kastmaat;
-    var nieuweKastvorm = kastvorm ?? this.kastvorm;
-    if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm95) {
-      nieuweKastvorm = OpmetingVoorzetscreenKastvorm.recht;
-    } else if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm120 &&
-        nieuweKastvorm == OpmetingVoorzetscreenKastvorm.recht) {
-      nieuweKastvorm = OpmetingVoorzetscreenKastvorm.schuin;
-    }
 
     var nieuweZonnecel = zonnecel ?? this.zonnecel;
     if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm85) {
       nieuweZonnecel = false;
+    }
+
+    var nieuweKastvorm = kastvorm ?? this.kastvorm;
+
+    // Kastvormen worden uitsluitend beperkt zolang zonnecel actief is.
+    // Zodra zonnecel uit staat, blijven Recht, Schuin en Rond onaangeroerd.
+    if (nieuweZonnecel) {
+      if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm95) {
+        nieuweKastvorm = OpmetingVoorzetscreenKastvorm.recht;
+      } else if (nieuweKastmaat == OpmetingVoorzetscreenKastmaat.mm120 &&
+          nieuweKastvorm == OpmetingVoorzetscreenKastvorm.recht) {
+        nieuweKastvorm = OpmetingVoorzetscreenKastvorm.schuin;
+      }
     }
 
     return OpmetingVoorzetscreenModel(

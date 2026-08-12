@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-KASTVORM-BEPERKING-ALLEEN-MET-ZONNECEL-20260812
 // THIMACO-CONTROLE: VOORZETSCREEN-85-ALLEEN-ZONDER-ZONNECEL-20260812
 // THIMACO-CONTROLE: VOORZETSCREEN-KAST-ZONNECEL-BEDIENING-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-ALLE-KEUZES-RADIOKNOPPEN-20260730-2155
@@ -290,13 +291,15 @@ class _OpmetingVoorzetscreenRechterkolomState
   Widget _bouwKastvorm() {
     return _SectieKaart(
       titel: 'Kastvorm',
-      onderschrift: switch (widget.model.kastmaat) {
-        OpmetingVoorzetscreenKastmaat.mm95 =>
-          'Bij 95 × 95 mm is alleen de rechte kast beschikbaar.',
-        OpmetingVoorzetscreenKastmaat.mm120 =>
-          'Rechte kast bestaat niet in 120 × 120 mm.',
-        _ => null,
-      },
+      onderschrift: !widget.model.zonnecel
+          ? null
+          : switch (widget.model.kastmaat) {
+              OpmetingVoorzetscreenKastmaat.mm95 =>
+                'Met zonnecel is bij 95 × 95 mm alleen de rechte kast beschikbaar.',
+              OpmetingVoorzetscreenKastmaat.mm120 =>
+                'Met zonnecel is de rechte kast niet beschikbaar bij 120 × 120 mm.',
+              _ => null,
+            },
       children: <Widget>[
         RadioGroup<OpmetingVoorzetscreenKastvorm>(
           groupValue: widget.model.kastvorm,
