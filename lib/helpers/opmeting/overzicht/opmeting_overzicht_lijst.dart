@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETING-OVERZICHT-SCROLLCONTROLLER-20260812
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -34,6 +35,8 @@ typedef OpmetingOverzichtPrijsCorrectieDialoog =
 class OpmetingOverzichtLijst extends StatelessWidget {
   const OpmetingOverzichtLijst({
     super.key,
+    required this.scrollController,
+    required this.scrollStorageKey,
     required this.klantNaam,
     required this.projectTitelhoofd,
     required this.opmetingen,
@@ -61,6 +64,8 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     required this.onBestaandeProjectPrijsregelsBewerken,
   });
 
+  final ScrollController scrollController;
+  final PageStorageKey<String> scrollStorageKey;
   final String klantNaam;
   final OpmetingProjectTitelhoofd projectTitelhoofd;
   final List<OpmetingOverzichtRaamItem> opmetingen;
@@ -141,6 +146,9 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     }
 
     return ListView(
+      key: scrollStorageKey,
+      controller: scrollController,
+      primary: false,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
         OpmetingProjectTitelhoofdKaart(

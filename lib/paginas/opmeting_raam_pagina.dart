@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-OPSLAG-PVC-ALU-20260812
 // THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: OPVULLING-PATROON-TEKST-VERGELIJKING-20260805
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
@@ -228,6 +229,14 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       _zetControllerTekst(
         slagOnderController,
         bestaandeOpmeting.kaderSamenstelling.slagOnderMm,
+      );
+      _zetControllerTekst(
+        binnenTabletController,
+        bestaandeOpmeting.tabletBinnenMm,
+      );
+      _zetControllerTekst(
+        buitenTabletController,
+        bestaandeOpmeting.tabletBuitenMm,
       );
       notitiesController.text = bestaandeOpmeting.notities;
       _fotos = List<OpmetingFoto>.from(bestaandeOpmeting.fotos);
@@ -1711,6 +1720,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       dagmaatHoogteMm: _waarde(dagmaatHoogteController).round(),
       raammaatBreedteMm: raammaatBreedte,
       raammaatHoogteMm: raammaatHoogte,
+      tabletBinnenMm: _waarde(binnenTabletController).round(),
+      tabletBuitenMm: _waarde(buitenTabletController).round(),
       kaderSamenstelling: _kaderSamenstelling,
       beginTekeningData: _overzichtTekeningData,
       actieveTechnischeTekeningen: _actieveTechnischeTekeningenVoorKader(

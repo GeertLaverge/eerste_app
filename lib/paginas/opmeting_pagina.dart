@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETING-OVERZICHT-SCROLLPOSITIE-BEHOUDEN-20260812
 // THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: VERBORGEN-NIET-REKENEN-POSITIES-BLIJVEND-BEWAREN-20260809-2040
 // THIMACO-CONTROLE: OFFERTEVERSIES-CONCEPTEN-WERKVERSIE-20260806
@@ -59,6 +60,11 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   bool _laden = false;
 
   int _veiligePrijsHerberekenGeneratie = 0;
+
+  final ScrollController _overzichtScrollController = ScrollController(
+    keepScrollOffset: true,
+    debugLabel: 'opmeting-overzicht',
+  );
 
   final List<OpmetingOverzichtRaamItem> _raamOpmetingen =
       <OpmetingOverzichtRaamItem>[];
@@ -332,6 +338,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   @override
   void dispose() {
+    _overzichtScrollController.dispose();
     _projectTitelhoofdController.dispose();
     _artikelPrijscorrectieController.dispose();
     _prijsinstellingenController.dispose();
@@ -1194,6 +1201,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   Widget _bouwOverzichtslijst() {
     return OpmetingOverzichtLijst(
+      scrollController: _overzichtScrollController,
+      scrollStorageKey: PageStorageKey<String>(
+        'opmeting-overzicht-${_klantNaam.trim().toLowerCase()}',
+      ),
       klantNaam: _klantNaam,
       projectTitelhoofd: _projectTitelhoofd,
       opmetingen: _raamOpmetingen,

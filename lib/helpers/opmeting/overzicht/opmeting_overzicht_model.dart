@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-JSON-OPSLAG-20260812
 // THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-LABEL-FASE-4-20260803
 // THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-MODEL-FASE-3A-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-OVERZICHT-MODEL-20260801
@@ -362,6 +363,8 @@ class OpmetingOverzichtRaamItem {
     required this.dagmaatHoogteMm,
     required this.raammaatBreedteMm,
     required this.raammaatHoogteMm,
+    this.tabletBinnenMm = 80,
+    this.tabletBuitenMm = 105,
     required this.kaderSamenstelling,
     this.formulierType = 'pvcRaam',
     this.gewijzigdOp = '',
@@ -431,6 +434,8 @@ class OpmetingOverzichtRaamItem {
   final int dagmaatHoogteMm;
   final int raammaatBreedteMm;
   final int raammaatHoogteMm;
+  final int tabletBinnenMm;
+  final int tabletBuitenMm;
 
   final OpmetingKaderSamenstelling kaderSamenstelling;
   final OpmetingOverzichtTekeningData tekeningData;
@@ -648,6 +653,8 @@ class OpmetingOverzichtRaamItem {
     int? dagmaatHoogteMm,
     int? raammaatBreedteMm,
     int? raammaatHoogteMm,
+    int? tabletBinnenMm,
+    int? tabletBuitenMm,
     OpmetingKaderSamenstelling? kaderSamenstelling,
     OpmetingOverzichtTekeningData? tekeningData,
     List<OpmetingOverzichtTechnischeRegel>? technischeRegels,
@@ -688,6 +695,8 @@ class OpmetingOverzichtRaamItem {
       dagmaatHoogteMm: dagmaatHoogteMm ?? this.dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm ?? this.raammaatBreedteMm,
       raammaatHoogteMm: raammaatHoogteMm ?? this.raammaatHoogteMm,
+      tabletBinnenMm: tabletBinnenMm ?? this.tabletBinnenMm,
+      tabletBuitenMm: tabletBuitenMm ?? this.tabletBuitenMm,
       kaderSamenstelling: kaderSamenstelling ?? this.kaderSamenstelling,
       tekeningData: tekeningData ?? this.tekeningData,
       technischeRegels: technischeRegels ?? this.technischeRegels,
@@ -738,6 +747,8 @@ class OpmetingOverzichtRaamItem {
       'dagmaatHoogteMm': dagmaatHoogteMm,
       'raammaatBreedteMm': raammaatBreedteMm,
       'raammaatHoogteMm': raammaatHoogteMm,
+      'tabletBinnenMm': tabletBinnenMm,
+      'tabletBuitenMm': tabletBuitenMm,
       'kaderSamenstelling': kaderSamenstelling.toJson(),
       'tekeningData': tekeningData.toJson(),
       'technischeRegels': technischeRegels
@@ -826,6 +837,14 @@ class OpmetingOverzichtRaamItem {
       dagmaatHoogteMm: dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm,
       raammaatHoogteMm: raammaatHoogteMm,
+      tabletBinnenMm: _leesInt(
+        json['tabletBinnenMm'] ?? json['binnenTabletMm'],
+        standaardWaarde: 80,
+      ),
+      tabletBuitenMm: _leesInt(
+        json['tabletBuitenMm'] ?? json['buitenTabletMm'],
+        standaardWaarde: 105,
+      ),
       kaderSamenstelling: kaderSamenstelling,
       tekeningData: ruweTekeningData is Map
           ? OpmetingOverzichtTekeningData.fromJson(

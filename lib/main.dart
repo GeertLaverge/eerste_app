@@ -1,9 +1,11 @@
+// THIMACO-CONTROLE: NUMERIEK-TOETSENBORD-KLAAR-IOS-20260812
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-INITIALISATIE-20260806
 import 'package:flutter/material.dart';
 
 import 'helpers/adres/postcode_helper.dart';
 import 'helpers/agenda/agenda_melding_service.dart';
 import 'helpers/financien/beveiliging/financiele_kluis_sessie_controller.dart';
+import 'helpers/invoer/numeriek_toetsenbord_klaar_overlay.dart';
 import 'paginas/home_pagina_nieuw.dart';
 
 Future<void> main() async {
@@ -20,9 +22,14 @@ class ThimacoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: HomePaginaNieuw(),
+      builder: (context, child) {
+        return NumeriekToetsenbordKlaarOverlay(
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      home: const HomePaginaNieuw(),
     );
   }
 }

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-85-ALLEEN-ZONDER-ZONNECEL-20260812
 // THIMACO-CONTROLE: VOORZETSCREEN-KAST-ZONNECEL-BEDIENING-20260811
 // THIMACO-CONTROLE: VOORZETSCREEN-ALLE-KEUZES-RADIOKNOPPEN-20260730-2155
 import 'dart:math' as math;
@@ -252,6 +253,9 @@ class _OpmetingVoorzetscreenRechterkolomState
   Widget _bouwKastmaat() {
     return _SectieKaart(
       titel: 'Kastmaat',
+      onderschrift: widget.model.zonnecel
+          ? '85 × 85 mm is niet beschikbaar met zonnecel.'
+          : null,
       children: <Widget>[
         RadioGroup<OpmetingVoorzetscreenKastmaat>(
           groupValue: widget.model.kastmaat,
@@ -265,7 +269,11 @@ class _OpmetingVoorzetscreenRechterkolomState
             spacing: 18,
             runSpacing: 8,
             children: OpmetingVoorzetscreenKastmaat.values
-                .where((maat) => maat != OpmetingVoorzetscreenKastmaat.mm85)
+                .where(
+                  (maat) =>
+                      !widget.model.zonnecel ||
+                      maat != OpmetingVoorzetscreenKastmaat.mm85,
+                )
                 .map((maat) {
                   return _EenvoudigeRadioKeuze<OpmetingVoorzetscreenKastmaat>(
                     waarde: maat,

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-OVERZICHT-BUILDER-20260812
 // THIMACO-CONTROLE: ALLEEN-HOE-UITSCHRIJVEN-LINKS-20260720
 import '../../fotos/opmeting_foto_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
@@ -22,6 +23,8 @@ class OpmetingRaamOverzichtBuilder {
     required int dagmaatHoogteMm,
     required int raammaatBreedteMm,
     required int raammaatHoogteMm,
+    int tabletBinnenMm = 80,
+    int tabletBuitenMm = 105,
     required OpmetingKaderSamenstelling kaderSamenstelling,
     required OpmetingOverzichtTekeningData? beginTekeningData,
     required List<OpmetingRaamTechnischeTekeningInstelling>
@@ -81,6 +84,8 @@ class OpmetingRaamOverzichtBuilder {
       dagmaatHoogteMm: dagmaatHoogteMm,
       raammaatBreedteMm: raammaatBreedteMm,
       raammaatHoogteMm: raammaatHoogteMm,
+      tabletBinnenMm: tabletBinnenMm,
+      tabletBuitenMm: tabletBuitenMm,
       kaderSamenstelling: kaderSamenstelling,
       tekeningData: tekeningData,
       technischeRegels: context.maakTechnischeRegels(),

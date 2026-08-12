@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VASTE-MODELTEKENING-IPAD-ROTATIE-FASE1-20260812
 // THIMACO-CONTROLE: IPAD-ROTATIE-OVERZICHT-SNAPSHOT-NA-SCHAAL-20260727
 // THIMACO-CONTROLE: SCHUIFRAAM-ZIJKADERS-LOKALE-GEOMETRIE-20260726
 // THIMACO-CONTROLE: KADERLOKALE-DATA-ROTATIE-EN-HEROPENEN-20260722
@@ -254,6 +255,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   final OpmetingRaamSchaalController _schaalController =
       OpmetingRaamSchaalController();
 
+  // De tekening blijft tijdens de volledige levensduur van deze fiche in één
+  // vaste bron-/modelgrootte staan. Schermrotatie verandert alleen de
+  // weergaveschaal, nooit de opgeslagen T-stijlen, vleugels of vlakdata.
+  Size? _vasteModelTekenvlakGrootte;
+
   late final OpmetingRaamLegendaMeldingController _legendaMeldingen;
 
   bool get _kanOngedaanMaken {
@@ -477,6 +483,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   void initState() {
     super.initState();
 
+    _initialiseerVasteModelTekenvlakGrootteUitBeginData();
     _laadBeginTekeningData();
     _initialiseerActieveKaderDataNaLaden();
     _verwerkDeurpaneelToewijzingenUitController();
@@ -974,9 +981,9 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
       final enkelKader = samenstelling.kaders.length == 1;
 
-      // Iedere kaderinhoud is lokaal in schermpixels opgeslagen. Bij een
-      // vensterwijziging of iPad-rotatie moet daarom elk kader afzonderlijk
-      // van het oude naar het nieuwe tekenvlak worden omgerekend.
+      // FASE 1: de bron-/modelgrootte blijft vast bij schermrotatie.
+      // Deze herberekening wordt daarom alleen nog gebruikt voor echte
+      // maatwijzigingen van raam/kader, niet voor liggend <-> staand.
       for (final kader in samenstelling.kaders) {
         final kaderId = kader.id;
 
@@ -1302,8 +1309,51 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     return resultaat;
   }
 
+  void _initialiseerVasteModelTekenvlakGrootteUitBeginData() {
+    final data = widget.beginTekeningData;
+
+    if (data == null || !data.heeftTekenvlakGrootte) {
+      return;
+    }
+
+    final grootte = Size(data.tekenvlakBreedtePx, data.tekenvlakHoogtePx);
+
+    if (grootte.width > 10 &&
+        grootte.height > 10 &&
+        grootte.width.isFinite &&
+        grootte.height.isFinite) {
+      _vasteModelTekenvlakGrootte = grootte;
+    }
+  }
+
+  Size _verzekerVasteModelTekenvlakGrootte(Size zichtbareGrootte) {
+    final bestaande = _vasteModelTekenvlakGrootte;
+
+    if (bestaande != null &&
+        bestaande.width > 10 &&
+        bestaande.height > 10 &&
+        bestaande.width.isFinite &&
+        bestaande.height.isFinite) {
+      return bestaande;
+    }
+
+    final geldigeZichtbareGrootte =
+        zichtbareGrootte.width > 10 &&
+        zichtbareGrootte.height > 10 &&
+        zichtbareGrootte.width.isFinite &&
+        zichtbareGrootte.height.isFinite;
+
+    final nieuweGrootte = geldigeZichtbareGrootte
+        ? zichtbareGrootte
+        : const Size(920, 620);
+
+    _vasteModelTekenvlakGrootte = nieuweGrootte;
+    return nieuweGrootte;
+  }
+
   Size? _actueleTekenvlakGrootte() {
-    return _schaalController.actueleTekenvlakGrootte;
+    return _vasteModelTekenvlakGrootte ??
+        _schaalController.actueleTekenvlakGrootte;
   }
 
   OpmetingKaderSamenstelling? get _bruikbareKaderSamenstelling {
@@ -6242,23 +6292,21 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
   }
 
   Widget _bouwTekenvlakInhoud(Size size) {
-    final vorigeTekenvlakGrootte = _actueleTekenvlakGrootte();
-    final tekenvlakGrootteIsGewijzigd =
-        vorigeTekenvlakGrootte != null &&
-        ((vorigeTekenvlakGrootte.width - size.width).abs() > 0.5 ||
-            (vorigeTekenvlakGrootte.height - size.height).abs() > 0.5);
+    final modelGrootte = _verzekerVasteModelTekenvlakGrootte(size);
 
-    _registreerTekenvlakGrootte(size);
-    _synchroniseerSchuifraamStructuur(size);
+    // De schaalcontroller krijgt voortaan altijd dezelfde bron-/modelgrootte.
+    // Daardoor veroorzaakt een iPad-rotatie geen mutatie van de geometrie.
+    _registreerTekenvlakGrootte(modelGrootte);
+    _synchroniseerSchuifraamStructuur(modelGrootte);
 
     _legendaMeldingen.planEersteMeldingen();
 
-    final preview = _previewPunt(size);
+    final preview = _previewPunt(modelGrootte);
 
-    final vulvlakken = _bepaalVulvlakken(size);
+    final vulvlakken = _bepaalVulvlakken(modelGrootte);
 
     final vulvlakkenPerKaderVoorWeergave = _vulvlakkenPerKaderVoorWeergave(
-      size,
+      modelGrootte,
     );
 
     final tStijlenPerKaderVoorWeergave = _tStijlenPerKaderVoorWeergave();
@@ -6277,7 +6325,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         _geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave();
 
     final weergaveStatus = OpmetingRaamTekenvlakWeergaveStatusHelper.bereken(
-      tekenvlakGrootte: size,
+      tekenvlakGrootte: modelGrootte,
       breedteMm: widget.breedteMm,
       hoogteMm: widget.hoogteMm,
       geselecteerdeLijn: _geselecteerdeLijn,
@@ -6289,15 +6337,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       kleinhouten: _kleinhouten,
     );
 
-    // Tijdens de eerste opbouw na een iPad-rotatie bevat `size` al de
-    // nieuwe tekenvlakgrootte, terwijl vleugels en andere kaderinhoud nog in
-    // de oude pixelcoördinaten kunnen staan. Bewaar die gemengde tussenstand
-    // nooit als overzichtsmomentopname. De schaalbewerking roept `setState`
-    // op; bij de daaropvolgende opbouw zijn grootte en coördinaten gelijk.
-    if (!tekenvlakGrootteIsGewijzigd &&
-        _schaalController.huidigeWijziging == null) {
+    // Het overzicht bewaart dezelfde vaste bronmaat als de editor. Een
+    // schermrotatie verandert dus ook de overzichtsbron niet meer.
+    if (_schaalController.huidigeWijziging == null) {
       _meldOverzichtTekeningGewijzigd(
-        tekenvlakGrootte: size,
+        tekenvlakGrootte: modelGrootte,
         vulvlakken: vulvlakken,
         vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
         tStijlenPerKader: tStijlenPerKaderVoorWeergave,
@@ -6306,6 +6350,65 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
       );
     }
+
+    final modelTekening = Stack(
+      fit: StackFit.expand,
+      children: [
+        OpmetingRaamTekenvlakTekenlaag(
+          breedteMm: widget.breedteMm,
+          hoogteMm: widget.hoogteMm,
+          onTapDown: (details) {
+            // GestureDetector zit binnen de geschaalde modeltekening.
+            // Flutter vertaalt de hit-test terug naar deze broncoördinaten.
+            unawaited(_klikTekenvlak(details));
+          },
+          geselecteerdeLijn: _geselecteerdeLijn,
+          previewPunt: preview,
+          tStijlen: _tStijlen,
+          tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+          vleugels: _vleugels,
+          vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+          vulvlakken: vulvlakken,
+          vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+          vullingToewijzingen: _vullingToewijzingen,
+          vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
+          geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
+          geselecteerdeVulvlakIdsPerKader:
+              geselecteerdeVulvlakIdsPerKaderVoorWeergave,
+          kleinhouten: _kleinhouten,
+          kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+          geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
+          geselecteerdeKleinhoutVlakIdsPerKader:
+              geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
+          technischeTekeningen: widget.technischeTekeningen,
+          technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
+          technischeTekeningenPerKaderGroep:
+              widget.technischeTekeningenPerKaderGroep,
+          technischeKaderGroepen: widget.technischeKaderGroepen,
+          geselecteerdeKaderIds: Set<String>.unmodifiable(
+            _geselecteerdeKaderIds,
+          ),
+          kaderSamenstelling: widget.kaderSamenstelling,
+          actiefKaderId: _actiefKaderIdVoorWeergave,
+          schuifraamSamenstelling: widget.schuifraamSamenstelling,
+        ),
+        IgnorePointer(
+          child: CustomPaint(
+            painter: OpmetingDeurpaneelTekenvlakPainter(
+              breedteMm: _effectieveBreedteMm,
+              hoogteMm: _effectieveHoogteMm,
+              vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
+              vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+              kaderSamenstelling: widget.kaderSamenstelling,
+              toewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
+                _deurpaneelToewijzingen,
+              ),
+            ),
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ],
+    );
 
     return OverlayPortal(
       controller: _zwevendeMenus.overlayController,
@@ -6323,62 +6426,16 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
           ],
         );
       },
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          OpmetingRaamTekenvlakTekenlaag(
-            breedteMm: widget.breedteMm,
-            hoogteMm: widget.hoogteMm,
-            onTapDown: (details) {
-              unawaited(_klikTekenvlak(details));
-            },
-            geselecteerdeLijn: _geselecteerdeLijn,
-            previewPunt: preview,
-            tStijlen: _tStijlen,
-            tStijlenPerKader: tStijlenPerKaderVoorWeergave,
-            vleugels: _vleugels,
-            vleugelsPerKader: vleugelsPerKaderVoorWeergave,
-            vulvlakken: vulvlakken,
-            vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
-            vullingToewijzingen: _vullingToewijzingen,
-            vullingToewijzingenPerKader:
-                vullingToewijzingenPerKaderVoorWeergave,
-            geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
-            geselecteerdeVulvlakIdsPerKader:
-                geselecteerdeVulvlakIdsPerKaderVoorWeergave,
-            kleinhouten: _kleinhouten,
-            kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
-            geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
-            geselecteerdeKleinhoutVlakIdsPerKader:
-                geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
-            technischeTekeningen: widget.technischeTekeningen,
-            technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
-            technischeTekeningenPerKaderGroep:
-                widget.technischeTekeningenPerKaderGroep,
-            technischeKaderGroepen: widget.technischeKaderGroepen,
-            geselecteerdeKaderIds: Set<String>.unmodifiable(
-              _geselecteerdeKaderIds,
-            ),
-            kaderSamenstelling: widget.kaderSamenstelling,
-            actiefKaderId: _actiefKaderIdVoorWeergave,
-            schuifraamSamenstelling: widget.schuifraamSamenstelling,
+      child: SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+          child: SizedBox(
+            width: modelGrootte.width,
+            height: modelGrootte.height,
+            child: modelTekening,
           ),
-          IgnorePointer(
-            child: CustomPaint(
-              painter: OpmetingDeurpaneelTekenvlakPainter(
-                breedteMm: _effectieveBreedteMm,
-                hoogteMm: _effectieveHoogteMm,
-                vleugels: List<OpmetingRaamVleugel>.unmodifiable(_vleugels),
-                vleugelsPerKader: vleugelsPerKaderVoorWeergave,
-                kaderSamenstelling: widget.kaderSamenstelling,
-                toewijzingen: List<OpmetingDeurpaneelToewijzing>.unmodifiable(
-                  _deurpaneelToewijzingen,
-                ),
-              ),
-              child: const SizedBox.expand(),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

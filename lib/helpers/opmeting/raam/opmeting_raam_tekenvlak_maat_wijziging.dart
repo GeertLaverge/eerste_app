@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: SCHAAL-COPYWITH-BEHOUD-METADATA-20260812
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -53,9 +54,10 @@ class OpmetingRaamTekenvlakMaatWijziging {
   ///
   /// - de raamhoogte verandert;
   /// - de raambreedte verandert;
-  /// - het tekenvlak groter of kleiner wordt;
-  /// - de iPad van liggend naar staand draait;
-  /// - de iPad van staand naar liggend draait.
+  /// - de werkelijke raam- of kadermaten veranderen.
+  ///
+  /// Een wijziging van alleen de zichtbare schermgrootte wordt vanaf fase 1
+  /// door de weergavelaag geschaald en herschrijft deze geometrie niet meer.
   ///
   /// Alle bestaande ID's worden behouden.
   static OpmetingRaamMaatWijzigingResultaat? pasTekeningAanNieuwBlok({
@@ -228,13 +230,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
         );
       }
 
-      nieuweVleugels.add(
-        OpmetingRaamVleugel(
-          id: oudeVleugel.id,
-          vlak: nieuwVleugelVlak,
-          type: oudeVleugel.type,
-        ),
-      );
+      nieuweVleugels.add(oudeVleugel.copyWith(vlak: nieuwVleugelVlak));
     }
 
     final oudeVleugelWerkvlakken =
@@ -362,9 +358,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
     required Rect oudVlak,
     required Rect nieuwVlak,
   }) {
-    return OpmetingRaamTStijl(
-      id: stijl.id,
-      richting: stijl.richting,
+    return stijl.copyWith(
       start: _schaalPuntTussenVlakken(
         punt: stijl.start,
         oudVlak: oudVlak,
@@ -375,8 +369,6 @@ class OpmetingRaamTekenvlakMaatWijziging {
         oudVlak: oudVlak,
         nieuwVlak: nieuwVlak,
       ),
-      breedteMm: stijl.breedteMm,
-      werkvlakId: stijl.werkvlakId,
     );
   }
 
@@ -720,9 +712,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
     }
 
     final voorlopigeStijlen = oudeStijlen.map((stijl) {
-      return OpmetingRaamTStijl(
-        id: stijl.id,
-        richting: stijl.richting,
+      return stijl.copyWith(
         start: _schaalPuntTussenVlakken(
           punt: stijl.start,
           oudVlak: oudWerkvlak,
@@ -733,8 +723,6 @@ class OpmetingRaamTekenvlakMaatWijziging {
           oudVlak: oudWerkvlak,
           nieuwVlak: nieuwWerkvlak,
         ),
-        breedteMm: stijl.breedteMm,
-        werkvlakId: stijl.werkvlakId,
       );
     }).toList();
 
@@ -780,14 +768,7 @@ class OpmetingRaamTekenvlakMaatWijziging {
       );
 
       definitieveStijlen.add(
-        OpmetingRaamTStijl(
-          id: oudeStijl.id,
-          richting: oudeStijl.richting,
-          start: nieuweStart,
-          einde: nieuweEinde,
-          breedteMm: oudeStijl.breedteMm,
-          werkvlakId: oudeStijl.werkvlakId,
-        ),
+        oudeStijl.copyWith(start: nieuweStart, einde: nieuweEinde),
       );
     }
 
