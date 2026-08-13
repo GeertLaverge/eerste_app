@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: NUMERIEK-INVOERVELD-ALTIJD-ZICHTBAAR-20260813
+// THIMACO-CONTROLE: NUMERIEK-KLAAR-VASTE-TOETSENBORDBALK-20260813
 // THIMACO-CONTROLE: NUMERIEK-TOETSENBORD-KLAAR-IOS-20260812
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -44,10 +46,38 @@ class _NumeriekToetsenbordKlaarOverlayState
 
   void _planVernieuwing() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {});
-      }
+      if (!mounted) return;
+
+      setState(() {});
+
+      // Wacht nog één frame zodat iPadOS de definitieve toetsenbordhoogte en
+      // Flutter de nieuwe beschikbare schermruimte volledig hebben verwerkt.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _zorgDatActiefInvoerveldZichtbaarIs();
+        }
+      });
     });
+  }
+
+  void _zorgDatActiefInvoerveldZichtbaarIs() {
+    final invoerveld = _actiefInvoerveld();
+    if (invoerveld == null) return;
+
+    final toetsenbordHoogte = MediaQuery.viewInsetsOf(context).bottom;
+    if (toetsenbordHoogte <= 0) return;
+
+    final keyboardType = invoerveld.widget.keyboardType;
+    if (!_isToetsenbordZonderKlaarToets(keyboardType)) return;
+
+    // Plaats het actieve invoerveld bewust hoger dan enkel "net zichtbaar".
+    // Daardoor blijft het ook vrij van de vaste Klaar-balk boven het toetsenbord.
+    Scrollable.ensureVisible(
+      invoerveld.context,
+      alignment: 0.35,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   EditableTextState? _actiefInvoerveld() {
@@ -106,32 +136,49 @@ class _NumeriekToetsenbordKlaarOverlayState
 
     final mediaQuery = MediaQuery.of(context);
     final toetsenbordHoogte = mediaQuery.viewInsets.bottom;
-    final veiligeBovenkant = mediaQuery.padding.top;
 
-    final knop = Material(
-      color: _groen,
-      elevation: 5,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: _bevestigEnSluitToetsenbord,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(Icons.check_rounded, color: Colors.white, size: 19),
-              SizedBox(width: 6),
-              Text(
-                'Klaar',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
+    // Toon de balk uitsluitend wanneer het systeemtoetsenbord effectief open is.
+    // Zo kan de actie nooit los bovenaan of ergens zwevend in het scherm staan.
+    if (toetsenbordHoogte <= 0) {
+      return widget.child;
+    }
+
+    final toetsenbordBalk = Material(
+      color: const Color(0xFFF8FAF9),
+      elevation: 6,
+      child: Container(
+        height: 44,
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Color(0xFFE5E7EB)),
+            bottom: BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            const Spacer(),
+            InkWell(
+              onTap: _bevestigEnSluitToetsenbord,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(Icons.check_rounded, color: _groen, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      'Klaar',
+                      style: TextStyle(
+                        color: _groen,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -140,10 +187,12 @@ class _NumeriekToetsenbordKlaarOverlayState
       fit: StackFit.expand,
       children: <Widget>[
         widget.child,
-        if (toetsenbordHoogte > 0)
-          Positioned(right: 14, bottom: toetsenbordHoogte + 8, child: knop)
-        else
-          Positioned(right: 14, top: veiligeBovenkant + 10, child: knop),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: toetsenbordHoogte,
+          child: toetsenbordBalk,
+        ),
       ],
     );
   }

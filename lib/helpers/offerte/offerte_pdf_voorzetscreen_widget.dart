@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VOORZETSCREEN-PDF-RONDING-KAST-ONDERAAN-20260813
 // THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONDERLATONDER-REFERENTIE-HERSTEL-20260731-0900
 // THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONGEBRUIKTE-IMPORT-VERWIJDERD-20260730
 import 'dart:math' as math;
@@ -334,7 +335,7 @@ class OffertePdfVoorzetscreenWidget {
       OpmetingVoorzetscreenKastvorm.schuin =>
         '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijRechts)} V ${n(zijOnder - (zijKast * 0.23))} L ${n(zijRechts - (zijKast * 0.23))} ${n(zijOnder)} H ${n(zijLinks)} Z" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
       OpmetingVoorzetscreenKastvorm.rond =>
-        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijLinks + (zijKast / 2))} Q ${n(zijRechts)} ${n(zijBoven)} ${n(zijRechts)} ${n(zijBoven + (zijKast / 2))} V ${n(zijOnder)} H ${n(zijLinks)} Z" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
+        '<path d="M ${n(zijLinks)} ${n(zijBoven)} H ${n(zijRechts)} V ${n(zijBoven + (zijKast / 2))} Q ${n(zijRechts)} ${n(zijOnder)} ${n(zijLinks + (zijKast / 2))} ${n(zijOnder)} H ${n(zijLinks)} Z" fill="#F8FAFC" stroke="#374151" stroke-width="1.3"/>',
     };
 
     final svg =
