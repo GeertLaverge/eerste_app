@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-VOORZETSCREEN-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: VOORZETSCREEN-PDF-RONDING-KAST-ONDERAAN-20260813
 // THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONDERLATONDER-REFERENTIE-HERSTEL-20260731-0900
 // THIMACO-CONTROLE: VOORZETSCREEN-PDF-ONGEBRUIKTE-IMPORT-VERWIJDERD-20260730
@@ -132,14 +133,19 @@ class OffertePdfVoorzetscreenWidget {
           kortingToestaan: false,
         );
     if (prijsResultaat != null) {
-      for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+      final zichtbareLokalePrijsregels =
+          [
+            ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+            ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+          ].where(
+            (prijsregel) =>
+                !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                  prijsregel,
+                ),
+          );
+
+      for (final prijsregel in zichtbareLokalePrijsregels) {
         if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-          continue;
-        }
-        final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-        final toonAlleenOmschrijving =
-            prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-        if (!toonPrijs && !toonAlleenOmschrijving) {
           continue;
         }
 
@@ -155,7 +161,7 @@ class OffertePdfVoorzetscreenWidget {
           OffertePdfTechnischeRegel(
             titel: omschrijving,
             waarde: '',
-            prijsTekst: toonPrijs
+            prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
                 ? '€ ${prijsregel.totaalExclBtw.toStringAsFixed(2)}'
                 : '',
           ),

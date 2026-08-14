@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP2-LEGACY-BEREKENING-UIT-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP1-LEGACY-UI-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-OPSLAAN-20260813
 // THIMACO-CONTROLE: OUDE-PROJECTPRIJS-TOEVOEGROUTE-UIT-20260813
@@ -413,8 +414,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           alleOpmetingen: basisOpmetingen,
           klantNaam: klantNaam,
           berekenPrijzen: true,
-          tijdelijkeProjectPrijsregels:
-              _projectTitelhoofd.tijdelijkeProjectPrijsregels,
         );
 
     if (!resultaat.gewijzigd) {

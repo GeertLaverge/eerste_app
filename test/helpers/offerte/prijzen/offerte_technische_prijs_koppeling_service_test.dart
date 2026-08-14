@@ -1,4 +1,5 @@
-// THIMACO-CONTROLE: HERSTEL-NIEUWE-BESTANDSNAAM-GEKOPPELDE-TECHNISCHE-PRIJZEN-FASE-5-20260727
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B4A-TEST-NIET-TECHNISCHE-CATEGORIE-NAAR-PRIJS-PER-POSITIE-20260814
+// THIMACO-CONTROLE: TEST-GEKOPPELDE-TECHNISCHE-PRIJZEN-FASE-5-20260727
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_categorie.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_eenheid.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_uitschrijfmodus.dart';
@@ -74,7 +75,7 @@ void main() {
           ),
           _regel(
             id: 'vrije-regel',
-            categorie: OffertePrijsCategorie.vrijPerArtikel,
+            categorie: OffertePrijsCategorie.prijsPerPositie,
             formulierType: 'pvcRaam',
             technischeKeuze: _keuze(
               formulierType: 'pvcRaam',
@@ -195,7 +196,7 @@ void main() {
       );
       final ongeldigeBron = _regel(
         id: 'gedeeld-3',
-        categorie: OffertePrijsCategorie.vrijPerArtikel,
+        categorie: OffertePrijsCategorie.prijsPerPositie,
         formulierType: 'pvcRaam',
         technischeKeuze: _keuze(
           formulierType: 'pvcRaam',
@@ -267,7 +268,7 @@ OffertePrijsprofielModel _profiel({
     formulierType: formulierType,
     formulierNaam: formulierNaam,
     prijsregels: regels,
-    gewijzigdOp: '2026-07-20T07:00:00.000Z',
+    gewijzigdOp: '2026-07-01T00:00:00.000Z',
   );
 }
 
@@ -275,29 +276,18 @@ OffertePrijsregelModel _technischeRegel({
   required String id,
   required String formulierType,
   required String keuzeId,
-  OfferteTechnischeKeuzeRef? technischeKeuze,
-  String omschrijving = 'Technische prijsregel',
   double prijsExclBtw = 10,
-  OffertePrijsEenheid eenheid = OffertePrijsEenheid.vast,
-  OffertePrijsUitschrijfmodus uitschrijfmodus =
-      OffertePrijsUitschrijfmodus.overzichtEnOfferteMetPrijs,
-  bool actief = true,
-  int volgorde = 0,
-  String gewijzigdOp = '2026-07-27T07:00:00.000Z',
+  String gewijzigdOp = '2026-07-27T08:00:00.000Z',
+  OfferteTechnischeKeuzeRef? technischeKeuze,
 }) {
   return _regel(
     id: id,
     categorie: OffertePrijsCategorie.technischeKeuzePerArtikel,
     formulierType: formulierType,
-    omschrijving: omschrijving,
     prijsExclBtw: prijsExclBtw,
-    eenheid: eenheid,
-    uitschrijfmodus: uitschrijfmodus,
     technischeKeuze:
         technischeKeuze ??
         _keuze(formulierType: formulierType, keuzeId: keuzeId),
-    actief: actief,
-    volgorde: volgorde,
     gewijzigdOp: gewijzigdOp,
   );
 }
@@ -306,7 +296,7 @@ OffertePrijsregelModel _regel({
   required String id,
   required OffertePrijsCategorie categorie,
   required String formulierType,
-  String omschrijving = 'Prijsregel',
+  String omschrijving = 'Testprijsregel',
   double prijsExclBtw = 10,
   OffertePrijsEenheid eenheid = OffertePrijsEenheid.vast,
   OffertePrijsUitschrijfmodus uitschrijfmodus =
@@ -314,7 +304,7 @@ OffertePrijsregelModel _regel({
   OfferteTechnischeKeuzeRef? technischeKeuze,
   bool actief = true,
   int volgorde = 0,
-  String gewijzigdOp = '2026-07-27T07:00:00.000Z',
+  String gewijzigdOp = '2026-07-27T08:00:00.000Z',
 }) {
   return OffertePrijsregelModel(
     id: id,
@@ -333,9 +323,9 @@ OffertePrijsregelModel _regel({
 
 OfferteTechnischeKeuzeRef _keuze({
   required String formulierType,
-  required String keuzeId,
   String menuId = 'menu',
   String submenuId = 'submenu',
+  required String keuzeId,
   String keuzeTitel = 'Technische keuze',
 }) {
   return OfferteTechnischeKeuzeRef(

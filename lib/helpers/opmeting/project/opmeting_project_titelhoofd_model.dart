@@ -1,11 +1,10 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-TITELHOOFD-ZONDER-TIJDELIJKE-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-KOPPELING-VERSIENUMMER-20260811
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-EN-VERBORGEN-NIET-REKENEN-20260809-2030
 // THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
 // THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
 import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
-import '../../offerte/prijzen/offerte_prijs_categorie.dart';
-import '../../offerte/prijzen/offerte_prijsregel_model.dart';
 
 class OpmetingProjectTitelhoofd {
   const OpmetingProjectTitelhoofd({
@@ -41,7 +40,6 @@ class OpmetingProjectTitelhoofd {
     this.verborgenNietRekenenPositieIds = const <String>{},
     this.kortingOmschrijving = standaardKortingOmschrijving,
     this.berekenPrijzen = false,
-    this.tijdelijkeProjectPrijsregels = const <OffertePrijsregelModel>[],
     this.offertePrijsinstellingenMomentopnames =
         const <String, OffertePrijsinstellingenMomentopname>{},
     this.offerteBronVersieId = '',
@@ -113,7 +111,6 @@ class OpmetingProjectTitelhoofd {
   final Set<String> verborgenNietRekenenPositieIds;
   final String kortingOmschrijving;
   final bool berekenPrijzen;
-  final List<OffertePrijsregelModel> tijdelijkeProjectPrijsregels;
   final Map<String, OffertePrijsinstellingenMomentopname>
   offertePrijsinstellingenMomentopnames;
   final String offerteBronVersieId;
@@ -205,7 +202,6 @@ class OpmetingProjectTitelhoofd {
         kleurAfwijking.trim().isEmpty &&
         offerteOmschrijving.trim().isEmpty &&
         verborgenNietRekenenPositieIds.isEmpty &&
-        tijdelijkeProjectPrijsregels.isEmpty &&
         !berekenPrijzen;
   }
 
@@ -242,7 +238,6 @@ class OpmetingProjectTitelhoofd {
     Set<String>? verborgenNietRekenenPositieIds,
     String? kortingOmschrijving,
     bool? berekenPrijzen,
-    List<OffertePrijsregelModel>? tijdelijkeProjectPrijsregels,
     Map<String, OffertePrijsinstellingenMomentopname>?
     offertePrijsinstellingenMomentopnames,
     String? offerteBronVersieId,
@@ -290,8 +285,6 @@ class OpmetingProjectTitelhoofd {
           verborgenNietRekenenPositieIds ?? this.verborgenNietRekenenPositieIds,
       kortingOmschrijving: kortingOmschrijving ?? this.kortingOmschrijving,
       berekenPrijzen: berekenPrijzen ?? this.berekenPrijzen,
-      tijdelijkeProjectPrijsregels:
-          tijdelijkeProjectPrijsregels ?? this.tijdelijkeProjectPrijsregels,
       offertePrijsinstellingenMomentopnames:
           offertePrijsinstellingenMomentopnames ??
           this.offertePrijsinstellingenMomentopnames,
@@ -386,9 +379,6 @@ class OpmetingProjectTitelhoofd {
       )..sort()),
       'kortingOmschrijving': kortingOmschrijving,
       'berekenPrijzen': berekenPrijzen,
-      'tijdelijkeProjectPrijsregels': tijdelijkeProjectPrijsregels
-          .map((regel) => regel.toJson())
-          .toList(),
       'offertePrijsinstellingenMomentopnames':
           offertePrijsinstellingenMomentopnames.map(
             (formulierType, momentopname) =>
@@ -475,9 +465,6 @@ class OpmetingProjectTitelhoofd {
         json['kortingOmschrijving']?.toString(),
       ),
       berekenPrijzen: _leesBool(json['berekenPrijzen'], standaardWaarde: false),
-      tijdelijkeProjectPrijsregels: _leesTijdelijkeProjectPrijsregels(
-        json['tijdelijkeProjectPrijsregels'],
-      ),
       offertePrijsinstellingenMomentopnames:
           _leesPrijsinstellingenMomentopnames(
             json['offertePrijsinstellingenMomentopnames'],
@@ -824,32 +811,6 @@ bool _leesBool(Object? waarde, {required bool standaardWaarde}) {
   }
 
   return standaardWaarde;
-}
-
-List<OffertePrijsregelModel> _leesTijdelijkeProjectPrijsregels(Object? waarde) {
-  if (waarde is! List) {
-    return const <OffertePrijsregelModel>[];
-  }
-
-  final resultaat = <OffertePrijsregelModel>[];
-  for (final item in waarde.whereType<Map>()) {
-    try {
-      final regel = OffertePrijsregelModel.fromJson(
-        Map<String, dynamic>.from(item),
-      );
-      if (regel.isGeldig &&
-          regel.categorie == OffertePrijsCategorie.alleArtikelen) {
-        resultaat.add(regel);
-      }
-    } catch (_) {
-      // Eén beschadigde tijdelijke regel mag het titelhoofd niet blokkeren.
-    }
-  }
-
-  resultaat.sort(
-    (eerste, tweede) => eerste.volgorde.compareTo(tweede.volgorde),
-  );
-  return List<OffertePrijsregelModel>.unmodifiable(resultaat);
 }
 
 Map<String, OffertePrijsinstellingenMomentopname>

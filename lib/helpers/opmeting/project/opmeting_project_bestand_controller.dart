@@ -183,8 +183,6 @@ class OpmetingProjectBestandController {
             klantNaam: actieveKlantNaam,
             berekenPrijzen: true,
             prijsprofielen: profielenVoorBerekening,
-            tijdelijkeProjectPrijsregels:
-                titelhoofd.tijdelijkeProjectPrijsregels,
             forceerPrijsinstellingen:
                 forceerPrijsinstellingen ||
                 (prijsinstellingenGewijzigd && huidigeInstellingenToepassen),

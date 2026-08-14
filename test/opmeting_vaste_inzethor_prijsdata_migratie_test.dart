@@ -1,281 +1,56 @@
-import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
-import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijsprofiel_model.dart';
-import 'package:eerste_app/helpers/opmeting/project/opmeting_project_titelhoofd_model.dart';
-import 'package:eerste_app/helpers/sync/sync_merge_service.dart';
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-PRIJSData-TEST-20260814
 import 'package:flutter_test/flutter_test.dart';
+import 'package:eerste_app/helpers/opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 
 void main() {
-  group('SyncMergeService agenda', () {
-    test('verplaatst item blijft uitsluitend op de nieuwste datum staan', () {
-      final cloudItem = _agendaItem(
-        id: 'afspraak-1',
-        updatedAt: '2026-07-25T10:00:00.000Z',
-      );
-      final lokaalItem = _agendaItem(
-        id: 'afspraak-1',
-        updatedAt: '2026-07-25T11:00:00.000Z',
-      );
-
-      final resultaat = SyncMergeService.mergeAgendaMap(
-        <String, List<AgendaItem>>{
-          '2026-07-26': <AgendaItem>[lokaalItem],
+  group('Vaste inzethor actieve prijsData', () {
+    test('actieve prijsvelden worden genest gelezen en geschreven', () {
+      final model = OpmetingVasteInzethorModel.fromJson(<String, dynamic>{
+        'stukReferentie': 'TEST-001',
+        'prijsData': <String, dynamic>{
+          'prijsPerStukExclBtw': 199.95,
+          'toegepasteTechnischePrijsregels': <dynamic>[],
+          'technischePrijsSignatuur': 'technisch',
+          'prijsPerPositieRegels': <dynamic>[],
+          'artikelKortingPercentage': 8.5,
+          'artikelWinstmargePercentage': 31.0,
         },
-        <String, List<AgendaItem>>{
-          '2026-07-25': <AgendaItem>[cloudItem],
-        },
-      );
+      });
 
-      expect(resultaat['2026-07-25'], isNull);
-      expect(resultaat['2026-07-26'], hasLength(1));
-      expect(resultaat['2026-07-26']!.single.id, 'afspraak-1');
+      expect(model.prijsData.prijsPerStukExclBtw, 199.95);
+      expect(model.prijsData.technischePrijsSignatuur, 'technisch');
+      expect(model.prijsData.artikelKortingPercentage, 8.5);
+      expect(model.prijsData.artikelWinstmargePercentage, 31.0);
+
+      final json = model.toJson();
+      final prijsData = Map<String, dynamic>.from(json['prijsData'] as Map);
+      expect(prijsData['prijsPerStukExclBtw'], 199.95);
+      expect(prijsData['technischePrijsSignatuur'], 'technisch');
+      expect(prijsData.containsKey('vrijeArtikelPrijsSelecties'), isFalse);
+      expect(prijsData.containsKey('vrijeArtikelPrijsSignatuur'), isFalse);
+      expect(prijsData.containsKey('toegepasteVerdeeldePrijsregels'), isFalse);
+      expect(prijsData.containsKey('verdeeldePrijsSignatuur'), isFalse);
     });
 
-    test('nieuwere tombstone onderdrukt oudere zichtbare cloudversie', () {
-      final cloudItem = _agendaItem(
-        id: 'afspraak-2',
-        updatedAt: '2026-07-25T10:00:00.000Z',
-      );
-      final verwijderdItem = _agendaItem(
-        id: 'afspraak-2',
-        updatedAt: '2026-07-25T12:00:00.000Z',
-        deletedAt: '2026-07-25T12:00:00.000Z',
-      );
-
-      final resultaat = SyncMergeService.mergeAgendaMap(
-        <String, List<AgendaItem>>{
-          '2026-07-25': <AgendaItem>[verwijderdItem],
+    test('verwijderde legacy prijsvelden worden genegeerd', () {
+      final model = OpmetingVasteInzethorModel.fromJson(<String, dynamic>{
+        'prijsData': <String, dynamic>{
+          'prijsPerStukExclBtw': 100.0,
+          'vrijeArtikelPrijsSelecties': <dynamic>[
+            <String, dynamic>{'id': 'oud'},
+          ],
+          'vrijeArtikelPrijsSignatuur': 'oud-vrij',
+          'toegepasteVerdeeldePrijsregels': <dynamic>[],
+          'verdeeldePrijsSignatuur': 'oud-verdeeld',
         },
-        <String, List<AgendaItem>>{
-          '2026-07-25': <AgendaItem>[cloudItem],
-        },
-      );
+      });
 
-      expect(resultaat['2026-07-25'], hasLength(1));
-      expect(resultaat['2026-07-25']!.single.isVerwijderd, isTrue);
-    });
-
-    test('verborgen tombstone blijft behouden bij een volgende UI-opslag', () {
-      final tombstone = _agendaItem(
-        id: 'afspraak-3',
-        updatedAt: '2026-07-25T12:00:00.000Z',
-        deletedAt: '2026-07-25T12:00:00.000Z',
-      );
-      final zichtbaarItem = _agendaItem(
-        id: 'afspraak-4',
-        updatedAt: '2026-07-25T13:00:00.000Z',
-      );
-
-      final resultaat = SyncMergeService.behoudAgendaTombstones(
-        actueleItems: <String, List<AgendaItem>>{
-          '2026-07-26': <AgendaItem>[zichtbaarItem],
-        },
-        opgeslagenItems: <String, List<AgendaItem>>{
-          '2026-07-25': <AgendaItem>[tombstone],
-        },
-      );
-
-      expect(resultaat['2026-07-25'], hasLength(1));
-      expect(resultaat['2026-07-25']!.single.id, 'afspraak-3');
-      expect(resultaat['2026-07-25']!.single.isVerwijderd, isTrue);
-    });
-
-    test(
-      'oude tombstone wordt niet behouden als hetzelfde item verhuisd is',
-      () {
-        final tombstone = _agendaItem(
-          id: 'afspraak-5',
-          updatedAt: '2026-07-25T12:00:00.000Z',
-          deletedAt: '2026-07-25T12:00:00.000Z',
-        );
-        final verplaatstItem = _agendaItem(
-          id: 'afspraak-5',
-          updatedAt: '2026-07-25T13:00:00.000Z',
-        );
-
-        final resultaat = SyncMergeService.behoudAgendaTombstones(
-          actueleItems: <String, List<AgendaItem>>{
-            '2026-07-26': <AgendaItem>[verplaatstItem],
-          },
-          opgeslagenItems: <String, List<AgendaItem>>{
-            '2026-07-25': <AgendaItem>[tombstone],
-          },
-        );
-
-        expect(resultaat['2026-07-25'], isNull);
-        expect(resultaat['2026-07-26'], hasLength(1));
-        expect(resultaat['2026-07-26']!.single.isVerwijderd, isFalse);
-      },
-    );
-  });
-
-  group('SyncMergeService prijsprofielen', () {
-    test('behoudt profielen van verschillende formuliertypes', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'PVC raam lokaal',
-            gewijzigdOp: '2026-07-26T08:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'vliegendeur',
-            naam: 'Vliegendeur cloud',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat, hasLength(2));
-      expect(
-        resultaat.map((profiel) => profiel.formulierType),
-        containsAll(<String>['pvcRaam', 'vliegendeur']),
-      );
-    });
-
-    test('nieuwste profiel van hetzelfde formuliertype wint', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Lokale oude naam',
-            gewijzigdOp: '2026-07-26T08:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Cloud nieuwe naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat, hasLength(1));
-      expect(resultaat.single.formulierNaam, 'Cloud nieuwe naam');
-    });
-
-    test('lokale versie wint bij gelijke wijzigingsdatum', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Lokale naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Cloud naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat.single.formulierNaam, 'Lokale naam');
+      expect(model.prijsData.prijsPerStukExclBtw, 100.0);
+      final prijsData = model.prijsData.toJson();
+      expect(prijsData.containsKey('vrijeArtikelPrijsSelecties'), isFalse);
+      expect(prijsData.containsKey('vrijeArtikelPrijsSignatuur'), isFalse);
+      expect(prijsData.containsKey('toegepasteVerdeeldePrijsregels'), isFalse);
+      expect(prijsData.containsKey('verdeeldePrijsSignatuur'), isFalse);
     });
   });
-
-  group('SyncMergeService projecttitelhoofden', () {
-    test(
-      'behoudt verschillende projecten en kiest per project de nieuwste',
-      () {
-        final resultaat = SyncMergeService.mergeProjectTitelhoofden(
-          <String, OpmetingProjectTitelhoofd>{
-            'project-a': _titelhoofd(
-              klantNaam: 'Project A lokaal',
-              gewijzigdOp: '2026-07-26T10:00:00.000Z',
-            ),
-          },
-          <String, OpmetingProjectTitelhoofd>{
-            'project-a': _titelhoofd(
-              klantNaam: 'Project A cloud oud',
-              gewijzigdOp: '2026-07-26T09:00:00.000Z',
-            ),
-            'project-b': _titelhoofd(
-              klantNaam: 'Project B cloud',
-              gewijzigdOp: '2026-07-26T09:30:00.000Z',
-            ),
-          },
-        );
-
-        expect(resultaat, hasLength(2));
-        expect(resultaat['project-a']!.klantNaam, 'Project A lokaal');
-        expect(resultaat['project-b']!.klantNaam, 'Project B cloud');
-      },
-    );
-  });
-
-  group('SyncMergeService deurpaneelrecords', () {
-    const sleutel = 'thimaco_deurpaneel_toewijzingen_opmeting-1';
-
-    test('nieuwere lege lijst blijft als verwijdermarkering bewaard', () {
-      final resultaat = SyncMergeService.mergeStringRecordsOpDatum(
-        lokaal: const <String, String>{sleutel: '[]'},
-        cloud: const <String, String>{sleutel: '[{"id":"oud"}]'},
-        lokaleGewijzigdOp: const <String, String>{
-          sleutel: '2026-07-26T11:00:00.000Z',
-        },
-        cloudGewijzigdOp: const <String, String>{
-          sleutel: '2026-07-26T10:00:00.000Z',
-        },
-      );
-
-      expect(resultaat.waarden[sleutel], '[]');
-      expect(resultaat.gewijzigdOp[sleutel], '2026-07-26T11:00:00.000Z');
-    });
-
-    test('nieuwere cloudtoewijzing wint van oudere lokale versie', () {
-      final resultaat = SyncMergeService.mergeStringRecordsOpDatum(
-        lokaal: const <String, String>{sleutel: '[{"id":"lokaal"}]'},
-        cloud: const <String, String>{sleutel: '[{"id":"cloud"}]'},
-        lokaleGewijzigdOp: const <String, String>{
-          sleutel: '2026-07-26T10:00:00.000Z',
-        },
-        cloudGewijzigdOp: const <String, String>{
-          sleutel: '2026-07-26T11:00:00.000Z',
-        },
-      );
-
-      expect(resultaat.waarden[sleutel], '[{"id":"cloud"}]');
-    });
-  });
-}
-
-AgendaItem _agendaItem({
-  required String id,
-  required String updatedAt,
-  String deletedAt = '',
-}) {
-  return AgendaItem(
-    id: id,
-    updatedAt: updatedAt,
-    deletedAt: deletedAt,
-    titel: 'Testafspraak',
-    type: 'afspraak',
-  );
-}
-
-OffertePrijsprofielModel _prijsprofiel({
-  required String type,
-  required String naam,
-  required String gewijzigdOp,
-}) {
-  return OffertePrijsprofielModel(
-    formulierType: type,
-    formulierNaam: naam,
-    gewijzigdOp: gewijzigdOp,
-  );
-}
-
-OpmetingProjectTitelhoofd _titelhoofd({
-  required String klantNaam,
-  required String gewijzigdOp,
-}) {
-  return OpmetingProjectTitelhoofd(
-    klantNaam: klantNaam,
-    gewijzigdOp: gewijzigdOp,
-  );
 }

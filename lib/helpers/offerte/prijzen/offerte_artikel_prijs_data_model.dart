@@ -1,6 +1,6 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ZONDER-LEGACY-PRIJSVELDEN-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-LOKALE-OPSLAG-20260813
 import 'offerte_toegepaste_prijsregel_model.dart';
-import 'offerte_vrije_prijs_selectie_model.dart';
 
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-TYPES-IN-PRIJS-DATA-MODEL-20260813
 
@@ -262,11 +262,6 @@ class OfferteArtikelPrijsDataModel {
     this.toegepasteTechnischePrijsregels =
         const <OfferteToegepastePrijsregelModel>[],
     this.technischePrijsSignatuur = '',
-    this.toegepasteVerdeeldePrijsregels =
-        const <OfferteToegepastePrijsregelModel>[],
-    this.verdeeldePrijsSignatuur = '',
-    this.vrijeArtikelPrijsSelecties = const <OfferteVrijePrijsSelectieModel>[],
-    this.vrijeArtikelPrijsSignatuur = '',
     this.prijsPerPositieRegels = const <OffertePrijsPerPositieRegelModel>[],
     this.artikelKortingPercentage = 0,
     this.artikelWinstmargePercentage = 0,
@@ -275,14 +270,8 @@ class OfferteArtikelPrijsDataModel {
   final double prijsPerStukExclBtw;
   final List<OfferteToegepastePrijsregelModel> toegepasteTechnischePrijsregels;
   final String technischePrijsSignatuur;
-  final List<OfferteToegepastePrijsregelModel> toegepasteVerdeeldePrijsregels;
-  final String verdeeldePrijsSignatuur;
-  final List<OfferteVrijePrijsSelectieModel> vrijeArtikelPrijsSelecties;
-  final String vrijeArtikelPrijsSignatuur;
 
-  /// Nieuwe lokale prijsregels die uitsluitend bij deze offertepositie horen.
-  /// Een ontbrekende JSON-sleutel wordt als een lege lijst gelezen, zodat oude
-  /// offertes zonder migratie gewoon blijven openen.
+  /// Lokale prijsregels die uitsluitend bij deze offertepositie horen.
   final List<OffertePrijsPerPositieRegelModel> prijsPerPositieRegels;
 
   final double artikelKortingPercentage;
@@ -305,10 +294,6 @@ class OfferteArtikelPrijsDataModel {
     return prijsPerStukExclBtw <= 0.0 &&
         toegepasteTechnischePrijsregels.isEmpty &&
         technischePrijsSignatuur.isEmpty &&
-        toegepasteVerdeeldePrijsregels.isEmpty &&
-        verdeeldePrijsSignatuur.isEmpty &&
-        vrijeArtikelPrijsSelecties.isEmpty &&
-        vrijeArtikelPrijsSignatuur.isEmpty &&
         prijsPerPositieRegels.isEmpty &&
         artikelKortingPercentage <= 0.0 &&
         artikelWinstmargePercentage <= 0.0;
@@ -318,10 +303,6 @@ class OfferteArtikelPrijsDataModel {
     double? prijsPerStukExclBtw,
     List<OfferteToegepastePrijsregelModel>? toegepasteTechnischePrijsregels,
     String? technischePrijsSignatuur,
-    List<OfferteToegepastePrijsregelModel>? toegepasteVerdeeldePrijsregels,
-    String? verdeeldePrijsSignatuur,
-    List<OfferteVrijePrijsSelectieModel>? vrijeArtikelPrijsSelecties,
-    String? vrijeArtikelPrijsSignatuur,
     List<OffertePrijsPerPositieRegelModel>? prijsPerPositieRegels,
     double? artikelKortingPercentage,
     double? artikelWinstmargePercentage,
@@ -333,14 +314,6 @@ class OfferteArtikelPrijsDataModel {
           this.toegepasteTechnischePrijsregels,
       technischePrijsSignatuur:
           technischePrijsSignatuur ?? this.technischePrijsSignatuur,
-      toegepasteVerdeeldePrijsregels:
-          toegepasteVerdeeldePrijsregels ?? this.toegepasteVerdeeldePrijsregels,
-      verdeeldePrijsSignatuur:
-          verdeeldePrijsSignatuur ?? this.verdeeldePrijsSignatuur,
-      vrijeArtikelPrijsSelecties:
-          vrijeArtikelPrijsSelecties ?? this.vrijeArtikelPrijsSelecties,
-      vrijeArtikelPrijsSignatuur:
-          vrijeArtikelPrijsSignatuur ?? this.vrijeArtikelPrijsSignatuur,
       prijsPerPositieRegels:
           prijsPerPositieRegels ?? this.prijsPerPositieRegels,
       artikelKortingPercentage:
@@ -357,14 +330,6 @@ class OfferteArtikelPrijsDataModel {
           .map((regel) => regel.toJson())
           .toList(),
       'technischePrijsSignatuur': technischePrijsSignatuur,
-      'toegepasteVerdeeldePrijsregels': toegepasteVerdeeldePrijsregels
-          .map((regel) => regel.toJson())
-          .toList(),
-      'verdeeldePrijsSignatuur': verdeeldePrijsSignatuur,
-      'vrijeArtikelPrijsSelecties': vrijeArtikelPrijsSelecties
-          .map((selectie) => selectie.toJson())
-          .toList(),
-      'vrijeArtikelPrijsSignatuur': vrijeArtikelPrijsSignatuur,
       'prijsPerPositieRegels': prijsPerPositieRegels
           .map((regel) => regel.toJson())
           .toList(),
@@ -382,18 +347,6 @@ class OfferteArtikelPrijsDataModel {
       ),
       technischePrijsSignatuur:
           json['technischePrijsSignatuur']?.toString() ?? '',
-      toegepasteVerdeeldePrijsregels: _leesLijst(
-        json['toegepasteVerdeeldePrijsregels'],
-        OfferteToegepastePrijsregelModel.fromJson,
-      ),
-      verdeeldePrijsSignatuur:
-          json['verdeeldePrijsSignatuur']?.toString() ?? '',
-      vrijeArtikelPrijsSelecties: _leesLijst(
-        json['vrijeArtikelPrijsSelecties'],
-        OfferteVrijePrijsSelectieModel.fromJson,
-      ),
-      vrijeArtikelPrijsSignatuur:
-          json['vrijeArtikelPrijsSignatuur']?.toString() ?? '',
       prijsPerPositieRegels: _leesLijst(
         json['prijsPerPositieRegels'],
         OffertePrijsPerPositieRegelModel.fromJson,

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-NIEUWE-EENHEDEN-GELIJK-AAN-PRIJS-PER-POSITIE-20260814
 // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-PAGINA-20260813
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -30,11 +31,14 @@ class _OffertePrijsPerArtikelPaginaState
     'L/M',
     'KM',
     'm²',
-    'L',
-    'L en R',
-    'L en B',
-    'B en R',
-    'rondom oppervlakte',
+    '1 x B',
+    '1 x H',
+    '2 x B',
+    '2 x H',
+    '2 x H en 1 x B',
+    '1 x H en 2 x B',
+    'rondom',
+    'oppervlakte',
   ];
 
   List<OffertePrijsPerArtikelTemplateModel> _templates =

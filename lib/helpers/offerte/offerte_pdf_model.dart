@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFMODEL-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-IN-PDF-DATA-20260809-2030
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OFFERTE-PDF-MODEL-20260728
 import 'dart:typed_data';
@@ -101,13 +102,8 @@ class OfferteDocumentData {
     this.projectKleurBuiten = '',
     this.ralKleurToebehoren = '',
     String kortingOmschrijving = 'Korting',
-    List<OfferteToegepastePrijsregelModel> projectPrijsregels =
-        const <OfferteToegepastePrijsregelModel>[],
     Map<String, Uint8List> pvcRaamTekeningen = const <String, Uint8List>{},
-  }) : projectPrijsregels = List<OfferteToegepastePrijsregelModel>.unmodifiable(
-         projectPrijsregels,
-       ),
-       pvcRaamTekeningen = Map<String, Uint8List>.unmodifiable(
+  }) : pvcRaamTekeningen = Map<String, Uint8List>.unmodifiable(
          pvcRaamTekeningen,
        ),
        kortingOmschrijving = kortingOmschrijving.trim().isEmpty
@@ -124,7 +120,6 @@ class OfferteDocumentData {
   final String projectKleurBuiten;
   final String ralKleurToebehoren;
   final List<OpmetingOverzichtRaamItem> posities;
-  final List<OfferteToegepastePrijsregelModel> projectPrijsregels;
   final Map<String, Uint8List> pvcRaamTekeningen;
 
   Uint8List? pvcRaamTekeningVoor(OpmetingOverzichtRaamItem positie) {
@@ -445,54 +440,6 @@ class OfferteDocumentData {
   bool get heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte =>
       algemeneArtikelPrijsregelsInbegrepenInOfferte.isNotEmpty;
 
-  List<OfferteToegepastePrijsregelModel> get projectPrijsregelsVoorOfferte {
-    return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      projectPrijsregels.where(
-        (regel) => regel.isGeldig && regel.teltMeeInOfferteTotaal,
-      ),
-    );
-  }
-
-  List<OfferteToegepastePrijsregelModel>
-  get afzonderlijkeProjectPrijsregelsVoorOfferte {
-    return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      projectPrijsregelsVoorOfferte.where(
-        (regel) => regel.toonAfzonderlijkePrijsOpOfferte,
-      ),
-    );
-  }
-
-  List<OfferteToegepastePrijsregelModel>
-  get projectOmschrijvingZonderPrijsRegelsVoorOfferte {
-    return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      projectPrijsregelsVoorOfferte.where(
-        (regel) => regel.toonOmschrijvingZonderPrijsOpOfferte,
-      ),
-    );
-  }
-
-  List<OfferteToegepastePrijsregelModel> get projectOptiePrijsregels {
-    return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      projectPrijsregels.where((regel) => regel.toonAlsOptieOpOfferte),
-    );
-  }
-
-  bool get heeftAfzonderlijkeProjectPrijsregels {
-    return afzonderlijkeProjectPrijsregelsVoorOfferte.isNotEmpty;
-  }
-
-  bool get heeftZichtbareProjectPrijsregels {
-    return afzonderlijkeProjectPrijsregelsVoorOfferte.isNotEmpty ||
-        projectOmschrijvingZonderPrijsRegelsVoorOfferte.isNotEmpty ||
-        heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte;
-  }
-
-  double get projectPrijsregelsTotaalExclBtw {
-    return _som(
-      projectPrijsregelsVoorOfferte.map((regel) => regel.totaalExclBtw),
-    );
-  }
-
   bool get btwIsVerlegd => btwTarief.trim().toLowerCase() == 'btw verlegd';
 
   double get btwPercentage {
@@ -523,9 +470,7 @@ class OfferteDocumentData {
   }
 
   double get totaalVoorKortingExclBtw {
-    return _rondBedragAf(
-      artikelTotaalVoorKortingExclBtw + projectPrijsregelsTotaalExclBtw,
-    );
+    return _rondBedragAf(artikelTotaalVoorKortingExclBtw);
   }
 
   double get totaalExclusiefBtw {
@@ -538,21 +483,14 @@ class OfferteDocumentData {
       _rondBedragAf(totaalExclusiefBtw + btwBedrag);
 
   List<OffertePrijsOptieRegel> get lossePrijsOpties {
-    return List<OffertePrijsOptieRegel>.unmodifiable(<OffertePrijsOptieRegel>[
-      ...projectOptiePrijsregels.map(
-        (regel) => OffertePrijsOptieRegel(
-          omschrijving:
-              OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(regel),
-          bedragExclBtw: regel.totaalExclBtw,
-        ),
-      ),
-      ...algemeneArtikelPrijsopties.map(
+    return List<OffertePrijsOptieRegel>.unmodifiable(
+      algemeneArtikelPrijsopties.map(
         (regel) => OffertePrijsOptieRegel(
           omschrijving: regel.omschrijving,
           bedragExclBtw: regel.totaalExclBtw,
         ),
       ),
-    ]);
+    );
   }
 
   bool get heeftLossePrijsOpties => lossePrijsOpties.isNotEmpty;

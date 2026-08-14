@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-INZETHOR-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: VASTE-INZETHOR-PDF-TOTAAL-UNIFORM-20260811
 // THIMACO-CONTROLE: VASTE-INZETHOR-PDF-GAAS-EN-LABELS-20260723
 import 'dart:math' as math;
@@ -324,33 +325,28 @@ class OffertePdfInzethorWidget {
           model,
           kortingToestaan: false,
         );
-    _voegVrijeArtikelPrijsregelsToe(
+    _voegPrijsPerPositieRegelsToe(
       resultaat: resultaat,
-      prijsregels: prijsResultaat.vrijeArtikelPrijsregels,
+      prijsregels:
+          [
+            ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+            ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+          ].where(
+            (prijsregel) =>
+                !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                  prijsregel,
+                ),
+          ),
     );
 
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
   }
 
-  static void _voegVrijeArtikelPrijsregelsToe({
+  static void _voegPrijsPerPositieRegelsToe({
     required List<OffertePdfTechnischeRegel> resultaat,
     required Iterable<OfferteToegepastePrijsregelModel> prijsregels,
   }) {
     for (final prijsregel in prijsregels) {
-      if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
-        continue;
-      }
-      if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-        continue;
-      }
-
-      final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-      final toonAlleenOmschrijving =
-          prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-      if (!toonPrijs && !toonAlleenOmschrijving) {
-        continue;
-      }
-
       final omschrijving =
           OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
             prijsregel,
@@ -363,7 +359,7 @@ class OffertePdfInzethorWidget {
         OffertePdfTechnischeRegel(
           titel: omschrijving,
           waarde: '',
-          prijsTekst: toonPrijs
+          prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
               ? '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}'
               : '',
         ),

@@ -1,5 +1,5 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5A-ALGEMEEN-ZONDER-LEGACY-STUBS-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-ALGEMEEN-BEREKENING-20260813
-// THIMACO-CONTROLE: PROJECTREGELS-NIET-IN-POSITIEPRIJS-20260725
 import 'dart:convert';
 
 import '../../opmeting/raam/opmeting_raam_keuzemenu_model.dart';
@@ -11,20 +11,14 @@ import 'offerte_prijsprofiel_model.dart';
 import 'offerte_prijsregel_model.dart';
 import 'offerte_technische_keuze_resolver.dart';
 import 'offerte_toegepaste_prijsregel_model.dart';
-import 'offerte_vrije_prijs_selectie_model.dart';
 
-/// Prijsberekening voor algemene opmeetartikelen zoals PVC ramen.
+/// Centrale berekening voor de actieve prijsarchitectuur.
 ///
-/// De rekenregels zijn bewust identiek aan de bestaande inzethorberekening:
-/// winstmarge en korting worden alleen op de prijs per stuk toegepast. Andere
-/// prijsregels en verdeelde kosten blijven daar buiten.
+/// Alleen prijs per stuk, technische prijsregels, lokale prijs-per-positieregels,
+/// artikelwinstmarge en artikelkorting worden nog verwerkt. De oude vrije-
+/// artikel- en projectprijsopslag is definitief uit het prijsmodel verwijderd.
 class OfferteAlgemeenArtikelPrijsService {
   const OfferteAlgemeenArtikelPrijsService._();
-
-  static const String _tijdelijkeVrijePrijsPrefix = 'tijdelijk_vrij_';
-  static const String _toegepasteProjectPrijsPrefix = 'toegepast_project_';
-  static const String _oudeAutomatischeProjectPrijsPrefix =
-      'automatisch_alleArtikelen_';
 
   static bool moetTechnischeMomentopnameBijwerken({
     required OfferteArtikelPrijsDataModel prijsData,
@@ -35,10 +29,7 @@ class OfferteAlgemeenArtikelPrijsService {
     required int hoogteMm,
     bool forceer = false,
   }) {
-    if (forceer) {
-      return true;
-    }
-
+    if (forceer) return true;
     return prijsData.technischePrijsSignatuur !=
         _maakTechnischePrijsSignatuur(
           profiel: profiel,
@@ -48,10 +39,6 @@ class OfferteAlgemeenArtikelPrijsService {
         );
   }
 
-  /// Past iedere actieve technische prijsregel één keer toe wanneer de
-  /// gekoppelde keuze ergens in deze volledige PVC-raampositie geselecteerd
-  /// is. Een keuze die op meerdere kaders voorkomt, verdubbelt de prijsregel
-  /// dus niet: de categorie is bewust "per artikel".
   static OfferteArtikelPrijsDataModel maakTechnischeMomentopname({
     required OfferteArtikelPrijsDataModel prijsData,
     required OffertePrijsprofielModel profiel,
@@ -65,15 +52,11 @@ class OfferteAlgemeenArtikelPrijsService {
 
     for (final prijsregel in _geldigeTechnischeRegels(profiel)) {
       final technischeKeuze = prijsregel.technischeKeuze;
-      if (technischeKeuze == null || technischeKeuze.isLeeg) {
-        continue;
-      }
-
-      final isGeselecteerd = OfferteTechnischeKeuzeResolver.isGeselecteerd(
+      if (technischeKeuze == null || technischeKeuze.isLeeg) continue;
+      if (!OfferteTechnischeKeuzeResolver.isGeselecteerd(
         keuze: technischeKeuze,
         keuzeSelectiesPerKader: keuzeSelectiesPerKader,
-      );
-      if (!isGeselecteerd) {
+      )) {
         continue;
       }
 
@@ -84,7 +67,6 @@ class OfferteAlgemeenArtikelPrijsService {
         aantal: 1,
       );
       final totaal = _rondBedragAf(hoeveelheid * prijsregel.prijsExclBtw);
-
       toegepasteRegels.add(
         OfferteToegepastePrijsregelModel(
           bronPrijsregelId: prijsregel.id,
@@ -113,289 +95,6 @@ class OfferteAlgemeenArtikelPrijsService {
     );
   }
 
-  static bool moetVrijeArtikelMomentopnameBijwerken({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required OffertePrijsprofielModel profiel,
-    String? artikelSignatuur,
-    bool forceer = false,
-  }) {
-    if (forceer) return true;
-
-    return prijsData.vrijeArtikelPrijsSignatuur !=
-        _maakVrijeArtikelPrijsSignatuur(
-          profiel,
-          artikelSignatuur: artikelSignatuur,
-        );
-  }
-
-  /// Bouwt de automatische vrije prijsregels per artikel opnieuw op.
-  ///
-  /// Regels uit de categorie "Alle artikelen" horen bewust niet in de
-  /// positieprijs. Niet-verdeelde projectregels worden projectbreed berekend
-  /// en onderaan getoond als "Bijkomende werken/materiaal". Alleen de
-  /// verdeelde interne kost wordt door de verdeelkostservice over de
-  /// afzonderlijke posities verdeeld.
-  ///
-  /// Eenmalige vrije regels uit het zwevende artikelprijsvenster blijven
-  /// behouden.
-  static OfferteArtikelPrijsDataModel maakVrijeArtikelMomentopname({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required OffertePrijsprofielModel profiel,
-    String? artikelSignatuur,
-  }) {
-    final berekendOp = DateTime.now().toUtc().toIso8601String();
-    final tijdelijkeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              _isTijdelijkeVrijePrijsSelectie(selectie) &&
-              !_isProjectPrijsSelectie(selectie),
-        )
-        .toList(growable: false);
-
-    final tijdelijkePrijsregelIds = tijdelijkeSelecties
-        .map((selectie) => selectie.bronPrijsregelId)
-        .where((id) => id.isNotEmpty)
-        .toSet();
-
-    final automatischeSelecties = _geldigeAutomatischeArtikelRegels(profiel)
-        .where((regel) => !tijdelijkePrijsregelIds.contains(regel.id))
-        .map((regel) {
-          return OfferteVrijePrijsSelectieModel(
-            id: 'automatisch_${regel.categorie.name}_${regel.id}',
-            bronPrijsregelId: regel.id,
-            omschrijving: regel.omschrijving,
-            bedragPerStukExclBtw: regel.prijsExclBtw,
-            eenheid: regel.eenheid,
-            uitschrijfmodus: regel.uitschrijfmodus,
-            bronPrijsPerStukExclBtw: regel.prijsExclBtw,
-            bronGewijzigdOp: regel.gewijzigdOp,
-            geselecteerdOp: berekendOp,
-            actief: true,
-          );
-        })
-        .toList(growable: false);
-
-    return prijsData.copyWith(
-      vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
-        ...automatischeSelecties,
-        ...tijdelijkeSelecties,
-      ],
-      vrijeArtikelPrijsSignatuur: _maakVrijeArtikelPrijsSignatuur(
-        profiel,
-        artikelSignatuur: artikelSignatuur,
-      ),
-    );
-  }
-
-  /// Leest uitsluitend de eenmalige regels terug die op deze positie werden
-  /// opgeslagen. De centrale regels uit Instellingen worden in het zwevende
-  /// venster afzonderlijk ingeladen en daarna met deze regels samengevoegd.
-  static List<OffertePrijsregelModel> tijdelijkeVrijeArtikelPrijsregels(
-    OfferteArtikelPrijsDataModel prijsData, {
-    required String formulierType,
-  }) {
-    final regels = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              _isTijdelijkeVrijePrijsSelectie(selectie) &&
-              !_isProjectPrijsSelectie(selectie) &&
-              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
-        )
-        .map((selectie) {
-          return OffertePrijsregelModel(
-            id: selectie.bronPrijsregelId,
-            categorie: OffertePrijsCategorie.vrijPerArtikel,
-            formulierType: formulierType,
-            omschrijving: selectie.omschrijving,
-            prijsExclBtw: selectie.prijsPerEenheidExclBtw,
-            eenheid: selectie.eenheid,
-            uitschrijfmodus: selectie.uitschrijfmodus,
-            actief: selectie.actief,
-            volgorde: _leesTijdelijkeVolgorde(selectie.id),
-            gewijzigdOp: selectie.bronGewijzigdOp,
-          );
-        })
-        .toList(growable: false);
-
-    regels.sort((eerste, tweede) => eerste.volgorde.compareTo(tweede.volgorde));
-    return List<OffertePrijsregelModel>.unmodifiable(regels);
-  }
-
-  /// Voegt één gekozen prijsregel aanvullend toe aan de vrije
-  /// artikelprijsopslag van een positie.
-  ///
-  /// Alle andere automatische en tijdelijke prijsregels blijven behouden. Als
-  /// dezelfde bronprijsregel al op deze positie staat, wordt alleen die ene
-  /// momentopname vervangen. Het prijsmodel en de JSON-structuur wijzigen niet.
-  static OfferteArtikelPrijsDataModel voegTijdelijkeVrijeArtikelPrijsregelToe({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required OffertePrijsregelModel prijsregel,
-  }) {
-    final regel = prijsregel.copyWith(
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      actief: true,
-    );
-    if (!regel.isGeldig || regel.prijsExclBtw <= 0.0) {
-      return prijsData;
-    }
-
-    final overigeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where((selectie) => selectie.bronPrijsregelId != regel.id)
-        .toList(growable: false);
-    final nu = DateTime.now().toUtc().toIso8601String();
-    final nieuweSelectie = OfferteVrijePrijsSelectieModel(
-      id: '${_tijdelijkeVrijePrijsPrefix}toegepast_${regel.id}',
-      bronPrijsregelId: regel.id,
-      omschrijving: regel.omschrijving,
-      bedragPerStukExclBtw: regel.prijsExclBtw,
-      eenheid: regel.eenheid,
-      uitschrijfmodus: regel.uitschrijfmodus,
-      bronPrijsPerStukExclBtw: regel.prijsExclBtw,
-      bronGewijzigdOp: regel.gewijzigdOp,
-      geselecteerdOp: nu,
-      actief: true,
-    );
-
-    return prijsData.copyWith(
-      vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
-        ...overigeSelecties,
-        nieuweSelectie,
-      ],
-    );
-  }
-
-  /// Maakt het vaste opslag-ID voor één projectbrede prijsregel op één
-  /// doelartikeltype. Daardoor kan dezelfde bronregel veilig op verschillende
-  /// artikeltypes worden toegepast zonder met andere vrije regels samen te
-  /// vallen.
-  static String gekozenProjectPrijsregelId({
-    required String oorspronkelijkPrijsregelId,
-    required String doelFormulierType,
-  }) {
-    final bronId = oorspronkelijkPrijsregelId.trim();
-    if (bronId.isEmpty) return '';
-
-    final formulierSleutel = _normaliseerFormulierType(doelFormulierType);
-    final veiligeFormulierSleutel = formulierSleutel.isEmpty
-        ? 'algemeen'
-        : formulierSleutel;
-
-    return '$_toegepasteProjectPrijsPrefix'
-        '${veiligeFormulierSleutel}_$bronId';
-  }
-
-  /// Controleert of de gekozen projectbrede prijsregel reeds op deze positie
-  /// staat. Zowel het huidige afgeleide ID als het oudere oorspronkelijke
-  /// bron-ID worden herkend.
-  static bool heeftGekozenProjectPrijsregel({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required String oorspronkelijkPrijsregelId,
-    required String doelFormulierType,
-  }) {
-    final bronIds = _gekozenProjectPrijsregelBronIds(
-      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
-      doelFormulierType: doelFormulierType,
-    );
-    if (bronIds.isEmpty) return false;
-
-    return prijsData.vrijeArtikelPrijsSelecties.any((selectie) {
-      return selectie.actief &&
-          selectie.isGeldig &&
-          bronIds.contains(selectie.bronPrijsregelId);
-    });
-  }
-
-  /// Verwijdert uitsluitend de gekozen projectbrede prijsregel van één
-  /// positie. Alle automatische en andere tijdelijke prijsregels blijven
-  /// volledig behouden.
-  static OfferteArtikelPrijsDataModel verwijderGekozenProjectPrijsregel({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required String oorspronkelijkPrijsregelId,
-    required String doelFormulierType,
-  }) {
-    final bronIds = _gekozenProjectPrijsregelBronIds(
-      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
-      doelFormulierType: doelFormulierType,
-    );
-    if (bronIds.isEmpty) return prijsData;
-
-    final overigeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where((selectie) => !bronIds.contains(selectie.bronPrijsregelId))
-        .toList(growable: false);
-    if (overigeSelecties.length ==
-        prijsData.vrijeArtikelPrijsSelecties.length) {
-      return prijsData;
-    }
-
-    return prijsData.copyWith(vrijeArtikelPrijsSelecties: overigeSelecties);
-  }
-
-  /// Voegt uitsluitend de ene prijsregel toe die in het projectbrede
-  /// prijsregelvenster gekozen werd.
-  ///
-  /// De toegepaste regel krijgt een eigen vrije-regel-ID per doelartikeltype.
-  /// Daardoor kan een gelijknamige of bewaarde projectregel niet samenvallen
-  /// met andere regels uit het projectmenu. Een oudere toepassing die nog het
-  /// oorspronkelijke bron-ID gebruikte, wordt bij opnieuw toepassen vervangen.
-  /// Het prijsmodel en de JSON-structuur blijven ongewijzigd.
-  static OfferteArtikelPrijsDataModel voegGekozenProjectPrijsregelToe({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required OffertePrijsregelModel prijsregel,
-    required String doelFormulierType,
-  }) {
-    final oorspronkelijkPrijsregelId = prijsregel.id.trim();
-    final toegepastePrijsregelId = gekozenProjectPrijsregelId(
-      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
-      doelFormulierType: doelFormulierType,
-    );
-
-    final regel = prijsregel.copyWith(
-      id: toegepastePrijsregelId,
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      formulierType: doelFormulierType,
-      actief: true,
-    );
-    if (oorspronkelijkPrijsregelId.isEmpty ||
-        toegepastePrijsregelId.isEmpty ||
-        !regel.isGeldig ||
-        regel.prijsExclBtw <= 0.0) {
-      return prijsData;
-    }
-
-    final teVervangenBronIds = _gekozenProjectPrijsregelBronIds(
-      oorspronkelijkPrijsregelId: oorspronkelijkPrijsregelId,
-      doelFormulierType: doelFormulierType,
-    );
-    final overigeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) => !teVervangenBronIds.contains(selectie.bronPrijsregelId),
-        )
-        .toList(growable: false);
-    final nu = DateTime.now().toUtc().toIso8601String();
-    final nieuweSelectie = OfferteVrijePrijsSelectieModel(
-      id: '${_tijdelijkeVrijePrijsPrefix}toegepast_$toegepastePrijsregelId',
-      bronPrijsregelId: toegepastePrijsregelId,
-      omschrijving: regel.omschrijving,
-      bedragPerStukExclBtw: regel.prijsExclBtw,
-      eenheid: regel.eenheid,
-      uitschrijfmodus: regel.uitschrijfmodus,
-      bronPrijsPerStukExclBtw: regel.prijsExclBtw,
-      bronGewijzigdOp: regel.gewijzigdOp,
-      geselecteerdOp: nu,
-      actief: true,
-    );
-
-    return prijsData.copyWith(
-      vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
-        ...overigeSelecties,
-        nieuweSelectie,
-      ],
-    );
-  }
-
-  /// Berekent vooraf het bedrag dat één prijsregel op één overzichtspositie
-  /// zal toevoegen. Dezelfde eenheidslogica wordt gebruikt als bij de echte
-  /// momentopnameberekening.
   static double berekenPrijsregelTotaalExclBtw({
     required OffertePrijsregelModel prijsregel,
     int aantal = 1,
@@ -407,7 +106,6 @@ class OfferteAlgemeenArtikelPrijsService {
         prijsregel.prijsExclBtw <= 0.0) {
       return 0.0;
     }
-
     final hoeveelheid = _berekenHoeveelheid(
       eenheid: prijsregel.eenheid,
       breedteMm: breedteMm,
@@ -415,71 +113,6 @@ class OfferteAlgemeenArtikelPrijsService {
       aantal: aantal,
     );
     return _rondBedragAf(hoeveelheid * prijsregel.prijsExclBtw);
-  }
-
-  /// Vervangt alleen de eenmalige vrije prijsregels van één positie. De
-  /// automatische regels uit Instellingen blijven bewaard.
-  static OfferteArtikelPrijsDataModel metTijdelijkeVrijeArtikelPrijsregels({
-    required OfferteArtikelPrijsDataModel prijsData,
-    required List<OffertePrijsregelModel> prijsregels,
-  }) {
-    final tijdelijkePrijsregelIds = prijsregels
-        .where(
-          (regel) =>
-              regel.isGeldig &&
-              regel.categorie == OffertePrijsCategorie.vrijPerArtikel,
-        )
-        .map((regel) => regel.id)
-        .where((id) => id.isNotEmpty)
-        .toSet();
-
-    final verdeelkostMarkeringen = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              _isTijdelijkeVrijePrijsSelectie(selectie) &&
-              selectie.uitschrijfmodus.isVerdeeldeInterneKost,
-        )
-        .toList(growable: false);
-    final bestaandeAutomatischeSelecties = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              !_isTijdelijkeVrijePrijsSelectie(selectie) &&
-              !tijdelijkePrijsregelIds.contains(selectie.bronPrijsregelId),
-        )
-        .toList(growable: false);
-    final nu = DateTime.now().toUtc().toIso8601String();
-
-    final tijdelijkeSelecties = <OfferteVrijePrijsSelectieModel>[];
-    for (var index = 0; index < prijsregels.length; index++) {
-      final regel = prijsregels[index];
-      if (!regel.isGeldig ||
-          regel.categorie != OffertePrijsCategorie.vrijPerArtikel) {
-        continue;
-      }
-
-      tijdelijkeSelecties.add(
-        OfferteVrijePrijsSelectieModel(
-          id: '$_tijdelijkeVrijePrijsPrefix${index}_${regel.id}',
-          bronPrijsregelId: regel.id,
-          omschrijving: regel.omschrijving,
-          bedragPerStukExclBtw: regel.prijsExclBtw,
-          eenheid: regel.eenheid,
-          uitschrijfmodus: regel.uitschrijfmodus,
-          bronPrijsPerStukExclBtw: regel.prijsExclBtw,
-          bronGewijzigdOp: regel.gewijzigdOp,
-          geselecteerdOp: nu,
-          actief: regel.actief,
-        ),
-      );
-    }
-
-    return prijsData.copyWith(
-      vrijeArtikelPrijsSelecties: <OfferteVrijePrijsSelectieModel>[
-        ...bestaandeAutomatischeSelecties,
-        ...verdeelkostMarkeringen,
-        ...tijdelijkeSelecties,
-      ],
-    );
   }
 
   static OfferteBerekeningResultaat resultaatUitMomentopname({
@@ -493,53 +126,11 @@ class OfferteAlgemeenArtikelPrijsService {
     final basisTotaal = _rondBedragAf(
       prijsData.prijsPerStukExclBtw * geldigAantal.toDouble(),
     );
-
-    final vrijeArtikelPrijsregels = prijsData.vrijeArtikelPrijsSelecties
-        .where(
-          (selectie) =>
-              selectie.actief &&
-              selectie.isGeldig &&
-              selectie.heeftBedrag &&
-              !_isProjectPrijsSelectie(selectie) &&
-              !selectie.uitschrijfmodus.isVerdeeldeInterneKost,
-        )
-        .map((selectie) {
-          final hoeveelheid = selectie.hoeveelheidVoorMaten(
-            aantal: geldigAantal,
-            breedteMm: breedteMm,
-            hoogteMm: hoogteMm,
-          );
-          final totaal = selectie.totaalExclBtwVoorMaten(
-            aantal: geldigAantal,
-            breedteMm: breedteMm,
-            hoogteMm: hoogteMm,
-          );
-
-          return OfferteToegepastePrijsregelModel(
-            bronPrijsregelId: selectie.bronPrijsregelId,
-            categorie: OffertePrijsCategorie.vrijPerArtikel,
-            omschrijving: selectie.omschrijving,
-            prijsExclBtw: selectie.prijsPerEenheidExclBtw,
-            eenheid: selectie.eenheid,
-            hoeveelheid: hoeveelheid,
-            totaalExclBtw: totaal,
-            uitschrijfmodus: selectie.uitschrijfmodus,
-            bronGewijzigdOp: selectie.bronGewijzigdOp,
-            berekendOp: selectie.geselecteerdOp,
-          );
-        })
-        .where((regel) => regel.isGeldig && regel.totaalExclBtw > 0.0)
-        .toList(growable: false);
-
     return OfferteBerekeningResultaat(
       basisTotaalExclBtw: basisTotaal,
       aantalArtikelen: geldigAantal,
       basisPrijsPerStukExclBtw: prijsData.prijsPerStukExclBtw,
       technischePrijsregels: prijsData.toegepasteTechnischePrijsregels
-          .where((regel) => regel.toonOpOverzicht && regel.isGeldig)
-          .toList(growable: false),
-      vrijeArtikelPrijsregels: vrijeArtikelPrijsregels,
-      verdeeldePrijsregels: prijsData.toegepasteVerdeeldePrijsregels
           .where((regel) => regel.toonOpOverzicht && regel.isGeldig)
           .toList(growable: false),
       prijsPerPositieRegels: prijsData.prijsPerPositieRegels,
@@ -574,34 +165,6 @@ class OfferteAlgemeenArtikelPrijsService {
               );
         })
         .toList(growable: false);
-  }
-
-  static List<OffertePrijsregelModel> _geldigeAutomatischeArtikelRegels(
-    OffertePrijsprofielModel profiel,
-  ) {
-    final regels = profiel
-        .regelsVoorCategorie(OffertePrijsCategorie.vrijPerArtikel)
-        .where((regel) {
-          return regel.actief &&
-              regel.isGeldig &&
-              regel.prijsExclBtw > 0.0 &&
-              _isZelfdeFormulierType(
-                regel.formulierType,
-                profiel.formulierType,
-              );
-        })
-        .toList(growable: false);
-
-    regels.sort((eerste, tweede) {
-      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
-      if (volgorde != 0) return volgorde;
-
-      return eerste.omschrijving.toLowerCase().compareTo(
-        tweede.omschrijving.toLowerCase(),
-      );
-    });
-
-    return List<OffertePrijsregelModel>.unmodifiable(regels);
   }
 
   static String _maakTechnischePrijsSignatuur({
@@ -639,39 +202,6 @@ class OfferteAlgemeenArtikelPrijsService {
     });
   }
 
-  static String _maakVrijeArtikelPrijsSignatuur(
-    OffertePrijsprofielModel profiel, {
-    String? artikelSignatuur,
-  }) {
-    final regels = _geldigeAutomatischeArtikelRegels(profiel)
-        .map(
-          (regel) => <String, Object?>{
-            'id': regel.id,
-            'categorie': regel.categorie.name,
-            'omschrijving': regel.omschrijving,
-            'prijsExclBtw': regel.prijsExclBtw,
-            'eenheid': regel.eenheid.jsonWaarde,
-            'uitschrijfmodus': regel.uitschrijfmodus.jsonWaarde,
-            'actief': regel.actief,
-            'volgorde': regel.volgorde,
-            'gewijzigdOp': regel.gewijzigdOp,
-          },
-        )
-        .toList(growable: false);
-
-    if (artikelSignatuur != null) {
-      return jsonEncode(<String, Object?>{
-        'artikel': artikelSignatuur,
-        'regels': regels,
-      });
-    }
-
-    return jsonEncode(<String, Object?>{
-      'formulierType': profiel.formulierType,
-      'regels': regels,
-    });
-  }
-
   static double _berekenHoeveelheid({
     required OffertePrijsEenheid eenheid,
     required int breedteMm,
@@ -681,7 +211,6 @@ class OfferteAlgemeenArtikelPrijsService {
     final breedteMeter = breedteMm < 0 ? 0.0 : breedteMm / 1000.0;
     final hoogteMeter = hoogteMm < 0 ? 0.0 : hoogteMm / 1000.0;
     final geldigAantal = (aantal < 1 ? 1 : aantal).toDouble();
-
     final hoeveelheidPerStuk = switch (eenheid) {
       OffertePrijsEenheid.vast => 1.0,
       OffertePrijsEenheid.eenBreedte => breedteMeter,
@@ -696,49 +225,7 @@ class OfferteAlgemeenArtikelPrijsService {
       OffertePrijsEenheid.omtrek => (2.0 * breedteMeter) + (2.0 * hoogteMeter),
       OffertePrijsEenheid.oppervlakte => breedteMeter * hoogteMeter,
     };
-
     return _rondHoeveelheidAf(geldigAantal * hoeveelheidPerStuk);
-  }
-
-  static bool _isTijdelijkeVrijePrijsSelectie(
-    OfferteVrijePrijsSelectieModel selectie,
-  ) {
-    return selectie.id.startsWith(_tijdelijkeVrijePrijsPrefix);
-  }
-
-  static bool _isProjectPrijsSelectie(OfferteVrijePrijsSelectieModel selectie) {
-    return _isGekozenProjectPrijsSelectie(selectie) ||
-        selectie.id.startsWith(_oudeAutomatischeProjectPrijsPrefix);
-  }
-
-  static bool _isGekozenProjectPrijsSelectie(
-    OfferteVrijePrijsSelectieModel selectie,
-  ) {
-    return selectie.bronPrijsregelId.startsWith(_toegepasteProjectPrijsPrefix);
-  }
-
-  static int _leesTijdelijkeVolgorde(String id) {
-    if (!id.startsWith(_tijdelijkeVrijePrijsPrefix)) return 0;
-    final rest = id.substring(_tijdelijkeVrijePrijsPrefix.length);
-    final scheiding = rest.indexOf('_');
-    if (scheiding <= 0) return 0;
-    final index = int.tryParse(rest.substring(0, scheiding)) ?? 0;
-    return index * 10;
-  }
-
-  static Set<String> _gekozenProjectPrijsregelBronIds({
-    required String oorspronkelijkPrijsregelId,
-    required String doelFormulierType,
-  }) {
-    final bronId = oorspronkelijkPrijsregelId.trim();
-    if (bronId.isEmpty) return <String>{};
-
-    final toegepastId = gekozenProjectPrijsregelId(
-      oorspronkelijkPrijsregelId: bronId,
-      doelFormulierType: doelFormulierType,
-    );
-
-    return <String>{bronId, if (toegepastId.isNotEmpty) toegepastId};
   }
 
   static bool _isZelfdeFormulierType(String eerste, String tweede) {

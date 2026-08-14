@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-SEKTIONALE-POORT-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-PDF-R-PROFIELEN-MAATVAST-20260729-1313
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-PDF-P-R-FINAAL-20260729-1214
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-PDF-P-R-STOPCONTACT-20260729
@@ -336,9 +337,20 @@ class OffertePdfSektionalePoortWidget {
     required List<OffertePdfTechnischeRegel> resultaat,
     required OfferteBerekeningResultaat prijsResultaat,
   }) {
+    final zichtbareLokalePrijsregels =
+        [
+          ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+          ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+        ].where(
+          (prijsregel) =>
+              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                prijsregel,
+              ),
+        );
+
     for (final prijsregel in <OfferteToegepastePrijsregelModel>[
       ...prijsResultaat.technischePrijsregels,
-      ...prijsResultaat.vrijeArtikelPrijsregels,
+      ...zichtbareLokalePrijsregels,
     ]) {
       if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
         continue;

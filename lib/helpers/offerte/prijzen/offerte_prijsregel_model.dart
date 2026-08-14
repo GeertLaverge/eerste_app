@@ -1,7 +1,7 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-ZONDER-VERDEELPROJECTKOST-20260814
 import 'offerte_prijs_categorie.dart';
 import 'offerte_prijs_eenheid.dart';
 import 'offerte_prijs_uitschrijfmodus.dart';
-import 'offerte_prijs_verdeel_limietmodus.dart';
 import 'offerte_technische_keuze_ref.dart';
 
 class OffertePrijsregelModel {
@@ -14,8 +14,6 @@ class OffertePrijsregelModel {
     required this.eenheid,
     required this.uitschrijfmodus,
     this.technischeKeuze,
-    this.verdeelLimietmodus = OffertePrijsVerdeelLimietmodus.zonderLimiet,
-    double verdeelLimietBedragExclBtw = 0,
     this.actief = true,
     int volgorde = 0,
     String gewijzigdOp = '',
@@ -23,9 +21,6 @@ class OffertePrijsregelModel {
        formulierType = formulierType.trim(),
        omschrijving = omschrijving.trim(),
        prijsExclBtw = _normaliseerBedrag(prijsExclBtw),
-       verdeelLimietBedragExclBtw = _normaliseerBedrag(
-         verdeelLimietBedragExclBtw,
-       ),
        volgorde = volgorde < 0 ? 0 : volgorde,
        gewijzigdOp = gewijzigdOp.trim();
 
@@ -37,35 +32,12 @@ class OffertePrijsregelModel {
   final OffertePrijsEenheid eenheid;
   final OffertePrijsUitschrijfmodus uitschrijfmodus;
   final OfferteTechnischeKeuzeRef? technischeKeuze;
-  final OffertePrijsVerdeelLimietmodus verdeelLimietmodus;
-  final double verdeelLimietBedragExclBtw;
   final bool actief;
   final int volgorde;
   final String gewijzigdOp;
 
-  bool get isVerdeeldeProjectkost {
-    return categorie == OffertePrijsCategorie.alleArtikelen &&
-        uitschrijfmodus.isVerdeeldeInterneKost;
-  }
-
-  bool get heeftVerdeelAankooplimiet {
-    return isVerdeeldeProjectkost &&
-        verdeelLimietmodus == OffertePrijsVerdeelLimietmodus.metAankooplimiet &&
-        verdeelLimietBedragExclBtw > 0;
-  }
-
   bool get isGeldig {
-    if (id.isEmpty || formulierType.isEmpty || omschrijving.isEmpty) {
-      return false;
-    }
-
-    if (isVerdeeldeProjectkost &&
-        verdeelLimietmodus == OffertePrijsVerdeelLimietmodus.metAankooplimiet &&
-        verdeelLimietBedragExclBtw <= 0) {
-      return false;
-    }
-
-    return true;
+    return id.isNotEmpty && formulierType.isNotEmpty && omschrijving.isNotEmpty;
   }
 
   OffertePrijsregelModel copyWith({
@@ -78,8 +50,6 @@ class OffertePrijsregelModel {
     OffertePrijsUitschrijfmodus? uitschrijfmodus,
     OfferteTechnischeKeuzeRef? technischeKeuze,
     bool technischeKeuzeWissen = false,
-    OffertePrijsVerdeelLimietmodus? verdeelLimietmodus,
-    double? verdeelLimietBedragExclBtw,
     bool? actief,
     int? volgorde,
     String? gewijzigdOp,
@@ -95,9 +65,6 @@ class OffertePrijsregelModel {
       technischeKeuze: technischeKeuzeWissen
           ? null
           : technischeKeuze ?? this.technischeKeuze,
-      verdeelLimietmodus: verdeelLimietmodus ?? this.verdeelLimietmodus,
-      verdeelLimietBedragExclBtw:
-          verdeelLimietBedragExclBtw ?? this.verdeelLimietBedragExclBtw,
       actief: actief ?? this.actief,
       volgorde: volgorde ?? this.volgorde,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
@@ -118,8 +85,6 @@ class OffertePrijsregelModel {
       'eenheid': eenheid.jsonWaarde,
       'uitschrijfmodus': uitschrijfmodus.jsonWaarde,
       'technischeKeuze': technischeKeuze?.toJson(),
-      'verdeelLimietmodus': verdeelLimietmodus.jsonWaarde,
-      'verdeelLimietBedragExclBtw': verdeelLimietBedragExclBtw,
       'actief': actief,
       'volgorde': volgorde,
       'gewijzigdOp': gewijzigdOp,
@@ -139,12 +104,6 @@ class OffertePrijsregelModel {
       ),
       technischeKeuze: OfferteTechnischeKeuzeRef.fromJsonWaarde(
         json['technischeKeuze'],
-      ),
-      verdeelLimietmodus: OffertePrijsVerdeelLimietmodus.fromJson(
-        json['verdeelLimietmodus'],
-      ),
-      verdeelLimietBedragExclBtw: _leesBedrag(
-        json['verdeelLimietBedragExclBtw'],
       ),
       actief: _leesBool(json['actief'], standaardWaarde: true),
       volgorde: _leesInt(json['volgorde']),

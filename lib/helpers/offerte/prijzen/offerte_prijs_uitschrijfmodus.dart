@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-ZONDER-VERDEEL-UITSCHRIJFMODUS-20260814
 enum OffertePrijsUitschrijfmodus {
   overzichtEnOfferteMetPrijs(
     jsonWaarde: 'overzichtEnOfferteMetPrijs',
@@ -15,10 +16,6 @@ enum OffertePrijsUitschrijfmodus {
     jsonWaarde: 'invullenEnOfferteZonderPrijs',
     benaming: 'Alleen omschrijving op offerte',
   ),
-  verdelenOverArtikelenAlleenOverzicht(
-    jsonWaarde: 'verdelenOverArtikelenAlleenOverzicht',
-    benaming: 'Verdelen over artikelen — verborgen',
-  ),
   optie(jsonWaarde: 'optie', benaming: 'Optie — niet meetellen');
 
   const OffertePrijsUitschrijfmodus({
@@ -28,11 +25,6 @@ enum OffertePrijsUitschrijfmodus {
 
   final String jsonWaarde;
   final String benaming;
-
-  bool get isVerdeeldeInterneKost {
-    return this ==
-        OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht;
-  }
 
   bool get isOptie {
     return this == OffertePrijsUitschrijfmodus.optie;
@@ -47,7 +39,6 @@ enum OffertePrijsUitschrijfmodus {
       OffertePrijsUitschrijfmodus.invullenEnOfferteZonderPrijs => true,
       OffertePrijsUitschrijfmodus.optie => true,
       OffertePrijsUitschrijfmodus.alleenOverzicht => false,
-      OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht => false,
     };
   }
 
@@ -60,7 +51,6 @@ enum OffertePrijsUitschrijfmodus {
       OffertePrijsUitschrijfmodus.optie => true,
       OffertePrijsUitschrijfmodus.invullenEnOfferteZonderPrijs => false,
       OffertePrijsUitschrijfmodus.alleenOverzicht => false,
-      OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht => false,
     };
   }
 
@@ -87,8 +77,6 @@ enum OffertePrijsUitschrijfmodus {
       OffertePrijsUitschrijfmodus.invullenEnOfferteZonderPrijs =>
         'Alleen omschrijving zichtbaar',
       OffertePrijsUitschrijfmodus.alleenOverzicht => 'Niet zichtbaar',
-      OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht =>
-        'Niet zichtbaar',
       OffertePrijsUitschrijfmodus.optie =>
         'Zichtbaar als optie met afzonderlijke prijs',
     };

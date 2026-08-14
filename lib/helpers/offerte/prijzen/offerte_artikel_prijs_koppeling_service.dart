@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-KOPPELING-ZONDER-LEGACY-PRIJSVELDEN-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-LOKALE-OPSLAG-KOPPELING-20260813
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-ALGEMENE-OPMETING-DOORGEVEN-20260813
 // THIMACO-CONTROLE: BUITENJALOEZIE-EXACT-ZOALS-VOORZETSCREEN-PRIJSKOPPELING-20260803
@@ -455,20 +456,13 @@ class OfferteArtikelPrijsKoppelingService {
     return artikel.offertePrijsData;
   }
 
-  /// Maakt een gewijzigde prijsdata-kopie zonder afhankelijk te zijn van de
-  /// parameters van `OfferteArtikelPrijsDataModel.copyWith`.
-  ///
-  /// Dit houdt de koppeling compatibel met bestaande projectversies waarin
-  /// `copyWith` nog niet alle korting- en winstmargevelden aanbiedt. Het model
-  /// en zijn JSON-structuur zelf worden niet gewijzigd.
+  /// Maakt een gewijzigde prijsdata-kopie voor de actieve prijsvelden.
   static OfferteArtikelPrijsDataModel wijzigPrijsData({
     required OfferteArtikelPrijsDataModel prijsData,
     double? prijsPerStukExclBtw,
     double? artikelKortingPercentage,
     double? artikelWinstmargePercentage,
     List<OffertePrijsPerPositieRegelModel>? prijsPerPositieRegels,
-    List<OfferteToegepastePrijsregelModel>? toegepasteVerdeeldePrijsregels,
-    String? verdeeldePrijsSignatuur,
   }) {
     final json = Map<String, dynamic>.from(prijsData.toJson());
 
@@ -488,16 +482,6 @@ class OfferteArtikelPrijsKoppelingService {
       json['prijsPerPositieRegels'] = prijsPerPositieRegels
           .map((regel) => regel.toJson())
           .toList(growable: false);
-    }
-
-    if (toegepasteVerdeeldePrijsregels != null) {
-      json['toegepasteVerdeeldePrijsregels'] = toegepasteVerdeeldePrijsregels
-          .map((regel) => regel.toJson())
-          .toList(growable: false);
-    }
-
-    if (verdeeldePrijsSignatuur != null) {
-      json['verdeeldePrijsSignatuur'] = verdeeldePrijsSignatuur;
     }
 
     return OfferteArtikelPrijsDataModel.fromJson(json);
@@ -520,8 +504,7 @@ class OfferteArtikelPrijsKoppelingService {
   }
 
   /// Vervangt uitsluitend de lokale prijs-per-positieregels van dit artikel.
-  /// Alle technische prijsregels, bestaande basisprijs, korting en legacy
-  /// prijsselecties blijven onaangeroerd.
+  /// Technische prijsregels, basisprijs, korting en winstmarge blijven behouden.
   static OpmetingOverzichtRaamItem schrijfPrijsPerPositieRegels({
     required OpmetingOverzichtRaamItem artikel,
     required List<OffertePrijsPerPositieRegelModel> prijsregels,
@@ -635,18 +618,12 @@ class OfferteArtikelPrijsKoppelingService {
 
     final algemeneOpmeting = artikel.algemeneOpmetingData;
     if (algemeneOpmeting != null) {
-      // Algemene opmeting beheert vrije prijzen bewust als zichtbare,
-      // verplaatsbare blokken in de fiche. Automatisch opgebouwde vrije-
-      // prijsselecties uit het centrale profiel worden hier daarom niet nog
-      // eens meegerekend; anders zou een gekozen regel dubbel in het totaal
-      // terechtkomen.
+      // Algemene opmeting gebruikt haar eigen zichtbare prijsblokken als basisprijs.
       final actuelePrijsData = artikel.offertePrijsData.copyWith(
         prijsPerStukExclBtw: algemeneOpmeting.prijsTotaalExclBtw,
         toegepasteTechnischePrijsregels:
             const <OfferteToegepastePrijsregelModel>[],
         technischePrijsSignatuur: '',
-        vrijeArtikelPrijsSelecties: const [],
-        vrijeArtikelPrijsSignatuur: '',
       );
       final standaardResultaat =
           OfferteAlgemeenArtikelPrijsService.resultaatUitMomentopname(
@@ -670,8 +647,6 @@ class OfferteArtikelPrijsKoppelingService {
         aantalArtikelen: standaardResultaat.aantalArtikelen,
         basisPrijsPerStukExclBtw: standaardResultaat.basisPrijsPerStukExclBtw,
         technischePrijsregels: standaardResultaat.technischePrijsregels,
-        vrijeArtikelPrijsregels: standaardResultaat.vrijeArtikelPrijsregels,
-        verdeeldePrijsregels: standaardResultaat.verdeeldePrijsregels,
         prijsPerPositieRegels: standaardResultaat.prijsPerPositieRegels,
         winstmargePercentage: winstmargePercentage,
         winstmargeBasisExclBtwOverride: aankoopTotaal,

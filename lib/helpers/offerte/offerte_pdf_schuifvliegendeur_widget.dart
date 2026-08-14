@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-SCHUIFVLIEGENDEUR-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-PDF-FIJN-GAAS-VASTE-STAP-20260728-1215
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-AFZONDERLIJKE-PDF-WIDGET-20260728
 import 'dart:math' as math;
@@ -313,7 +314,7 @@ class OffertePdfSchuifvliegendeurWidget {
 
     final prijsResultaat = _prijsResultaatVoor(positie, kortingToestaan: false);
     if (prijsResultaat != null) {
-      _voegVrijeArtikelPrijsregelsToe(
+      _voegPrijsPerPositieRegelsToe(
         resultaat: resultaat,
         prijsResultaat: prijsResultaat,
       );
@@ -322,25 +323,22 @@ class OffertePdfSchuifvliegendeurWidget {
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
   }
 
-  static void _voegVrijeArtikelPrijsregelsToe({
+  static void _voegPrijsPerPositieRegelsToe({
     required List<OffertePdfTechnischeRegel> resultaat,
     required OfferteBerekeningResultaat prijsResultaat,
   }) {
-    for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
-      if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
-        continue;
-      }
-      if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-        continue;
-      }
+    final zichtbareLokalePrijsregels =
+        [
+          ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+          ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+        ].where(
+          (prijsregel) =>
+              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                prijsregel,
+              ),
+        );
 
-      final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-      final toonAlleenOmschrijving =
-          prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-      if (!toonPrijs && !toonAlleenOmschrijving) {
-        continue;
-      }
-
+    for (final prijsregel in zichtbareLokalePrijsregels) {
       final omschrijving =
           OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
             prijsregel,
@@ -353,7 +351,7 @@ class OffertePdfSchuifvliegendeurWidget {
         OffertePdfTechnischeRegel(
           titel: omschrijving,
           waarde: '',
-          prijsTekst: toonPrijs
+          prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
               ? '€ ${_bedragMetPunt(prijsregel.totaalExclBtw)}'
               : '',
         ),

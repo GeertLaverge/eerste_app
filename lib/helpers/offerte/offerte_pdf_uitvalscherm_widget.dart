@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-UITVALSCHERM-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: UITVALSCHERM-PDF-WIDGET-20260801
 import 'dart:math' as math;
 
@@ -133,14 +134,19 @@ class OffertePdfUitvalschermWidget {
           kortingToestaan: false,
         );
     if (prijsResultaat != null) {
-      for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+      final zichtbareLokalePrijsregels =
+          [
+            ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+            ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+          ].where(
+            (prijsregel) =>
+                !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                  prijsregel,
+                ),
+          );
+
+      for (final prijsregel in zichtbareLokalePrijsregels) {
         if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-          continue;
-        }
-        final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-        final toonAlleenOmschrijving =
-            prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-        if (!toonPrijs && !toonAlleenOmschrijving) {
           continue;
         }
 
@@ -156,7 +162,7 @@ class OffertePdfUitvalschermWidget {
           OffertePdfTechnischeRegel(
             titel: omschrijving,
             waarde: '',
-            prijsTekst: toonPrijs
+            prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
                 ? '€ ${prijsregel.totaalExclBtw.toStringAsFixed(2)}'
                 : '',
           ),

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-VELUX-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: VELUX-PDF-DRAAIRICHTING-EN-GEEN-STUKPRIJS-20260730
 // THIMACO-CONTROLE: VELUX-KLANTOMSCHRIJVING-VERKOOPPRIJS-20260730
 // THIMACO-CONTROLE: VELUX-DAKRAAM-PDF-WIDGET-FASE-3-20260729-2212
@@ -310,7 +311,7 @@ class OffertePdfVeluxDakraamWidget {
         prijsResultaat: prijsResultaat,
         aantal: model.veiligAantal,
       );
-      _voegVrijeArtikelPrijsregelsToe(
+      _voegPrijsPerPositieRegelsToe(
         resultaat: resultaat,
         prijsResultaat: prijsResultaat,
       );
@@ -440,11 +441,22 @@ class OffertePdfVeluxDakraamWidget {
     }
   }
 
-  static void _voegVrijeArtikelPrijsregelsToe({
+  static void _voegPrijsPerPositieRegelsToe({
     required List<OffertePdfTechnischeRegel> resultaat,
     required OfferteBerekeningResultaat prijsResultaat,
   }) {
-    for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+    final zichtbareLokalePrijsregels =
+        [
+          ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+          ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+        ].where(
+          (prijsregel) =>
+              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                prijsregel,
+              ),
+        );
+
+    for (final prijsregel in zichtbareLokalePrijsregels) {
       if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
         continue;
       }

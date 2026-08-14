@@ -1,10 +1,8 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-ANALYZERFIX-ONGEBRUIKTE-VOEGBLOKKENTOE-WEG-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-RECHTERKOLOM-ZONDER-OUDE-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-EN-VRIJE-PRIJS-20260802
 import 'package:flutter/material.dart';
 
-import '../../offerte/prijzen/offerte_prijs_categorie.dart';
-import '../../offerte/prijzen/offerte_prijs_eenheid.dart';
-import '../../offerte/prijzen/offerte_prijsregel_model.dart';
-import '../../../paginas/instellingen/offerte_prijzen/offerte_prijsregel_dialog.dart';
 import 'opmeting_algemene_opmeting_blok_model.dart';
 import 'opmeting_algemene_opmeting_model.dart';
 
@@ -12,15 +10,10 @@ class OpmetingAlgemeneOpmetingRechterkolom extends StatefulWidget {
   const OpmetingAlgemeneOpmetingRechterkolom({
     super.key,
     required this.model,
-    required this.prijsregels,
-    required this.onPrijsregelsBewaren,
     required this.onGewijzigd,
   });
 
   final OpmetingAlgemeneOpmetingModel model;
-  final List<OffertePrijsregelModel> prijsregels;
-  final Future<void> Function(List<OffertePrijsregelModel> prijsregels)
-  onPrijsregelsBewaren;
   final ValueChanged<OpmetingAlgemeneOpmetingModel> onGewijzigd;
 
   @override
@@ -61,26 +54,6 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
     super.dispose();
   }
 
-  List<OffertePrijsregelModel> get _beschikbarePrijsregels {
-    final regels = widget.prijsregels
-        .where(
-          (regel) =>
-              regel.actief &&
-              regel.isGeldig &&
-              regel.categorie == OffertePrijsCategorie.vrijPerArtikel,
-        )
-        .toList(growable: false);
-
-    regels.sort((eerste, tweede) {
-      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
-      if (volgorde != 0) return volgorde;
-      return eerste.omschrijving.toLowerCase().compareTo(
-        tweede.omschrijving.toLowerCase(),
-      );
-    });
-    return regels;
-  }
-
   void _wijzigTitel(String waarde) {
     widget.onGewijzigd(widget.model.copyWith(titel: waarde));
   }
@@ -90,17 +63,6 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
       widget.model.copyWith(
         blokken: List<OpmetingAlgemeneOpmetingBlok>.unmodifiable(
           <OpmetingAlgemeneOpmetingBlok>[...widget.model.blokken, blok],
-        ),
-      ),
-    );
-  }
-
-  void _voegBlokkenToe(List<OpmetingAlgemeneOpmetingBlok> blokken) {
-    if (blokken.isEmpty) return;
-    widget.onGewijzigd(
-      widget.model.copyWith(
-        blokken: List<OpmetingAlgemeneOpmetingBlok>.unmodifiable(
-          <OpmetingAlgemeneOpmetingBlok>[...widget.model.blokken, ...blokken],
         ),
       ),
     );
@@ -191,76 +153,6 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
   }
 
   // ignore: unused_element
-  Future<void> _openVrijePrijsPerArtikel() async {
-    final regels = _beschikbarePrijsregels;
-    final reedsToegevoegd = widget.model.blokken
-        .map((blok) => blok.bronPrijsregelId.trim())
-        .where((id) => id.isNotEmpty)
-        .toSet();
-
-    final resultaat = await showGeneralDialog<_VrijePrijsPerArtikelResultaat>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'Vrije prijs per artikel',
-      barrierColor: Colors.black.withValues(alpha: 0.20),
-      transitionDuration: const Duration(milliseconds: 160),
-      pageBuilder: (dialogContext, animatie, tweedeAnimatie) {
-        return _VrijePrijsPerArtikelDialog(
-          prijsregels: regels,
-          reedsToegevoegdePrijsregelIds: reedsToegevoegd,
-        );
-      },
-      transitionBuilder: (context, animatie, tweedeAnimatie, child) {
-        return FadeTransition(opacity: animatie, child: child);
-      },
-    );
-
-    if (resultaat == null || !mounted) return;
-
-    if (resultaat.bewarenInInstellingen) {
-      try {
-        await widget.onPrijsregelsBewaren(resultaat.allePrijsregels);
-      } catch (fout) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
-            content: Text('Vrije prijsregels bewaren is niet gelukt: $fout'),
-          ),
-        );
-        return;
-      }
-    }
-
-    if (!mounted || resultaat.geselecteerdePrijsregels.isEmpty) return;
-
-    final tijd = DateTime.now().microsecondsSinceEpoch;
-    final blokken = <OpmetingAlgemeneOpmetingBlok>[];
-    for (
-      var index = 0;
-      index < resultaat.geselecteerdePrijsregels.length;
-      index++
-    ) {
-      final regel = resultaat.geselecteerdePrijsregels[index];
-      final eenheid = _mapPrijsEenheid(regel.eenheid);
-      blokken.add(
-        OpmetingAlgemeneOpmetingBlok(
-          id: 'algemene_vrije_prijs_${tijd}_$index',
-          type: OpmetingAlgemeneOpmetingBlokType.prijs,
-          titel: regel.omschrijving.trim(),
-          hoeveelheid: 1,
-          eenheid: eenheid,
-          eenheidsprijsExclBtw: regel.prijsExclBtw,
-          bronPrijsregelId: regel.id,
-          prijsSoort: OpmetingAlgemenePrijsSoort.verkoop,
-          toonOpOfferte: _toonOmschrijvingOpOfferte(regel),
-          toonPrijsOpOfferte: _toonPrijsOpOfferte(regel),
-        ),
-      );
-    }
-    _voegBlokkenToe(blokken);
-  }
-
   Future<void> _bewerkBlok(OpmetingAlgemeneOpmetingBlok blok) async {
     if (blok.isPrijs) {
       await _openTekstvlakMetPrijs(bestaand: blok);
@@ -388,32 +280,6 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
       ),
     );
   }
-
-  static bool _toonOmschrijvingOpOfferte(OffertePrijsregelModel regel) {
-    final waarde = regel.uitschrijfmodus.jsonWaarde;
-    return waarde == 'overzichtEnOfferteMetPrijs' ||
-        waarde == 'invullenEnOfferteMetPrijs' ||
-        waarde == 'invullenEnOfferteZonderPrijs' ||
-        waarde == 'optie';
-  }
-
-  static bool _toonPrijsOpOfferte(OffertePrijsregelModel regel) {
-    final waarde = regel.uitschrijfmodus.jsonWaarde;
-    return waarde == 'overzichtEnOfferteMetPrijs' ||
-        waarde == 'invullenEnOfferteMetPrijs' ||
-        waarde == 'optie';
-  }
-
-  static OpmetingAlgemenePrijsEenheid _mapPrijsEenheid(
-    OffertePrijsEenheid eenheid,
-  ) {
-    return switch (eenheid) {
-      OffertePrijsEenheid.vast => OpmetingAlgemenePrijsEenheid.vastBedrag,
-      OffertePrijsEenheid.oppervlakte =>
-        OpmetingAlgemenePrijsEenheid.vierkanteMeter,
-      _ => OpmetingAlgemenePrijsEenheid.lopendeMeter,
-    };
-  }
 }
 
 class _Actieknop extends StatelessWidget {
@@ -496,7 +362,6 @@ class _ResultaatBlokKaart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final vrijePrijs = blok.bronPrijsregelId.trim().isNotEmpty;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       decoration: BoxDecoration(
@@ -530,7 +395,7 @@ class _ResultaatBlokKaart extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(child: _bouwInhoud(vrijePrijs)),
+          Expanded(child: _bouwInhoud()),
           IconButton(
             tooltip: 'Aanpassen',
             visualDensity: VisualDensity.compact,
@@ -552,7 +417,7 @@ class _ResultaatBlokKaart extends StatelessWidget {
     );
   }
 
-  Widget _bouwInhoud(bool vrijePrijs) {
+  Widget _bouwInhoud() {
     if (!blok.isPrijs) {
       return Padding(
         padding: const EdgeInsets.only(top: 4),
@@ -571,24 +436,6 @@ class _ResultaatBlokKaart extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        if (vrijePrijs) ...<Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'Vrije prijs per artikel',
-              style: TextStyle(
-                color: _groen,
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
-        ],
         Row(
           children: <Widget>[
             Container(
@@ -894,9 +741,7 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
         eenheid: _eenheid,
         eenheidsprijsExclBtw: prijs,
         prijsSoort: _prijsSoort,
-        toonOpOfferte: widget.blok.isVrijePrijsPerArtikel
-            ? widget.blok.toonOpOfferte
-            : true,
+        toonOpOfferte: true,
         toonPrijsOpOfferte: _toonPrijsOpOfferte,
       ),
     );
@@ -904,7 +749,6 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isVrijePrijs = widget.blok.bronPrijsregelId.trim().isNotEmpty;
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
@@ -923,7 +767,7 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
           const SizedBox(width: 11),
           Expanded(
             child: Text(
-              isVrijePrijs ? 'Vrije prijs aanpassen' : 'Tekstvlak met prijs',
+              'Tekstvlak met prijs',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
@@ -936,25 +780,6 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (isVrijePrijs) ...<Widget>[
-                Container(
-                  padding: const EdgeInsets.all(11),
-                  decoration: BoxDecoration(
-                    color: _lichtGroen,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'Deze regel is overgenomen uit Instellingen → Offerteprijzen → Vrije prijzen per artikel.',
-                    style: TextStyle(
-                      color: _groen,
-                      fontSize: 11.5,
-                      height: 1.35,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
               SegmentedButton<OpmetingAlgemenePrijsSoort>(
                 segments: const <ButtonSegment<OpmetingAlgemenePrijsSoort>>[
                   ButtonSegment<OpmetingAlgemenePrijsSoort>(
@@ -1009,7 +834,7 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
               const SizedBox(height: 8),
               TextField(
                 controller: _omschrijvingController,
-                autofocus: !isVrijePrijs,
+                autofocus: true,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: _veldDecoratie(
                   label: 'Omschrijving',
@@ -1239,483 +1064,5 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
   static String _getal(double waarde) {
     if (waarde == waarde.roundToDouble()) return waarde.toInt().toString();
     return waarde.toStringAsFixed(2).replaceAll('.', ',');
-  }
-}
-
-class _VrijePrijsPerArtikelResultaat {
-  const _VrijePrijsPerArtikelResultaat({
-    required this.geselecteerdePrijsregels,
-    required this.allePrijsregels,
-    required this.bewarenInInstellingen,
-  });
-
-  final List<OffertePrijsregelModel> geselecteerdePrijsregels;
-  final List<OffertePrijsregelModel> allePrijsregels;
-  final bool bewarenInInstellingen;
-}
-
-class _VrijePrijsPerArtikelDialog extends StatefulWidget {
-  const _VrijePrijsPerArtikelDialog({
-    required this.prijsregels,
-    required this.reedsToegevoegdePrijsregelIds,
-  });
-
-  final List<OffertePrijsregelModel> prijsregels;
-  final Set<String> reedsToegevoegdePrijsregelIds;
-
-  @override
-  State<_VrijePrijsPerArtikelDialog> createState() =>
-      _VrijePrijsPerArtikelDialogState();
-}
-
-class _VrijePrijsPerArtikelDialogState
-    extends State<_VrijePrijsPerArtikelDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
-
-  final Set<String> _geselecteerdeIds = <String>{};
-  final TextEditingController _zoekController = TextEditingController();
-  late List<OffertePrijsregelModel> _prijsregels;
-  String _zoekterm = '';
-  Offset? _positie;
-
-  @override
-  void initState() {
-    super.initState();
-    _prijsregels = List<OffertePrijsregelModel>.from(widget.prijsregels);
-    _sorteerPrijsregels();
-  }
-
-  @override
-  void dispose() {
-    _zoekController.dispose();
-    super.dispose();
-  }
-
-  List<OffertePrijsregelModel> get _zichtbareRegels {
-    final zoekterm = _zoekterm.trim().toLowerCase();
-    if (zoekterm.isEmpty) return _prijsregels;
-    return _prijsregels
-        .where((regel) => regel.omschrijving.toLowerCase().contains(zoekterm))
-        .toList(growable: false);
-  }
-
-  int get _volgendeVolgorde {
-    if (_prijsregels.isEmpty) return 0;
-    var hoogste = _prijsregels.first.volgorde;
-    for (final regel in _prijsregels.skip(1)) {
-      if (regel.volgorde > hoogste) hoogste = regel.volgorde;
-    }
-    return hoogste + 10;
-  }
-
-  void _sorteerPrijsregels() {
-    _prijsregels.sort((eerste, tweede) {
-      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
-      if (volgorde != 0) return volgorde;
-      return eerste.omschrijving.toLowerCase().compareTo(
-        tweede.omschrijving.toLowerCase(),
-      );
-    });
-  }
-
-  Future<void> _voegNieuwePrijsToe() async {
-    final regel = await toonOffertePrijsregelDialog(
-      context: context,
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      formulierType: 'algemeneOpmeting',
-      volgendeVolgorde: _volgendeVolgorde,
-      bevestigKnopTekst: 'Toevoegen',
-      bevestigKnopIcoon: Icons.add_rounded,
-    );
-
-    if (regel == null || !mounted) return;
-    final genormaliseerd = regel.copyWith(
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      formulierType: 'algemeneOpmeting',
-    );
-
-    setState(() {
-      final index = _prijsregels.indexWhere((item) => item.id == regel.id);
-      if (index >= 0) {
-        _prijsregels[index] = genormaliseerd;
-      } else {
-        _prijsregels.add(genormaliseerd);
-      }
-      _geselecteerdeIds.add(genormaliseerd.id);
-      _sorteerPrijsregels();
-    });
-  }
-
-  Future<void> _bewerkPrijsregel(OffertePrijsregelModel regel) async {
-    final gewijzigd = await toonOffertePrijsregelDialog(
-      context: context,
-      categorie: OffertePrijsCategorie.vrijPerArtikel,
-      formulierType: 'algemeneOpmeting',
-      volgendeVolgorde: regel.volgorde,
-      bestaandePrijsregel: regel,
-      bevestigKnopTekst: 'Aanpassen',
-      bevestigKnopIcoon: Icons.check_rounded,
-    );
-
-    if (gewijzigd == null || !mounted) return;
-    setState(() {
-      final index = _prijsregels.indexWhere((item) => item.id == regel.id);
-      if (index >= 0) {
-        _prijsregels[index] = gewijzigd.copyWith(
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: 'algemeneOpmeting',
-        );
-      }
-      _sorteerPrijsregels();
-    });
-  }
-
-  void _sluitMetResultaat({required bool bewaren}) {
-    final gekozen = _prijsregels
-        .where((regel) => _geselecteerdeIds.contains(regel.id))
-        .toList(growable: false);
-    if (gekozen.isEmpty) return;
-
-    Navigator.pop(
-      context,
-      _VrijePrijsPerArtikelResultaat(
-        geselecteerdePrijsregels: gekozen,
-        allePrijsregels: List<OffertePrijsregelModel>.unmodifiable(
-          _prijsregels,
-        ),
-        bewarenInInstellingen: bewaren,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scherm = MediaQuery.sizeOf(context);
-    final breedte = (scherm.width - 24).clamp(320.0, 760.0).toDouble();
-    final hoogte = (scherm.height - 40).clamp(440.0, 720.0).toDouble();
-    final beginPositie = Offset(
-      ((scherm.width - breedte) / 2).clamp(8.0, scherm.width).toDouble(),
-      ((scherm.height - hoogte) / 2).clamp(8.0, scherm.height).toDouble(),
-    );
-    final positie = _positie ?? beginPositie;
-
-    return Material(
-      type: MaterialType.transparency,
-      child: Stack(
-        children: <Widget>[
-          Positioned(
-            left: positie.dx,
-            top: positie.dy,
-            width: breedte,
-            height: hoogte,
-            child: Material(
-              color: Colors.white,
-              elevation: 22,
-              borderRadius: BorderRadius.circular(18),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: <Widget>[
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanUpdate: (details) {
-                      final huidige = _positie ?? beginPositie;
-                      final maxX = scherm.width - breedte - 8;
-                      final maxY = scherm.height - hoogte - 8;
-                      setState(() {
-                        _positie = Offset(
-                          (huidige.dx + details.delta.dx)
-                              .clamp(8.0, maxX < 8 ? 8.0 : maxX)
-                              .toDouble(),
-                          (huidige.dy + details.delta.dy)
-                              .clamp(8.0, maxY < 8 ? 8.0 : maxY)
-                              .toDouble(),
-                        );
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(16, 11, 8, 11),
-                      color: _lichtGroen,
-                      child: Row(
-                        children: <Widget>[
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.library_add_outlined,
-                              color: _groen,
-                            ),
-                          ),
-                          const SizedBox(width: 11),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  'Vrije prijs per artikel',
-                                  style: TextStyle(
-                                    color: _tekstDonker,
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Kies een bestaande regel of maak hier de eerste vrije prijs.',
-                                  style: TextStyle(
-                                    color: _tekstGrijs,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(
-                            Icons.open_with_rounded,
-                            color: _tekstGrijs,
-                            size: 19,
-                          ),
-                          IconButton(
-                            tooltip: 'Sluiten',
-                            onPressed: () => Navigator.pop(context),
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
-                    child: Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: TextField(
-                            controller: _zoekController,
-                            onChanged: (waarde) =>
-                                setState(() => _zoekterm = waarde),
-                            decoration: InputDecoration(
-                              hintText: 'Zoek een vrije prijsregel',
-                              prefixIcon: const Icon(
-                                Icons.search,
-                                color: _groen,
-                              ),
-                              suffixIcon: _zoekterm.isEmpty
-                                  ? null
-                                  : IconButton(
-                                      onPressed: () {
-                                        _zoekController.clear();
-                                        setState(() => _zoekterm = '');
-                                      },
-                                      icon: const Icon(Icons.close_rounded),
-                                    ),
-                              isDense: true,
-                              filled: true,
-                              fillColor: Colors.white,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: _rand),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: _rand),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(
-                                  color: _groen,
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 9),
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _groen,
-                            minimumSize: const Size(0, 40),
-                          ),
-                          onPressed: _voegNieuwePrijsToe,
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: const Text('Nieuwe prijs'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: _zichtbareRegels.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  const Icon(
-                                    Icons.price_change_outlined,
-                                    color: _groen,
-                                    size: 34,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Nog geen vrije prijsregels.',
-                                    style: TextStyle(
-                                      color: _tekstDonker,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  const Text(
-                                    'Gebruik Nieuwe prijs om de eerste regel toe te voegen.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: _tekstGrijs,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: _groen,
-                                      side: const BorderSide(color: _groen),
-                                    ),
-                                    onPressed: _voegNieuwePrijsToe,
-                                    icon: const Icon(Icons.add_rounded),
-                                    label: const Text('Eerste vrije prijs'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-                            itemCount: _zichtbareRegels.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1, color: _rand),
-                            itemBuilder: (context, index) {
-                              final regel = _zichtbareRegels[index];
-                              final reedsToegevoegd = widget
-                                  .reedsToegevoegdePrijsregelIds
-                                  .contains(regel.id);
-                              final geselecteerd = _geselecteerdeIds.contains(
-                                regel.id,
-                              );
-                              return CheckboxListTile(
-                                value: geselecteerd,
-                                onChanged: reedsToegevoegd
-                                    ? null
-                                    : (waarde) {
-                                        setState(() {
-                                          if (waarde == true) {
-                                            _geselecteerdeIds.add(regel.id);
-                                          } else {
-                                            _geselecteerdeIds.remove(regel.id);
-                                          }
-                                        });
-                                      },
-                                activeColor: _groen,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 4,
-                                  vertical: 2,
-                                ),
-                                secondary: IconButton(
-                                  tooltip: 'Prijsregel aanpassen',
-                                  onPressed: () => _bewerkPrijsregel(regel),
-                                  icon: const Icon(
-                                    Icons.edit_outlined,
-                                    color: _groen,
-                                    size: 19,
-                                  ),
-                                ),
-                                title: Text(
-                                  regel.omschrijving,
-                                  style: TextStyle(
-                                    color: reedsToegevoegd
-                                        ? _tekstGrijs
-                                        : _tekstDonker,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  reedsToegevoegd
-                                      ? 'Reeds toegevoegd aan deze fiche'
-                                      : '${regel.eenheid.benaming} · '
-                                            '€ ${regel.prijsExclBtw.toStringAsFixed(2).replaceAll('.', ',')} excl. btw',
-                                  style: TextStyle(
-                                    color: reedsToegevoegd
-                                        ? _tekstGrijs
-                                        : _groen,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      border: Border(top: BorderSide(color: _rand)),
-                    ),
-                    child: Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        TextButton(
-                          style: TextButton.styleFrom(foregroundColor: _groen),
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Annuleren'),
-                        ),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _groen,
-                            side: const BorderSide(color: _groen),
-                          ),
-                          onPressed: _geselecteerdeIds.isEmpty
-                              ? null
-                              : () => _sluitMetResultaat(bewaren: false),
-                          icon: const Icon(
-                            Icons.playlist_add_rounded,
-                            size: 18,
-                          ),
-                          label: const Text('Toevoegen'),
-                        ),
-                        FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _groen,
-                          ),
-                          onPressed: _geselecteerdeIds.isEmpty
-                              ? null
-                              : () => _sluitMetResultaat(bewaren: true),
-                          icon: const Icon(
-                            Icons.library_add_check_outlined,
-                            size: 18,
-                          ),
-                          label: const Text('Toevoegen en bewaren'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

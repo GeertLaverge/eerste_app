@@ -1,8 +1,8 @@
 // THIMACO-CONTROLE: PRIJSINSTELLINGEN-MOMENTOPNAME-FASE-7-20260727
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5B2-TEST-ZONDER-VERDEELMETA-20260814
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_categorie.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_eenheid.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_uitschrijfmodus.dart';
-import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijs_verdeel_limietmodus.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
 import 'package:eerste_app/helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,8 +77,6 @@ OffertePrijsregelMomentopname _momentopname(
     eenheid: OffertePrijsEenheid.vast,
     uitschrijfmodus: OffertePrijsUitschrijfmodus.overzichtEnOfferteMetPrijs,
     technischeKeuze: technischeKeuze,
-    verdeelLimietmodus: OffertePrijsVerdeelLimietmodus.zonderLimiet,
-    verdeelLimietBedragExclBtw: 0,
     actief: true,
     volgorde: 0,
   );

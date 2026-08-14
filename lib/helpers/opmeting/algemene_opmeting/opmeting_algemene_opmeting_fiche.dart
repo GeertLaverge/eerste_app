@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-ALGEMENE-OPMETING-ZONDER-OUDE-VRIJE-PRIJSROUTE-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ANALYZERFIX-ALGEMENE-OPMETING-20260814
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-FICHE-20260802
 import 'dart:convert';
 
@@ -6,10 +8,6 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app_storage.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
-import '../../offerte/prijzen/offerte_prijs_categorie.dart';
-import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
-import '../../offerte/prijzen/offerte_prijsregel_beheer_service.dart';
-import '../../offerte/prijzen/offerte_prijsregel_model.dart';
 import '../../sync/onedrive_afbeelding_kiezer_dialog.dart';
 import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
@@ -44,7 +42,6 @@ class _OpmetingAlgemeneOpmetingFicheState
   final ImagePicker _imagePicker = ImagePicker();
 
   late OpmetingAlgemeneOpmetingModel _model;
-  List<OffertePrijsregelModel> _prijsregels = const <OffertePrijsregelModel>[];
   bool _bewarenBezig = false;
   bool _afbeeldingBezig = false;
 
@@ -59,7 +56,6 @@ class _OpmetingAlgemeneOpmetingFicheState
           fotos: widget.bestaandeOpmeting?.fotos ?? const <OpmetingFoto>[],
         );
     _model = _normaliseerBeginModel(beginModel);
-    _laadPrijsinstellingen();
   }
 
   OpmetingAlgemeneOpmetingModel _normaliseerBeginModel(
@@ -90,64 +86,6 @@ class _OpmetingAlgemeneOpmetingFicheState
         ),
         ...model.blokken,
       ],
-    );
-  }
-
-  Future<void> _laadPrijsinstellingen() async {
-    final profiel = await AppStorage.laadOffertePrijsProfiel(
-      'algemeneOpmeting',
-    );
-    if (!mounted) return;
-    setState(() {
-      _prijsregels = (profiel?.prijsregels ?? const <OffertePrijsregelModel>[])
-          .where(
-            (regel) =>
-                regel.actief &&
-                regel.isGeldig &&
-                regel.categorie == OffertePrijsCategorie.vrijPerArtikel,
-          )
-          .toList(growable: false);
-    });
-  }
-
-  Future<void> _bewaarVrijePrijsregels(
-    List<OffertePrijsregelModel> prijsregels,
-  ) async {
-    final bestaandProfiel =
-        await AppStorage.laadOffertePrijsProfiel('algemeneOpmeting') ??
-        OffertePrijsprofielModel.leeg(
-          formulierType: 'algemeneOpmeting',
-          formulierNaam: 'Algemene opmeting',
-        );
-
-    final bijgewerktProfiel =
-        OffertePrijsregelBeheerService.vervangPrijsregelsVoorCategorie(
-          profiel: bestaandProfiel,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          formulierType: 'algemeneOpmeting',
-          prijsregels: prijsregels,
-        );
-
-    await AppStorage.bewaarOffertePrijsProfiel(bijgewerktProfiel);
-
-    final bijgewerkteRegels = bijgewerktProfiel.prijsregels
-        .where(
-          (regel) =>
-              regel.actief &&
-              regel.isGeldig &&
-              regel.categorie == OffertePrijsCategorie.vrijPerArtikel,
-        )
-        .toList(growable: false);
-
-    if (!mounted) return;
-    setState(() => _prijsregels = bijgewerkteRegels);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: _groen,
-        content: Text(
-          'Vrije prijsregels toegevoegd en bewaard in Instellingen → Offerteprijzen.',
-        ),
-      ),
     );
   }
 
@@ -277,8 +215,6 @@ class _OpmetingAlgemeneOpmetingFicheState
       prijsPerStukExclBtw: model.prijsTotaalExclBtw,
       toegepasteTechnischePrijsregels: const [],
       technischePrijsSignatuur: '',
-      vrijeArtikelPrijsSelecties: const [],
-      vrijeArtikelPrijsSignatuur: '',
     );
     final klantNaam =
         (widget.klantNaam ?? widget.bestaandeOpmeting?.klantNaam ?? '').trim();
@@ -424,8 +360,6 @@ class _OpmetingAlgemeneOpmetingFicheState
             );
             final rechterkolom = OpmetingAlgemeneOpmetingRechterkolom(
               model: _model,
-              prijsregels: _prijsregels,
-              onPrijsregelsBewaren: _bewaarVrijePrijsregels,
               onGewijzigd: (model) => setState(() => _model = model),
             );
 

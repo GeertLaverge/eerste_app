@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5B2-TOEGEPAST-ZONDER-VERDEELMETA-20260814
 import 'offerte_prijs_categorie.dart';
 import 'offerte_prijs_eenheid.dart';
 import 'offerte_prijs_uitschrijfmodus.dart';
@@ -14,10 +15,6 @@ class OfferteToegepastePrijsregelModel {
     required double totaalExclBtw,
     required this.uitschrijfmodus,
     this.technischeKeuze,
-    int verdeeldOverAantalArtikelen = 0,
-    double projectPrijsExclBtw = 0,
-    double aankoopTotaalVoorVerdelingExclBtw = 0,
-    double verdeelLimietBedragExclBtw = 0,
     String bronGewijzigdOp = '',
     String berekendOp = '',
   }) : bronPrijsregelId = bronPrijsregelId.trim(),
@@ -25,16 +22,6 @@ class OfferteToegepastePrijsregelModel {
        prijsExclBtw = _normaliseerGetal(prijsExclBtw),
        hoeveelheid = _normaliseerGetal(hoeveelheid),
        totaalExclBtw = _normaliseerGetal(totaalExclBtw),
-       verdeeldOverAantalArtikelen = verdeeldOverAantalArtikelen < 0
-           ? 0
-           : verdeeldOverAantalArtikelen,
-       projectPrijsExclBtw = _normaliseerGetal(projectPrijsExclBtw),
-       aankoopTotaalVoorVerdelingExclBtw = _normaliseerGetal(
-         aankoopTotaalVoorVerdelingExclBtw,
-       ),
-       verdeelLimietBedragExclBtw = _normaliseerGetal(
-         verdeelLimietBedragExclBtw,
-       ),
        bronGewijzigdOp = bronGewijzigdOp.trim(),
        berekendOp = berekendOp.trim();
 
@@ -47,20 +34,11 @@ class OfferteToegepastePrijsregelModel {
   final double totaalExclBtw;
   final OffertePrijsUitschrijfmodus uitschrijfmodus;
   final OfferteTechnischeKeuzeRef? technischeKeuze;
-  final int verdeeldOverAantalArtikelen;
-  final double projectPrijsExclBtw;
-  final double aankoopTotaalVoorVerdelingExclBtw;
-  final double verdeelLimietBedragExclBtw;
   final String bronGewijzigdOp;
   final String berekendOp;
 
   bool get isGeldig {
     return bronPrijsregelId.isNotEmpty && omschrijving.isNotEmpty;
-  }
-
-  bool get isVerdeeldeProjectkost {
-    return categorie == OffertePrijsCategorie.alleArtikelen &&
-        uitschrijfmodus.isVerdeeldeInterneKost;
   }
 
   bool get toonOpOverzicht {
@@ -115,10 +93,6 @@ class OfferteToegepastePrijsregelModel {
     OffertePrijsUitschrijfmodus? uitschrijfmodus,
     OfferteTechnischeKeuzeRef? technischeKeuze,
     bool technischeKeuzeWissen = false,
-    int? verdeeldOverAantalArtikelen,
-    double? projectPrijsExclBtw,
-    double? aankoopTotaalVoorVerdelingExclBtw,
-    double? verdeelLimietBedragExclBtw,
     String? bronGewijzigdOp,
     String? berekendOp,
   }) {
@@ -134,14 +108,6 @@ class OfferteToegepastePrijsregelModel {
       technischeKeuze: technischeKeuzeWissen
           ? null
           : technischeKeuze ?? this.technischeKeuze,
-      verdeeldOverAantalArtikelen:
-          verdeeldOverAantalArtikelen ?? this.verdeeldOverAantalArtikelen,
-      projectPrijsExclBtw: projectPrijsExclBtw ?? this.projectPrijsExclBtw,
-      aankoopTotaalVoorVerdelingExclBtw:
-          aankoopTotaalVoorVerdelingExclBtw ??
-          this.aankoopTotaalVoorVerdelingExclBtw,
-      verdeelLimietBedragExclBtw:
-          verdeelLimietBedragExclBtw ?? this.verdeelLimietBedragExclBtw,
       bronGewijzigdOp: bronGewijzigdOp ?? this.bronGewijzigdOp,
       berekendOp: berekendOp ?? this.berekendOp,
     );
@@ -158,10 +124,6 @@ class OfferteToegepastePrijsregelModel {
       'totaalExclBtw': totaalExclBtw,
       'uitschrijfmodus': uitschrijfmodus.jsonWaarde,
       'technischeKeuze': technischeKeuze?.toJson(),
-      'verdeeldOverAantalArtikelen': verdeeldOverAantalArtikelen,
-      'projectPrijsExclBtw': projectPrijsExclBtw,
-      'aankoopTotaalVoorVerdelingExclBtw': aankoopTotaalVoorVerdelingExclBtw,
-      'verdeelLimietBedragExclBtw': verdeelLimietBedragExclBtw,
       'bronGewijzigdOp': bronGewijzigdOp,
       'berekendOp': berekendOp,
     };
@@ -181,16 +143,6 @@ class OfferteToegepastePrijsregelModel {
       ),
       technischeKeuze: OfferteTechnischeKeuzeRef.fromJsonWaarde(
         json['technischeKeuze'],
-      ),
-      verdeeldOverAantalArtikelen: _leesInt(
-        json['verdeeldOverAantalArtikelen'],
-      ),
-      projectPrijsExclBtw: _leesDouble(json['projectPrijsExclBtw']),
-      aankoopTotaalVoorVerdelingExclBtw: _leesDouble(
-        json['aankoopTotaalVoorVerdelingExclBtw'],
-      ),
-      verdeelLimietBedragExclBtw: _leesDouble(
-        json['verdeelLimietBedragExclBtw'],
       ),
       bronGewijzigdOp: json['bronGewijzigdOp']?.toString() ?? '',
       berekendOp: json['berekendOp']?.toString() ?? '',
@@ -214,19 +166,5 @@ class OfferteToegepastePrijsregelModel {
       double.tryParse(waarde?.toString().trim().replaceAll(',', '.') ?? '') ??
           0,
     );
-  }
-
-  static int _leesInt(Object? waarde) {
-    if (waarde is int) {
-      return waarde < 0 ? 0 : waarde;
-    }
-
-    if (waarde is num) {
-      final getal = waarde.toInt();
-      return getal < 0 ? 0 : getal;
-    }
-
-    final getal = int.tryParse(waarde?.toString().trim() ?? '') ?? 0;
-    return getal < 0 ? 0 : getal;
   }
 }

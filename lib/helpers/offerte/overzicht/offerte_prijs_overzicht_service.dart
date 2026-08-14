@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3B-STABILISATIE-OVERZICHT-HERUITGAVE-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3B-PRIJSOVERZICHT-ZONDER-LEGACY-RESULTAAT-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-OVERZICHT-ZONDER-PROJECTPRIJS-20260814
 import 'dart:collection';
 
 import '../../opmeting/overzicht/opmeting_artikel_type_omschrijving_helper.dart';
@@ -5,7 +8,6 @@ import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../../opmeting/project/opmeting_project_titelhoofd_model.dart';
 import '../offerte_posities_service.dart';
 import '../prijzen/offerte_artikel_prijs_koppeling_service.dart';
-import '../prijzen/offerte_project_prijs_service.dart';
 import '../prijzen/offerte_toegepaste_prijsregel_model.dart';
 import 'offerte_prijs_overzicht_model.dart';
 
@@ -91,27 +93,7 @@ class OffertePrijsOverzichtService {
         toepassingLabel: positieLabel,
         artikelIsOptie: positie.isOfferteOptie,
       );
-      _voegArtikelPrijsregelsToe(
-        accumulators: prijsregelAccumulators,
-        regels: resultaat.vrijeArtikelPrijsregels,
-        type: OffertePrijsOverzichtRegelType.vrij,
-        toepassingLabel: positieLabel,
-        artikelIsOptie: positie.isOfferteOptie,
-      );
-      _voegArtikelPrijsregelsToe(
-        accumulators: prijsregelAccumulators,
-        regels: resultaat.verdeeldePrijsregels,
-        type: OffertePrijsOverzichtRegelType.alleArtikelen,
-        toepassingLabel: positieLabel,
-        artikelIsOptie: positie.isOfferteOptie,
-      );
     }
-
-    _voegProjectPrijsregelsToe(
-      accumulators: prijsregelAccumulators,
-      titelhoofd: titelhoofd,
-      posities: actievePosities,
-    );
 
     final prijsregels =
         prijsregelAccumulators.values
@@ -172,38 +154,6 @@ class OffertePrijsOverzichtService {
         totaalExclBtw: regel.totaalExclBtw,
         isOptie: artikelIsOptie || regel.isOptie,
       );
-    }
-  }
-
-  static void _voegProjectPrijsregelsToe({
-    required Map<String, _SamengevoegdePrijsregelAccumulator> accumulators,
-    required OpmetingProjectTitelhoofd titelhoofd,
-    required List<OpmetingOverzichtRaamItem> posities,
-  }) {
-    for (final formulierType
-        in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-      final typeResultaat = OfferteProjectPrijsService.berekenUitTitelhoofd(
-        titelhoofd: titelhoofd,
-        alleOpmetingen: posities,
-        formulierType: formulierType,
-      );
-      if (typeResultaat.aantalArtikelen <= 0) continue;
-
-      final formulierNaam =
-          OfferteArtikelPrijsKoppelingService.formulierNaamVoor(formulierType);
-
-      for (final regel in typeResultaat.prijsregels) {
-        if (!regel.isGeldig || regel.totaalExclBtw <= 0.0) continue;
-
-        _voegSamengevoegdeRegelToe(
-          accumulators: accumulators,
-          type: OffertePrijsOverzichtRegelType.alleArtikelen,
-          omschrijving: regel.omschrijving,
-          toepassingLabel: formulierNaam,
-          totaalExclBtw: regel.totaalExclBtw,
-          isOptie: regel.isOptie,
-        );
-      }
     }
   }
 

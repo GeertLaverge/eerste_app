@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-VOORZETROLLUIK-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: VOORZETROLLUIK-OFFERTE-PDF-VOLLEDIG-20260731
 import 'dart:math' as math;
 
@@ -128,14 +129,19 @@ class OffertePdfVoorzetrolluikWidget {
           kortingToestaan: false,
         );
     if (prijsResultaat != null) {
-      for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+      final zichtbareLokalePrijsregels =
+          [
+            ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+            ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+          ].where(
+            (prijsregel) =>
+                !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                  prijsregel,
+                ),
+          );
+
+      for (final prijsregel in zichtbareLokalePrijsregels) {
         if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-          continue;
-        }
-        final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-        final toonAlleenOmschrijving =
-            prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-        if (!toonPrijs && !toonAlleenOmschrijving) {
           continue;
         }
 
@@ -151,7 +157,7 @@ class OffertePdfVoorzetrolluikWidget {
           OffertePdfTechnischeRegel(
             titel: omschrijving,
             waarde: '',
-            prijsTekst: toonPrijs
+            prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
                 ? '€ ${prijsregel.totaalExclBtw.toStringAsFixed(2)}'
                 : '',
           ),

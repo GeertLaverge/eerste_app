@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-BUITENJALOEZIE-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: BUITENJALOEZIE-DEFINITIEVE-PDF-WIDGET-20260803
 // THIMACO-CONTROLE: BUITENJALOEZIE-PDF-WIDGET-FASE-6-20260803
 import 'dart:math' as math;
@@ -132,16 +133,18 @@ class OffertePdfBuitenjaloezieWidget {
         );
 
     if (prijsResultaat != null) {
-      for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
-        if (!prijsregel.isGeldig || !prijsregel.teltMeeInOfferteTotaal) {
-          continue;
-        }
+      final zichtbareLokalePrijsregels =
+          [
+            ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+            ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+          ].where(
+            (prijsregel) =>
+                !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                  prijsregel,
+                ),
+          );
 
-        final toonPrijs = prijsregel.toonAfzonderlijkePrijsOpOfferte;
-        final toonAlleenOmschrijving =
-            prijsregel.toonOmschrijvingZonderPrijsOpOfferte;
-        if (!toonPrijs && !toonAlleenOmschrijving) continue;
-
+      for (final prijsregel in zichtbareLokalePrijsregels) {
         final omschrijving =
             OffertePrijsregelWeergaveService.omschrijvingVoorOfferte(
               prijsregel,
@@ -152,7 +155,7 @@ class OffertePdfBuitenjaloezieWidget {
           OffertePdfTechnischeRegel(
             titel: omschrijving,
             waarde: '',
-            prijsTekst: toonPrijs
+            prijsTekst: prijsregel.toonAfzonderlijkePrijsOpOfferte
                 ? '€ ${prijsregel.totaalExclBtw.toStringAsFixed(2)}'
                 : '',
           ),

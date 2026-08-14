@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-20260814
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-ONEDRIVE-SYNC-20260806
 // THIMACO-CONTROLE: ONEDRIVE-NOOIT-INTERACTIEF-TIJDENS-AUTOMATISCHE-SYNC-20260805
 // THIMACO-CONTROLE: ALGEMENE-PRIJSREGELS-ONEDRIVE-SYNC-FASE5-20260805
@@ -43,6 +44,11 @@ class OneDriveSyncService {
 
   static const String _offerteAlgemenePrijsregelsKey =
       'thimaco_offerte_algemene_prijsregels';
+
+  static const String _offertePrijsPerArtikelTemplatesKey =
+      'thimaco_offerte_prijs_per_artikel_templates';
+  static const String _offertePrijsPerArtikelTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_per_artikel_templates_sync_meta';
 
   static const String _offerteVersiesKey = 'thimaco_offerte_versies';
   static const String _offerteVersiesSyncMetaKey =
@@ -422,6 +428,16 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: cloudBackupDatum,
       );
+      final mergedOffertePrijsPerArtikelTemplates = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: cloudBackup,
+        lokaleDataKey: _offertePrijsPerArtikelTemplatesKey,
+        lokaleMetadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
+        cloudDataVeld: 'offertePrijsPerArtikelTemplates',
+        cloudMetadataVeld: 'offertePrijsPerArtikelTemplatesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: cloudBackupDatum,
+      );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: cloudBackup,
@@ -762,6 +778,14 @@ class OneDriveSyncService {
         'offerteVersiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
           mergedOfferteVersies.metadata,
         ),
+        'offertePrijsPerArtikelTemplates':
+            AppStorage.encodeJsonMapLijstVoorSync(
+              mergedOffertePrijsPerArtikelTemplates.records,
+            ),
+        'offertePrijsPerArtikelTemplatesSyncMeta':
+            SyncMergeService.encodeJsonRecordMetadata(
+              mergedOffertePrijsPerArtikelTemplates.metadata,
+            ),
         'offertePrijsProfielen': AppStorage.encodeOffertePrijsProfielenVoorSync(
           mergedPrijsprofielen,
         ),
@@ -898,6 +922,12 @@ class OneDriveSyncService {
         dataKey: _offerteVersiesKey,
         metadataKey: _offerteVersiesSyncMetaKey,
         resultaat: mergedOfferteVersies,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsPerArtikelTemplatesKey,
+        metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsPerArtikelTemplates,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
@@ -1679,6 +1709,16 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: backupDatum,
       );
+      final mergedOffertePrijsPerArtikelTemplates = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: data,
+        lokaleDataKey: _offertePrijsPerArtikelTemplatesKey,
+        lokaleMetadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
+        cloudDataVeld: 'offertePrijsPerArtikelTemplates',
+        cloudMetadataVeld: 'offertePrijsPerArtikelTemplatesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: backupDatum,
+      );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: data,
@@ -1900,6 +1940,12 @@ class OneDriveSyncService {
         dataKey: _offerteVersiesKey,
         metadataKey: _offerteVersiesSyncMetaKey,
         resultaat: mergedOfferteVersies,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsPerArtikelTemplatesKey,
+        metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsPerArtikelTemplates,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,

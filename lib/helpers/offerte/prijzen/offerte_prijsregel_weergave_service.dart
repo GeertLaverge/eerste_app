@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-EXHAUSTIEVE-WEERGAVE-SWITCH-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5B2-WEERGAVE-ZONDER-VERDEELREFERENTIE-20260814
 // THIMACO-CONTROLE: PRIJSREGEL-WEERGAVE-UITSCHRIJFMODUS-20260721
 import 'offerte_prijs_categorie.dart';
 import 'offerte_prijs_uitschrijfmodus.dart';
@@ -5,7 +7,6 @@ import 'offerte_toegepaste_prijsregel_model.dart';
 
 /// Centrale, uitsluitend visuele interpretatie van een toegepaste prijsregel.
 ///
-/// De opgeslagen prijsregel, enumwaarden en JSON blijven ongewijzigd.
 /// Bij technische prijsregels is uitsluitend de tekst uit `Hoe uitschrijven`
 /// bepalend voor wat op het overzicht en de klantofferte wordt getoond.
 class OffertePrijsregelWeergaveService {
@@ -118,8 +119,6 @@ class OffertePrijsregelWeergaveService {
         'Enkel uitschrijven',
       OffertePrijsUitschrijfmodus.alleenOverzicht =>
         'Enkel op overzicht — niet op offerte',
-      OffertePrijsUitschrijfmodus.verdelenOverArtikelenAlleenOverzicht =>
-        'Verdelen over artikelen — niet op offerte',
       OffertePrijsUitschrijfmodus.optie => 'Als optie tonen — niet meetellen',
     };
   }

@@ -1,9 +1,9 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-INZETHOR-ZONDER-LEGACY-PRIJSVELDEN-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-INZETHOR-JSON-BEHOUD-20260813
 import 'dart:convert';
 
 import '../../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../../offerte/prijzen/offerte_toegepaste_prijsregel_model.dart';
-import '../../../offerte/prijzen/offerte_vrije_prijs_selectie_model.dart';
 import '../../fotos/opmeting_foto_model.dart';
 
 class OpmetingVasteInzethorModel {
@@ -328,9 +328,7 @@ class OpmetingVasteInzethorModel {
 
   /// Gemeenschappelijk prijsmodel voor generieke offertehelpers.
   ///
-  /// Nieuwe dossiers bewaren de prijsgegevens uitsluitend genest in
-  /// [prijsData]. Oude losse JSON-velden worden alleen nog in [fromJson]
-  /// als terugval gelezen, zodat bestaande dossiers compatibel blijven.
+  /// Prijsgegevens worden uitsluitend via [prijsData] beheerd.
   OfferteArtikelPrijsDataModel get prijsData => _prijsData;
 
   double get prijsPerStukExclBtw => _prijsData.prijsPerStukExclBtw;
@@ -339,17 +337,6 @@ class OpmetingVasteInzethorModel {
       _prijsData.toegepasteTechnischePrijsregels;
 
   String get technischePrijsSignatuur => _prijsData.technischePrijsSignatuur;
-
-  List<OfferteToegepastePrijsregelModel> get toegepasteVerdeeldePrijsregels =>
-      _prijsData.toegepasteVerdeeldePrijsregels;
-
-  String get verdeeldePrijsSignatuur => _prijsData.verdeeldePrijsSignatuur;
-
-  List<OfferteVrijePrijsSelectieModel> get vrijeArtikelPrijsSelecties =>
-      _prijsData.vrijeArtikelPrijsSelecties;
-
-  String get vrijeArtikelPrijsSignatuur =>
-      _prijsData.vrijeArtikelPrijsSignatuur;
 
   double get artikelKortingPercentage => _prijsData.artikelKortingPercentage;
 
@@ -1061,10 +1048,6 @@ class OpmetingVasteInzethorModel {
       'toegepasteTechnischePrijsregels':
           json['toegepasteTechnischePrijsregels'],
       'technischePrijsSignatuur': json['technischePrijsSignatuur'],
-      'toegepasteVerdeeldePrijsregels': json['toegepasteVerdeeldePrijsregels'],
-      'verdeeldePrijsSignatuur': json['verdeeldePrijsSignatuur'],
-      'vrijeArtikelPrijsSelecties': json['vrijeArtikelPrijsSelecties'],
-      'vrijeArtikelPrijsSignatuur': json['vrijeArtikelPrijsSignatuur'],
       'prijsPerPositieRegels': json['prijsPerPositieRegels'],
       'artikelKortingPercentage': json['artikelKortingPercentage'],
       'artikelWinstmargePercentage': json['artikelWinstmargePercentage'],
@@ -1079,10 +1062,6 @@ class OpmetingVasteInzethorModel {
         'prijsPerStukExclBtw',
         'toegepasteTechnischePrijsregels',
         'technischePrijsSignatuur',
-        'toegepasteVerdeeldePrijsregels',
-        'verdeeldePrijsSignatuur',
-        'vrijeArtikelPrijsSelecties',
-        'vrijeArtikelPrijsSignatuur',
         'prijsPerPositieRegels',
         'artikelKortingPercentage',
         'artikelWinstmargePercentage',

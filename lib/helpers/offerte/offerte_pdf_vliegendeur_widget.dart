@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3C-VLIEGENDEUR-ZONDER-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: VLIEGENDEUR-PDF-FIJN-GAAS-VASTE-STAP-20260728-1215
 import 'dart:math' as math;
 
@@ -307,7 +308,7 @@ class OffertePdfVliegendeurWidget {
 
     final prijsResultaat = _prijsResultaatVoor(positie, kortingToestaan: false);
     if (prijsResultaat != null) {
-      _voegVrijeArtikelPrijsregelsToe(
+      _voegPrijsPerPositieRegelsToe(
         resultaat: resultaat,
         prijsResultaat: prijsResultaat,
       );
@@ -316,11 +317,22 @@ class OffertePdfVliegendeurWidget {
     return List<OffertePdfTechnischeRegel>.unmodifiable(resultaat);
   }
 
-  static void _voegVrijeArtikelPrijsregelsToe({
+  static void _voegPrijsPerPositieRegelsToe({
     required List<OffertePdfTechnischeRegel> resultaat,
     required OfferteBerekeningResultaat prijsResultaat,
   }) {
-    for (final prijsregel in prijsResultaat.vrijeArtikelPrijsregels) {
+    final zichtbareLokalePrijsregels =
+        [
+          ...prijsResultaat.omschrijvingZonderPrijsRegelsVoorOfferte,
+          ...prijsResultaat.afzonderlijkePrijsregelsVoorOfferte,
+        ].where(
+          (prijsregel) =>
+              !OffertePrijsregelWeergaveService.isTechnischePrijsregel(
+                prijsregel,
+              ),
+        );
+
+    for (final prijsregel in zichtbareLokalePrijsregels) {
       if (prijsregel.bronPrijsregelId.trim().startsWith('toegepast_project_')) {
         continue;
       }

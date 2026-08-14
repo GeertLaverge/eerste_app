@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3B-STABILISATIE-LAYOUT-WARNINGS-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3B-ARTIKEL-LAYOUT-ZONDER-LEGACY-RESULTAAT-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5B2-ANALYZERFIX-ARTIKEL-LAYOUT-20260814
 // THIMACO-CONTROLE: OVERZICHT-ARTIKEL-PRIJS-LAYOUT-20260721
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -46,9 +49,7 @@ class OpmetingOverzichtArtikelPrijsLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final prijsSamenvattingHoogte = berekenPrijzen
         ? 92.0 +
-              ((prijsResultaat.vrijeArtikelPrijsregels.length +
-                      prijsResultaat.verdeeldePrijsregels.length +
-                      (prijsResultaat.heeftArtikelWinstmarge ? 1 : 0) +
+              (((prijsResultaat.heeftArtikelWinstmarge ? 1 : 0) +
                       (prijsResultaat.heeftArtikelKorting ? 1 : 0)) *
                   34.0)
         : 0.0;
@@ -155,30 +156,6 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
               bedrag: -resultaat.kortingBedragExclBtw,
               korting: true,
             ),
-          ...resultaat.vrijeArtikelPrijsregels.map((prijsregel) {
-            final omschrijving = prijsregel.isOptie
-                ? '${prijsregel.omschrijving} · optie op offerte'
-                : prijsregel.toonAfzonderlijkePrijsOpOfferte
-                ? '${prijsregel.omschrijving} · apart op offerte'
-                : '${prijsregel.omschrijving} · verwerkt in artikelprijs';
-            return _PrijsSamenvattingRij(
-              omschrijving: omschrijving,
-              bedrag: prijsregel.totaalExclBtw,
-              optie: prijsregel.isOptie,
-            );
-          }),
-          ...resultaat.verdeeldePrijsregels.map((prijsregel) {
-            final aantalArtikelen = prijsregel.verdeeldOverAantalArtikelen;
-            final verdelingTekst = aantalArtikelen > 0
-                ? ' · verdeeld over $aantalArtikelen artikelen'
-                : ' · verdeelde projectkost';
-
-            return _PrijsSamenvattingRij(
-              omschrijving: '${prijsregel.omschrijving}$verdelingTekst',
-              bedrag: prijsregel.totaalExclBtw,
-              intern: true,
-            );
-          }),
           const Divider(height: 18, color: _rand),
           _PrijsSamenvattingRij(
             omschrijving: 'Totaal positie excl. btw',
@@ -186,8 +163,6 @@ class _PrijsSamenvattingKaart extends StatelessWidget {
             vet: true,
           ),
           if (!resultaat.heeftTechnischePrijsregels &&
-              !resultaat.heeftVrijeArtikelPrijsregels &&
-              !resultaat.heeftVerdeeldePrijsregels &&
               !resultaat.heeftArtikelWinstmarge &&
               !resultaat.heeftArtikelKorting) ...[
             const SizedBox(height: 5),
@@ -211,16 +186,12 @@ class _PrijsSamenvattingRij extends StatelessWidget {
     required this.omschrijving,
     required this.bedrag,
     this.vet = false,
-    this.intern = false,
-    this.optie = false,
     this.korting = false,
   });
 
   final String omschrijving;
   final double bedrag;
   final bool vet;
-  final bool intern;
-  final bool optie;
   final bool korting;
 
   static const Color _tekstDonker = Color(0xFF111827);
@@ -248,28 +219,6 @@ class _PrijsSamenvattingRij extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (intern || optie) ...<Widget>[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFFED7AA)),
-                    ),
-                    child: Text(
-                      optie ? 'optie' : 'intern',
-                      style: const TextStyle(
-                        color: Color(0xFF9A3412),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

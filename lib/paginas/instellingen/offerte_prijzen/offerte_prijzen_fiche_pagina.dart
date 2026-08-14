@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B4A-ANALYZERFIX-ONGEBRUIKTE-HELPERS-WEG-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B2-PRIJZENFICHE-ZONDER-OUDE-VRIJE-MODUS-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5C-FICHE-ZONDER-VERDEELKOST-20260814
 // THIMACO-CONTROLE: OFFERTE-PRIJZEN-FICHE-DOWNLOADSIGNAAL-FASE17-20260805
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-PRIJSBOOM-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-PRIJSBOOM-ACTIEF-20260730
@@ -21,7 +24,6 @@ import '../../../helpers/offerte/prijzen/offerte_technische_keuze_ref.dart';
 import '../../../helpers/offerte/prijzen/offerte_technische_prijs_koppeling_service.dart';
 import '../../../helpers/sync/sync_navigatie_helper.dart';
 import 'offerte_prijsregel_dialog.dart';
-import 'offerte_prijstabel_widget.dart';
 import 'offerte_technische_prijs_overnemen_dialog.dart';
 import 'offerte_technische_prijskeuze_boom.dart';
 
@@ -30,18 +32,10 @@ class OffertePrijzenFichePagina extends StatefulWidget {
     super.key,
     required this.formulierType,
     required this.formulierNaam,
-    this.alleenVrijePrijsPerArtikel = false,
   });
 
   final String formulierType;
   final String formulierNaam;
-
-  /// `true` wanneer deze pagina geopend wordt vanuit de centrale tegel
-  /// “Vrije prijs per artikel”.
-  ///
-  /// Dezelfde bestaande prijsprofielopslag wordt gebruikt. Alleen de
-  /// zichtbare prijscategorie wordt beperkt tot `vrijPerArtikel`.
-  final bool alleenVrijePrijsPerArtikel;
 
   @override
   State<OffertePrijzenFichePagina> createState() {
@@ -58,9 +52,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
   List<OfferteTechnischeKeuzeRef> _technischeKeuzes =
       const <OfferteTechnischeKeuzeRef>[];
-
-  List<OffertePrijsregelModel> _verdeelgroepOpties =
-      const <OffertePrijsregelModel>[];
 
   List<OffertePrijsregelModel> _andereTechnischePrijsregels =
       const <OffertePrijsregelModel>[];
@@ -95,21 +86,10 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
   }
 
   String get _paginaTitel {
-    if (widget.alleenVrijePrijsPerArtikel) {
-      return 'Vrije prijs per artikel · ${widget.formulierNaam}';
-    }
-
     return 'Prijs volgens technische keuze · ${widget.formulierNaam}';
   }
 
   String get _paginaUitleg {
-    if (widget.alleenVrijePrijsPerArtikel) {
-      return 'Beheer hier uitsluitend de vrije prijsregels die later '
-          'handmatig bij één afzonderlijk artikel van '
-          '${widget.formulierNaam} kunnen worden ingevuld. Voeg regels toe, '
-          'wijzig de volgorde en zet ze tijdelijk actief of inactief.';
-    }
-
     return 'Kies rechtstreeks een technisch kenmerk van '
         '${widget.formulierNaam}. Tik op een keuze om een prijs in te stellen '
         'of de bestaande prijsregel te wijzigen.';
@@ -188,8 +168,7 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
             formulierNaam: widget.formulierNaam,
           );
 
-      final technischeKeuzes =
-          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
+      final technischeKeuzes = _heeftGeenTechnischeKeuzes
           ? const <OfferteTechnischeKeuzeRef>[]
           : await OfferteTechnischeKeuzeLaadHelper.laadVoorFormulierTypeInBoomVolgorde(
               widget.formulierType,
@@ -199,17 +178,11 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
         await AppStorage.bewaarOffertePrijsProfiel(profiel);
       }
 
-      final verdeelgroepOpties = await _laadVerdeelgroepOpties(
-        huidigProfiel: profiel,
-      );
-
-      final andereTechnischePrijsregels =
-          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
+      final andereTechnischePrijsregels = _heeftGeenTechnischeKeuzes
           ? const <OffertePrijsregelModel>[]
           : await _laadAndereTechnischePrijsregels(huidigProfiel: profiel);
 
-      final technischePrijsregelKoppelAantallen =
-          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
+      final technischePrijsregelKoppelAantallen = _heeftGeenTechnischeKeuzes
           ? const <String, int>{}
           : await OfferteTechnischePrijsKoppelingService.laadKoppelAantallen();
 
@@ -220,7 +193,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
       setState(() {
         _profiel = profiel;
         _technischeKeuzes = technischeKeuzes;
-        _verdeelgroepOpties = verdeelgroepOpties;
         _andereTechnischePrijsregels = andereTechnischePrijsregels;
         _technischePrijsregelKoppelAantallen =
             technischePrijsregelKoppelAantallen;
@@ -301,66 +273,9 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
     return List<OffertePrijsregelModel>.unmodifiable(resultaat);
   }
 
-  Future<List<OffertePrijsregelModel>> _laadVerdeelgroepOpties({
-    OffertePrijsprofielModel? huidigProfiel,
-  }) async {
-    final groepenPerId = <String, OffertePrijsregelModel>{};
-
-    for (final formulierType in _ondersteundeFormulierTypes()) {
-      OffertePrijsprofielModel? profiel;
-
-      if (huidigProfiel != null &&
-          _isZelfdeFormulierType(formulierType, huidigProfiel.formulierType)) {
-        profiel = huidigProfiel;
-      } else {
-        try {
-          profiel = await AppStorage.laadOffertePrijsProfiel(formulierType);
-        } catch (_) {
-          // Een ontbrekend of tijdelijk onleesbaar ander prijsprofiel
-          // mag de geopende prijsfiche niet blokkeren.
-          profiel = null;
-        }
-      }
-
-      if (profiel == null) {
-        continue;
-      }
-
-      for (final prijsregel in profiel.prijsregels) {
-        if (!prijsregel.isVerdeeldeProjectkost ||
-            prijsregel.id.trim().isEmpty) {
-          continue;
-        }
-
-        final bestaandeGroep = groepenPerId[prijsregel.id];
-
-        if (bestaandeGroep == null ||
-            _isNieuwer(prijsregel.gewijzigdOp, bestaandeGroep.gewijzigdOp)) {
-          groepenPerId[prijsregel.id] = prijsregel;
-        }
-      }
-    }
-
-    final resultaat = groepenPerId.values.toList(growable: false)
-      ..sort((eerste, tweede) {
-        final omschrijvingVergelijking = eerste.omschrijving
-            .toLowerCase()
-            .compareTo(tweede.omschrijving.toLowerCase());
-
-        if (omschrijvingVergelijking != 0) {
-          return omschrijvingVergelijking;
-        }
-
-        return eerste.id.compareTo(tweede.id);
-      });
-
-    return resultaat;
-  }
-
   Future<void> _bewaarProfiel(
     OffertePrijsprofielModel profiel, {
     String? melding,
-    String? synchroniseerVerdeelgroepId,
     Set<String> synchroniseerTechnischePrijsregelIds = const <String>{},
   }) async {
     if (_opslaan) {
@@ -373,34 +288,19 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
     });
 
     try {
-      final gedeeldeVerdeelgroep = synchroniseerVerdeelgroepId == null
-          ? null
-          : _zoekPrijsregel(profiel, synchroniseerVerdeelgroepId);
-
       if (synchroniseerTechnischePrijsregelIds.isNotEmpty) {
         await OfferteTechnischePrijsKoppelingService.bewaarEnSynchroniseer(
           huidigProfiel: profiel,
           prijsregelIds: synchroniseerTechnischePrijsregelIds,
         );
-      } else if (gedeeldeVerdeelgroep != null &&
-          gedeeldeVerdeelgroep.isVerdeeldeProjectkost) {
-        await _bewaarEnSynchroniseerVerdeelgroep(
-          huidigProfiel: profiel,
-          verdeelgroep: gedeeldeVerdeelgroep,
-        );
       } else {
         await AppStorage.bewaarOffertePrijsProfiel(profiel);
       }
 
-      final verdeelgroepOpties = await _laadVerdeelgroepOpties(
-        huidigProfiel: profiel,
-      );
-      final andereTechnischePrijsregels =
-          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
+      final andereTechnischePrijsregels = _heeftGeenTechnischeKeuzes
           ? const <OffertePrijsregelModel>[]
           : await _laadAndereTechnischePrijsregels(huidigProfiel: profiel);
-      final technischePrijsregelKoppelAantallen =
-          widget.alleenVrijePrijsPerArtikel || _heeftGeenTechnischeKeuzes
+      final technischePrijsregelKoppelAantallen = _heeftGeenTechnischeKeuzes
           ? const <String, int>{}
           : await OfferteTechnischePrijsKoppelingService.laadKoppelAantallen();
 
@@ -411,7 +311,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
       setState(() {
         _opslaan = false;
         _profiel = profiel;
-        _verdeelgroepOpties = verdeelgroepOpties;
         _andereTechnischePrijsregels = andereTechnischePrijsregels;
         _technischePrijsregelKoppelAantallen =
             technischePrijsregelKoppelAantallen;
@@ -436,79 +335,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
       _toonMelding('Bewaren is niet gelukt: $e', fout: true);
     }
-  }
-
-  Future<void> _bewaarEnSynchroniseerVerdeelgroep({
-    required OffertePrijsprofielModel huidigProfiel,
-    required OffertePrijsregelModel verdeelgroep,
-  }) async {
-    await AppStorage.bewaarOffertePrijsProfiel(huidigProfiel);
-
-    for (final formulierType in _ondersteundeFormulierTypes()) {
-      if (_isZelfdeFormulierType(formulierType, huidigProfiel.formulierType)) {
-        continue;
-      }
-
-      final anderProfiel = await AppStorage.laadOffertePrijsProfiel(
-        formulierType,
-      );
-
-      if (anderProfiel == null) {
-        continue;
-      }
-
-      final heeftGekoppeldeVerdeelgroep = anderProfiel.prijsregels.any((
-        prijsregel,
-      ) {
-        return prijsregel.id == verdeelgroep.id &&
-            prijsregel.isVerdeeldeProjectkost;
-      });
-
-      if (!heeftGekoppeldeVerdeelgroep) {
-        continue;
-      }
-
-      final bijgewerktProfiel = _synchroniseerVerdeelgroepInProfiel(
-        profiel: anderProfiel,
-        bronVerdeelgroep: verdeelgroep,
-      );
-
-      await AppStorage.bewaarOffertePrijsProfiel(bijgewerktProfiel);
-    }
-  }
-
-  OffertePrijsprofielModel _synchroniseerVerdeelgroepInProfiel({
-    required OffertePrijsprofielModel profiel,
-    required OffertePrijsregelModel bronVerdeelgroep,
-  }) {
-    final bijgewerktePrijsregels = profiel.prijsregels
-        .map((prijsregel) {
-          if (prijsregel.id != bronVerdeelgroep.id ||
-              !prijsregel.isVerdeeldeProjectkost) {
-            return prijsregel;
-          }
-
-          return prijsregel.copyWith(
-            categorie: bronVerdeelgroep.categorie,
-            formulierType: profiel.formulierType,
-            omschrijving: bronVerdeelgroep.omschrijving,
-            prijsExclBtw: bronVerdeelgroep.prijsExclBtw,
-            eenheid: bronVerdeelgroep.eenheid,
-            uitschrijfmodus: bronVerdeelgroep.uitschrijfmodus,
-            technischeKeuzeWissen: true,
-            verdeelLimietmodus: bronVerdeelgroep.verdeelLimietmodus,
-            verdeelLimietBedragExclBtw:
-                bronVerdeelgroep.verdeelLimietBedragExclBtw,
-            actief: bronVerdeelgroep.actief,
-            gewijzigdOp: bronVerdeelgroep.gewijzigdOp,
-          );
-        })
-        .toList(growable: false);
-
-    return profiel.copyWith(
-      prijsregels: bijgewerktePrijsregels,
-      gewijzigdOp: bronVerdeelgroep.gewijzigdOp,
-    );
   }
 
   Future<List<OfferteTechnischeKeuzeRef>>
@@ -537,50 +363,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
       return _technischeKeuzes;
     }
-  }
-
-  Future<void> _voegPrijsregelToe(OffertePrijsCategorie categorie) async {
-    final profiel = _profiel;
-
-    if (profiel == null || _opslaan) {
-      return;
-    }
-
-    final isTechnischePrijsregel =
-        categorie == OffertePrijsCategorie.technischeKeuzePerArtikel;
-
-    final technischeKeuzes = isTechnischePrijsregel
-        ? await _laadActueleTechnischeKeuzesVoorPrijsregel()
-        : const <OfferteTechnischeKeuzeRef>[];
-
-    if (!mounted) {
-      return;
-    }
-
-    final prijsregel = await toonOffertePrijsregelDialog(
-      context: context,
-      categorie: categorie,
-      formulierType: widget.formulierType,
-      volgendeVolgorde: profiel.volgendeVolgordeVoorCategorie(categorie),
-      technischeKeuzes: technischeKeuzes,
-      verdeelgroepOpties: _verdeelgroepOpties,
-    );
-
-    if (prijsregel == null || !mounted) {
-      return;
-    }
-
-    final bijgewerktProfiel = profiel.metPrijsregel(prijsregel);
-
-    await _bewaarProfiel(
-      bijgewerktProfiel,
-      synchroniseerVerdeelgroepId: prijsregel.isVerdeeldeProjectkost
-          ? prijsregel.id
-          : null,
-      melding: prijsregel.isVerdeeldeProjectkost
-          ? 'Gedeelde verdeelkost gekoppeld.'
-          : 'Prijsregel toegevoegd.',
-    );
   }
 
   Future<void> _openTechnischeKeuze(
@@ -627,7 +409,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
       technischeKeuzes: technischeKeuzes,
       beginTechnischeKeuze: actueleKeuze,
       technischeKeuzeVergrendeld: true,
-      verdeelgroepOpties: _verdeelgroepOpties,
       bestaandePrijsregel: bestaandeRegel,
     );
 
@@ -843,7 +624,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
       formulierType: widget.formulierType,
       volgendeVolgorde: prijsregel.volgorde,
       technischeKeuzes: technischeKeuzes,
-      verdeelgroepOpties: _verdeelgroepOpties,
       bestaandePrijsregel: prijsregel,
     );
 
@@ -857,15 +637,10 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
     await _bewaarProfiel(
       bijgewerktProfiel,
-      synchroniseerVerdeelgroepId: gewijzigd.isVerdeeldeProjectkost
-          ? gewijzigd.id
-          : null,
       synchroniseerTechnischePrijsregelIds: isGekoppeldeTechnischePrijsregel
           ? <String>{gewijzigd.id}
           : const <String>{},
-      melding: gewijzigd.isVerdeeldeProjectkost
-          ? 'Gedeelde verdeelkost gewijzigd.'
-          : isGekoppeldeTechnischePrijsregel
+      melding: isGekoppeldeTechnischePrijsregel
           ? 'Gekoppelde prijsregel bij alle artikeltypes gewijzigd.'
           : 'Prijsregel gewijzigd.',
     );
@@ -878,7 +653,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
       return;
     }
 
-    final isGedeeldeVerdeelgroep = prijsregel.isVerdeeldeProjectkost;
     final isGekoppeldeTechnischePrijsregel = _isGekoppeldeTechnischePrijsregel(
       prijsregel,
     );
@@ -891,19 +665,12 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            isGedeeldeVerdeelgroep
-                ? 'Verdeelkost ontkoppelen?'
-                : isGekoppeldeTechnischePrijsregel
+            isGekoppeldeTechnischePrijsregel
                 ? 'Gekoppelde prijsregel verwijderen?'
                 : 'Prijsregel verwijderen?',
           ),
           content: Text(
-            isGedeeldeVerdeelgroep
-                ? '“${prijsregel.omschrijving}” wordt uit '
-                      '${widget.formulierNaam} verwijderd. '
-                      'Dezelfde verdeelkost blijft bestaan bij '
-                      'andere gekoppelde artikelgroepen.'
-                : isGekoppeldeTechnischePrijsregel
+            isGekoppeldeTechnischePrijsregel
                 ? '“${prijsregel.omschrijving}” wordt alleen uit '
                       '${widget.formulierNaam} verwijderd. De gekoppelde '
                       'prijsregel blijft bij de andere artikeltypes bestaan.'
@@ -924,9 +691,7 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              child: Text(
-                isGedeeldeVerdeelgroep ? 'Ontkoppelen' : 'Verwijderen',
-              ),
+              child: const Text('Verwijderen'),
             ),
           ],
         );
@@ -939,43 +704,9 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
 
     await _bewaarProfiel(
       profiel.zonderPrijsregel(prijsregel.id),
-      melding: isGedeeldeVerdeelgroep
-          ? 'Verdeelkost ontkoppeld van ${widget.formulierNaam}.'
-          : isGekoppeldeTechnischePrijsregel
+      melding: isGekoppeldeTechnischePrijsregel
           ? 'Gekoppelde prijsregel uit ${widget.formulierNaam} verwijderd.'
           : 'Prijsregel verwijderd.',
-    );
-  }
-
-  Future<void> _zetPrijsregelActief(
-    OffertePrijsregelModel prijsregel,
-    bool actief,
-  ) async {
-    final profiel = _profiel;
-
-    if (profiel == null || _opslaan) {
-      return;
-    }
-
-    final gewijzigd = prijsregel.copyWith(
-      actief: actief,
-      gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
-    );
-
-    final bijgewerktProfiel = profiel.metPrijsregel(gewijzigd);
-
-    final isGekoppeldeTechnischePrijsregel = _isGekoppeldeTechnischePrijsregel(
-      gewijzigd,
-    );
-
-    await _bewaarProfiel(
-      bijgewerktProfiel,
-      synchroniseerVerdeelgroepId: gewijzigd.isVerdeeldeProjectkost
-          ? gewijzigd.id
-          : null,
-      synchroniseerTechnischePrijsregelIds: isGekoppeldeTechnischePrijsregel
-          ? <String>{gewijzigd.id}
-          : const <String>{},
     );
   }
 
@@ -1080,81 +811,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
         (_technischePrijsregelKoppelAantallen[prijsregel.id] ?? 0) > 1;
   }
 
-  Future<void> _verplaatsPrijsregel(
-    OffertePrijsregelModel prijsregel,
-    int richting,
-  ) async {
-    final profiel = _profiel;
-
-    if (profiel == null || _opslaan || richting == 0) {
-      return;
-    }
-
-    final regels = profiel
-        .regelsVoorCategorie(prijsregel.categorie)
-        .toList(growable: true);
-
-    final huidigIndex = regels.indexWhere((regel) => regel.id == prijsregel.id);
-
-    final nieuwIndex = huidigIndex + richting;
-
-    if (huidigIndex < 0 || nieuwIndex < 0 || nieuwIndex >= regels.length) {
-      return;
-    }
-
-    final verplaatsteRegel = regels.removeAt(huidigIndex);
-
-    regels.insert(nieuwIndex, verplaatsteRegel);
-
-    await _bewaarProfiel(
-      profiel.metCategorieVolgorde(
-        categorie: prijsregel.categorie,
-        prijsregelIds: regels.map((regel) => regel.id).toList(growable: false),
-      ),
-    );
-  }
-
-  OffertePrijsregelModel? _zoekPrijsregel(
-    OffertePrijsprofielModel profiel,
-    String prijsregelId,
-  ) {
-    for (final prijsregel in profiel.prijsregels) {
-      if (prijsregel.id == prijsregelId) {
-        return prijsregel;
-      }
-    }
-
-    return null;
-  }
-
-  List<String> _ondersteundeFormulierTypes() {
-    final formulierTypesPerSleutel = <String, String>{};
-
-    void voegToe(String formulierType) {
-      final canoniek =
-          OfferteArtikelPrijsKoppelingService.canoniekFormulierType(
-            formulierType,
-          ).trim();
-
-      final sleutel = _normaliseerFormulierType(canoniek);
-
-      if (sleutel.isEmpty) {
-        return;
-      }
-
-      formulierTypesPerSleutel.putIfAbsent(sleutel, () => canoniek);
-    }
-
-    for (final formulierType
-        in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-      voegToe(formulierType);
-    }
-
-    voegToe(widget.formulierType);
-
-    return formulierTypesPerSleutel.values.toList(growable: false);
-  }
-
   void _toonMelding(String tekst, {bool fout = false}) {
     if (!mounted) {
       return;
@@ -1253,18 +909,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
   }
 
   List<Widget> _bouwPrijssecties(OffertePrijsprofielModel profiel) {
-    if (widget.alleenVrijePrijsPerArtikel) {
-      return <Widget>[
-        _bouwTabel(
-          profiel,
-          categorie: OffertePrijsCategorie.vrijPerArtikel,
-          uitleg:
-              'Vrije bijkomende kosten die later bij één '
-              'afzonderlijk artikel kunnen worden ingevuld.',
-        ),
-      ];
-    }
-
     return <Widget>[
       if (_heeftGeenTechnischeKeuzes)
         _bouwGeenTechnischeKeuzesKaart()
@@ -1310,8 +954,9 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
                 Text(
                   'Niet van toepassing voor ${widget.formulierNaam}. '
                   'Dit artikeltype heeft bewust geen technische '
-                  'prijskeuzeboom. Vrije prijzen per artikel blijven via de '
-                  'afzonderlijke centrale tegel beschikbaar.',
+                  'prijskeuzeboom. Bijkomende prijzen kunnen via '
+                  'Prijs per artikel rechtstreeks op de offertepositie '
+                  'worden toegevoegd.',
                   style: const TextStyle(
                     color: _tekstGrijs,
                     fontSize: 12.2,
@@ -1324,25 +969,6 @@ class _OffertePrijzenFichePaginaState extends State<OffertePrijzenFichePagina> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _bouwTabel(
-    OffertePrijsprofielModel profiel, {
-    required OffertePrijsCategorie categorie,
-    required String uitleg,
-  }) {
-    return OffertePrijstabelWidget(
-      categorie: categorie,
-      prijsregels: profiel.regelsVoorCategorie(categorie),
-      uitleg: uitleg,
-      onToevoegen: () {
-        _voegPrijsregelToe(categorie);
-      },
-      onWijzigen: _wijzigPrijsregel,
-      onVerwijderen: _verwijderPrijsregel,
-      onActiefGewijzigd: _zetPrijsregelActief,
-      onVerplaats: _verplaatsPrijsregel,
     );
   }
 

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ANALYZERFIX-POSITIEBEHEER-20260814
 // THIMACO-CONTROLE: POSITIEBEHEER-ATOMAIR-20260810
 // THIMACO-CONTROLE: NIET-REKENEN-TERUG-ACTIVEREN-HUIDIGE-PAGINA-20260810_0942
 // THIMACO-CONTROLE: POSITIEBEHEER-MET-WISSEL-NIET-REKENEN-20260728
@@ -6,7 +7,6 @@ import 'package:flutter/material.dart';
 import '../../app_storage.dart';
 import '../offerte_controller.dart';
 import '../prijzen/offerte_artikel_prijs_koppeling_service.dart';
-import '../prijzen/offerte_toegepaste_prijsregel_model.dart';
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../../opmeting/opslag/opmeting_veilige_mutatie_service.dart';
 
@@ -191,10 +191,7 @@ class OffertePositieBeheerController {
           );
 
           if (kopie.isOfferteOptie) {
-            kopie = _wisOptiePrijsgegevens(
-              kopie,
-              wisVerdeeldePrijsregels: false,
-            );
+            kopie = _wisOptiePrijsgegevens(kopie);
           }
 
           var invoegIndex = bronIndex + 1;
@@ -386,10 +383,7 @@ class OffertePositieBeheerController {
       );
 
       if (wordtOptie) {
-        bijgewerkt = _wisOptiePrijsgegevens(
-          bijgewerkt,
-          wisVerdeeldePrijsregels: true,
-        );
+        bijgewerkt = _wisOptiePrijsgegevens(bijgewerkt);
       }
 
       final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
@@ -424,9 +418,8 @@ class OffertePositieBeheerController {
   }
 
   OpmetingOverzichtRaamItem _wisOptiePrijsgegevens(
-    OpmetingOverzichtRaamItem item, {
-    required bool wisVerdeeldePrijsregels,
-  }) {
+    OpmetingOverzichtRaamItem item,
+  ) {
     final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
       item,
     );
@@ -439,10 +432,6 @@ class OffertePositieBeheerController {
         OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
           prijsData: prijsData,
           artikelKortingPercentage: 0.0,
-          toegepasteVerdeeldePrijsregels: wisVerdeeldePrijsregels
-              ? const <OfferteToegepastePrijsregelModel>[]
-              : null,
-          verdeeldePrijsSignatuur: wisVerdeeldePrijsregels ? '' : null,
         );
 
     return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(

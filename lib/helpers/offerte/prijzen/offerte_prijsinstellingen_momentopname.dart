@@ -1,10 +1,10 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5B2-MOMENTOPNAME-ZONDER-VERDEELMETA-20260814
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZESLEUTELS-FASE-7-20260727
 import 'dart:convert';
 
 import 'offerte_prijs_categorie.dart';
 import 'offerte_prijs_eenheid.dart';
 import 'offerte_prijs_uitschrijfmodus.dart';
-import 'offerte_prijs_verdeel_limietmodus.dart';
 import 'offerte_prijsprofiel_model.dart';
 import 'offerte_prijsregel_model.dart';
 import 'offerte_technische_keuze_overeenkomst_helper.dart';
@@ -34,8 +34,6 @@ class OffertePrijsregelMomentopname {
     required this.eenheid,
     required this.uitschrijfmodus,
     this.technischeKeuze,
-    required this.verdeelLimietmodus,
-    required this.verdeelLimietBedragExclBtw,
     required this.actief,
     required this.volgorde,
   });
@@ -48,8 +46,6 @@ class OffertePrijsregelMomentopname {
   final OffertePrijsEenheid eenheid;
   final OffertePrijsUitschrijfmodus uitschrijfmodus;
   final OfferteTechnischeKeuzeRef? technischeKeuze;
-  final OffertePrijsVerdeelLimietmodus verdeelLimietmodus;
-  final double verdeelLimietBedragExclBtw;
   final bool actief;
   final int volgorde;
 
@@ -65,8 +61,6 @@ class OffertePrijsregelMomentopname {
       eenheid: prijsregel.eenheid,
       uitschrijfmodus: prijsregel.uitschrijfmodus,
       technischeKeuze: prijsregel.technischeKeuze,
-      verdeelLimietmodus: prijsregel.verdeelLimietmodus,
-      verdeelLimietBedragExclBtw: prijsregel.verdeelLimietBedragExclBtw,
       actief: prijsregel.actief,
       volgorde: prijsregel.volgorde,
     );
@@ -82,8 +76,6 @@ class OffertePrijsregelMomentopname {
       eenheid: eenheid,
       uitschrijfmodus: uitschrijfmodus,
       technischeKeuze: technischeKeuze,
-      verdeelLimietmodus: verdeelLimietmodus,
-      verdeelLimietBedragExclBtw: verdeelLimietBedragExclBtw,
       actief: actief,
       volgorde: volgorde,
     );
@@ -99,8 +91,6 @@ class OffertePrijsregelMomentopname {
       'eenheid': eenheid.jsonWaarde,
       'uitschrijfmodus': uitschrijfmodus.jsonWaarde,
       'technischeKeuze': technischeKeuze?.toJson(),
-      'verdeelLimietmodus': verdeelLimietmodus.jsonWaarde,
-      'verdeelLimietBedragExclBtw': verdeelLimietBedragExclBtw,
       'actief': actief,
       'volgorde': volgorde,
     };
@@ -119,12 +109,6 @@ class OffertePrijsregelMomentopname {
       ),
       technischeKeuze: OfferteTechnischeKeuzeRef.fromJsonWaarde(
         json['technischeKeuze'],
-      ),
-      verdeelLimietmodus: OffertePrijsVerdeelLimietmodus.fromJson(
-        json['verdeelLimietmodus'],
-      ),
-      verdeelLimietBedragExclBtw: _leesDouble(
-        json['verdeelLimietBedragExclBtw'],
       ),
       actief: _leesBool(json['actief'], standaardWaarde: true),
       volgorde: _leesInt(json['volgorde']),
@@ -159,17 +143,6 @@ class OffertePrijsregelMomentopname {
         nieuw.actief ? 'Prijsregel geactiveerd' : 'Prijsregel uitgeschakeld',
       );
     }
-    if (verdeelLimietmodus != nieuw.verdeelLimietmodus) {
-      verschillen.add(
-        'Limiet: ${verdeelLimietmodus.benaming} → ${nieuw.verdeelLimietmodus.benaming}',
-      );
-    }
-    if (_rondBedrag(verdeelLimietBedragExclBtw) !=
-        _rondBedrag(nieuw.verdeelLimietBedragExclBtw)) {
-      verschillen.add(
-        'Aankooplimiet: ${_euro(verdeelLimietBedragExclBtw)} → ${_euro(nieuw.verdeelLimietBedragExclBtw)}',
-      );
-    }
     if (!_zijnZelfdeTechnischeKeuze(technischeKeuze, nieuw.technischeKeuze)) {
       verschillen.add('Gekoppelde technische keuze gewijzigd');
     }
@@ -189,11 +162,6 @@ class OffertePrijsregelMomentopname {
       eenheid.benaming,
       actief ? 'actief' : 'inactief',
     ];
-
-    if (verdeelLimietmodus == OffertePrijsVerdeelLimietmodus.metAankooplimiet &&
-        verdeelLimietBedragExclBtw > 0) {
-      delen.add('limiet ${_euro(verdeelLimietBedragExclBtw)}');
-    }
 
     return delen.join(' · ');
   }

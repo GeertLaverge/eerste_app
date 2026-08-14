@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-CONTROLLER-ZONDER-LEGACY-OPRUIMBLOKKEN-20260814
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP2-ALLEEN-TECHNISCHE-PRIJSINSTELLINGEN-20260814
 // THIMACO-CONTROLE: VOORZETROLLUIK-INBOUWSCHAKELAAR-PRIJS-MOMENTOPNAME-20260731
 // THIMACO-CONTROLE: VOORZETSCREEN-INBOUWSCHAKELAAR-TECHNISCHE-MOMENTOPNAME-20260730-2205
 // THIMACO-CONTROLE: VELUX-TECHNISCHE-AFWERKING-MOMENTOPNAME-20260730
@@ -16,10 +18,7 @@ import 'offerte_prijs_berekening_service.dart';
 import 'offerte_prijs_categorie.dart';
 import 'offerte_prijsinstellingen_momentopname.dart';
 import 'offerte_prijsprofiel_model.dart';
-import 'offerte_prijsregel_model.dart';
 import 'offerte_technische_prijs_momentopname_service.dart';
-import 'offerte_verdeelkost_service.dart';
-import 'offerte_gekoppelde_verdeelkost_service.dart';
 
 class OffertePrijsinstellingenController {
   OffertePrijsinstellingenController({
@@ -127,9 +126,7 @@ class OffertePrijsinstellingenController {
           .where(
             (regel) =>
                 regel.categorie ==
-                    OffertePrijsCategorie.technischeKeuzePerArtikel ||
-                regel.categorie == OffertePrijsCategorie.vrijPerArtikel ||
-                regel.categorie == OffertePrijsCategorie.alleArtikelen,
+                OffertePrijsCategorie.technischeKeuzePerArtikel,
           )
           .toList(growable: false),
     );
@@ -138,15 +135,11 @@ class OffertePrijsinstellingenController {
   OffertePrijsinstellingenMomentopname maakPrijsinstellingenMomentopname(
     OffertePrijsprofielModel profiel,
   ) {
-    final koppeling =
-        OfferteArtikelPrijsKoppelingService.koppelingVoorFormulierType(
-          profiel.formulierType,
-        );
-    final profielVoorMomentopname = koppeling?.isAlgemeenArtikel == true
-        ? _algemeenPrijsprofielVoorMomentopname(profiel)
-        : profiel;
+    // Alleen technische prijsregels behoren nog tot de centrale
+    // prijsinstellingen. Oude vrije/projectregels mogen geen melding,
+    // herberekening of momentopname meer veroorzaken.
     return OffertePrijsinstellingenMomentopname.vanProfiel(
-      profielVoorMomentopname,
+      _algemeenPrijsprofielVoorMomentopname(profiel),
     );
   }
 
@@ -209,8 +202,6 @@ class OffertePrijsinstellingenController {
     required String klantNaam,
     required bool berekenPrijzen,
     Map<String, OffertePrijsprofielModel>? prijsprofielen,
-    List<OffertePrijsregelModel> tijdelijkeProjectPrijsregels =
-        const <OffertePrijsregelModel>[],
     bool forceerPrijsinstellingen = false,
   }) async {
     if (!berekenPrijzen || klantNaam.trim().isEmpty) {
@@ -220,44 +211,17 @@ class OffertePrijsinstellingenController {
       );
     }
 
-    OffertePrijsprofielModel combineerProjectRegels(
-      OffertePrijsprofielModel basis,
-    ) {
-      final formulierSleutel = _normaliseerFormulierType(basis.formulierType);
-      final regelsPerId = <String, OffertePrijsregelModel>{
-        for (final regel in basis.prijsregels) regel.id: regel,
-      };
-
-      for (final regel in tijdelijkeProjectPrijsregels) {
-        if (regel.categorie != OffertePrijsCategorie.alleArtikelen ||
-            _normaliseerFormulierType(regel.formulierType) !=
-                formulierSleutel) {
-          continue;
-        }
-
-        regelsPerId[regel.id] = regel.copyWith(
-          categorie: OffertePrijsCategorie.alleArtikelen,
-          formulierType: basis.formulierType,
-        );
-      }
-
-      return basis.copyWith(
-        prijsregels: regelsPerId.values.toList(growable: false),
-      );
-    }
-
     final basisProfielen =
         prijsprofielen ?? await laadOndersteundePrijsprofielen();
     final profielen = <String, OffertePrijsprofielModel>{
       for (final formulierType
           in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes)
-        formulierType: combineerProjectRegels(
-          basisProfielen[formulierType] ??
-              OffertePrijsprofielModel.leeg(
-                formulierType: formulierType,
-                formulierNaam: _formulierNaamVoorPrijsType(formulierType),
-              ),
-        ),
+        formulierType:
+            basisProfielen[formulierType] ??
+            OffertePrijsprofielModel.leeg(
+              formulierType: formulierType,
+              formulierNaam: _formulierNaamVoorPrijsType(formulierType),
+            ),
     };
     final klantSleutel = klantNaam.trim().toLowerCase();
     var gewijzigd = false;
@@ -292,23 +256,6 @@ class OffertePrijsinstellingenController {
                   OffertePrijsBerekeningService.maakTechnischeMomentopname(
                     model: bijgewerktModel,
                   );
-              modelGewijzigd = true;
-            }
-
-            var prijsData = bijgewerktModel.prijsData;
-            if (OfferteAlgemeenArtikelPrijsService.moetVrijeArtikelMomentopnameBijwerken(
-              prijsData: prijsData,
-              profiel: profiel,
-              artikelSignatuur: bijgewerktModel.prijsBerekeningSignatuur,
-              forceer: forceerPrijsinstellingen,
-            )) {
-              prijsData =
-                  OfferteAlgemeenArtikelPrijsService.maakVrijeArtikelMomentopname(
-                    prijsData: prijsData,
-                    profiel: profiel,
-                    artikelSignatuur: bijgewerktModel.prijsBerekeningSignatuur,
-                  );
-              bijgewerktModel = bijgewerktModel.copyWithPrijsData(prijsData);
               modelGewijzigd = true;
             }
 
@@ -457,19 +404,6 @@ class OffertePrijsinstellingenController {
             prijsDataGewijzigd = true;
           }
 
-          if (OfferteAlgemeenArtikelPrijsService.moetVrijeArtikelMomentopnameBijwerken(
-            prijsData: prijsData,
-            profiel: profiel,
-            forceer: forceerPrijsinstellingen,
-          )) {
-            prijsData =
-                OfferteAlgemeenArtikelPrijsService.maakVrijeArtikelMomentopname(
-                  prijsData: prijsData,
-                  profiel: profiel,
-                );
-            prijsDataGewijzigd = true;
-          }
-
           if (!prijsDataGewijzigd) return opmeting;
 
           gewijzigd = true;
@@ -480,63 +414,9 @@ class OffertePrijsinstellingenController {
         })
         .toList(growable: false);
 
-    var verdeelkostOpmetingen = bijgewerkteOpmetingen;
-    var verdeelkostenGewijzigd = false;
-
-    // Iedere profielgebonden artikelgroep wordt herberekend. De eerdere
-    // hardcodering voor alleen vaste inzethor en PVC raam sloeg vijf groepen
-    // volledig over.
-    for (final formulierType
-        in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-      final profiel = profielen[formulierType];
-      if (profiel == null) continue;
-
-      final resultaat = OfferteVerdeelkostService.werkMomentopnamesBij(
-        alleOpmetingen: verdeelkostOpmetingen,
-        klantNaam: klantNaam,
-        profiel: profiel,
-        forceer: forceerPrijsinstellingen,
-      );
-      verdeelkostOpmetingen = resultaat.opmetingen;
-      verdeelkostenGewijzigd = verdeelkostenGewijzigd || resultaat.gewijzigd;
-    }
-
-    // Voeg automatische interne kosten met dezelfde omschrijving uit
-    // verschillende artikeltypes eerst samen tot één projectkost.
-    //
-    // Voorbeeld:
-    // PVC raam: Transport € 40
-    // Vaste inzethor: Transport € 40
-    //
-    // Resultaat: één kost van € 40, verdeeld over alle betrokken artikelen.
-    final gekoppeldeVerdeelkostenResultaat =
-        OfferteGekoppeldeVerdeelkostService.werkBij(
-          alleOpmetingen: verdeelkostOpmetingen,
-          klantNaam: klantNaam,
-          profielen: profielen,
-        );
-
-    verdeelkostOpmetingen = gekoppeldeVerdeelkostenResultaat.opmetingen;
-
-    verdeelkostenGewijzigd =
-        verdeelkostenGewijzigd || gekoppeldeVerdeelkostenResultaat.gewijzigd;
-
-    // Expliciet gekozen posities vormen één gezamenlijke verdeelgroep, ook
-    // wanneer verschillende artikeltypes werden geselecteerd. Hierdoor doet
-    // ook de handmatig geprijsde vliegendeur correct mee.
-    final geselecteerdeVerdeelkostenResultaat =
-        OfferteVerdeelkostService.werkGeselecteerdeProjectVerdeelkostenBij(
-          alleOpmetingen: verdeelkostOpmetingen,
-          klantNaam: klantNaam,
-          profielen: profielen,
-        );
-
     return OfferteTechnischePrijsMomentopnameResultaat(
-      opmetingen: geselecteerdeVerdeelkostenResultaat.opmetingen,
-      gewijzigd:
-          gewijzigd ||
-          verdeelkostenGewijzigd ||
-          geselecteerdeVerdeelkostenResultaat.gewijzigd,
+      opmetingen: bijgewerkteOpmetingen,
+      gewijzigd: gewijzigd,
     );
   }
 

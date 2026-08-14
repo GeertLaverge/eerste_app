@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-ACTIEF-20260814
 // THIMACO-CONTROLE: OFFERTEVARIANTEN-ATOMAIRE-OPSLAG-20260811
 // THIMACO-CONTROLE: PROJECT-TITELHOOFD-ATOMAIRE-OPSLAG-BEREKEN-20260810
 // THIMACO-CONTROLE: OPMETINGEN-ATOMAIRE-OPSLAG-GLOBAAL-20260810
@@ -1067,10 +1068,7 @@ class AppStorage {
       metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
       records: geldigeTemplates.map((template) => template.toJson()).toList(),
       idVoorRecord: _standaardSyncId,
-      // OneDrive wordt in een aparte gecontroleerde stap gekoppeld. Zo wordt
-      // nu geen backup gemarkeerd als voltooid terwijl deze nieuwe sleutel nog
-      // niet in onedrive_sync_service.dart zit.
-      sync: false,
+      sync: true,
     );
   }
 

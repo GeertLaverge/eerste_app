@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFSERVICE-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-ONDER-OFFERTENUMMER-20260809-2030
 // THIMACO-CONTROLE: OFFERTE-PDF-4-ANALYZER-ISSUES-FIX-20260809-1918
 // THIMACO-CONTROLE: OFFERTE-GELDIGHEID-14-KALENDERDAGEN-20260809-1908
@@ -779,15 +780,14 @@ class OffertePdfService {
           ],
           pw.Spacer(),
           if (toonEindBerekening) ...<pw.Widget>[
-            if (data.heeftZichtbareProjectPrijsregels) ...<pw.Widget>[
-              _bouwProjectPrijsregels(data),
-              pw.SizedBox(height: 10),
-            ],
+            if (data.heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte) ...<
+              pw.Widget
+            >[_bouwAlgemeneArtikelPrijsregels(data), pw.SizedBox(height: 10)],
             if (data.heeftLossePrijsOpties) ...<pw.Widget>[
               _bouwLossePrijsOpties(data),
               pw.SizedBox(height: 10),
             ],
-            if (data.heeftZichtbareProjectPrijsregels ||
+            if (data.heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte ||
                 data.heeftLossePrijsOpties)
               pw.SizedBox(height: 4),
           ],
@@ -1433,26 +1433,20 @@ class OffertePdfService {
   }
 
   static double _berekenEindBerekeningReserve(OfferteDocumentData data) {
-    final aantalProjectRegels =
-        data.afzonderlijkeProjectPrijsregelsVoorOfferte.length +
-        data.projectOmschrijvingZonderPrijsRegelsVoorOfferte.length +
+    final aantalAlgemeneRegels =
         data.algemeneArtikelPrijsregelsInbegrepenInOfferte.length;
-    final aantalProjectOpties = data.lossePrijsOpties.length;
+    final aantalLossePrijsOpties = data.lossePrijsOpties.length;
     var reserve = _basisEindBerekeningReserve;
-    if (aantalProjectRegels > 0) {
-      reserve += 38.0 + (aantalProjectRegels * 25.0);
+    if (aantalAlgemeneRegels > 0) {
+      reserve += 38.0 + (aantalAlgemeneRegels * 25.0);
     }
-    if (aantalProjectOpties > 0) {
-      reserve += 38.0 + (aantalProjectOpties * 24.0);
+    if (aantalLossePrijsOpties > 0) {
+      reserve += 38.0 + (aantalLossePrijsOpties * 24.0);
     }
     return reserve;
   }
 
-  static pw.Widget _bouwProjectPrijsregels(OfferteDocumentData data) {
-    final projectRegels = [
-      ...data.projectOmschrijvingZonderPrijsRegelsVoorOfferte,
-      ...data.afzonderlijkeProjectPrijsregelsVoorOfferte,
-    ];
+  static pw.Widget _bouwAlgemeneArtikelPrijsregels(OfferteDocumentData data) {
     final algemeneRegels = data.algemeneArtikelPrijsregelsInbegrepenInOfferte;
 
     return pw.Container(
@@ -1484,42 +1478,6 @@ class OffertePdfService {
               algemeneRegels[index],
               toonScheiding: index > 0,
             ),
-          for (
-            var index = 0;
-            index < projectRegels.length;
-            index++
-          ) ...<pw.Widget>[
-            if (algemeneRegels.isNotEmpty || index > 0)
-              pw.Container(height: 0.7, color: rand),
-            pw.Padding(
-              padding: const pw.EdgeInsets.fromLTRB(12, 7, 12, 7),
-              child: pw.Row(
-                children: <pw.Widget>[
-                  pw.Expanded(
-                    child: pw.Text(
-                      projectRegels[index].omschrijving,
-                      style: const pw.TextStyle(
-                        color: tekstGrijs,
-                        fontSize: 8.5,
-                      ),
-                    ),
-                  ),
-                  if (projectRegels[index].toonAfzonderlijkePrijsOpOfferte) ...[
-                    pw.SizedBox(width: 18),
-                    pw.Text(
-                      _formatteerEuro(projectRegels[index].totaalExclBtw),
-                      textAlign: pw.TextAlign.right,
-                      style: pw.TextStyle(
-                        color: tekstDonker,
-                        fontSize: 8.6,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
