@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-ALGEMEEN-BEREKENING-20260813
 // THIMACO-CONTROLE: PROJECTREGELS-NIET-IN-POSITIEPRIJS-20260725
 import 'dart:convert';
 
@@ -541,6 +542,7 @@ class OfferteAlgemeenArtikelPrijsService {
       verdeeldePrijsregels: prijsData.toegepasteVerdeeldePrijsregels
           .where((regel) => regel.toonOpOverzicht && regel.isGeldig)
           .toList(growable: false),
+      prijsPerPositieRegels: prijsData.prijsPerPositieRegels,
       winstmargePercentage: prijsData.artikelWinstmargePercentage,
       winstmargeOmschrijving: prijsData.artikelWinstmargeOmschrijving,
       kortingPercentage: kortingToestaan

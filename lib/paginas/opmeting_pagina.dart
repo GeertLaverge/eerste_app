@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP1-LEGACY-UI-20260814
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-OPSLAAN-20260813
+// THIMACO-CONTROLE: OUDE-PROJECTPRIJS-TOEVOEGROUTE-UIT-20260813
+// THIMACO-CONTROLE: OUDE-VRIJE-PRIJS-PER-ARTIKEL-ROUTE-UIT-20260813
+// THIMACO-CONTROLE: GROEPSGEWIJZE-WINST-KORTING-UI-LOS-20260813
 // THIMACO-CONTROLE: OPMETING-OVERZICHT-SCROLLPOSITIE-BEHOUDEN-20260812
 // THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: VERBORGEN-NIET-REKENEN-POSITIES-BLIJVEND-BEWAREN-20260809-2040
@@ -24,9 +29,9 @@ import '../helpers/offerte/offerte_pdf_preview_pagina.dart';
 import '../helpers/offerte/opmeting_pdf_preview_pagina.dart';
 import 'offerte_prijs_overzicht_pagina.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
+import '../helpers/offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_mutatie_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
-import '../helpers/offerte/prijzen/offerte_project_prijsregel_controller.dart';
 import '../helpers/offerte/prijzen/offerte_prijsinstellingen_controller.dart';
 import '../helpers/sync/onedrive_klantdocument_service.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
@@ -84,8 +89,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   late final OfferteArtikelPrijscorrectieController
   _artikelPrijscorrectieController;
-
-  late final OfferteProjectPrijsregelController _projectPrijsregelController;
 
   late final OffertePositieBeheerController _positieBeheerController;
 
@@ -155,50 +158,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         }
 
         setState(() {});
-      },
-    );
-
-    _projectPrijsregelController = OfferteProjectPrijsregelController(
-      context: context,
-      offerteController: _offerteController,
-      isMounted: () => mounted,
-      leesArtikelen: () => _raamOpmetingen,
-      leesTitelhoofd: () => _projectTitelhoofd,
-      leesKlantNaam: () => _klantNaam,
-      laadPrijsprofiel:
-          _prijsinstellingenController.laadPrijsprofielVoorFormulierType,
-      maakPrijsinstellingenMomentopname:
-          _prijsinstellingenController.maakPrijsinstellingenMomentopname,
-      herberekenPrijsMomentopnames: (klantNaam) {
-        return _herberekenPrijsMomentopnamesNaPrijswijziging(
-          klantNaam: klantNaam,
-        );
-      },
-      vervangArtikelen: (artikelen) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _raamOpmetingen
-            ..clear()
-            ..addAll(artikelen);
-        });
-      },
-      vervangTitelhoofd: (titelhoofd) {
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _projectTitelhoofd = titelhoofd;
-          _verborgenNietRekenenPositieIds = Set<String>.from(
-            titelhoofd.verborgenNietRekenenPositieIds,
-          );
-        });
-      },
-      toonMelding: (tekst, fout) {
-        _toonMelding(tekst, fout: fout);
       },
     );
 
@@ -439,20 +398,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     );
   }
 
-  Future<void> _openVrijePrijsPerArtikelVenster(
-    OpmetingOverzichtRaamItem item, {
-    required String positieLabel,
-  }) {
-    return _projectPrijsregelController.openVrijePrijsPerArtikelVenster(
-      item,
-      positieLabel: positieLabel,
-    );
-  }
-
-  Future<void> _openPrijsVoorAlleArtikelenVenster() {
-    return _projectPrijsregelController.openPrijsVoorAlleArtikelenVenster();
-  }
-
   Future<void> _herberekenPrijsMomentopnamesNaPrijswijziging({
     required String klantNaam,
   }) async {
@@ -627,6 +572,59 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     await _herberekenPrijsMomentopnamesNaPrijswijziging(
       klantNaam: veiligResultaat.positie.klantNaam,
     );
+  }
+
+  Future<void> _wijzigPrijsPerPositieRegels(
+    OpmetingOverzichtRaamItem item,
+    List<OffertePrijsPerPositieRegelModel> prijsregels,
+  ) async {
+    final positieId = item.id.trim();
+    if (positieId.isEmpty) {
+      return;
+    }
+
+    OpmetingVeiligeMutatieResultaat veiligResultaat;
+
+    try {
+      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
+        positieId: positieId,
+        wijziging: (actueel) {
+          return OfferteArtikelPrijsKoppelingService.schrijfPrijsPerPositieRegels(
+            artikel: actueel,
+            prijsregels: prijsregels,
+          );
+        },
+      );
+    } catch (fout) {
+      if (mounted) {
+        _toonMelding(
+          'Prijs per positie bewaren is niet gelukt.\n$fout',
+          fout: true,
+        );
+      }
+      return;
+    }
+
+    if (!veiligResultaat.gewijzigd || !mounted) {
+      return;
+    }
+
+    final lokaal = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
+    final index = lokaal.indexWhere(
+      (opmeting) => opmeting.id == veiligResultaat.positie.id,
+    );
+
+    if (index < 0) {
+      return;
+    }
+
+    lokaal[index] = veiligResultaat.positie;
+
+    setState(() {
+      _raamOpmetingen
+        ..clear()
+        ..addAll(lokaal);
+    });
   }
 
   Future<void> _wijzigArtikelWinstmarge(
@@ -1221,25 +1219,11 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       onArtikelKopieren: _kopieerRaamopmeting,
       onArtikelOptieWijzigen: _wisselRaamopmetingOptie,
       onArtikelNietRekenenWijzigen: _wisselRaamopmetingNietRekenen,
-      onPrijsMenuOpenen: (item, positieLabel) {
-        return _openVrijePrijsPerArtikelVenster(
-          item,
-          positieLabel: positieLabel,
-        );
-      },
       onPrijsGewijzigd: _wijzigArtikelPrijs,
       onWinstmargeGewijzigd: _wijzigArtikelWinstmarge,
       onKortingGewijzigd: _wijzigArtikelKorting,
-      prijsCorrectieDoelSamenvatting:
-          _artikelPrijscorrectieController.prijsCorrectieDoelSamenvatting,
-      onPrijsCorrectieToepassenOpOpenen:
-          _artikelPrijscorrectieController.openPrijsCorrectieToepassenOpDialog,
+      onPrijsPerPositieRegelsGewijzigd: _wijzigPrijsPerPositieRegels,
       onArtikelVerplaatsen: _verplaatsRaamopmeting,
-
-      // Beide projectbrede prijsregelknoppen gebruiken opnieuw
-      // uitsluitend de bestaande, werkende prijsregelcontroller.
-      onAlgemenePrijsregelOpenen: _openPrijsVoorAlleArtikelenVenster,
-      onBestaandeProjectPrijsregelsBewerken: _openPrijsVoorAlleArtikelenVenster,
     );
   }
 }

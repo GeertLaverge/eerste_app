@@ -1,5 +1,3 @@
-// THIMACO-CONTROLE: PRIJS-PER-POSITIE-LOKALE-OPSLAG-KOPPELING-20260813
-// THIMACO-CONTROLE: PRIJS-PER-POSITIE-ALGEMENE-OPMETING-DOORGEVEN-20260813
 // THIMACO-CONTROLE: BUITENJALOEZIE-EXACT-ZOALS-VOORZETSCREEN-PRIJSKOPPELING-20260803
 // THIMACO-CONTROLE: BUITENJALOEZIE-PRIJSKOPPELING-FASE-3A-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-VERKOOP-AANKOOP-WINST-KORTING-20260802
@@ -466,7 +464,6 @@ class OfferteArtikelPrijsKoppelingService {
     double? prijsPerStukExclBtw,
     double? artikelKortingPercentage,
     double? artikelWinstmargePercentage,
-    List<OffertePrijsPerPositieRegelModel>? prijsPerPositieRegels,
     List<OfferteToegepastePrijsregelModel>? toegepasteVerdeeldePrijsregels,
     String? verdeeldePrijsSignatuur,
   }) {
@@ -484,12 +481,6 @@ class OfferteArtikelPrijsKoppelingService {
       json['artikelWinstmargePercentage'] = artikelWinstmargePercentage;
     }
 
-    if (prijsPerPositieRegels != null) {
-      json['prijsPerPositieRegels'] = prijsPerPositieRegels
-          .map((regel) => regel.toJson())
-          .toList(growable: false);
-    }
-
     if (toegepasteVerdeeldePrijsregels != null) {
       json['toegepasteVerdeeldePrijsregels'] = toegepasteVerdeeldePrijsregels
           .map((regel) => regel.toJson())
@@ -501,42 +492,6 @@ class OfferteArtikelPrijsKoppelingService {
     }
 
     return OfferteArtikelPrijsDataModel.fromJson(json);
-  }
-
-  /// Leest de nieuwe lokale prijsregels van exact deze positie.
-  ///
-  /// Dit is bewust alleen een lokale kopie uit de artikelprijsdata. Er bestaat
-  /// geen live koppeling naar Instellingen of een centraal prijsregel-id.
-  static List<OffertePrijsPerPositieRegelModel>
-  prijsPerPositieRegelsVoorArtikel(OpmetingOverzichtRaamItem artikel) {
-    final prijsData = prijsDataVoorArtikel(artikel);
-    if (prijsData == null || prijsData.prijsPerPositieRegels.isEmpty) {
-      return const <OffertePrijsPerPositieRegelModel>[];
-    }
-
-    return List<OffertePrijsPerPositieRegelModel>.unmodifiable(
-      prijsData.prijsPerPositieRegels,
-    );
-  }
-
-  /// Vervangt uitsluitend de lokale prijs-per-positieregels van dit artikel.
-  /// Alle technische prijsregels, bestaande basisprijs, korting en legacy
-  /// prijsselecties blijven onaangeroerd.
-  static OpmetingOverzichtRaamItem schrijfPrijsPerPositieRegels({
-    required OpmetingOverzichtRaamItem artikel,
-    required List<OffertePrijsPerPositieRegelModel> prijsregels,
-  }) {
-    final prijsData = prijsDataVoorArtikel(artikel);
-    if (prijsData == null) return artikel;
-
-    return schrijfPrijsData(
-      artikel: artikel,
-      prijsData: wijzigPrijsData(
-        prijsData: prijsData,
-        prijsPerPositieRegels:
-            List<OffertePrijsPerPositieRegelModel>.unmodifiable(prijsregels),
-      ),
-    );
   }
 
   static OpmetingOverzichtRaamItem schrijfPrijsData({
@@ -672,7 +627,6 @@ class OfferteArtikelPrijsKoppelingService {
         technischePrijsregels: standaardResultaat.technischePrijsregels,
         vrijeArtikelPrijsregels: standaardResultaat.vrijeArtikelPrijsregels,
         verdeeldePrijsregels: standaardResultaat.verdeeldePrijsregels,
-        prijsPerPositieRegels: standaardResultaat.prijsPerPositieRegels,
         winstmargePercentage: winstmargePercentage,
         winstmargeBasisExclBtwOverride: aankoopTotaal,
         kortingBasisExclBtwOverride: aankoopdeelNaWinstmarge,

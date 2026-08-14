@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-INZETHOR-JSON-BEHOUD-20260813
 import 'dart:convert';
 
 import '../../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
@@ -1064,6 +1065,7 @@ class OpmetingVasteInzethorModel {
       'verdeeldePrijsSignatuur': json['verdeeldePrijsSignatuur'],
       'vrijeArtikelPrijsSelecties': json['vrijeArtikelPrijsSelecties'],
       'vrijeArtikelPrijsSignatuur': json['vrijeArtikelPrijsSignatuur'],
+      'prijsPerPositieRegels': json['prijsPerPositieRegels'],
       'artikelKortingPercentage': json['artikelKortingPercentage'],
       'artikelWinstmargePercentage': json['artikelWinstmargePercentage'],
     };
@@ -1081,6 +1083,7 @@ class OpmetingVasteInzethorModel {
         'verdeeldePrijsSignatuur',
         'vrijeArtikelPrijsSelecties',
         'vrijeArtikelPrijsSignatuur',
+        'prijsPerPositieRegels',
         'artikelKortingPercentage',
         'artikelWinstmargePercentage',
       ];

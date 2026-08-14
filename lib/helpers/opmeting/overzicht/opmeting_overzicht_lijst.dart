@@ -1,11 +1,15 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP1-LEGACY-UI-20260814
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-LIJST-20260813
+// THIMACO-CONTROLE: GROEPSGEWIJZE-WINST-KORTING-UI-UIT-LIJST-20260813
+// THIMACO-CONTROLE: OUDE-PROJECTPRIJS-TOEVOEGKNOP-UIT-LIJST-20260813
+// THIMACO-CONTROLE: OUDE-VRIJE-PRIJS-KNOP-UIT-LIJST-20260813
 // THIMACO-CONTROLE: OPMETING-OVERZICHT-SCROLLCONTROLLER-20260812
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../offerte/offerte_controller.dart';
-import '../../offerte/prijzen/offerte_project_prijs_overzicht_kaart.dart';
-import '../../offerte/prijzen/offerte_project_prijs_service.dart';
+import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../project/opmeting_project_kleur_model.dart';
 import '../project/opmeting_project_titelhoofd_kaart.dart';
 import '../project/opmeting_project_titelhoofd_model.dart';
@@ -16,21 +20,13 @@ typedef OpmetingOverzichtArtikelActie =
     Future<void> Function(OpmetingOverzichtRaamItem item);
 typedef OpmetingOverzichtArtikelVerplaatsActie =
     Future<void> Function(OpmetingOverzichtRaamItem item, int richting);
-typedef OpmetingOverzichtArtikelPrijsMenuActie =
-    Future<void> Function(OpmetingOverzichtRaamItem item, String positieLabel);
 typedef OpmetingOverzichtArtikelWaardeActie =
     Future<void> Function(OpmetingOverzichtRaamItem item, double waarde);
-typedef OpmetingOverzichtPrijsCorrectieSamenvatting =
-    String Function({
-      required OpmetingOverzichtRaamItem artikel,
-      required bool isKorting,
-    });
-typedef OpmetingOverzichtPrijsCorrectieDialoog =
-    Future<void> Function({
-      required OpmetingOverzichtRaamItem item,
-      required bool isKorting,
-      required double percentage,
-    });
+typedef OpmetingOverzichtPrijsPerPositieRegelsActie =
+    Future<void> Function(
+      OpmetingOverzichtRaamItem item,
+      List<OffertePrijsPerPositieRegelModel> prijsregels,
+    );
 
 class OpmetingOverzichtLijst extends StatelessWidget {
   const OpmetingOverzichtLijst({
@@ -53,15 +49,11 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     required this.onArtikelKopieren,
     required this.onArtikelOptieWijzigen,
     required this.onArtikelNietRekenenWijzigen,
-    required this.onPrijsMenuOpenen,
     required this.onPrijsGewijzigd,
     required this.onWinstmargeGewijzigd,
     required this.onKortingGewijzigd,
-    required this.prijsCorrectieDoelSamenvatting,
-    required this.onPrijsCorrectieToepassenOpOpenen,
+    required this.onPrijsPerPositieRegelsGewijzigd,
     required this.onArtikelVerplaatsen,
-    required this.onAlgemenePrijsregelOpenen,
-    required this.onBestaandeProjectPrijsregelsBewerken,
   });
 
   final ScrollController scrollController;
@@ -82,20 +74,13 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   final OpmetingOverzichtArtikelActie onArtikelKopieren;
   final OpmetingOverzichtArtikelActie onArtikelOptieWijzigen;
   final OpmetingOverzichtArtikelActie onArtikelNietRekenenWijzigen;
-  final OpmetingOverzichtArtikelPrijsMenuActie onPrijsMenuOpenen;
   final OpmetingOverzichtArtikelWaardeActie onPrijsGewijzigd;
   final OpmetingOverzichtArtikelWaardeActie onWinstmargeGewijzigd;
   final OpmetingOverzichtArtikelWaardeActie onKortingGewijzigd;
-  final OpmetingOverzichtPrijsCorrectieSamenvatting
-  prijsCorrectieDoelSamenvatting;
-  final OpmetingOverzichtPrijsCorrectieDialoog
-  onPrijsCorrectieToepassenOpOpenen;
+  final OpmetingOverzichtPrijsPerPositieRegelsActie
+  onPrijsPerPositieRegelsGewijzigd;
   final OpmetingOverzichtArtikelVerplaatsActie onArtikelVerplaatsen;
-  final Future<void> Function() onAlgemenePrijsregelOpenen;
-  final Future<void> Function() onBestaandeProjectPrijsregelsBewerken;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
@@ -112,11 +97,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   Widget build(BuildContext context) {
     final zichtbareItems = <_OpmetingOverzichtItemMetPositie>[];
     final titelhoofdVoorPrijs = _titelhoofdVoorPrijs;
-    final projectPrijsResultaat =
-        OfferteProjectPrijsService.berekenAlleOndersteundeUitTitelhoofd(
-          titelhoofd: titelhoofdVoorPrijs,
-          alleOpmetingen: opmetingen,
-        );
     final positieLabelPerId = offerteController.positiesService
         .maakBronPositieLabels(opmetingen);
     final geordendeItems = offerteController.positiesService
@@ -194,15 +174,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
                 item: item,
                 positieLabel: zichtbaarItem.positieLabel,
                 berekenPrijzen: projectTitelhoofd.berekenPrijzen,
-                winstmargeToepassenOpSamenvatting:
-                    prijsCorrectieDoelSamenvatting(
-                      artikel: item,
-                      isKorting: false,
-                    ),
-                kortingToepassenOpSamenvatting: prijsCorrectieDoelSamenvatting(
-                  artikel: item,
-                  isKorting: true,
-                ),
                 onOpenen: () {
                   unawaited(onArtikelOpenen(item));
                 },
@@ -218,36 +189,18 @@ class OpmetingOverzichtLijst extends StatelessWidget {
                 onNietRekenenWijzigen: () {
                   unawaited(onArtikelNietRekenenWijzigen(item));
                 },
-                onPrijsMenuOpenen: () {
-                  unawaited(
-                    onPrijsMenuOpenen(item, zichtbaarItem.positieLabel),
-                  );
-                },
                 onPrijsGewijzigd: (prijs) {
                   unawaited(onPrijsGewijzigd(item, prijs));
                 },
-                onWinstmargeGewijzigd: (percentage, _) {
+                onWinstmargeGewijzigd: (percentage) {
                   unawaited(onWinstmargeGewijzigd(item, percentage));
                 },
-                onKortingGewijzigd: (percentage, _) {
+                onKortingGewijzigd: (percentage) {
                   unawaited(onKortingGewijzigd(item, percentage));
                 },
-                onWinstmargeToepassenOpOpenen: (percentage) {
+                onPrijsPerPositieRegelsGewijzigd: (prijsregels) {
                   unawaited(
-                    onPrijsCorrectieToepassenOpOpenen(
-                      item: item,
-                      isKorting: false,
-                      percentage: percentage,
-                    ),
-                  );
-                },
-                onKortingToepassenOpOpenen: (percentage) {
-                  unawaited(
-                    onPrijsCorrectieToepassenOpOpenen(
-                      item: item,
-                      isKorting: true,
-                      percentage: percentage,
-                    ),
+                    onPrijsPerPositieRegelsGewijzigd(item, prijsregels),
                   );
                 },
                 onOmhoog: zichtbaarItem.lijstIndex > 0
@@ -263,43 +216,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
               ),
             );
           }),
-        if (projectTitelhoofd.berekenPrijzen)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                style: FilledButton.styleFrom(
-                  foregroundColor: _groen,
-                  backgroundColor: _lichtGroen,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: _rand),
-                  ),
-                ),
-                onPressed: () {
-                  unawaited(onAlgemenePrijsregelOpenen());
-                },
-                icon: const Icon(Icons.rule_folder_outlined, size: 19),
-                label: const Text(
-                  'Prijsregel toepassen op…',
-                  style: TextStyle(fontWeight: FontWeight.w900),
-                ),
-              ),
-            ),
-          ),
-        if (projectTitelhoofd.berekenPrijzen &&
-            projectPrijsResultaat.regelsVoorOverzicht.isNotEmpty)
-          OfferteProjectPrijsOverzichtKaart(
-            resultaat: projectPrijsResultaat,
-            onBewerken: () {
-              unawaited(onBestaandeProjectPrijsregelsBewerken());
-            },
-          ),
       ],
     );
   }

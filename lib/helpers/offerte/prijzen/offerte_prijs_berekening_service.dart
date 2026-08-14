@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-INZETHOR-BEREKENING-20260813
 // THIMACO-CONTROLE: VERDEELKOST-DOELMARKERING-20260724-INZETHOR
 import 'dart:convert';
 
@@ -259,6 +260,7 @@ class OffertePrijsBerekeningService {
       verdeeldePrijsregels: model.toegepasteVerdeeldePrijsregels
           .where((regel) => regel.toonOpOverzicht && regel.isGeldig)
           .toList(growable: false),
+      prijsPerPositieRegels: model.prijsData.prijsPerPositieRegels,
       winstmargePercentage: model.artikelWinstmargePercentage,
       winstmargeOmschrijving: model.artikelWinstmargeOmschrijving,
       kortingPercentage: kortingToestaan ? model.artikelKortingPercentage : 0.0,

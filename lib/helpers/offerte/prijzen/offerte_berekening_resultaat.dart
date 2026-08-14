@@ -1,5 +1,11 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-PDF-WEERGAVE-20260813
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-MEETELLEN-IN-TOTAAL-20260813
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-KORTING-ALLEEN-OP-AANKOOPDEEL-20260802
 // THIMACO-CONTROLE: WINSTMARGE-BASIS-OVERRIDE-ALGEMENE-OPMETING-20260802
+import 'offerte_artikel_prijs_data_model.dart';
+import 'offerte_prijs_categorie.dart';
+import 'offerte_prijs_eenheid.dart';
+import 'offerte_prijs_uitschrijfmodus.dart';
 import 'offerte_toegepaste_prijsregel_model.dart';
 
 class OfferteBerekeningResultaat {
@@ -13,6 +19,8 @@ class OfferteBerekeningResultaat {
         const <OfferteToegepastePrijsregelModel>[],
     List<OfferteToegepastePrijsregelModel> verdeeldePrijsregels =
         const <OfferteToegepastePrijsregelModel>[],
+    List<OffertePrijsPerPositieRegelModel> prijsPerPositieRegels =
+        const <OffertePrijsPerPositieRegelModel>[],
     double winstmargePercentage = 0,
     double? winstmargeBasisExclBtwOverride,
     double? kortingBasisExclBtwOverride,
@@ -38,6 +46,10 @@ class OfferteBerekeningResultaat {
            List<OfferteToegepastePrijsregelModel>.unmodifiable(
              verdeeldePrijsregels,
            ),
+       prijsPerPositieRegels =
+           List<OffertePrijsPerPositieRegelModel>.unmodifiable(
+             prijsPerPositieRegels,
+           ),
        winstmargePercentage = _normaliseerWinstmargePercentage(
          winstmargePercentage,
        ),
@@ -61,6 +73,11 @@ class OfferteBerekeningResultaat {
   final List<OfferteToegepastePrijsregelModel> technischePrijsregels;
   final List<OfferteToegepastePrijsregelModel> vrijeArtikelPrijsregels;
   final List<OfferteToegepastePrijsregelModel> verdeeldePrijsregels;
+
+  /// Lokale A/V-regels die uitsluitend bij deze offertepositie horen.
+  /// De offerteweergave (Uit / Tekst / €) verandert nooit de berekening.
+  final List<OffertePrijsPerPositieRegelModel> prijsPerPositieRegels;
+
   final double winstmargePercentage;
 
   /// Optionele interne basis waarop alleen de winstmarge wordt berekend.
@@ -91,6 +108,18 @@ class OfferteBerekeningResultaat {
 
   bool get heeftVerdeeldePrijsregels {
     return verdeeldePrijsregels.isNotEmpty;
+  }
+
+  bool get heeftPrijsPerPositieRegels {
+    return geldigePrijsPerPositieRegels.isNotEmpty;
+  }
+
+  List<OffertePrijsPerPositieRegelModel> get geldigePrijsPerPositieRegels {
+    return List<OffertePrijsPerPositieRegelModel>.unmodifiable(
+      prijsPerPositieRegels.where((regel) {
+        return regel.isGeldig && regel.eindTotaalExclBtw > 0.0;
+      }),
+    );
   }
 
   bool get heeftArtikelWinstmarge {
@@ -135,23 +164,64 @@ class OfferteBerekeningResultaat {
 
   /// Regels waarvan zowel de omschrijving als de afzonderlijke prijs
   /// op de klantofferte zichtbaar moet zijn.
+  ///
+  /// Lokale prijs-per-positieregels met weergave `€` worden hier uitsluitend
+  /// voor de PDF/weergavelaag als een bestaande toegepaste prijsregel
+  /// aangeboden. Ze worden bewust NIET aan [prijsregelsVoorOfferte] toegevoegd,
+  /// omdat hun bedrag reeds afzonderlijk in [prijsPerPositieTotaalExclBtw]
+  /// meetelt. Zo kan de bestaande PDF-opbouw ze tonen zonder dubbel te tellen.
   List<OfferteToegepastePrijsregelModel>
   get afzonderlijkePrijsregelsVoorOfferte {
+    final bestaande = prijsregelsVoorOfferte.where((regel) {
+      return regel.toonAfzonderlijkePrijsOpOfferte;
+    });
+    final lokale = geldigePrijsPerPositieRegels
+        .where((regel) => regel.offerteWeergave.toonPrijs)
+        .map(_prijsPerPositieAlsToegepastePrijsregel);
+
     return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      prijsregelsVoorOfferte.where((regel) {
-        return regel.toonAfzonderlijkePrijsOpOfferte;
-      }),
+      <OfferteToegepastePrijsregelModel>[...bestaande, ...lokale],
     );
   }
 
   /// Regels waarvan alleen de omschrijving op de klantofferte zichtbaar is.
   /// Het bedrag blijft wel volledig in het positie- en eindtotaal verwerkt.
+  ///
+  /// Lokale regels met weergave `Tekst` volgen exact dezelfde bestaande
+  /// PDF-route als de oudere prijsregels zonder afzonderlijk bedrag.
   List<OfferteToegepastePrijsregelModel>
   get omschrijvingZonderPrijsRegelsVoorOfferte {
+    final bestaande = prijsregelsVoorOfferte.where((regel) {
+      return regel.toonOmschrijvingZonderPrijsOpOfferte;
+    });
+    final lokale = geldigePrijsPerPositieRegels
+        .where((regel) {
+          return regel.offerteWeergave.toonOmschrijving &&
+              !regel.offerteWeergave.toonPrijs;
+        })
+        .map(_prijsPerPositieAlsToegepastePrijsregel);
+
     return List<OfferteToegepastePrijsregelModel>.unmodifiable(
-      prijsregelsVoorOfferte.where((regel) {
-        return regel.toonOmschrijvingZonderPrijsOpOfferte;
-      }),
+      <OfferteToegepastePrijsregelModel>[...bestaande, ...lokale],
+    );
+  }
+
+  OfferteToegepastePrijsregelModel _prijsPerPositieAlsToegepastePrijsregel(
+    OffertePrijsPerPositieRegelModel regel,
+  ) {
+    final uitschrijfmodus = regel.offerteWeergave.toonPrijs
+        ? OffertePrijsUitschrijfmodus.invullenEnOfferteMetPrijs
+        : OffertePrijsUitschrijfmodus.invullenEnOfferteZonderPrijs;
+
+    return OfferteToegepastePrijsregelModel(
+      bronPrijsregelId: 'prijsPerPositie::${regel.id}',
+      categorie: OffertePrijsCategorie.vrijPerArtikel,
+      omschrijving: regel.omschrijving,
+      prijsExclBtw: regel.verkoopPrijsPerEenheidExclBtw,
+      eenheid: OffertePrijsEenheid.vast,
+      hoeveelheid: regel.veiligAantal,
+      totaalExclBtw: regel.eindTotaalExclBtw,
+      uitschrijfmodus: uitschrijfmodus,
     );
   }
 
@@ -165,6 +235,32 @@ class OfferteBerekeningResultaat {
 
   double get verdeeldeTotaalExclBtw {
     return _som(verdeeldePrijsregels.where((regel) => !regel.isOptie));
+  }
+
+  /// Verkoopwaarde van alle geldige lokale prijs-per-positieregels.
+  /// A-regels bevatten hier hun eigen winst; V-regels hun ingevoerde
+  /// verkoopprijs. Deze regels krijgen geen extra artikelwinstmarge of korting.
+  double get prijsPerPositieTotaalExclBtw {
+    final totaal = geldigePrijsPerPositieRegels.fold<double>(
+      0.0,
+      (som, regel) => som + regel.eindTotaalExclBtw,
+    );
+    return _rondBedragAf(totaal);
+  }
+
+  double get prijsPerPositieAankoopBasisTotaalExclBtw {
+    final totaal = geldigePrijsPerPositieRegels
+        .where((regel) => regel.isAankoop)
+        .fold<double>(0.0, (som, regel) => som + regel.basisTotaalExclBtw);
+    return _rondBedragAf(totaal);
+  }
+
+  double get prijsPerPositieWinstTotaalExclBtw {
+    final totaal = geldigePrijsPerPositieRegels.fold<double>(
+      0.0,
+      (som, regel) => som + regel.winstBedragExclBtw,
+    );
+    return _rondBedragAf(totaal);
   }
 
   double get optiePrijsregelsTotaalExclBtw {
@@ -252,7 +348,8 @@ class OfferteBerekeningResultaat {
     return _rondBedragAf(
       basisNaWinstmargeEnKortingExclBtw +
           technischeTotaalExclBtw +
-          vrijeArtikelTotaalExclBtw,
+          vrijeArtikelTotaalExclBtw +
+          prijsPerPositieTotaalExclBtw,
     );
   }
 
@@ -268,7 +365,9 @@ class OfferteBerekeningResultaat {
   /// Verborgen prijsregels blijven hierin aanwezig.
   double get offerteTotaalExclBtw {
     return _rondBedragAf(
-      basisNaWinstmargeEnKortingExclBtw + offertePrijsregelsTotaalExclBtw,
+      basisNaWinstmargeEnKortingExclBtw +
+          offertePrijsregelsTotaalExclBtw +
+          prijsPerPositieTotaalExclBtw,
     );
   }
 

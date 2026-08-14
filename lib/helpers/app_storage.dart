@@ -40,6 +40,7 @@ import 'offerte/mail/offerte_mail_tekst_model.dart';
 import 'offerte/versies/offerte_versie_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
+import 'offerte/prijzen/offerte_prijs_per_artikel_template_model.dart';
 
 class AppStorageOpmetingMutatieResultaat<T> {
   const AppStorageOpmetingMutatieResultaat({
@@ -167,6 +168,13 @@ class AppStorage {
 
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
+
+  // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-OPSLAG-20260813
+  static const String _offertePrijsPerArtikelTemplatesKey =
+      'thimaco_offerte_prijs_per_artikel_templates';
+
+  static const String _offertePrijsPerArtikelTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_per_artikel_templates_sync_meta';
 
   static const String _offerteVersiesKey = 'thimaco_offerte_versies';
 
@@ -1013,6 +1021,94 @@ class AppStorage {
     });
 
     await bewaarOffertePrijsProfielen(profielen);
+  }
+
+  // ------------------------------------------------------------
+  // PRIJS PER ARTIKEL - HERBRUIKBARE BIBLIOTHEEK
+  // ------------------------------------------------------------
+
+  static Future<List<OffertePrijsPerArtikelTemplateModel>>
+  laadOffertePrijsPerArtikelTemplates() async {
+    final prefs = await openBox();
+    final records = decodeJsonMapLijstVoorSync(
+      prefs.getString(_offertePrijsPerArtikelTemplatesKey),
+    );
+    final resultaat = <OffertePrijsPerArtikelTemplateModel>[];
+
+    for (final record in records) {
+      try {
+        final template = OffertePrijsPerArtikelTemplateModel.fromJson(record);
+        if (template.isGeldig) resultaat.add(template);
+      } catch (_) {
+        // Eén beschadigde bibliotheekregel mag de overige regels niet blokkeren.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+      if (volgorde != 0) return volgorde;
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return resultaat;
+  }
+
+  static Future<void> bewaarOffertePrijsPerArtikelTemplates(
+    List<OffertePrijsPerArtikelTemplateModel> templates,
+  ) async {
+    final geldigeTemplates = templates
+        .where((template) => template.isGeldig)
+        .toList(growable: false);
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offertePrijsPerArtikelTemplatesKey,
+      metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
+      records: geldigeTemplates.map((template) => template.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      // OneDrive wordt in een aparte gecontroleerde stap gekoppeld. Zo wordt
+      // nu geen backup gemarkeerd als voltooid terwijl deze nieuwe sleutel nog
+      // niet in onedrive_sync_service.dart zit.
+      sync: false,
+    );
+  }
+
+  static Future<void> bewaarOffertePrijsPerArtikelTemplatesVoorSync(
+    List<OffertePrijsPerArtikelTemplateModel> templates,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsPerArtikelTemplatesKey,
+      encodeJsonMapLijstVoorSync(
+        templates
+            .where((template) => template.isGeldig)
+            .map((template) => template.toJson()),
+      ),
+    );
+  }
+
+  static Future<String>
+  laadOffertePrijsPerArtikelTemplatesJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsPerArtikelTemplatesKey) ?? '';
+  }
+
+  static Future<String>
+  laadOffertePrijsPerArtikelTemplatesSyncMetadataJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsPerArtikelTemplatesSyncMetaKey) ?? '';
+  }
+
+  static Future<void>
+  bewaarOffertePrijsPerArtikelTemplatesSyncMetadataJsonVoorSync(
+    String metadataJson,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsPerArtikelTemplatesSyncMetaKey,
+      metadataJson,
+    );
   }
 
   // ------------------------------------------------------------
