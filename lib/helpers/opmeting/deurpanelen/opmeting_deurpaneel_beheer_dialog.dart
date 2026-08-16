@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: FRAGER-DEURPANELEN-BEHEER-20260816
 // THIMACO-CONTROLE: DEURPANELEN-DXF-DOWNLOADSIGNAAL-FASE19-20260805
 import 'package:flutter/material.dart';
 
@@ -232,7 +233,7 @@ class _OpmetingDeurpaneelBeheerDialogState
                 _toonInactievePanelen = !_toonInactievePanelen;
               });
             } else if (actie == 'reset') {
-              _resetNaarTestPanelen();
+              _resetNaarFragerLijst();
             } else if (actie == 'test_dxf') {
               _laadTestDxfBestanden();
             } else if (actie == 'wis_dxf') {
@@ -251,7 +252,7 @@ class _OpmetingDeurpaneelBeheerDialogState
               ),
               const PopupMenuItem<String>(
                 value: 'reset',
-                child: Text('Testlijst terugzetten'),
+                child: Text('Frager-lijst terugzetten'),
               ),
               const PopupMenuItem<String>(
                 value: 'test_dxf',
@@ -520,12 +521,12 @@ class _OpmetingDeurpaneelBeheerDialogState
     );
   }
 
-  Future<void> _resetNaarTestPanelen() async {
+  Future<void> _resetNaarFragerLijst() async {
     await _voerBewaarActieUit(
       actie: panelen_bibliotheek
           .OpmetingDeurpaneelBibliotheek
-          .resetNaarTestPanelen,
-      melding: 'Testlijst deurpanelen teruggezet.',
+          .resetNaarFragerLijst,
+      melding: 'Frager-lijst met deurpanelen teruggezet.',
     );
   }
 
@@ -727,11 +728,7 @@ class _DeurpaneelExcelPlakDialogState
   void initState() {
     super.initState();
     _controller = TextEditingController(
-      text:
-          'ID\tNaam\tTekening\tType\tCilinder\n'
-          'MI251\tJEF\tMI2510BN.dxf\tVleugel\tRechts\n'
-          'LD121\tHERMITAGE\tLD1211AN.dxf\tBeide\t\n'
-          'VF011\tVEDUDO\tVF0110BN.dxf\tNiet-vleugel\t',
+      text: 'ID\tNaam\tTekening\tType\tCilinder\n',
     );
   }
 

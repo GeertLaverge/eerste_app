@@ -1,5 +1,7 @@
+// THIMACO-CONTROLE: FRAGER-DEURPANELEN-BIBLIOTHEEK-20260816
 import 'package:flutter/foundation.dart';
 
+import 'opmeting_deurpaneel_frager_lijst.dart';
 import 'opmeting_deurpaneel_model.dart';
 import 'opmeting_deurpaneel_storage_helper.dart' as deurpaneel_storage;
 
@@ -8,7 +10,9 @@ class OpmetingDeurpaneelBibliotheek {
 
   static final ValueNotifier<List<OpmetingDeurpaneel>> panelen =
       ValueNotifier<List<OpmetingDeurpaneel>>(
-        List<OpmetingDeurpaneel>.unmodifiable(_testPanelen),
+        List<OpmetingDeurpaneel>.unmodifiable(
+          OpmetingDeurpaneelFragerLijst.panelen,
+        ),
       );
 
   static bool _geladen = false;
@@ -29,15 +33,29 @@ class OpmetingDeurpaneelBibliotheek {
       final opgeslagenPanelen = await deurpaneel_storage
           .OpmetingDeurpaneelStorageHelper.laadPanelen();
 
-      if (opgeslagenPanelen != null) {
+      // De drie oude testpanelen waren enkel tijdelijk voor de opbouw van
+      // deurpanelen/DXF. Zodra die oude testset nog in opslag staat, vervangen
+      // we ze automatisch éénmalig door de volledige Frager-lijst.
+      final gebruikFragerLijst =
+          opgeslagenPanelen == null || _isOudeTestlijst(opgeslagenPanelen);
+
+      if (gebruikFragerLijst) {
+        final fragerPanelen = _sorteerPanelen(
+          OpmetingDeurpaneelFragerLijst.panelen,
+        );
+
+        panelen.value = List<OpmetingDeurpaneel>.unmodifiable(fragerPanelen);
+        _geladen = true;
+
+        await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
+          fragerPanelen,
+        );
+      } else {
         panelen.value = List<OpmetingDeurpaneel>.unmodifiable(
           _sorteerPanelen(opgeslagenPanelen),
         );
-      } else {
-        panelen.value = List<OpmetingDeurpaneel>.unmodifiable(_testPanelen);
+        _geladen = true;
       }
-
-      _geladen = true;
     } finally {
       _ladenBezig = false;
     }
@@ -64,13 +82,22 @@ class OpmetingDeurpaneelBibliotheek {
     );
   }
 
-  static Future<void> resetNaarTestPanelen() async {
-    panelen.value = List<OpmetingDeurpaneel>.unmodifiable(_testPanelen);
+  static Future<void> resetNaarFragerLijst() async {
+    final fragerPanelen = _sorteerPanelen(
+      OpmetingDeurpaneelFragerLijst.panelen,
+    );
+
+    panelen.value = List<OpmetingDeurpaneel>.unmodifiable(fragerPanelen);
     _geladen = true;
 
     await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
-      _testPanelen,
+      fragerPanelen,
     );
+  }
+
+  // Tijdelijk behouden voor eventuele oudere aanroepen.
+  static Future<void> resetNaarTestPanelen() {
+    return resetNaarFragerLijst();
   }
 
   static Future<void> wisselActief(String paneelId) async {
@@ -92,6 +119,23 @@ class OpmetingDeurpaneelBibliotheek {
     await deurpaneel_storage.OpmetingDeurpaneelStorageHelper.bewaarPanelen(
       nieuwePanelen,
     );
+  }
+
+  static bool _isOudeTestlijst(List<OpmetingDeurpaneel> bron) {
+    if (bron.length != 3) {
+      return false;
+    }
+
+    final perId = <String, OpmetingDeurpaneel>{
+      for (final paneel in bron) paneel.id.trim().toUpperCase(): paneel,
+    };
+
+    return perId['MI251']?.tekeningBestandsnaam.trim().toLowerCase() ==
+            'mi2510bn.dxf' &&
+        perId['LD121']?.tekeningBestandsnaam.trim().toLowerCase() ==
+            'ld1211an.dxf' &&
+        perId['VF011']?.tekeningBestandsnaam.trim().toLowerCase() ==
+            'vf0110bn.dxf';
   }
 
   static List<OpmetingDeurpaneel> _sorteerPanelen(
@@ -120,29 +164,4 @@ class OpmetingDeurpaneelBibliotheek {
 
     return resultaat;
   }
-
-  static const List<OpmetingDeurpaneel> _testPanelen = <OpmetingDeurpaneel>[
-    OpmetingDeurpaneel(
-      id: 'MI251',
-      naam: 'JEF',
-      tekeningBestandsnaam: 'MI2510BN.dxf',
-      nietVleugelOverdekkendToegelaten: false,
-      vleugelOverdekkendToegelaten: true,
-      cilinderZijde: OpmetingDeurpaneelCilinderZijde.rechts,
-    ),
-    OpmetingDeurpaneel(
-      id: 'LD121',
-      naam: 'HERMITAGE',
-      tekeningBestandsnaam: 'LD1211AN.dxf',
-      nietVleugelOverdekkendToegelaten: true,
-      vleugelOverdekkendToegelaten: true,
-    ),
-    OpmetingDeurpaneel(
-      id: 'VF011',
-      naam: 'VEDUDO',
-      tekeningBestandsnaam: 'VF0110BN.dxf',
-      nietVleugelOverdekkendToegelaten: true,
-      vleugelOverdekkendToegelaten: false,
-    ),
-  ];
 }

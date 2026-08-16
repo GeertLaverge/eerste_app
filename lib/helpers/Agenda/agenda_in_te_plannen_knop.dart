@@ -25,8 +25,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
       return (item.type == 'planning' ||
               item.type == 'opvolging' ||
-              item.type == 'nadienst' ||
-              item.type == 'afspraak') &&
+              item.type == 'nadienst') &&
           (itemNaam == klantNaam || itemTitel == klantNaam);
     });
   }
