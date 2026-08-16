@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: TECHNISCHE-PRIJS-MENU-SUBMENU-GROEPERING-20260816
+// THIMACO-CONTROLE: TECHNISCHE-PRIJS-DEDUPE-ZONDER-FICHELABEL-20260816
 // THIMACO-CONTROLE: TECHNISCHE-PRIJS-ALLEEN-ZELFGEMAAKTE-KEUZES-20260815
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-UNUSED-FIELDS-FIX-20260815
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-PAGINA-20260815
@@ -53,6 +55,9 @@ class _OffertePrijsTechnischeKeuzesPaginaState
   Map<String, OfferteTechnischeKeuzePrijsModel> _prijzen =
       <String, OfferteTechnischeKeuzePrijsModel>{};
 
+  final Set<String> _openMenuSleutels = <String>{};
+  final Set<String> _openSubmenuSleutels = <String>{};
+
   @override
   void initState() {
     super.initState();
@@ -67,11 +72,10 @@ class _OffertePrijsTechnischeKeuzesPaginaState
 
     try {
       final opgeslagen = await AppStorage.laadOfferteTechnischeKeuzePrijzen();
-      final prijzen = <String, OfferteTechnischeKeuzePrijsModel>{
-        for (final prijs in opgeslagen) prijs.id: prijs,
-      };
 
       final perSleutel = <String, _CentraleTechnischeKeuzeAccumulator>{};
+      final groepVoorExacteSleutel = <String, String>{};
+      final groepVoorZichtbareSleutel = <String, String>{};
 
       final technischeKoppelingen = OfferteArtikelPrijsKoppelingService
           .alleKoppelingen
@@ -83,9 +87,9 @@ class _OffertePrijsTechnischeKeuzesPaginaState
         // "Nieuwe technische keuze" in een opmeetfiche heeft aangemaakt,
         // komen in deze centrale prijslijst.
         //
-        // De opmeetfiche bewaart die zelfgemaakte keuzemenu's reeds centraal
-        // per formulierType in AppStorage. We lezen dus UITSLUITEND die opslag
-        // en voegen geen ingebouwde Velux/screen/rolluik/... keuzes meer toe.
+        // De centrale prijslijst is bewust fiche-onafhankelijk. Keuzes met
+        // dezelfde stabiele IDs OF exact dezelfde zichtbare combinatie
+        // menu + submenu + keuze vormen daarom één centrale keuze.
         final menus = await AppStorage.laadOpmetingRaamKeuzemenusVoorFormulier(
           koppeling.formulierType,
         );
@@ -99,24 +103,71 @@ class _OffertePrijsTechnischeKeuzesPaginaState
         );
 
         for (final keuze in keuzes) {
-          final sleutel =
+          final exacteSleutel =
               OfferteTechnischeKeuzeOvereenkomstHelper.exacteSleutelTussenArtikeltypesVan(
                 keuze,
               );
-          if (sleutel.isEmpty) {
+          if (exacteSleutel.isEmpty) {
             continue;
           }
 
-          final bestaand = perSleutel[sleutel];
-          if (bestaand == null) {
-            perSleutel[sleutel] = _CentraleTechnischeKeuzeAccumulator(
-              sleutel: sleutel,
+          final zichtbareSleutel =
+              OfferteTechnischeKeuzeOvereenkomstHelper.tekstSuggestieSleutelVan(
+                keuze,
+              );
+
+          final groepViaExact = groepVoorExacteSleutel[exacteSleutel];
+          final groepViaTekst = zichtbareSleutel.isEmpty
+              ? null
+              : groepVoorZichtbareSleutel[zichtbareSleutel];
+
+          String groepSleutel;
+          if (groepViaExact == null && groepViaTekst == null) {
+            groepSleutel = exacteSleutel;
+            perSleutel[groepSleutel] = _CentraleTechnischeKeuzeAccumulator(
+              sleutel: groepSleutel,
               keuze: keuze,
-              formulierNamen: <String>{koppeling.formulierNaam},
             );
+          } else if (groepViaExact != null && groepViaTekst != null) {
+            if (groepViaExact == groepViaTekst) {
+              groepSleutel = groepViaExact;
+            } else {
+              // Een oudere dataset kan twee groepen hebben die via IDs en
+              // zichtbare tekst alsnog dezelfde keuze blijken te zijn.
+              // Voeg ze veilig samen en behoud één bestaande echte ID als
+              // centrale opslagsleutel.
+              groepSleutel = groepViaExact;
+              final bron = perSleutel.remove(groepViaTekst);
+
+              if (bron != null) {
+                for (final entry in groepVoorExacteSleutel.entries.toList()) {
+                  if (entry.value == groepViaTekst) {
+                    groepVoorExacteSleutel[entry.key] = groepSleutel;
+                  }
+                }
+                for (final entry
+                    in groepVoorZichtbareSleutel.entries.toList()) {
+                  if (entry.value == groepViaTekst) {
+                    groepVoorZichtbareSleutel[entry.key] = groepSleutel;
+                  }
+                }
+              }
+            }
           } else {
-            bestaand.formulierNamen.add(koppeling.formulierNaam);
-            bestaand.keuze = _besteMomentopname(bestaand.keuze, keuze);
+            groepSleutel = groepViaExact ?? groepViaTekst!;
+          }
+
+          final groep = perSleutel[groepSleutel]!;
+          final groepExacteSleutel =
+              OfferteTechnischeKeuzeOvereenkomstHelper.exacteSleutelTussenArtikeltypesVan(
+                groep.keuze,
+              );
+          if (groepExacteSleutel == exacteSleutel) {
+            groep.keuze = _besteMomentopname(groep.keuze, keuze);
+          }
+          groepVoorExacteSleutel[exacteSleutel] = groepSleutel;
+          if (zichtbareSleutel.isNotEmpty) {
+            groepVoorZichtbareSleutel[zichtbareSleutel] = groepSleutel;
           }
         }
       }
@@ -127,8 +178,6 @@ class _OffertePrijsTechnischeKeuzesPaginaState
                 (item) => _CentraleTechnischeKeuze(
                   sleutel: item.sleutel,
                   keuze: item.keuze,
-                  formulierNamen: item.formulierNamen.toList(growable: false)
-                    ..sort(),
                 ),
               )
               .toList(growable: true)
@@ -150,17 +199,76 @@ class _OffertePrijsTechnischeKeuzesPaginaState
               );
             });
 
-      final beschikbareSleutels = perSleutel.keys.toSet();
-      final opgeschoondePrijzen = <String, OfferteTechnischeKeuzePrijsModel>{
-        for (final entry in prijzen.entries)
-          if (beschikbareSleutels.contains(entry.key)) entry.key: entry.value,
-      };
+      final opgeschoondePrijzen = <String, OfferteTechnischeKeuzePrijsModel>{};
+      var opslagGewijzigd = false;
 
-      // Eventuele eerder foutief aangemaakte prijsregels voor ingebouwde
-      // programma-keuzes worden éénmalig verwijderd. Een technische prijs mag
-      // alleen bestaan zolang de bijhorende zelfgemaakte technische keuze nog
-      // in de centrale keuzemenu-opslag bestaat.
-      if (opgeschoondePrijzen.length != prijzen.length) {
+      for (final prijs in opgeslagen) {
+        String? centraleSleutel;
+
+        if (perSleutel.containsKey(prijs.id)) {
+          centraleSleutel = prijs.id;
+        } else {
+          centraleSleutel = groepVoorExacteSleutel[prijs.id];
+        }
+
+        if (centraleSleutel == null || centraleSleutel.isEmpty) {
+          final prijsExacteSleutel =
+              OfferteTechnischeKeuzeOvereenkomstHelper.exacteSleutelTussenArtikeltypesVan(
+                prijs.technischeKeuze,
+              );
+          if (prijsExacteSleutel.isNotEmpty) {
+            centraleSleutel = groepVoorExacteSleutel[prijsExacteSleutel];
+          }
+        }
+
+        if (centraleSleutel == null || centraleSleutel.isEmpty) {
+          final prijsZichtbareSleutel =
+              OfferteTechnischeKeuzeOvereenkomstHelper.tekstSuggestieSleutelVan(
+                prijs.technischeKeuze,
+              );
+          if (prijsZichtbareSleutel.isNotEmpty) {
+            centraleSleutel = groepVoorZichtbareSleutel[prijsZichtbareSleutel];
+          }
+        }
+
+        if (centraleSleutel == null ||
+            centraleSleutel.isEmpty ||
+            !perSleutel.containsKey(centraleSleutel)) {
+          // Oude prijs voor een keuze die niet meer bestaat of voor een
+          // ingebouwde programmakeuze: niet opnieuw bewaren.
+          opslagGewijzigd = true;
+          continue;
+        }
+
+        final representatieveKeuze = perSleutel[centraleSleutel]!.keuze;
+        final kandidaat = prijs.copyWith(
+          id: centraleSleutel,
+          technischeKeuze: representatieveKeuze,
+        );
+
+        if (prijs.id != centraleSleutel) {
+          opslagGewijzigd = true;
+        }
+
+        final bestaand = opgeschoondePrijzen[centraleSleutel];
+        if (bestaand == null) {
+          opgeschoondePrijzen[centraleSleutel] = kandidaat;
+        } else {
+          // Twee oudere fichegebonden prijsregels bleken dezelfde centrale
+          // technische keuze te zijn. Bewaar er precies één.
+          opslagGewijzigd = true;
+          opgeschoondePrijzen[centraleSleutel] = _meestRecentePrijs(
+            bestaand,
+            kandidaat,
+          );
+        }
+      }
+
+      if (opgeschoondePrijzen.length != opgeslagen.length) {
+        opslagGewijzigd = true;
+      }
+
+      if (opslagGewijzigd) {
         await AppStorage.bewaarOfferteTechnischeKeuzePrijzen(
           opgeschoondePrijzen.values.toList(growable: false),
         );
@@ -200,6 +308,32 @@ class _OffertePrijsTechnischeKeuzesPaginaState
     return tweedeScore > eersteScore ? tweede : eerste;
   }
 
+  static OfferteTechnischeKeuzePrijsModel _meestRecentePrijs(
+    OfferteTechnischeKeuzePrijsModel eerste,
+    OfferteTechnischeKeuzePrijsModel tweede,
+  ) {
+    final eersteTijdstip = DateTime.tryParse(eerste.gewijzigdOp);
+    final tweedeTijdstip = DateTime.tryParse(tweede.gewijzigdOp);
+
+    if (eersteTijdstip != null && tweedeTijdstip != null) {
+      if (tweedeTijdstip.isAfter(eersteTijdstip)) {
+        return tweede;
+      }
+      if (eersteTijdstip.isAfter(tweedeTijdstip)) {
+        return eerste;
+      }
+    } else if (tweedeTijdstip != null) {
+      return tweede;
+    } else if (eersteTijdstip != null) {
+      return eerste;
+    }
+
+    if (tweede.heeftPrijs && !eerste.heeftPrijs) {
+      return tweede;
+    }
+    return eerste;
+  }
+
   List<_CentraleTechnischeKeuze> get _zichtbareKeuzes {
     final zoek = _zoekterm.trim().toLowerCase();
     if (zoek.isEmpty) {
@@ -213,7 +347,6 @@ class _OffertePrijsTechnischeKeuzesPaginaState
             item.submenuTitel,
             item.keuzeTitel,
             item.uitschrijftekst,
-            ...item.formulierNamen,
           ].join(' ').toLowerCase();
           return tekst.contains(zoek);
         })
@@ -280,12 +413,273 @@ class _OffertePrijsTechnischeKeuzesPaginaState
     }
   }
 
+  List<_TechnischeMenuGroep> _groepeerKeuzes(
+    List<_CentraleTechnischeKeuze> keuzes,
+  ) {
+    final perMenu = <String, _TechnischeMenuGroepBouwer>{};
+
+    for (final item in keuzes) {
+      final menuTitel = item.menuTitel.isEmpty
+          ? 'Technische keuzes'
+          : item.menuTitel;
+      final submenuTitel = item.submenuTitel.isEmpty
+          ? 'Algemeen'
+          : item.submenuTitel;
+      final menuSleutel = _groepSleutel(menuTitel, fallback: 'menu');
+      final submenuSleutel =
+          '$menuSleutel|${_groepSleutel(submenuTitel, fallback: 'algemeen')}';
+
+      final menu = perMenu.putIfAbsent(
+        menuSleutel,
+        () =>
+            _TechnischeMenuGroepBouwer(sleutel: menuSleutel, titel: menuTitel),
+      );
+      final submenu = menu.submenus.putIfAbsent(
+        submenuSleutel,
+        () => _TechnischSubmenuGroepBouwer(
+          sleutel: submenuSleutel,
+          titel: submenuTitel,
+        ),
+      );
+      submenu.keuzes.add(item);
+    }
+
+    final groepen =
+        perMenu.values
+            .map((menu) {
+              final submenus =
+                  menu.submenus.values
+                      .map((submenu) {
+                        submenu.keuzes.sort(
+                          (eerste, tweede) => eerste.keuzeTitel
+                              .toLowerCase()
+                              .compareTo(tweede.keuzeTitel.toLowerCase()),
+                        );
+                        return _TechnischSubmenuGroep(
+                          sleutel: submenu.sleutel,
+                          titel: submenu.titel,
+                          keuzes: List<_CentraleTechnischeKeuze>.unmodifiable(
+                            submenu.keuzes,
+                          ),
+                        );
+                      })
+                      .toList(growable: true)
+                    ..sort(
+                      (eerste, tweede) => eerste.titel.toLowerCase().compareTo(
+                        tweede.titel.toLowerCase(),
+                      ),
+                    );
+
+              return _TechnischeMenuGroep(
+                sleutel: menu.sleutel,
+                titel: menu.titel,
+                submenus: List<_TechnischSubmenuGroep>.unmodifiable(submenus),
+              );
+            })
+            .toList(growable: true)
+          ..sort(
+            (eerste, tweede) => eerste.titel.toLowerCase().compareTo(
+              tweede.titel.toLowerCase(),
+            ),
+          );
+
+    return groepen;
+  }
+
+  static String _groepSleutel(String waarde, {required String fallback}) {
+    final genormaliseerd =
+        OfferteTechnischeKeuzeOvereenkomstHelper.normaliseerTekst(waarde);
+    return genormaliseerd.isEmpty ? fallback : genormaliseerd;
+  }
+
+  int _aantalGeprijsd(Iterable<_CentraleTechnischeKeuze> keuzes) {
+    return keuzes.where((item) {
+      return _prijzen[item.sleutel]?.heeftPrijs == true;
+    }).length;
+  }
+
+  bool get _zoekenActief => _zoekterm.trim().isNotEmpty;
+
+  void _wisselMenuOpen(String sleutel) {
+    setState(() {
+      if (!_openMenuSleutels.add(sleutel)) {
+        _openMenuSleutels.remove(sleutel);
+      }
+    });
+  }
+
+  void _wisselSubmenuOpen(String sleutel) {
+    setState(() {
+      if (!_openSubmenuSleutels.add(sleutel)) {
+        _openSubmenuSleutels.remove(sleutel);
+      }
+    });
+  }
+
+  Widget _bouwTeller({required int totaal, required int geprijsd}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: geprijsd > 0 ? _lichtGroen : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$geprijsd/$totaal',
+        style: TextStyle(
+          color: geprijsd > 0 ? _groen : const Color(0xFF6B7280),
+          fontSize: 10.5,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _bouwMenuGroep(_TechnischeMenuGroep groep) {
+    final alleKeuzes = groep.keuzes;
+    final open = _zoekenActief || _openMenuSleutels.contains(groep.sleutel);
+    final aantalGeprijsd = _aantalGeprijsd(alleKeuzes);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _rand),
+      ),
+      child: Column(
+        children: <Widget>[
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _wisselMenuOpen(groep.sleutel),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    open
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.keyboard_arrow_right_rounded,
+                    color: _groen,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      groep.titel,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  _bouwTeller(
+                    totaal: alleKeuzes.length,
+                    geprijsd: aantalGeprijsd,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (open) ...<Widget>[
+            const Divider(height: 1, color: _rand),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              child: Column(
+                children: groep.submenus
+                    .map(_bouwSubmenuGroep)
+                    .toList(growable: false),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwSubmenuGroep(_TechnischSubmenuGroep groep) {
+    final open = _zoekenActief || _openSubmenuSleutels.contains(groep.sleutel);
+    final aantalGeprijsd = _aantalGeprijsd(groep.keuzes);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFBFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _rand),
+      ),
+      child: Column(
+        children: <Widget>[
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => _wisselSubmenuOpen(groep.sleutel),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    open
+                        ? Icons.expand_more_rounded
+                        : Icons.chevron_right_rounded,
+                    color: const Color(0xFF6B7280),
+                    size: 19,
+                  ),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      groep.titel,
+                      style: const TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  _bouwTeller(
+                    totaal: groep.keuzes.length,
+                    geprijsd: aantalGeprijsd,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (open)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+              child: Column(
+                children: groep.keuzes
+                    .map((item) {
+                      final prijs = _prijsVoor(item);
+                      return Padding(
+                        key: ValueKey<String>(item.sleutel),
+                        padding: const EdgeInsets.only(top: 7),
+                        child: _TechnischePrijsKaart(
+                          item: item,
+                          prijs: prijs,
+                          eenheden: _eenheden,
+                          heeftOpgeslagenPrijs: _prijzen.containsKey(
+                            item.sleutel,
+                          ),
+                          onGewijzigd: (gewijzigd) {
+                            _bewaarPrijs(item, gewijzigd);
+                          },
+                          onWissen: () => _wisPrijs(item),
+                        ),
+                      );
+                    })
+                    .toList(growable: false),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final zichtbareKeuzes = _zichtbareKeuzes;
-    final aantalGeprijsd = _keuzes.where((item) {
-      return _prijzen[item.sleutel]?.heeftPrijs == true;
-    }).length;
+    final groepen = _groepeerKeuzes(zichtbareKeuzes);
+    final aantalGeprijsd = _aantalGeprijsd(_keuzes);
 
     return Scaffold(
       backgroundColor: _achtergrond,
@@ -323,42 +717,40 @@ class _OffertePrijsTechnischeKeuzesPaginaState
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                   children: <Widget>[
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 13,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: _lichtGroen,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFFCDE9D5)),
                       ),
                       child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           const Icon(
                             Icons.tune_rounded,
                             color: _groen,
-                            size: 20,
+                            size: 19,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 9),
                           Expanded(
                             child: Text(
-                              '${_keuzes.length} zelf aangemaakte technische keuzes · '
-                              '$aantalGeprijsd met prijs. Iedere technische keuze die '
-                              'u via “Nieuwe technische keuze” in een opmeetfiche '
-                              'aanmaakt, verschijnt automatisch in deze centrale lijst. '
-                              'Dezelfde keuze staat hier maar één keer, ook wanneer ze '
-                              'in meerdere opmeetfiches wordt gebruikt. Uit / Tekst / € '
-                              'bepaalt alleen de zichtbaarheid op de klantofferte.',
+                              '${_keuzes.length} technische keuzes · '
+                              '$aantalGeprijsd met prijs. Eén centrale prijs per '
+                              'technische keuze.',
                               style: const TextStyle(
                                 color: _tekstDonker,
                                 fontSize: 12,
-                                height: 1.4,
-                                fontWeight: FontWeight.w600,
+                                height: 1.3,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     TextField(
                       onChanged: (waarde) {
                         setState(() => _zoekterm = waarde);
@@ -374,6 +766,7 @@ class _OffertePrijsTechnischeKeuzesPaginaState
                                 },
                                 icon: const Icon(Icons.close_rounded),
                               ),
+                        isDense: true,
                         filled: true,
                         fillColor: Colors.white,
                         border: OutlineInputBorder(
@@ -397,25 +790,7 @@ class _OffertePrijsTechnischeKeuzesPaginaState
                     if (zichtbareKeuzes.isEmpty)
                       const _LegeKaart()
                     else
-                      ...zichtbareKeuzes.map((item) {
-                        final prijs = _prijsVoor(item);
-                        return Padding(
-                          key: ValueKey<String>(item.sleutel),
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _TechnischePrijsKaart(
-                            item: item,
-                            prijs: prijs,
-                            eenheden: _eenheden,
-                            heeftOpgeslagenPrijs: _prijzen.containsKey(
-                              item.sleutel,
-                            ),
-                            onGewijzigd: (gewijzigd) {
-                              _bewaarPrijs(item, gewijzigd);
-                            },
-                            onWissen: () => _wisPrijs(item),
-                          ),
-                        );
-                      }),
+                      ...groepen.map(_bouwMenuGroep),
                   ],
                 ),
               ),
@@ -424,28 +799,66 @@ class _OffertePrijsTechnischeKeuzesPaginaState
   }
 }
 
+class _TechnischeMenuGroepBouwer {
+  _TechnischeMenuGroepBouwer({required this.sleutel, required this.titel});
+
+  final String sleutel;
+  final String titel;
+  final Map<String, _TechnischSubmenuGroepBouwer> submenus =
+      <String, _TechnischSubmenuGroepBouwer>{};
+}
+
+class _TechnischSubmenuGroepBouwer {
+  _TechnischSubmenuGroepBouwer({required this.sleutel, required this.titel});
+
+  final String sleutel;
+  final String titel;
+  final List<_CentraleTechnischeKeuze> keuzes = <_CentraleTechnischeKeuze>[];
+}
+
+class _TechnischeMenuGroep {
+  const _TechnischeMenuGroep({
+    required this.sleutel,
+    required this.titel,
+    required this.submenus,
+  });
+
+  final String sleutel;
+  final String titel;
+  final List<_TechnischSubmenuGroep> submenus;
+
+  List<_CentraleTechnischeKeuze> get keuzes {
+    return submenus.expand((submenu) => submenu.keuzes).toList(growable: false);
+  }
+}
+
+class _TechnischSubmenuGroep {
+  const _TechnischSubmenuGroep({
+    required this.sleutel,
+    required this.titel,
+    required this.keuzes,
+  });
+
+  final String sleutel;
+  final String titel;
+  final List<_CentraleTechnischeKeuze> keuzes;
+}
+
 class _CentraleTechnischeKeuzeAccumulator {
   _CentraleTechnischeKeuzeAccumulator({
     required this.sleutel,
     required this.keuze,
-    required this.formulierNamen,
   });
 
   final String sleutel;
   OfferteTechnischeKeuzeRef keuze;
-  final Set<String> formulierNamen;
 }
 
 class _CentraleTechnischeKeuze {
-  const _CentraleTechnischeKeuze({
-    required this.sleutel,
-    required this.keuze,
-    required this.formulierNamen,
-  });
+  const _CentraleTechnischeKeuze({required this.sleutel, required this.keuze});
 
   final String sleutel;
   final OfferteTechnischeKeuzeRef keuze;
-  final List<String> formulierNamen;
 
   String get menuTitel => keuze.menuTitelMomentopname.trim();
   String get submenuTitel => keuze.submenuTitelMomentopname.trim();
@@ -459,15 +872,6 @@ class _CentraleTechnischeKeuze {
   }
 
   String get uitschrijftekst => keuze.hoeUitschrijven.trim();
-
-  String get pad {
-    return <String>[
-      menuTitel,
-      submenuTitel,
-    ].where((deel) => deel.isNotEmpty).join(' · ');
-  }
-
-  String get formulierLabel => formulierNamen.join(', ');
 }
 
 class _TechnischePrijsKaart extends StatelessWidget {
@@ -546,25 +950,6 @@ class _TechnischePrijsKaart extends StatelessWidget {
                         color: _tekstDonker,
                         fontSize: 13,
                         fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (item.pad.isNotEmpty)
-                      Text(
-                        item.pad,
-                        style: const TextStyle(
-                          color: _tekstGrijs,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    Text(
-                      'Gebruikt in: ${item.formulierLabel}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: _tekstGrijs,
-                        fontSize: 9.8,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],

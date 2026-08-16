@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-PRIJS-DEDUPE-ZICHTBARE-KEUZE-20260816
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-PRIJS-FORMULIERTYPE-OPSLAGSLEUTEL-FIX-20260815
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-PRIJS-UNNECESSARY-CASCADE-FIX-20260815
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-PRIJS-FICHEONAFHANKELIJKE-KOPPELING-20260815
@@ -54,13 +55,14 @@ class OfferteCentraleTechnischePrijsService {
   const OfferteCentraleTechnischePrijsService._();
 
   static const String _signatuurVersie =
-      'centrale-technische-prijs-v4-canoniek-formuliertype';
+      'centrale-technische-prijs-v5-dedupe-zichtbare-keuze';
   static const String _bronPrefix = 'centraleTechnischeKeuze::';
 
   static Future<OfferteCentraleTechnischePrijsContext> laadContext({
     required Iterable<String> formulierTypes,
   }) async {
-    final prijzen = await AppStorage.laadOfferteTechnischeKeuzePrijzen();
+    final opgeslagenPrijzen =
+        await AppStorage.laadOfferteTechnischeKeuzePrijzen();
     final lokaleKeuzesPerFormulierType =
         <String, Map<String, OfferteTechnischeKeuzeRef>>{};
 
@@ -129,11 +131,46 @@ class OfferteCentraleTechnischePrijsService {
           );
     }
 
-    final beschikbareCentraleSleutels = lokaleKeuzesPerFormulierType.values
-        .expand((keuzes) => keuzes.keys)
-        .toSet();
-    final geldigePrijzen = prijzen
-        .where((prijs) => beschikbareCentraleSleutels.contains(prijs.id))
+    // Oude versies konden dezelfde technische keuze onder meerdere
+    // fichegebonden IDs bewaren. Breng die eerst in-memory terug tot één prijs.
+    // Exact dezelfde stabiele IDs OF exact dezelfde zichtbare combinatie
+    // menu + submenu + keuze gelden als dezelfde centrale keuze.
+    final uniekePrijzen = <OfferteTechnischeKeuzePrijsModel>[];
+
+    for (final prijs in opgeslagenPrijzen) {
+      if (!prijs.isGeldig) {
+        continue;
+      }
+
+      final bestaandIndex = uniekePrijzen.indexWhere(
+        (bestaand) => _zijnDezelfdeCentraleKeuze(bestaand, prijs),
+      );
+
+      if (bestaandIndex < 0) {
+        uniekePrijzen.add(prijs);
+      } else {
+        uniekePrijzen[bestaandIndex] = _meestRecentePrijs(
+          uniekePrijzen[bestaandIndex],
+          prijs,
+        );
+      }
+    }
+
+    // Niet meer filteren op alleen prijs.id. Wanneer dezelfde keuze vroeger
+    // op twee fiches apart is aangemaakt, kunnen de IDs verschillen terwijl
+    // het voor de gebruiker één centrale keuze is. De bestaande veilige
+    // koppelroute hieronder bepaalt daarom of de prijs bij minstens één van de
+    // actuele formulierTypes hoort.
+    final geldigePrijzen = uniekePrijzen
+        .where((prijs) {
+          return lokaleKeuzesPerFormulierType.values.any((lokaleKeuzes) {
+            return _vindLokaleKeuzeVoorPrijs(
+                  prijs: prijs,
+                  lokaleKeuzes: lokaleKeuzes,
+                ) !=
+                null;
+          });
+        })
         .toList(growable: false);
 
     return OfferteCentraleTechnischePrijsContext(
@@ -281,6 +318,56 @@ class OfferteCentraleTechnischePrijsService {
       'artikelSignatuur': artikelSignatuur,
       'prijzen': relevantePrijzen,
     });
+  }
+
+  static bool _zijnDezelfdeCentraleKeuze(
+    OfferteTechnischeKeuzePrijsModel eerste,
+    OfferteTechnischeKeuzePrijsModel tweede,
+  ) {
+    if (eerste.id.trim().isNotEmpty && eerste.id.trim() == tweede.id.trim()) {
+      return true;
+    }
+
+    final eersteKeuze = eerste.technischeKeuze;
+    final tweedeKeuze = tweede.technischeKeuze;
+
+    if (OfferteTechnischeKeuzeOvereenkomstHelper.zijnExactTussenArtikeltypes(
+      eersteKeuze,
+      tweedeKeuze,
+    )) {
+      return true;
+    }
+
+    return OfferteTechnischeKeuzeOvereenkomstHelper.zijnMogelijkeTekstovereenkomst(
+      eersteKeuze,
+      tweedeKeuze,
+    );
+  }
+
+  static OfferteTechnischeKeuzePrijsModel _meestRecentePrijs(
+    OfferteTechnischeKeuzePrijsModel eerste,
+    OfferteTechnischeKeuzePrijsModel tweede,
+  ) {
+    final eersteTijdstip = DateTime.tryParse(eerste.gewijzigdOp);
+    final tweedeTijdstip = DateTime.tryParse(tweede.gewijzigdOp);
+
+    if (eersteTijdstip != null && tweedeTijdstip != null) {
+      if (tweedeTijdstip.isAfter(eersteTijdstip)) {
+        return tweede;
+      }
+      if (eersteTijdstip.isAfter(tweedeTijdstip)) {
+        return eerste;
+      }
+    } else if (tweedeTijdstip != null) {
+      return tweede;
+    } else if (eersteTijdstip != null) {
+      return eerste;
+    }
+
+    if (tweede.heeftPrijs && !eerste.heeftPrijs) {
+      return tweede;
+    }
+    return eerste;
   }
 
   static OfferteTechnischeKeuzeRef? _vindLokaleKeuzeVoorPrijs({

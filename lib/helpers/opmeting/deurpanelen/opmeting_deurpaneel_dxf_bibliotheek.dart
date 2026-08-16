@@ -50,7 +50,8 @@ class OpmetingDeurpaneelDxfBibliotheek {
     return sleutels.length;
   }
 
-  static int get aantalFragerDxfs => _fragerBestanden.length;
+  static int get aantalFragerDxfs =>
+      _fragerArchief == null ? 0 : _fragerBestanden.length;
 
   static bool get isGeladen => _geladen;
 

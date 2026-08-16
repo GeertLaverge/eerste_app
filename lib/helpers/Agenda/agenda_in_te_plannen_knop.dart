@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: IN-TE-PLANNEN-SCHUIFBALK-EN-GROEPERING-20260816
+// THIMACO-CONTROLE: NIEUWE-KLANT-BLIJFT-IN-TE-PLANNEN-NA-AFSPRAAK-20260816
 import 'package:flutter/material.dart';
 
 import 'agenda_item.dart';
@@ -12,21 +14,58 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
   const AgendaInTePlannenKnop({super.key, required this.items});
 
-  bool klantStaatAlOpAgenda(KlantenficheModel klant) {
-    final klantNaam = klant.naam.trim().toLowerCase();
+  String _wachtrijTypeVoorKlant(KlantenficheModel klant) {
+    final explicietType = klant.inTePlannenType.trim();
+    if (explicietType.isNotEmpty) {
+      return explicietType;
+    }
 
-    if (klantNaam.isEmpty) return true;
+    if (klant.klantStatus == 'Nadienst') {
+      return 'nadienst';
+    }
+
+    if (klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning) {
+      return 'opvolging';
+    }
+
+    return 'planning';
+  }
+
+  bool _isZelfdeKlant(KlantenficheModel klant, AgendaItem item) {
+    final klantNr = klant.klantNr.trim().toLowerCase();
+    final itemKlantNr = item.klantNr.trim().toLowerCase();
+
+    // Een klantnummer is, waar beschikbaar, betrouwbaarder dan alleen de naam.
+    if (klantNr.isNotEmpty && itemKlantNr.isNotEmpty) {
+      return klantNr == itemKlantNr;
+    }
+
+    final klantNaam = klant.naam.trim().toLowerCase();
+    if (klantNaam.isEmpty) {
+      return false;
+    }
+
+    final itemNaam = item.naamKlant.trim().toLowerCase();
+    final itemTitel = item.titel.trim().toLowerCase();
+    return itemNaam == klantNaam || itemTitel == klantNaam;
+  }
+
+  bool klantStaatAlOpAgenda(KlantenficheModel klant) {
+    final verwachtType = _wachtrijTypeVoorKlant(klant);
 
     return items.any((item) {
-      if (item.isVerwijderd) return false;
+      if (item.isVerwijderd) {
+        return false;
+      }
 
-      final itemNaam = item.naamKlant.trim().toLowerCase();
-      final itemTitel = item.titel.trim().toLowerCase();
+      // Alleen een reeds ingepland item van hetzelfde wachtrijtype mag de klant
+      // uit 'Nog in te plannen' halen. Een gewone afspraak mag een actieve klant
+      // dus niet verbergen wanneer die nog als planning moet worden ingepland.
+      if (item.type.trim() != verwachtType) {
+        return false;
+      }
 
-      return (item.type == 'planning' ||
-              item.type == 'opvolging' ||
-              item.type == 'nadienst') &&
-          (itemNaam == klantNaam || itemTitel == klantNaam);
+      return _isZelfdeKlant(klant, item);
     });
   }
 
@@ -36,13 +75,7 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
     return AgendaItem(
       titel: klant.naam,
-      type: klant.inTePlannenType.trim().isNotEmpty
-          ? klant.inTePlannenType
-          : klant.klantStatus == 'Nadienst'
-          ? 'nadienst'
-          : isOpvolging
-          ? 'opvolging'
-          : 'planning',
+      type: _wachtrijTypeVoorKlant(klant),
       klantNr: klant.klantNr,
       naamKlant: klant.naam,
       straatnaam: klant.straatnaam,
@@ -58,28 +91,115 @@ class AgendaInTePlannenKnop extends StatelessWidget {
     );
   }
 
+  int _volgordeVoorWachtrijType(String type) {
+    switch (type.trim()) {
+      case 'planning':
+        return 0;
+      case 'opvolging':
+        return 1;
+      case 'nadienst':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  String _groepLabelVoorType(String type) {
+    switch (type.trim()) {
+      case 'planning':
+        return 'Planning';
+      case 'opvolging':
+        return 'Opvolging';
+      case 'nadienst':
+        return 'Nadienst';
+      default:
+        return type.trim().isEmpty ? 'Overige' : type.trim();
+    }
+  }
+
+  List<String> _wachtrijTypesInVolgorde(List<AgendaItem> lijst) {
+    final types = lijst
+        .map((item) => item.type.trim())
+        .where((type) => type.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+
+    types.sort((a, b) {
+      final volgorde = _volgordeVoorWachtrijType(
+        a,
+      ).compareTo(_volgordeVoorWachtrijType(b));
+      if (volgorde != 0) {
+        return volgorde;
+      }
+      return a.toLowerCase().compareTo(b.toLowerCase());
+    });
+
+    return types;
+  }
+
+  Widget _wachtrijGroepKop({required String type, required int aantal}) {
+    final kleur = AgendaKleurService.kleur(type);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 4, 2, 7),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: kleur, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              _groepLabelVoorType(type),
+              style: TextStyle(
+                color: kleur,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          Text(
+            aantal.toString(),
+            style: TextStyle(
+              color: kleur,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<List<AgendaItem>> laadActieveKlantenNogInTePlannen() async {
     final klanten = await KlantenficheRepository.laadKlantenFiches();
 
     final actieveKlanten = klanten.where((klant) {
-      final opvolging =
-          klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
-
       final actief =
           klant.klantStatus == 'Actief' ||
           klant.klantStatus == 'Nadienst' ||
           klant.inTePlannenType.trim().isNotEmpty;
+      final opvolging =
+          klant.klantStatus == 'Opvolgen' && klant.klaarVoorNieuwePlanning;
 
-      if (klant.naam.trim().isEmpty) return false;
-
-      if (opvolging) return true;
-
-      return actief && !klantStaatAlOpAgenda(klant);
+      return (actief || opvolging) &&
+          klant.naam.trim().isNotEmpty &&
+          !klantStaatAlOpAgenda(klant);
     }).toList();
 
-    actieveKlanten.sort(
-      (a, b) => a.naam.toLowerCase().compareTo(b.naam.toLowerCase()),
-    );
+    actieveKlanten.sort((a, b) {
+      final typeVergelijking = _volgordeVoorWachtrijType(
+        _wachtrijTypeVoorKlant(a),
+      ).compareTo(_volgordeVoorWachtrijType(_wachtrijTypeVoorKlant(b)));
+
+      if (typeVergelijking != 0) {
+        return typeVergelijking;
+      }
+
+      return a.naam.toLowerCase().compareTo(b.naam.toLowerCase());
+    });
 
     return actieveKlanten.map(maakAgendaItemVanKlant).toList();
   }
@@ -89,6 +209,19 @@ class AgendaInTePlannenKnop extends StatelessWidget {
 
     double links = 18;
     double boven = 120;
+
+    final lijstScrollController = ScrollController();
+    var scrollControllerOpgeruimd = false;
+
+    void sluitOverlay() {
+      overlayEntry.remove();
+      if (!scrollControllerOpgeruimd) {
+        scrollControllerOpgeruimd = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          lijstScrollController.dispose();
+        });
+      }
+    }
 
     List<AgendaItem>? openLijst;
 
@@ -101,34 +234,35 @@ class AgendaInTePlannenKnop extends StatelessWidget {
               top: boven,
               child: Material(
                 color: Colors.transparent,
-                child: GestureDetector(
-                  onPanUpdate: (details) {
-                    setOverlayState(() {
-                      links += details.delta.dx;
-                      boven += details.delta.dy;
-                    });
-                  },
-                  child: Container(
-                    width: 360,
-                    constraints: const BoxConstraints(maxHeight: 520),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.grey.shade300),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Row(
+                child: Container(
+                  width: 360,
+                  constraints: const BoxConstraints(maxHeight: 520),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.grey.shade300),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.18),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onPanUpdate: (details) {
+                            setOverlayState(() {
+                              links += details.delta.dx;
+                              boven += details.delta.dy;
+                            });
+                          },
+                          child: Row(
                             children: [
                               const Icon(
                                 Icons.drag_indicator,
@@ -150,121 +284,195 @@ class AgendaInTePlannenKnop extends StatelessWidget {
                                 ),
                               ),
                               IconButton(
-                                onPressed: () {
-                                  overlayEntry.remove();
-                                },
+                                onPressed: sluitOverlay,
                                 icon: const Icon(Icons.close),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10),
-                          Flexible(
-                            child: FutureBuilder<List<AgendaItem>>(
-                              future: laadActieveKlantenNogInTePlannen(),
-                              builder: (context, snapshot) {
-                                if (!snapshot.hasData) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(20),
-                                    child: CircularProgressIndicator(),
-                                  );
-                                }
-
-                                openLijst ??= List<AgendaItem>.from(
-                                  snapshot.data!,
+                        ),
+                        const SizedBox(height: 10),
+                        Flexible(
+                          child: FutureBuilder<List<AgendaItem>>(
+                            future: laadActieveKlantenNogInTePlannen(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: CircularProgressIndicator(),
                                 );
+                              }
 
-                                final lijst = openLijst!;
+                              openLijst ??= List<AgendaItem>.from(
+                                snapshot.data!,
+                              );
 
-                                if (lijst.isEmpty) {
-                                  return const Padding(
-                                    padding: EdgeInsets.all(20),
-                                    child: Text(
-                                      'Geen actieve klanten in wachtrij',
-                                      style: TextStyle(color: Colors.black54),
-                                    ),
-                                  );
-                                }
+                              final lijst = openLijst!;
 
-                                return ListView.builder(
+                              if (lijst.isEmpty) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(20),
+                                  child: Text(
+                                    'Geen actieve klanten in wachtrij',
+                                    style: TextStyle(color: Colors.black54),
+                                  ),
+                                );
+                              }
+
+                              final types = _wachtrijTypesInVolgorde(lijst);
+
+                              return Scrollbar(
+                                controller: lijstScrollController,
+                                thumbVisibility: true,
+                                trackVisibility: true,
+                                interactive: true,
+                                thickness: 8,
+                                radius: const Radius.circular(8),
+                                child: ListView(
+                                  controller: lijstScrollController,
                                   shrinkWrap: true,
-                                  itemCount: lijst.length,
-                                  itemBuilder: (context, index) {
-                                    final item = lijst[index];
-                                    final kleur = AgendaKleurService.kleur(
-                                      item.type,
-                                    );
+                                  padding: const EdgeInsets.only(right: 14),
+                                  children: [
+                                    for (
+                                      var typeIndex = 0;
+                                      typeIndex < types.length;
+                                      typeIndex++
+                                    ) ...[
+                                      Builder(
+                                        builder: (context) {
+                                          final type = types[typeIndex];
+                                          final groepItems =
+                                              lijst
+                                                  .where(
+                                                    (item) =>
+                                                        item.type.trim() ==
+                                                        type,
+                                                  )
+                                                  .toList(growable: false)
+                                                ..sort(
+                                                  (a, b) => a.titel
+                                                      .toLowerCase()
+                                                      .compareTo(
+                                                        b.titel.toLowerCase(),
+                                                      ),
+                                                );
 
-                                    return Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Draggable<AgendaSleepData>(
-                                        data: AgendaSleepData(
-                                          oudeDag: DateTime(1900, 1, 1),
-                                          item: item,
-                                        ),
-                                        onDragCompleted: () {
-                                          openLijst!.removeWhere(
-                                            (x) =>
-                                                x.naamKlant == item.naamKlant,
-                                          );
-
-                                          setOverlayState(() {});
-                                        },
-                                        feedback: Material(
-                                          color: Colors.transparent,
-                                          child: Container(
-                                            width: 260,
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 8,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color:
-                                                  AgendaKleurService.achtergrond(
-                                                    item.type,
-                                                  ),
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                              border: Border.all(color: kleur),
-                                              boxShadow: const [
-                                                BoxShadow(
-                                                  color: Colors.black26,
-                                                  blurRadius: 8,
-                                                  offset: Offset(0, 3),
-                                                ),
-                                              ],
-                                            ),
-                                            child: Text(
-                                              item.titel,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: kleur,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
+                                          return Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              _wachtrijGroepKop(
+                                                type: type,
+                                                aantal: groepItems.length,
                                               ),
-                                            ),
-                                          ),
-                                        ),
-                                        childWhenDragging: Opacity(
-                                          opacity: 0.35,
-                                          child: inTePlannenRij(
-                                            item: item,
-                                            kleur: kleur,
-                                          ),
-                                        ),
-                                        child: inTePlannenRij(
-                                          item: item,
-                                          kleur: kleur,
-                                        ),
+                                              for (final item in groepItems)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 8,
+                                                      ),
+                                                  child: Draggable<AgendaSleepData>(
+                                                    data: AgendaSleepData(
+                                                      oudeDag: DateTime(
+                                                        1900,
+                                                        1,
+                                                        1,
+                                                      ),
+                                                      item: item,
+                                                    ),
+                                                    onDragCompleted: () {
+                                                      openLijst!.removeWhere(
+                                                        (x) =>
+                                                            x.naamKlant ==
+                                                            item.naamKlant,
+                                                      );
+
+                                                      setOverlayState(() {});
+                                                    },
+                                                    feedback: Material(
+                                                      color: Colors.transparent,
+                                                      child: Container(
+                                                        width: 260,
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 10,
+                                                              vertical: 8,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color:
+                                                              AgendaKleurService.achtergrond(
+                                                                item.type,
+                                                              ),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                          border: Border.all(
+                                                            color:
+                                                                AgendaKleurService.kleur(
+                                                                  item.type,
+                                                                ),
+                                                          ),
+                                                          boxShadow: const [
+                                                            BoxShadow(
+                                                              color: Colors
+                                                                  .black26,
+                                                              blurRadius: 8,
+                                                              offset: Offset(
+                                                                0,
+                                                                3,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Text(
+                                                          item.titel,
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style: TextStyle(
+                                                            color:
+                                                                AgendaKleurService.kleur(
+                                                                  item.type,
+                                                                ),
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w800,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    childWhenDragging: Opacity(
+                                                      opacity: 0.35,
+                                                      child: inTePlannenRij(
+                                                        item: item,
+                                                        kleur:
+                                                            AgendaKleurService.kleur(
+                                                              item.type,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    child: inTePlannenRij(
+                                                      item: item,
+                                                      kleur:
+                                                          AgendaKleurService.kleur(
+                                                            item.type,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              if (typeIndex < types.length - 1)
+                                                const SizedBox(height: 4),
+                                            ],
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
-                                );
-                              },
-                            ),
+                                    ],
+                                  ],
+                                ),
+                              );
+                            },
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
