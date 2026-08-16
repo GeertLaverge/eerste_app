@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-PRIJS-ALLEEN-ZICHTBARE-KEUZE-20260814
 // THIMACO-CONTROLE: OVERZICHT-TECHNISCHE-PRIJS-KOPPELING-20260721
 import '../../offerte/prijzen/offerte_prijsregel_weergave_service.dart';
 import '../../offerte/prijzen/offerte_toegepaste_prijsregel_model.dart';
@@ -54,51 +55,6 @@ class OpmetingOverzichtTechnischePrijsKoppelHelper {
           bedragExclBtw: heeftGekoppeldePrijs && gekoppeldBedrag > 0.0
               ? gekoppeldBedrag
               : null,
-        ),
-      );
-    }
-
-    final ongekoppeldeBedragenPerTekst = <String, double>{};
-    final zichtbareTekstPerSleutel = <String, String>{};
-
-    for (var index = 0; index < bruikbarePrijsregels.length; index++) {
-      if (gebruiktePrijsregelIndexen.contains(index)) {
-        continue;
-      }
-
-      final prijsregel = bruikbarePrijsregels[index];
-      final uitschrijftekst =
-          OffertePrijsregelWeergaveService.technischeUitschrijftekst(
-            prijsregel,
-          );
-      final sleutel =
-          OffertePrijsregelWeergaveService.normaliseerTechnischeTekst(
-            uitschrijftekst,
-          );
-
-      if (sleutel.isEmpty) {
-        continue;
-      }
-
-      zichtbareTekstPerSleutel.putIfAbsent(sleutel, () => uitschrijftekst);
-      ongekoppeldeBedragenPerTekst[sleutel] =
-          (ongekoppeldeBedragenPerTekst[sleutel] ?? 0.0) +
-          prijsregel.totaalExclBtw;
-    }
-
-    for (final entry in ongekoppeldeBedragenPerTekst.entries) {
-      final uitschrijftekst = zichtbareTekstPerSleutel[entry.key] ?? '';
-      if (uitschrijftekst.isEmpty) {
-        continue;
-      }
-
-      resultaat.add(
-        OpmetingOverzichtTechnischeRegelPrijs(
-          regel: OpmetingOverzichtTechnischeRegel(
-            titel: uitschrijftekst,
-            waarde: '',
-          ),
-          bedragExclBtw: entry.value > 0.0 ? entry.value : null,
         ),
       );
     }

@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: ANALYZERFIX-ROND-HOEVEELHEID-PRIJS-PER-POSITIE-20260815
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-EENHEID-HOUDT-REKENING-MET-BREEDTE-HOOGTE-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ZONDER-LEGACY-PRIJSVELDEN-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-LOKALE-OPSLAG-20260813
 import 'offerte_toegepaste_prijsregel_model.dart';
@@ -137,6 +139,82 @@ class OffertePrijsPerPositieRegelModel {
     return _rondBedragAf(eindTotaalExclBtw / veiligAantal);
   }
 
+  /// Werkelijke rekenhoeveelheid voor deze lokale prijsregel.
+  ///
+  /// st, uur, L/M, KM en m² gebruiken [aantal] rechtstreeks.
+  /// Maatgebonden eenheden rekenen met de actuele positie-afmetingen in meter.
+  /// [aantal] blijft daarbij de lokale vermenigvuldigingsfactor en wordt nooit
+  /// automatisch vervangen door het artikelaantal van de positie.
+  double hoeveelheidVoorMaten({required int breedteMm, required int hoogteMm}) {
+    final basisAantal = veiligAantal;
+    if (basisAantal <= 0.0) return 0.0;
+
+    final breedteMeter = breedteMm <= 0 ? 0.0 : breedteMm / 1000.0;
+    final hoogteMeter = hoogteMm <= 0 ? 0.0 : hoogteMm / 1000.0;
+    final sleutel = _normaliseerEenheidVoorBerekening(eenheid);
+
+    final factor = switch (sleutel) {
+      '1xb' => breedteMeter,
+      '1xh' => hoogteMeter,
+      '2xb' => 2.0 * breedteMeter,
+      '2xh' => 2.0 * hoogteMeter,
+      '2xhen1xb' => (2.0 * hoogteMeter) + breedteMeter,
+      '1xhen2xb' => hoogteMeter + (2.0 * breedteMeter),
+      'rondom' => (2.0 * breedteMeter) + (2.0 * hoogteMeter),
+      'oppervlakte' => breedteMeter * hoogteMeter,
+      _ => 1.0,
+    };
+
+    return _rondHoeveelheidAf(basisAantal * factor);
+  }
+
+  double basisTotaalExclBtwVoorMaten({
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    return _rondBedragAf(
+      hoeveelheidVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm) *
+          veiligeEenheidsPrijsExclBtw,
+    );
+  }
+
+  double winstBedragExclBtwVoorMaten({
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    if (!isAankoop || veiligWinstPercentage <= 0.0) return 0.0;
+    return _rondBedragAf(
+      basisTotaalExclBtwVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm) *
+          (veiligWinstPercentage / 100.0),
+    );
+  }
+
+  double eindTotaalExclBtwVoorMaten({
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    return _rondBedragAf(
+      basisTotaalExclBtwVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm) +
+          winstBedragExclBtwVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm),
+    );
+  }
+
+  double verkoopPrijsPerEenheidExclBtwVoorMaten({
+    required int breedteMm,
+    required int hoogteMm,
+  }) {
+    final hoeveelheid = hoeveelheidVoorMaten(
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+    if (hoeveelheid <= 0.0) return 0.0;
+
+    return _rondBedragAf(
+      eindTotaalExclBtwVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm) /
+          hoeveelheid,
+    );
+  }
+
   bool get isGeldig {
     return id.trim().isNotEmpty &&
         omschrijving.trim().isNotEmpty &&
@@ -228,7 +306,20 @@ class OffertePrijsPerPositieRegelModel {
     return gelezen != null && gelezen.isFinite ? gelezen : standaard;
   }
 
+  static String _normaliseerEenheidVoorBerekening(String waarde) {
+    return waarde
+        .trim()
+        .toLowerCase()
+        .replaceAll('×', 'x')
+        .replaceAll(RegExp(r'\s+'), '');
+  }
+
   static double _normaliseerHoeveelheid(double waarde) {
+    if (!waarde.isFinite || waarde <= 0.0) return 0.0;
+    return (waarde * 10000.0).roundToDouble() / 10000.0;
+  }
+
+  static double _rondHoeveelheidAf(double waarde) {
     if (!waarde.isFinite || waarde <= 0.0) return 0.0;
     return (waarde * 10000.0).roundToDouble() / 10000.0;
   }

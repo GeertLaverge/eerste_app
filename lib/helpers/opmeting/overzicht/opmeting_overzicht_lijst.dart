@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-HERBEREKEN-BIJ-AANTALWIJZIGING-20260816
+// THIMACO-CONTROLE: PRIJSVERDELING-CORRECTIE-ALLEEN-INSTELLINGEN-EN-ALLE-POSITIES-ONDERAAN-20260816
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-DOELMATEN-20260816
+// THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-OVERZICHT-TOEPASSEN-20260815
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE2-LIJST-EN-TITELHOOFD-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP1-LEGACY-UI-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-LIJST-20260813
 // THIMACO-CONTROLE: GROEPSGEWIJZE-WINST-KORTING-UI-UIT-LIJST-20260813
@@ -8,13 +13,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../app_storage.dart';
 import '../../offerte/offerte_controller.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
+import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
+import '../../offerte/prijzen/offerte_prijs_verdeeld_over_service.dart';
+import '../../offerte/prijzen/offerte_prijs_verdeeld_over_template_model.dart';
 import '../project/opmeting_project_kleur_model.dart';
 import '../project/opmeting_project_titelhoofd_kaart.dart';
 import '../project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting_overzicht_artikel_kaart.dart';
 import 'opmeting_overzicht_model.dart';
+import 'opmeting_overzicht_prijs_voor_alle_posities.dart';
 
 typedef OpmetingOverzichtArtikelActie =
     Future<void> Function(OpmetingOverzichtRaamItem item);
@@ -101,6 +111,23 @@ class OpmetingOverzichtLijst extends StatelessWidget {
         .maakBronPositieLabels(opmetingen);
     final geordendeItems = offerteController.positiesService
         .groepeerBronPositiesVoorOverzicht(opmetingen);
+    final prijsDoelPosities = geordendeItems
+        .where((item) => !item.isVerwijderd && !item.isNietRekenen)
+        .map(
+          (item) => OpmetingOverzichtPrijsDoelPositie(
+            id: item.id,
+            positieLabel: positieLabelPerId[item.id] ?? 'Positie',
+            artikelLabel: item.formulierTypeLabel,
+            breedteMm: OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
+              item,
+            ),
+            hoogteMm: OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
+              item,
+            ),
+            teltMeeInHoofdofferte: item.teltMeeInHoofdofferte,
+          ),
+        )
+        .toList(growable: false);
 
     for (final item in geordendeItems) {
       if (item.isNietRekenen) {
@@ -145,6 +172,23 @@ class OpmetingOverzichtLijst extends StatelessWidget {
           onToggleNietRekenenPositie: onToggleNietRekenenPositie,
         ),
         const SizedBox(height: 14),
+
+        // Geen bediening voor "Prijzen verdeeld over…" in het overzicht.
+        // Deze onzichtbare helper synchroniseert uitsluitend de centrale
+        // instellingen naar de projectregels die de bestaande berekening/PDF
+        // al begrijpt.
+        if (projectTitelhoofd.berekenPrijzen)
+          _AutomatischeVerdeelPrijsSynchronisator(
+            key: ValueKey<String>(
+              OffertePrijsVerdeeldOverService.verdeelSynchronisatieSignatuur(
+                opmetingen,
+              ),
+            ),
+            projectTitelhoofd: projectTitelhoofd,
+            opmetingen: opmetingen,
+            onGewijzigd: onTitelhoofdGewijzigd,
+          ),
+
         if (zichtbareItems.isEmpty)
           Container(
             padding: const EdgeInsets.all(18),
@@ -203,6 +247,18 @@ class OpmetingOverzichtLijst extends StatelessWidget {
                     onPrijsPerPositieRegelsGewijzigd(item, prijsregels),
                   );
                 },
+                prijsVoorAllePositiesRegels:
+                    projectTitelhoofd.prijsVoorAllePositiesRegels,
+                prijsDoelPosities: prijsDoelPosities,
+                onPrijsVoorAllePositiesRegelsGewijzigd: (regels) {
+                  onTitelhoofdGewijzigd(
+                    projectTitelhoofd.copyWith(
+                      prijsVoorAllePositiesRegels: regels,
+                    ),
+                  );
+                },
+                // De projecteditor staat één keer onder de volledige lijst.
+                toonPrijsVoorAllePosities: false,
                 onOmhoog: zichtbaarItem.lijstIndex > 0
                     ? () {
                         unawaited(onArtikelVerplaatsen(item, -1));
@@ -216,8 +272,139 @@ class OpmetingOverzichtLijst extends StatelessWidget {
               ),
             );
           }),
+
+        // "Prijs voor alle posities" staat bewust maar één keer, volledig
+        // onder de laatste zichtbare positie.
+        if (projectTitelhoofd.berekenPrijzen && prijsDoelPosities.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Builder(
+              builder: (context) {
+                final laatsteDoelId = prijsDoelPosities.last.id;
+                final laatsteDoel = geordendeItems.firstWhere(
+                  (item) => item.id == laatsteDoelId,
+                  orElse: () => geordendeItems.last,
+                );
+                return OpmetingOverzichtPrijsVoorAllePositiesBlok(
+                  huidigePositieId: laatsteDoelId,
+                  breedteMm:
+                      OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(
+                        laatsteDoel,
+                      ),
+                  hoogteMm:
+                      OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
+                        laatsteDoel,
+                      ),
+                  regels: projectTitelhoofd.prijsVoorAllePositiesRegels,
+                  doelPosities: prijsDoelPosities,
+                  toonAlleRegels: true,
+                  onGewijzigd: (regels) {
+                    onTitelhoofdGewijzigd(
+                      projectTitelhoofd.copyWith(
+                        prijsVoorAllePositiesRegels: regels,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
       ],
     );
+  }
+}
+
+class _AutomatischeVerdeelPrijsSynchronisator extends StatefulWidget {
+  const _AutomatischeVerdeelPrijsSynchronisator({
+    super.key,
+    required this.projectTitelhoofd,
+    required this.opmetingen,
+    required this.onGewijzigd,
+  });
+
+  final OpmetingProjectTitelhoofd projectTitelhoofd;
+  final List<OpmetingOverzichtRaamItem> opmetingen;
+  final ValueChanged<OpmetingProjectTitelhoofd> onGewijzigd;
+
+  @override
+  State<_AutomatischeVerdeelPrijsSynchronisator> createState() =>
+      _AutomatischeVerdeelPrijsSynchronisatorState();
+}
+
+class _AutomatischeVerdeelPrijsSynchronisatorState
+    extends State<_AutomatischeVerdeelPrijsSynchronisator> {
+  List<OffertePrijsVerdeeldOverTemplateModel> _templates =
+      const <OffertePrijsVerdeeldOverTemplateModel>[];
+  bool _geladen = false;
+  bool _syncGepland = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_laadTemplates());
+  }
+
+  @override
+  void didUpdateWidget(
+    covariant _AutomatischeVerdeelPrijsSynchronisator oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+    if (_geladen) {
+      _planSynchronisatie();
+    }
+  }
+
+  Future<void> _laadTemplates() async {
+    final templates = await AppStorage.laadOffertePrijsVerdeeldOverTemplates();
+    if (!mounted) {
+      return;
+    }
+    _templates = List<OffertePrijsVerdeeldOverTemplateModel>.unmodifiable(
+      templates,
+    );
+    _geladen = true;
+    _planSynchronisatie();
+  }
+
+  void _planSynchronisatie() {
+    if (!mounted || _syncGepland) {
+      return;
+    }
+    _syncGepland = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncGepland = false;
+      if (mounted) {
+        _synchroniseer();
+      }
+    });
+  }
+
+  void _synchroniseer() {
+    final huidigeRegels = widget.projectTitelhoofd.prijsVoorAllePositiesRegels;
+    final nieuweRegels =
+        OffertePrijsVerdeeldOverService.synchroniseerAutomatisch(
+          bestaandeRegels: huidigeRegels,
+          templates: _templates,
+          posities: widget.opmetingen,
+        );
+
+    if (OffertePrijsVerdeeldOverService.regelsZijnGelijk(
+      huidigeRegels,
+      nieuweRegels,
+    )) {
+      return;
+    }
+
+    widget.onGewijzigd(
+      widget.projectTitelhoofd.copyWith(
+        prijsVoorAllePositiesRegels: nieuweRegels,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
   }
 }
 

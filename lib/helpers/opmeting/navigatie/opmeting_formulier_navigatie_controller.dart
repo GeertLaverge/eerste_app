@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NAVIGATIE-ZONDER-OFFERTE-PRIJS-PROFIELMODEL-20260815
 // THIMACO-CONTROLE: GEEN-DUBBELE-SNAPSHOT-SAVE-NA-FICHE-20260810
 // THIMACO-CONTROLE: SPECIALISTISCHE-FICHE-RESULTAAT-BEHOUD-NA-SYNC-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-NAVIGATIE-FASE-3B-20260803
@@ -10,7 +11,6 @@
 // THIMACO-CONTROLE: PLOOIWERKEN-PROJECTKLEUR-HOOFDPAGINA-20260728-2110
 import 'package:flutter/material.dart';
 
-import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
 import '../algemene_opmeting/opmeting_algemene_opmeting_fiche.dart';
 import '../overzicht/opmeting_overzicht_model.dart' as overzicht;
 import '../project/opmeting_project_titelhoofd_model.dart';
@@ -42,7 +42,14 @@ class OpmetingFormulierNavigatieController {
   final String Function() leesKlantNaam;
   final OpmetingProjectTitelhoofd Function() leesTitelhoofd;
   final Future<String?> Function() zorgVoorActieveKlant;
-  final Future<OffertePrijsprofielModel> Function()
+  final Future<
+    ({
+      double standaardPrijsPerStukExclBtw,
+      double standaardWinstmargePercentage,
+      double standaardKortingPercentage,
+    })
+  >
+  Function()
   laadVasteInzethorPrijsprofiel;
   final Future<void> Function(String? klantNaam) herlaadOpmetingen;
 

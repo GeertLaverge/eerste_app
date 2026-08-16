@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-RESULTAAT-MET-EENHEID-BREEDTE-HOOGTE-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D4A-RESULTAAT-PRIJS-PER-POSITIE-CATEGORIE-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3D-COMPATIBILITEITSGETTERS-DEFINITIEF-WEG-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3B-STABILISATIE-TIJDELIJKE-PDF-BRUG-20260814
@@ -17,6 +18,8 @@ class OfferteBerekeningResultaat {
     required double basisTotaalExclBtw,
     int aantalArtikelen = 1,
     double? basisPrijsPerStukExclBtw,
+    int breedteMm = 0,
+    int hoogteMm = 0,
     List<OfferteToegepastePrijsregelModel> technischePrijsregels =
         const <OfferteToegepastePrijsregelModel>[],
     List<OffertePrijsPerPositieRegelModel> prijsPerPositieRegels =
@@ -34,6 +37,8 @@ class OfferteBerekeningResultaat {
              (basisTotaalExclBtw /
                  (aantalArtikelen < 1 ? 1 : aantalArtikelen).toDouble()),
        ),
+       breedteMm = breedteMm < 0 ? 0 : breedteMm,
+       hoogteMm = hoogteMm < 0 ? 0 : hoogteMm,
        technischePrijsregels =
            List<OfferteToegepastePrijsregelModel>.unmodifiable(
              technischePrijsregels,
@@ -62,6 +67,12 @@ class OfferteBerekeningResultaat {
   final double basisTotaalExclBtw;
   final int aantalArtikelen;
   final double basisPrijsPerStukExclBtw;
+
+  /// Actuele buitenmaat van deze positie voor maatgebonden lokale eenheden.
+  /// Deze context wordt niet in de prijsregel zelf opgeslagen.
+  final int breedteMm;
+  final int hoogteMm;
+
   final List<OfferteToegepastePrijsregelModel> technischePrijsregels;
 
   /// Lokale A/V-regels die uitsluitend bij deze offertepositie horen.
@@ -99,8 +110,48 @@ class OfferteBerekeningResultaat {
   List<OffertePrijsPerPositieRegelModel> get geldigePrijsPerPositieRegels {
     return List<OffertePrijsPerPositieRegelModel>.unmodifiable(
       prijsPerPositieRegels.where((regel) {
-        return regel.isGeldig && regel.eindTotaalExclBtw > 0.0;
+        return regel.isGeldig && prijsPerPositieEindTotaalExclBtw(regel) > 0.0;
       }),
+    );
+  }
+
+  double prijsPerPositieHoeveelheid(OffertePrijsPerPositieRegelModel regel) {
+    return regel.hoeveelheidVoorMaten(breedteMm: breedteMm, hoogteMm: hoogteMm);
+  }
+
+  double prijsPerPositieBasisTotaalExclBtw(
+    OffertePrijsPerPositieRegelModel regel,
+  ) {
+    return regel.basisTotaalExclBtwVoorMaten(
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+  }
+
+  double prijsPerPositieWinstBedragExclBtw(
+    OffertePrijsPerPositieRegelModel regel,
+  ) {
+    return regel.winstBedragExclBtwVoorMaten(
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+  }
+
+  double prijsPerPositieEindTotaalExclBtw(
+    OffertePrijsPerPositieRegelModel regel,
+  ) {
+    return regel.eindTotaalExclBtwVoorMaten(
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
+    );
+  }
+
+  double prijsPerPositieVerkoopPrijsPerEenheidExclBtw(
+    OffertePrijsPerPositieRegelModel regel,
+  ) {
+    return regel.verkoopPrijsPerEenheidExclBtwVoorMaten(
+      breedteMm: breedteMm,
+      hoogteMm: hoogteMm,
     );
   }
 
@@ -195,10 +246,10 @@ class OfferteBerekeningResultaat {
       bronPrijsregelId: 'prijsPerPositie::${regel.id}',
       categorie: OffertePrijsCategorie.prijsPerPositie,
       omschrijving: regel.omschrijving,
-      prijsExclBtw: regel.verkoopPrijsPerEenheidExclBtw,
+      prijsExclBtw: prijsPerPositieVerkoopPrijsPerEenheidExclBtw(regel),
       eenheid: OffertePrijsEenheid.vast,
-      hoeveelheid: regel.veiligAantal,
-      totaalExclBtw: regel.eindTotaalExclBtw,
+      hoeveelheid: prijsPerPositieHoeveelheid(regel),
+      totaalExclBtw: prijsPerPositieEindTotaalExclBtw(regel),
       uitschrijfmodus: uitschrijfmodus,
     );
   }
@@ -213,7 +264,7 @@ class OfferteBerekeningResultaat {
   double get prijsPerPositieTotaalExclBtw {
     final totaal = geldigePrijsPerPositieRegels.fold<double>(
       0.0,
-      (som, regel) => som + regel.eindTotaalExclBtw,
+      (som, regel) => som + prijsPerPositieEindTotaalExclBtw(regel),
     );
     return _rondBedragAf(totaal);
   }
@@ -221,14 +272,17 @@ class OfferteBerekeningResultaat {
   double get prijsPerPositieAankoopBasisTotaalExclBtw {
     final totaal = geldigePrijsPerPositieRegels
         .where((regel) => regel.isAankoop)
-        .fold<double>(0.0, (som, regel) => som + regel.basisTotaalExclBtw);
+        .fold<double>(
+          0.0,
+          (som, regel) => som + prijsPerPositieBasisTotaalExclBtw(regel),
+        );
     return _rondBedragAf(totaal);
   }
 
   double get prijsPerPositieWinstTotaalExclBtw {
     final totaal = geldigePrijsPerPositieRegels.fold<double>(
       0.0,
-      (som, regel) => som + regel.winstBedragExclBtw,
+      (som, regel) => som + prijsPerPositieWinstBedragExclBtw(regel),
     );
     return _rondBedragAf(totaal);
   }

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-EENHEID-AFMETINGEN-BEHOUDEN-BIJ-KOPPELING-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-KOPPELING-ZONDER-LEGACY-PRIJSVELDEN-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-LOKALE-OPSLAG-KOPPELING-20260813
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-ALGEMENE-OPMETING-DOORGEVEN-20260813
@@ -646,6 +647,8 @@ class OfferteArtikelPrijsKoppelingService {
         basisTotaalExclBtw: standaardResultaat.basisTotaalExclBtw,
         aantalArtikelen: standaardResultaat.aantalArtikelen,
         basisPrijsPerStukExclBtw: standaardResultaat.basisPrijsPerStukExclBtw,
+        breedteMm: standaardResultaat.breedteMm,
+        hoogteMm: standaardResultaat.hoogteMm,
         technischePrijsregels: standaardResultaat.technischePrijsregels,
         prijsPerPositieRegels: standaardResultaat.prijsPerPositieRegels,
         winstmargePercentage: winstmargePercentage,

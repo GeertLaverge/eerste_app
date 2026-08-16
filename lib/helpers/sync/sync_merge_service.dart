@@ -1,8 +1,8 @@
+// THIMACO-CONTROLE: PRIJSARCHITECTUUR-LEGACY-PRIJSPROFIEL-MERGE-VERWIJDERD-20260815
 import 'dart:convert';
 
 import '../Agenda/agenda_item.dart';
 import '../klanten/fiche/klantenfiche_model.dart';
-import '../offerte/prijzen/offerte_prijsprofiel_model.dart';
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/project/opmeting_project_titelhoofd_model.dart';
 
@@ -183,59 +183,6 @@ class SyncMergeService {
     }
 
     return resultaat.values.toList();
-  }
-
-  /// Voegt prijsprofielen per formuliertype samen.
-  ///
-  /// Hierdoor kan een wijziging aan bijvoorbeeld PVC ramen op het ene toestel
-  /// naast een wijziging aan vliegendeuren op een ander toestel blijven bestaan.
-  /// Binnen hetzelfde formuliertype wint de nieuwste [gewijzigdOp]. Bij een
-  /// gelijke of ontbrekende datum krijgt de lokale versie voorrang.
-  static List<OffertePrijsprofielModel> mergeOffertePrijsprofielen(
-    List<OffertePrijsprofielModel> lokaal,
-    List<OffertePrijsprofielModel> cloud,
-  ) {
-    final resultaat = <String, _PrijsprofielMetBron>{};
-
-    void verwerk(
-      Iterable<OffertePrijsprofielModel> bron, {
-      required bool lokaleBron,
-    }) {
-      for (final profiel in bron) {
-        final sleutel = profiel.formulierType.trim().toLowerCase();
-        if (sleutel.isEmpty) {
-          continue;
-        }
-
-        final kandidaat = _PrijsprofielMetBron(
-          profiel: profiel,
-          lokaleBron: lokaleBron,
-        );
-        final bestaand = resultaat[sleutel];
-
-        if (bestaand == null ||
-            _recordIsNieuwer(
-              kandidaatGewijzigdOp: profiel.gewijzigdOp,
-              bestaandGewijzigdOp: bestaand.profiel.gewijzigdOp,
-              kandidaatIsLokaal: lokaleBron,
-              bestaandIsLokaal: bestaand.lokaleBron,
-            )) {
-          resultaat[sleutel] = kandidaat;
-        }
-      }
-    }
-
-    verwerk(cloud, lokaleBron: false);
-    verwerk(lokaal, lokaleBron: true);
-
-    final profielen = resultaat.values.map((record) => record.profiel).toList();
-    profielen.sort((eerste, tweede) {
-      return eerste.formulierNaam.toLowerCase().compareTo(
-        tweede.formulierNaam.toLowerCase(),
-      );
-    });
-
-    return profielen;
   }
 
   /// Voegt projecttitelhoofden per opgeslagen projectsleutel samen.
@@ -693,13 +640,6 @@ class SyncJsonRecordMergeResult {
 
   final List<Map<String, dynamic>> records;
   final Map<String, SyncJsonRecordMetadata> metadata;
-}
-
-class _PrijsprofielMetBron {
-  const _PrijsprofielMetBron({required this.profiel, required this.lokaleBron});
-
-  final OffertePrijsprofielModel profiel;
-  final bool lokaleBron;
 }
 
 class _TitelhoofdMetBron {

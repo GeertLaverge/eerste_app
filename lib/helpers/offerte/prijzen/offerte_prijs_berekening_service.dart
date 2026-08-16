@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-INZETHOR-EENHEID-AFMETINGEN-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5A-INZETHOR-ZONDER-LEGACY-STUBS-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-INZETHOR-BEREKENING-20260813
 import '../../opmeting/toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
@@ -39,6 +40,8 @@ class OffertePrijsBerekeningService {
       basisTotaalExclBtw: basisTotaal,
       aantalArtikelen: aantal,
       basisPrijsPerStukExclBtw: model.prijsPerStukExclBtw,
+      breedteMm: model.breedteMm,
+      hoogteMm: model.hoogteMm,
       technischePrijsregels: model.toegepasteTechnischePrijsregels
           .where((regel) => regel.toonOpOverzicht && regel.isGeldig)
           .toList(growable: false),

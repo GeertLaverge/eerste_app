@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSOVERZICHT-PAGINA-NIEUWE-PRIJSSTRUCTUUR-20260815
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -282,7 +283,7 @@ class _OffertePrijsOverzichtPaginaState
       _bouwSamenvattingKaart(
         label: 'Prijsregels',
         waarde: _euro(prijsregels),
-        detail: 'technisch, vrij en project',
+        detail: 'technisch, per positie en alle posities',
         icoon: Icons.rule_folder_outlined,
       ),
       _bouwSamenvattingKaart(
@@ -621,7 +622,7 @@ class _OffertePrijsOverzichtPaginaState
         : 'Prijsregels samengevoegd';
     final uitleg = isOptie
         ? 'Elke optionele omschrijving staat één keer in de lijst met het gezamenlijke totaalbedrag.'
-        : 'Technische, vrije en projectbrede prijsregels worden per unieke omschrijving samengevoegd. Terugkerende bedragen zijn opgeteld.';
+        : 'Technische keuzes, prijs per positie en prijs voor alle posities worden per unieke omschrijving samengevoegd. Terugkerende bedragen zijn opgeteld.';
 
     return _basisKaart(
       randKleur: isOptie ? _oranje : _rand,
@@ -768,23 +769,23 @@ class _OffertePrijsOverzichtPaginaState
           final kop = _bouwSectieKop(
             titel: 'Financiële samenvatting',
             uitleg:
-                'De korting wordt alleen op de basisprijs na winstmarge berekend. Technische, vrije en projectbrede prijsregels blijven buiten de korting.',
+                'De artikelkorting wordt alleen op de basisprijs na artikelwinstmarge berekend. Technische keuzes en de twee eenvoudige prijsregelingen blijven buiten die artikelkorting.',
             icoon: Icons.summarize_outlined,
           );
           final totalen = Column(
             children: <Widget>[
               _bouwTotaalRij('Basisprijs', _data.basisTotaalExclBtw),
               _bouwTotaalRij(
-                'Technische prijsregels',
+                'Prijs bij technische keuzes',
                 _data.technischePrijsregelsTotaalExclBtw,
               ),
               _bouwTotaalRij(
-                'Vrije prijsregels',
-                _data.vrijePrijsregelsTotaalExclBtw,
+                'Prijs per positie',
+                _data.prijsPerPositieTotaalExclBtw,
               ),
               _bouwTotaalRij(
-                'Prijsregels voor alle artikelen',
-                _data.alleArtikelenPrijsregelsTotaalExclBtw,
+                'Prijs voor alle posities',
+                _data.prijsVoorAllePositiesTotaalExclBtw,
               ),
               _bouwTotaalRij(
                 'Winstmarge',

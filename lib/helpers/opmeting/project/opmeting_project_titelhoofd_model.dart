@@ -1,10 +1,12 @@
+// THIMACO-CONTROLE: TITELHOOFD-ZONDER-OUDE-PRIJSINSTELLINGENMOMENTOPNAMES-20260815
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PROJECTOPSLAG-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-TITELHOOFD-ZONDER-TIJDELIJKE-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-KOPPELING-VERSIENUMMER-20260811
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-EN-VERBORGEN-NIET-REKENEN-20260809-2030
 // THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
 // THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
-import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
+import '../../offerte/prijzen/offerte_prijs_voor_alle_posities_regel_model.dart';
 
 class OpmetingProjectTitelhoofd {
   const OpmetingProjectTitelhoofd({
@@ -40,8 +42,8 @@ class OpmetingProjectTitelhoofd {
     this.verborgenNietRekenenPositieIds = const <String>{},
     this.kortingOmschrijving = standaardKortingOmschrijving,
     this.berekenPrijzen = false,
-    this.offertePrijsinstellingenMomentopnames =
-        const <String, OffertePrijsinstellingenMomentopname>{},
+    this.prijsVoorAllePositiesRegels =
+        const <OffertePrijsVoorAllePositiesRegelModel>[],
     this.offerteBronVersieId = '',
     this.offerteBronVersieNummer = 0,
     this.gewijzigdOp = '',
@@ -111,8 +113,8 @@ class OpmetingProjectTitelhoofd {
   final Set<String> verborgenNietRekenenPositieIds;
   final String kortingOmschrijving;
   final bool berekenPrijzen;
-  final Map<String, OffertePrijsinstellingenMomentopname>
-  offertePrijsinstellingenMomentopnames;
+  final List<OffertePrijsVoorAllePositiesRegelModel>
+  prijsVoorAllePositiesRegels;
   final String offerteBronVersieId;
   final int offerteBronVersieNummer;
   final String gewijzigdOp;
@@ -202,6 +204,7 @@ class OpmetingProjectTitelhoofd {
         kleurAfwijking.trim().isEmpty &&
         offerteOmschrijving.trim().isEmpty &&
         verborgenNietRekenenPositieIds.isEmpty &&
+        prijsVoorAllePositiesRegels.isEmpty &&
         !berekenPrijzen;
   }
 
@@ -238,8 +241,7 @@ class OpmetingProjectTitelhoofd {
     Set<String>? verborgenNietRekenenPositieIds,
     String? kortingOmschrijving,
     bool? berekenPrijzen,
-    Map<String, OffertePrijsinstellingenMomentopname>?
-    offertePrijsinstellingenMomentopnames,
+    List<OffertePrijsVoorAllePositiesRegelModel>? prijsVoorAllePositiesRegels,
     String? offerteBronVersieId,
     int? offerteBronVersieNummer,
     String? gewijzigdOp,
@@ -285,9 +287,8 @@ class OpmetingProjectTitelhoofd {
           verborgenNietRekenenPositieIds ?? this.verborgenNietRekenenPositieIds,
       kortingOmschrijving: kortingOmschrijving ?? this.kortingOmschrijving,
       berekenPrijzen: berekenPrijzen ?? this.berekenPrijzen,
-      offertePrijsinstellingenMomentopnames:
-          offertePrijsinstellingenMomentopnames ??
-          this.offertePrijsinstellingenMomentopnames,
+      prijsVoorAllePositiesRegels:
+          prijsVoorAllePositiesRegels ?? this.prijsVoorAllePositiesRegels,
       offerteBronVersieId: offerteBronVersieId ?? this.offerteBronVersieId,
       offerteBronVersieNummer:
           offerteBronVersieNummer ?? this.offerteBronVersieNummer,
@@ -315,32 +316,6 @@ class OpmetingProjectTitelhoofd {
       offerteBronVersieNummer: versieNummer,
       offerteVersie: offerteVersieVoorVariantNummer(versieNummer),
     );
-  }
-
-  OffertePrijsinstellingenMomentopname? prijsinstellingenMomentopnameVoor(
-    String formulierType,
-  ) {
-    final sleutel = _normaliseerFormulierType(formulierType);
-
-    for (final entry in offertePrijsinstellingenMomentopnames.entries) {
-      if (_normaliseerFormulierType(entry.key) == sleutel) {
-        return entry.value;
-      }
-    }
-
-    return null;
-  }
-
-  OpmetingProjectTitelhoofd metPrijsinstellingenMomentopname(
-    OffertePrijsinstellingenMomentopname momentopname,
-  ) {
-    final nieuweMomentopnames =
-        Map<String, OffertePrijsinstellingenMomentopname>.from(
-          offertePrijsinstellingenMomentopnames,
-        );
-    nieuweMomentopnames[momentopname.formulierType] = momentopname;
-
-    return copyWith(offertePrijsinstellingenMomentopnames: nieuweMomentopnames);
   }
 
   Map<String, dynamic> toJson() {
@@ -379,11 +354,9 @@ class OpmetingProjectTitelhoofd {
       )..sort()),
       'kortingOmschrijving': kortingOmschrijving,
       'berekenPrijzen': berekenPrijzen,
-      'offertePrijsinstellingenMomentopnames':
-          offertePrijsinstellingenMomentopnames.map(
-            (formulierType, momentopname) =>
-                MapEntry(formulierType, momentopname.toJson()),
-          ),
+      'prijsVoorAllePositiesRegels': prijsVoorAllePositiesRegels
+          .map((regel) => regel.toJson())
+          .toList(growable: false),
       'offerteBronVersieId': offerteBronVersieId,
       'offerteBronVersieNummer': offerteBronVersieNummer,
       'gewijzigdOp': gewijzigdOp,
@@ -465,10 +438,9 @@ class OpmetingProjectTitelhoofd {
         json['kortingOmschrijving']?.toString(),
       ),
       berekenPrijzen: _leesBool(json['berekenPrijzen'], standaardWaarde: false),
-      offertePrijsinstellingenMomentopnames:
-          _leesPrijsinstellingenMomentopnames(
-            json['offertePrijsinstellingenMomentopnames'],
-          ),
+      prijsVoorAllePositiesRegels: _leesPrijsVoorAllePositiesRegels(
+        json['prijsVoorAllePositiesRegels'],
+      ),
       offerteBronVersieId: json['offerteBronVersieId']?.toString() ?? '',
       offerteBronVersieNummer: _leesIntVeilig(json['offerteBronVersieNummer']),
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
@@ -779,6 +751,40 @@ String opmetingProjectTitelhoofdSleutel(String klantNaam) {
   return sleutel.isEmpty ? 'zonder_klantnaam' : sleutel;
 }
 
+List<OffertePrijsVoorAllePositiesRegelModel> _leesPrijsVoorAllePositiesRegels(
+  Object? waarde,
+) {
+  if (waarde is! List) {
+    return const <OffertePrijsVoorAllePositiesRegelModel>[];
+  }
+
+  final resultaat = <OffertePrijsVoorAllePositiesRegelModel>[];
+  for (final item in waarde) {
+    if (item is! Map) continue;
+
+    try {
+      final regel = OffertePrijsVoorAllePositiesRegelModel.fromJson(
+        Map<String, dynamic>.from(item),
+      );
+      if (regel.id.trim().isNotEmpty) {
+        resultaat.add(regel);
+      }
+    } catch (_) {
+      // Eén beschadigde projectprijsregel mag het titelhoofd niet blokkeren.
+    }
+  }
+
+  resultaat.sort((eerste, tweede) {
+    final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+    if (volgorde != 0) return volgorde;
+    return eerste.omschrijving.toLowerCase().compareTo(
+      tweede.omschrijving.toLowerCase(),
+    );
+  });
+
+  return List<OffertePrijsVoorAllePositiesRegelModel>.unmodifiable(resultaat);
+}
+
 Set<String> _leesStringSet(Object? waarde) {
   if (waarde is! List) {
     return const <String>{};
@@ -811,42 +817,6 @@ bool _leesBool(Object? waarde, {required bool standaardWaarde}) {
   }
 
   return standaardWaarde;
-}
-
-Map<String, OffertePrijsinstellingenMomentopname>
-_leesPrijsinstellingenMomentopnames(Object? waarde) {
-  if (waarde is! Map) {
-    return const <String, OffertePrijsinstellingenMomentopname>{};
-  }
-
-  final resultaat = <String, OffertePrijsinstellingenMomentopname>{};
-
-  for (final entry in waarde.entries) {
-    if (entry.value is! Map) {
-      continue;
-    }
-
-    try {
-      final momentopname = OffertePrijsinstellingenMomentopname.fromJson(
-        Map<String, dynamic>.from(entry.value as Map),
-      );
-      final sleutel = momentopname.formulierType.trim().isNotEmpty
-          ? momentopname.formulierType
-          : entry.key.toString();
-
-      if (sleutel.trim().isNotEmpty) {
-        resultaat[sleutel] = momentopname;
-      }
-    } catch (_) {
-      // Een beschadigde prijsinstellingenmomentopname mag de fiche niet blokkeren.
-    }
-  }
-
-  return resultaat;
-}
-
-String _normaliseerFormulierType(String waarde) {
-  return waarde.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
 }
 
 String _normaliseerKortingOmschrijving(String? waarde) {

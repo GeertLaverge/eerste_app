@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSOVERZICHT-ALLE-NIEUWE-PRIJSREGELS-MEETELLEN-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D3B-STABILISATIE-OVERZICHT-HERUITGAVE-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3B-PRIJSOVERZICHT-ZONDER-LEGACY-RESULTAAT-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-OVERZICHT-ZONDER-PROJECTPRIJS-20260814
@@ -8,6 +9,7 @@ import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../../opmeting/project/opmeting_project_titelhoofd_model.dart';
 import '../offerte_posities_service.dart';
 import '../prijzen/offerte_artikel_prijs_koppeling_service.dart';
+import '../prijzen/offerte_prijs_voor_alle_posities_service.dart';
 import '../prijzen/offerte_toegepaste_prijsregel_model.dart';
 import 'offerte_prijs_overzicht_model.dart';
 
@@ -39,15 +41,22 @@ class OffertePrijsOverzichtService {
         <String, _SamengevoegdePrijsregelAccumulator>{};
 
     for (final positie in geordendePosities) {
+      final prijsPositie =
+          OffertePrijsVoorAllePositiesService.projecteerOpArtikel(
+            artikel: positie,
+            regels: titelhoofd.prijsVoorAllePositiesRegels,
+          );
       final resultaat =
           OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-            positie,
+            prijsPositie,
             kortingToestaan: !positie.isOfferteOptie,
           );
-      if (resultaat == null) continue;
+      if (resultaat == null) {
+        continue;
+      }
 
       final aantal = OfferteArtikelPrijsKoppelingService.aantalVoorArtikel(
-        positie,
+        prijsPositie,
       ).clamp(1, 1000000).toInt();
       final positieLabel = positieLabels[positie.id] ?? 'Positie';
       final omschrijvingRegels =
@@ -93,6 +102,28 @@ class OffertePrijsOverzichtService {
         toepassingLabel: positieLabel,
         artikelIsOptie: positie.isOfferteOptie,
       );
+
+      for (final regel in resultaat.geldigePrijsPerPositieRegels) {
+        final totaal = resultaat.prijsPerPositieEindTotaalExclBtw(regel);
+        if (totaal <= 0.0) {
+          continue;
+        }
+
+        final isVoorAllePosities = regel.id.trim().startsWith(
+          'prijsVoorAllePosities::',
+        );
+
+        _voegSamengevoegdeRegelToe(
+          accumulators: prijsregelAccumulators,
+          type: isVoorAllePosities
+              ? OffertePrijsOverzichtRegelType.prijsVoorAllePosities
+              : OffertePrijsOverzichtRegelType.prijsPerPositie,
+          omschrijving: regel.omschrijving,
+          toepassingLabel: positieLabel,
+          totaalExclBtw: totaal,
+          isOptie: positie.isOfferteOptie,
+        );
+      }
     }
 
     final prijsregels =
@@ -114,13 +145,17 @@ class OffertePrijsOverzichtService {
             final typeVergelijking = eerste.type.index.compareTo(
               tweede.type.index,
             );
-            if (typeVergelijking != 0) return typeVergelijking;
+            if (typeVergelijking != 0) {
+              return typeVergelijking;
+            }
             final optieVergelijking = eerste.isOptie == tweede.isOptie
                 ? 0
                 : eerste.isOptie
                 ? 1
                 : -1;
-            if (optieVergelijking != 0) return optieVergelijking;
+            if (optieVergelijking != 0) {
+              return optieVergelijking;
+            }
             return eerste.omschrijving.toLowerCase().compareTo(
               tweede.omschrijving.toLowerCase(),
             );
@@ -144,7 +179,9 @@ class OffertePrijsOverzichtService {
     required bool artikelIsOptie,
   }) {
     for (final regel in regels) {
-      if (!regel.isGeldig || regel.totaalExclBtw <= 0.0) continue;
+      if (!regel.isGeldig || regel.totaalExclBtw <= 0.0) {
+        continue;
+      }
 
       _voegSamengevoegdeRegelToe(
         accumulators: accumulators,
@@ -206,7 +243,9 @@ class OffertePrijsOverzichtService {
     final hoogte = OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
       positie,
     );
-    if (breedte <= 0 && hoogte <= 0) return '';
+    if (breedte <= 0 && hoogte <= 0) {
+      return '';
+    }
     return '$breedte × $hoogte mm';
   }
 
@@ -225,12 +264,16 @@ class OffertePrijsOverzichtService {
   }
 
   static double _deelDoorAantal(double totaal, int aantal) {
-    if (aantal <= 0) return 0.0;
+    if (aantal <= 0) {
+      return 0.0;
+    }
     return _rondBedrag(totaal / aantal.toDouble());
   }
 
   static double _rondBedrag(double waarde) {
-    if (!waarde.isFinite) return 0.0;
+    if (!waarde.isFinite) {
+      return 0.0;
+    }
     return (waarde * 100.0).roundToDouble() / 100.0;
   }
 

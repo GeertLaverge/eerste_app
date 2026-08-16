@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSOVERZICHT-PDF-NIEUWE-PRIJSSTRUCTUUR-20260815
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -610,7 +611,7 @@ class OffertePrijsOverzichtPdfService {
                 ),
                 pw.SizedBox(height: 3),
                 pw.Text(
-                  'De korting wordt alleen op de basisprijs na winstmarge berekend. Technische, vrije en projectbrede prijsregels blijven buiten de korting.',
+                  'De artikelkorting wordt alleen op de basisprijs na artikelwinstmarge berekend. Technische keuzes en de twee eenvoudige prijsregelingen blijven buiten die artikelkorting.',
                   style: const pw.TextStyle(
                     color: _tekstGrijs,
                     fontSize: 7,
@@ -627,16 +628,16 @@ class OffertePrijsOverzichtPdfService {
               children: <pw.Widget>[
                 _totaalRij('Basisprijs', data.basisTotaalExclBtw),
                 _totaalRij(
-                  'Technische prijsregels',
+                  'Prijs bij technische keuzes',
                   data.technischePrijsregelsTotaalExclBtw,
                 ),
                 _totaalRij(
-                  'Vrije prijsregels',
-                  data.vrijePrijsregelsTotaalExclBtw,
+                  'Prijs per positie',
+                  data.prijsPerPositieTotaalExclBtw,
                 ),
                 _totaalRij(
-                  'Prijsregels voor alle artikelen',
-                  data.alleArtikelenPrijsregelsTotaalExclBtw,
+                  'Prijs voor alle posities',
+                  data.prijsVoorAllePositiesTotaalExclBtw,
                 ),
                 _totaalRij(
                   'Winstmarge',

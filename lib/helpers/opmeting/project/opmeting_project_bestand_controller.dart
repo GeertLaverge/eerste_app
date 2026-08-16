@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OUDE-PRIJSPROFIEL-MOMENTOPNAMEFLOW-UIT-PROJECTLADEN-20260815
 // THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-BEWERKEN-20260811
 // THIMACO-CONTROLE: GLOBALE-ATOMAIRE-OPMETINGOPSLAG-20260810
 // THIMACO-CONTROLE: OFFERTEVERSIE-ALS-WERKVERSIE-20260806
@@ -7,11 +8,8 @@
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
-import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
 import '../../offerte/prijzen/offerte_prijsinstellingen_controller.dart';
-import '../../offerte/prijzen/offerte_prijsinstellingen_momentopname.dart';
-import '../../offerte/prijzen/offerte_prijsprofiel_model.dart';
 import '../../sync/onedrive_sync_service.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import '../opslag/opmeting_veilige_mutatie_service.dart';
@@ -67,7 +65,6 @@ class OpmetingProjectBestandController {
 
   Future<void> laadOpmetingenVanOpslag({
     String? klantNaam,
-    bool vraagPrijsinstellingenOvernemen = false,
     bool forceerPrijsinstellingen = false,
   }) async {
     zetLaden(true);
@@ -78,114 +75,26 @@ class OpmetingProjectBestandController {
         projectTitelhoofdController.normaliseerKlantNaam(actieveKlantNaam) !=
         projectTitelhoofdController.normaliseerKlantNaam(huidigeKlantNaam);
 
-    if (klantGewijzigd) {
-      prijsinstellingenController.wisGenegeerdePrijsinstellingenSignatuur();
-    }
-
     final opgeslagenTitelhoofd = await AppStorage.laadOpmetingProjectTitelhoofd(
       actieveKlantNaam,
     );
-    var titelhoofd = await projectTitelhoofdController.vulAanUitKlantenfiche(
+    final titelhoofd = await projectTitelhoofdController.vulAanUitKlantenfiche(
       klantNaam: actieveKlantNaam,
       basis: opgeslagenTitelhoofd,
     );
+
     final alleOpmetingenVoorSync = await AppStorage.laadOpmetingenVoorSync();
 
-    final huidigeProfielen = await prijsinstellingenController
-        .laadOndersteundePrijsprofielen();
-    final huidigeMomentopnames = prijsinstellingenController
-        .maakHuidigePrijsinstellingenMomentopnames(huidigeProfielen);
-    final oudeMomentopnames = prijsinstellingenController
-        .leesOudePrijsinstellingenMomentopnames(titelhoofd);
-
-    bool isGewijzigd(
-      OffertePrijsinstellingenMomentopname? oud,
-      OffertePrijsinstellingenMomentopname huidig,
-    ) {
-      // Oudere bestanden zonder momentopname krijgen de huidige inhoud als
-      // stille uitgangssituatie. Alleen een bestaande, afwijkende snapshot
-      // veroorzaakt nog de vraag om nieuwe prijsinstellingen toe te passen.
-      return oud == null ? false : !oud.heeftZelfdeInhoudAls(huidig);
-    }
-
-    final gewijzigdeFormulierTypes = OfferteArtikelPrijsKoppelingService
-        .ondersteundeFormulierTypes
-        .where(
-          (formulierType) => isGewijzigd(
-            oudeMomentopnames[formulierType],
-            huidigeMomentopnames[formulierType]!,
-          ),
-        )
-        .toList(growable: false);
-    final prijsinstellingenGewijzigd = gewijzigdeFormulierTypes.isNotEmpty;
-    final wijzigingen = <OffertePrijsinstellingenWijziging>[
-      for (final formulierType in gewijzigdeFormulierTypes)
-        ...prijsinstellingenController.bepaalPrijsinstellingenWijzigingen(
-          oud: oudeMomentopnames[formulierType],
-          huidig: huidigeMomentopnames[formulierType]!,
-        ),
-    ];
-
-    var huidigeInstellingenToepassen = true;
-    final profielenVoorBerekening = Map<String, OffertePrijsprofielModel>.from(
-      huidigeProfielen,
-    );
-
-    if (titelhoofd.berekenPrijzen &&
-        prijsinstellingenGewijzigd &&
-        vraagPrijsinstellingenOvernemen &&
-        !forceerPrijsinstellingen) {
-      if (!isMounted()) return;
-
-      final keuze = await prijsinstellingenController
-          .vraagPrijsinstellingenOvernemen(
-            wijzigingen: wijzigingen,
-            eersteKoppeling: gewijzigdeFormulierTypes.any(
-              (formulierType) => oudeMomentopnames[formulierType] == null,
-            ),
-          );
-      huidigeInstellingenToepassen = keuze == true;
-
-      if (huidigeInstellingenToepassen) {
-        prijsinstellingenController.wisGenegeerdePrijsinstellingenSignatuur();
-      } else {
-        prijsinstellingenController.negeerHuidigePrijsinstellingen(
-          huidigeMomentopnames.values,
-        );
-      }
-
-      if (!huidigeInstellingenToepassen) {
-        for (final formulierType
-            in OfferteArtikelPrijsKoppelingService.ondersteundeFormulierTypes) {
-          profielenVoorBerekening[formulierType] =
-              oudeMomentopnames[formulierType]?.naarProfiel() ??
-              OffertePrijsprofielModel.leeg(
-                formulierType: formulierType,
-                formulierNaam:
-                    OfferteArtikelPrijsKoppelingService.formulierNaamVoor(
-                      formulierType,
-                    ),
-              );
-        }
-      }
-    }
-
-    final magPrijsberekeningUitvoeren =
-        titelhoofd.berekenPrijzen &&
-        (huidigeInstellingenToepassen ||
-            oudeMomentopnames.values.any(
-              (momentopname) => momentopname != null,
-            ));
-
-    final momentopnameResultaat = magPrijsberekeningUitvoeren
+    // De oude fichegebonden prijsprofielen en opgeslagen
+    // prijsinstellingenmomentopnames zijn uit de laadflow verwijderd.
+    // Wanneer prijzen actief zijn wordt altijd rechtstreeks tegen de huidige
+    // centrale technische prijslijst gerekend.
+    final momentopnameResultaat = titelhoofd.berekenPrijzen
         ? await prijsinstellingenController.werkTechnischePrijsMomentopnamesBij(
             alleOpmetingen: alleOpmetingenVoorSync,
             klantNaam: actieveKlantNaam,
             berekenPrijzen: true,
-            prijsprofielen: profielenVoorBerekening,
-            forceerPrijsinstellingen:
-                forceerPrijsinstellingen ||
-                (prijsinstellingenGewijzigd && huidigeInstellingenToepassen),
+            forceerPrijsinstellingen: forceerPrijsinstellingen,
           )
         : OfferteTechnischePrijsMomentopnameResultaat(
             opmetingen: alleOpmetingenVoorSync,
@@ -200,14 +109,6 @@ class OpmetingProjectBestandController {
         );
     final opmetingenNaProjectkleurSynchronisatie =
         projectkleurResultaat.opmetingen;
-
-    if (titelhoofd.berekenPrijzen && huidigeInstellingenToepassen) {
-      for (final momentopname in huidigeMomentopnames.values) {
-        titelhoofd = titelhoofd.metPrijsinstellingenMomentopname(momentopname);
-      }
-      titelhoofd = titelhoofd.metWijzigingsDatum();
-      await AppStorage.bewaarOpmetingProjectTitelhoofd(titelhoofd);
-    }
 
     var definitieveOpmetingen = opmetingenNaProjectkleurSynchronisatie;
 
@@ -230,7 +131,9 @@ class OpmetingProjectBestandController {
                 opmeting.klantNaam.trim().toLowerCase() == klantFilter;
           }).toList();
 
-    if (!isMounted()) return;
+    if (!isMounted()) {
+      return;
+    }
 
     final bestaandeTypes = zichtbareOpmetingen
         .map((opmeting) => opmeting.formulierTypeGenormaliseerd)
@@ -443,10 +346,7 @@ class OpmetingProjectBestandController {
 
     if (gekozenKlant == null) return;
 
-    await laadOpmetingenVanOpslag(
-      klantNaam: gekozenKlant,
-      vraagPrijsinstellingenOvernemen: true,
-    );
+    await laadOpmetingenVanOpslag(klantNaam: gekozenKlant);
     if (!isMounted()) return;
 
     toonMelding('Opmeetbestand “$gekozenKlant” is geopend.', false);

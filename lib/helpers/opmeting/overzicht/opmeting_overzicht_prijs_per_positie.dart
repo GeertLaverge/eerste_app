@@ -1,3 +1,10 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-GEEN-RUIMTE-PER-ARTIKEL-20260816
+// THIMACO-CONTROLE: VERDEELDE-KOST-IN-PRIJSBEREKENING-ONDER-KORTING-20260816
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-MEETELLEN-IN-POSITIETOTAAL-20260815
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE2-IN-PRIJSZONE-20260815
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-IPAD-COMPACT-GROTER-LETTERTYPE-EN-INVOERLIMIETEN-20260815
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-COMPACTE-IPAD-LANDSCHAP-REGEL-20260815
+// THIMACO-CONTROLE: PRIJS-PER-POSITIE-UI-TOONT-EENHEIDSBEREKENING-MET-MATEN-20260815
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-DROPDOWNS-ZELFDE-40PX-HOOGTE-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-OMSCHRIJVING-STANDAARDHOOGTE-ALLE-VELDEN-40PX-MENU-LINKS-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-APARTE-CONTAINERS-GELIJKE-VELDHOOGTE-NIEUWE-EENHEDEN-20260814
@@ -16,8 +23,12 @@ import 'package:flutter/services.dart';
 import '../../app_storage.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../offerte/prijzen/offerte_prijs_per_artikel_template_model.dart';
+import '../../offerte/prijzen/offerte_prijs_verdeeld_over_service.dart';
+import '../../offerte/prijzen/offerte_prijs_voor_alle_posities_regel_model.dart';
+import '../../offerte/prijzen/offerte_prijs_voor_alle_posities_service.dart';
 import '../../offerte/prijzen/offerte_berekening_resultaat.dart';
 import 'opmeting_overzicht_artikel_layout_helper.dart';
+import 'opmeting_overzicht_prijs_voor_alle_posities.dart';
 
 /// Centrale prijszone van één positie in het opmetingsoverzicht.
 ///
@@ -36,6 +47,10 @@ class OpmetingOverzichtPrijsPerPositie {
     required bool toonWinstEnKorting,
     required bool toonTechnischePrijsregels,
     required bool heeftAlgemenePrijsUitsplitsing,
+    List<OffertePrijsVoorAllePositiesRegelModel> prijsVoorAllePositiesRegels =
+        const <OffertePrijsVoorAllePositiesRegelModel>[],
+    String huidigePositieId = '',
+    bool toonPrijsVoorAllePositiesEditor = true,
   }) {
     if (!berekenPrijzen) {
       return 0.0;
@@ -52,11 +67,40 @@ class OpmetingOverzichtPrijsPerPositie {
         (toonWinstEnKorting ? 104.0 : 0.0);
     final prijsPerPositieHoogte =
         54.0 + (prijsResultaat.prijsPerPositieRegels.length * 98.0);
+    final positieId = huidigePositieId.trim();
+    final aantalVerdeeldeRegels = positieId.isEmpty
+        ? 0
+        : prijsVoorAllePositiesRegels
+              .where(
+                (regel) =>
+                    OffertePrijsVerdeeldOverService.isVerdeeldOverRegel(
+                      regel,
+                    ) &&
+                    regel.isVanToepassingOp(positieId),
+              )
+              .length;
+    final aantalGewoneAllePositiesRegels =
+        !toonPrijsVoorAllePositiesEditor || positieId.isEmpty
+        ? 0
+        : prijsVoorAllePositiesRegels
+              .where(
+                (regel) =>
+                    !OffertePrijsVerdeeldOverService.isVerdeeldOverRegel(
+                      regel,
+                    ) &&
+                    regel.isVanToepassingOp(positieId),
+              )
+              .length;
+    final prijsVoorAllePositiesHoogte =
+        toonPrijsVoorAllePositiesEditor && positieId.isNotEmpty
+        ? 54.0 + (aantalGewoneAllePositiesRegels * 148.0)
+        : 0.0;
 
-    return 96.0 +
+    return 104.0 +
         invoerHoogte +
-        (aantalSamenvattingRegels * 34.0) +
-        prijsPerPositieHoogte;
+        ((aantalSamenvattingRegels + aantalVerdeeldeRegels) * 34.0) +
+        prijsPerPositieHoogte +
+        prijsVoorAllePositiesHoogte;
   }
 
   static List<Widget> bouwWidgets({
@@ -73,6 +117,13 @@ class OpmetingOverzichtPrijsPerPositie {
     required ValueChanged<double> onKortingGewijzigd,
     required ValueChanged<List<OffertePrijsPerPositieRegelModel>>
     onPrijsPerPositieRegelsGewijzigd,
+    List<OffertePrijsVoorAllePositiesRegelModel> prijsVoorAllePositiesRegels =
+        const <OffertePrijsVoorAllePositiesRegelModel>[],
+    String huidigePositieId = '',
+    List<OpmetingOverzichtPrijsDoelPositie> prijsDoelPosities =
+        const <OpmetingOverzichtPrijsDoelPositie>[],
+    ValueChanged<List<OffertePrijsVoorAllePositiesRegelModel>>?
+    onPrijsVoorAllePositiesRegelsGewijzigd,
     String? basisOmschrijving,
     double? algemeneVerkoopPrijsTotaalExclBtw,
     double? algemeneAankoopPrijsTotaalExclBtw,
@@ -94,6 +145,11 @@ class OpmetingOverzichtPrijsPerPositie {
         onWinstmargeGewijzigd: onWinstmargeGewijzigd,
         onKortingGewijzigd: onKortingGewijzigd,
         onPrijsPerPositieRegelsGewijzigd: onPrijsPerPositieRegelsGewijzigd,
+        prijsVoorAllePositiesRegels: prijsVoorAllePositiesRegels,
+        huidigePositieId: huidigePositieId,
+        prijsDoelPosities: prijsDoelPosities,
+        onPrijsVoorAllePositiesRegelsGewijzigd:
+            onPrijsVoorAllePositiesRegelsGewijzigd,
         basisOmschrijving: basisOmschrijving,
         algemeneVerkoopPrijsTotaalExclBtw: algemeneVerkoopPrijsTotaalExclBtw,
         algemeneAankoopPrijsTotaalExclBtw: algemeneAankoopPrijsTotaalExclBtw,
@@ -115,6 +171,10 @@ class _PrijsBerekeningKaart extends StatelessWidget {
     required this.onWinstmargeGewijzigd,
     required this.onKortingGewijzigd,
     required this.onPrijsPerPositieRegelsGewijzigd,
+    required this.prijsVoorAllePositiesRegels,
+    required this.huidigePositieId,
+    required this.prijsDoelPosities,
+    this.onPrijsVoorAllePositiesRegelsGewijzigd,
     this.basisOmschrijving,
     this.algemeneVerkoopPrijsTotaalExclBtw,
     this.algemeneAankoopPrijsTotaalExclBtw,
@@ -132,6 +192,12 @@ class _PrijsBerekeningKaart extends StatelessWidget {
   final ValueChanged<double> onKortingGewijzigd;
   final ValueChanged<List<OffertePrijsPerPositieRegelModel>>
   onPrijsPerPositieRegelsGewijzigd;
+  final List<OffertePrijsVoorAllePositiesRegelModel>
+  prijsVoorAllePositiesRegels;
+  final String huidigePositieId;
+  final List<OpmetingOverzichtPrijsDoelPositie> prijsDoelPosities;
+  final ValueChanged<List<OffertePrijsVoorAllePositiesRegelModel>>?
+  onPrijsVoorAllePositiesRegelsGewijzigd;
   final String? basisOmschrijving;
   final double? algemeneVerkoopPrijsTotaalExclBtw;
   final double? algemeneAankoopPrijsTotaalExclBtw;
@@ -141,6 +207,29 @@ class _PrijsBerekeningKaart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final prijsVoorAllePositiesTotaal =
+        OffertePrijsVoorAllePositiesService.totaalVoorPositie(
+          positieId: huidigePositieId,
+          breedteMm: resultaat.breedteMm,
+          hoogteMm: resultaat.hoogteMm,
+          regels: prijsVoorAllePositiesRegels,
+        );
+    final volledigPositieTotaal = _rondBedragAf(
+      resultaat.totaalExclBtw + prijsVoorAllePositiesTotaal,
+    );
+    final positieId = huidigePositieId.trim();
+    final verdeeldeRegels = positieId.isEmpty
+        ? const <OffertePrijsVoorAllePositiesRegelModel>[]
+        : prijsVoorAllePositiesRegels
+              .where(
+                (regel) =>
+                    OffertePrijsVerdeeldOverService.isVerdeeldOverRegel(
+                      regel,
+                    ) &&
+                    regel.isVanToepassingOp(positieId),
+              )
+              .toList(growable: false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -225,6 +314,20 @@ class _PrijsBerekeningKaart extends StatelessWidget {
                 ],
                 const SizedBox(height: 7),
               ],
+              if (verdeeldeRegels.isNotEmpty)
+                ...verdeeldeRegels.map((regel) {
+                  final omschrijving = regel.omschrijving.trim().isEmpty
+                      ? 'Verdeelde kost'
+                      : regel.omschrijving.trim();
+                  final bedrag = regel.prijsregel.eindTotaalExclBtwVoorMaten(
+                    breedteMm: resultaat.breedteMm,
+                    hoogteMm: resultaat.hoogteMm,
+                  );
+                  return _PrijsSamenvattingRij(
+                    omschrijving: omschrijving,
+                    bedrag: bedrag,
+                  );
+                }),
               if (toonTechnischePrijsregels)
                 ...resultaat.technischePrijsregels.map((prijsregel) {
                   final omschrijving = prijsregel.isOptie
@@ -243,22 +346,42 @@ class _PrijsBerekeningKaart extends StatelessWidget {
 
         // 2. Lokale prijs per positie heeft zijn eigen duidelijke container.
         _PrijsPerPositieRegelsBlok(
+          resultaat: resultaat,
           regels: prijsData.prijsPerPositieRegels,
           onGewijzigd: onPrijsPerPositieRegelsGewijzigd,
         ),
+        if (huidigePositieId.trim().isNotEmpty &&
+            onPrijsVoorAllePositiesRegelsGewijzigd != null) ...<Widget>[
+          const SizedBox(height: 8),
+          OpmetingOverzichtPrijsVoorAllePositiesBlok(
+            huidigePositieId: huidigePositieId,
+            breedteMm: resultaat.breedteMm,
+            hoogteMm: resultaat.hoogteMm,
+            regels: prijsVoorAllePositiesRegels,
+            doelPosities: prijsDoelPosities,
+            onGewijzigd: onPrijsVoorAllePositiesRegelsGewijzigd!,
+          ),
+        ],
         const SizedBox(height: 8),
 
-        // Het eindtotaal blijft los onder beide blokken en sluit rechts uit.
+        // Het eindtotaal blijft los onder de prijsblokken en sluit rechts uit.
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 2),
           child: _PrijsSamenvattingRij(
             omschrijving: 'Totaal positie excl. btw',
-            bedrag: resultaat.totaalExclBtw,
+            bedrag: volledigPositieTotaal,
             vet: true,
           ),
         ),
       ],
     );
+  }
+
+  static double _rondBedragAf(double waarde) {
+    if (!waarde.isFinite || waarde <= 0.0) {
+      return 0.0;
+    }
+    return (waarde * 100.0).roundToDouble() / 100.0;
   }
 
   static String _bedrag(double waarde) {
@@ -320,10 +443,12 @@ class _CompactPrijsRij extends StatelessWidget {
 
 class _PrijsPerPositieRegelsBlok extends StatelessWidget {
   const _PrijsPerPositieRegelsBlok({
+    required this.resultaat,
     required this.regels,
     required this.onGewijzigd,
   });
 
+  final OfferteBerekeningResultaat resultaat;
   final List<OffertePrijsPerPositieRegelModel> regels;
   final ValueChanged<List<OffertePrijsPerPositieRegelModel>> onGewijzigd;
 
@@ -553,6 +678,7 @@ class _PrijsPerPositieRegelsBlok extends StatelessWidget {
                 key: ValueKey<String>(regel.id),
                 padding: const EdgeInsets.only(top: 7),
                 child: _PrijsPerPositieRegelKaart(
+                  resultaat: resultaat,
                   regel: regel,
                   eenheden: _eenheden,
                   onGewijzigd: _vervangRegel,
@@ -572,6 +698,7 @@ class _PrijsPerPositieRegelsBlok extends StatelessWidget {
 
 class _PrijsPerPositieRegelKaart extends StatelessWidget {
   const _PrijsPerPositieRegelKaart({
+    required this.resultaat,
     required this.regel,
     required this.eenheden,
     required this.onGewijzigd,
@@ -580,6 +707,7 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
     required this.onVerwijderen,
   });
 
+  final OfferteBerekeningResultaat resultaat;
   final OffertePrijsPerPositieRegelModel regel;
   final List<String> eenheden;
   final ValueChanged<OffertePrijsPerPositieRegelModel> onGewijzigd;
@@ -709,191 +837,249 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
           const SizedBox(height: 7),
           LayoutBuilder(
             builder: (context, constraints) {
-              const aantalKolommen = 8;
-              const tussenruimte = 6.0;
-              const minimaleBreedte = 84.0;
-              final beschikbareBreedte =
-                  constraints.maxWidth - ((aantalKolommen - 1) * tussenruimte);
-              final berekendeBreedte = beschikbareBreedte / aantalKolommen;
-              final kolomBreedte = berekendeBreedte < minimaleBreedte
-                  ? minimaleBreedte
-                  : berekendeBreedte;
+              const tussenruimte = 4.0;
 
-              Widget cel(Widget child) {
-                return SizedBox(width: kolomBreedte, height: 40, child: child);
+              Widget cel({required Widget child, required int flex}) {
+                return Expanded(
+                  flex: flex,
+                  child: SizedBox(height: 40, child: child),
+                );
               }
 
               Widget ruimte() => const SizedBox(width: tussenruimte);
 
               final huidigeEenheid = regel.eenheid.trim();
-              final totaalHeeftWaarde = regel.basisTotaalExclBtw > 0;
-              final winstHeeftWaarde = regel.winstBedragExclBtw > 0;
-              final eindtotaalHeeftWaarde = regel.eindTotaalExclBtw > 0;
+              final basisTotaal = resultaat.prijsPerPositieBasisTotaalExclBtw(
+                regel,
+              );
+              final winstBedrag = resultaat.prijsPerPositieWinstBedragExclBtw(
+                regel,
+              );
+              final eindTotaal = resultaat.prijsPerPositieEindTotaalExclBtw(
+                regel,
+              );
+              final totaalHeeftWaarde = basisTotaal > 0;
+              final winstHeeftWaarde = winstBedrag > 0;
+              final eindtotaalHeeftWaarde = eindTotaal > 0;
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    cel(
-                      DropdownButtonFormField<OffertePrijsPerPositieType>(
-                        key: ValueKey<String>(
-                          'prijsType_${regel.id}_${regel.type.name}',
+              // Compacte, responsieve breedtes voor iPad in liggende stand.
+              // De regel gebruikt altijd exact de beschikbare breedte:
+              // A/V 4 | aantal 6 | eenheid 12 | prijs 8 | totaal 8 |
+              // % 4 | winst € 8 | eindtotaal 9.
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  cel(
+                    flex: 4,
+                    child:
+                        _PrijsRegelCompactKeuzeMenu<OffertePrijsPerPositieType>(
+                          waarde: regel.type,
+                          waarden: OffertePrijsPerPositieType.values,
+                          hintText: 'V',
+                          tekstVoor: (waarde) => waarde.label,
+                          tekstGrootte: 13,
+                          tekstVet: true,
+                          onGekozen: (waarde) {
+                            if (waarde == regel.type) return;
+                            onGewijzigd(regel.copyWith(type: waarde));
+                          },
                         ),
-                        initialValue: regel.type,
-                        isDense: false,
-                        isExpanded: true,
-                        decoration: _regelDropdownDecoratie(),
-                        items: OffertePrijsPerPositieType.values
-                            .map(
-                              (waarde) =>
-                                  DropdownMenuItem<OffertePrijsPerPositieType>(
-                                    value: waarde,
-                                    child: Text(
-                                      waarde.label,
-                                      style: const TextStyle(
-                                        fontSize: 10.5,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    ),
-                                  ),
-                            )
-                            .toList(growable: false),
-                        onChanged: (waarde) {
-                          if (waarde == null || waarde == regel.type) return;
-                          onGewijzigd(regel.copyWith(type: waarde));
-                        },
-                      ),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 6,
+                    child: _PrijsRegelInvoerVeld(
+                      sleutel: 'aantal_${regel.id}',
+                      beginTekst: _getal(regel.aantal, decimalen: 4),
+                      hintText: 'Aantal',
+                      numeriek: true,
+                      maxGeheleCijfers: 3,
+                      maxDecimalen: 2,
+                      onBewaren: (waarde) {
+                        onGewijzigd(
+                          regel.copyWith(aantal: _leesDouble(waarde)),
+                        );
+                      },
                     ),
-                    ruimte(),
-                    cel(
-                      _PrijsRegelInvoerVeld(
-                        sleutel: 'aantal_${regel.id}',
-                        beginTekst: _getal(regel.aantal, decimalen: 4),
-                        hintText: 'Aantal',
-                        numeriek: true,
-                        onBewaren: (waarde) {
-                          onGewijzigd(
-                            regel.copyWith(aantal: _leesDouble(waarde)),
-                          );
-                        },
-                      ),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 12,
+                    child: _PrijsRegelCompactKeuzeMenu<String>(
+                      waarde: huidigeEenheid.isEmpty ? null : huidigeEenheid,
+                      waarden: _eenhedenVoorDropdown,
+                      hintText: 'Eenheid',
+                      tekstVoor: (waarde) => waarde,
+                      tekstGrootte: 11.5,
+                      onGekozen: (waarde) {
+                        if (waarde == regel.eenheid) return;
+                        onGewijzigd(regel.copyWith(eenheid: waarde));
+                      },
                     ),
-                    ruimte(),
-                    cel(
-                      DropdownButtonFormField<String>(
-                        key: ValueKey<String>(
-                          'prijsEenheid_${regel.id}_$huidigeEenheid',
-                        ),
-                        initialValue: huidigeEenheid.isEmpty
-                            ? null
-                            : huidigeEenheid,
-                        hint: const Text(
-                          'Eenheid',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 8,
+                    child: _PrijsRegelInvoerVeld(
+                      sleutel: 'prijs_${regel.id}',
+                      beginTekst: _getal(regel.eenheidsPrijsExclBtw),
+                      hintText: 'Prijs',
+                      numeriek: true,
+                      maxGeheleCijfers: 4,
+                      maxDecimalen: 2,
+                      prefixText: '€ ',
+                      onBewaren: (waarde) {
+                        onGewijzigd(
+                          regel.copyWith(
+                            eenheidsPrijsExclBtw: _leesDouble(waarde),
                           ),
-                        ),
-                        isExpanded: true,
-                        isDense: false,
-                        decoration: _regelDropdownDecoratie(),
-                        items: _eenhedenVoorDropdown
-                            .map(
-                              (waarde) => DropdownMenuItem<String>(
-                                value: waarde,
-                                child: Text(
-                                  waarde,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                        );
+                      },
+                    ),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 8,
+                    child: _PrijsRegelWaardeVak(
+                      tekst: totaalHeeftWaarde
+                          ? _bedrag(basisTotaal)
+                          : 'Totaal',
+                      hint: !totaalHeeftWaarde,
+                    ),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 4,
+                    child: regel.isAankoop
+                        ? _PrijsRegelInvoerVeld(
+                            sleutel: 'winst_${regel.id}',
+                            beginTekst: _getal(regel.winstPercentage),
+                            hintText: '%',
+                            numeriek: true,
+                            maxGeheleCijfers: 2,
+                            maxDecimalen: 2,
+                            suffixText: '%',
+                            onBewaren: (waarde) {
+                              onGewijzigd(
+                                regel.copyWith(
+                                  winstPercentage: _leesDouble(waarde),
                                 ),
-                              ),
-                            )
-                            .toList(growable: false),
-                        onChanged: (waarde) {
-                          if (waarde == null || waarde == regel.eenheid) return;
-                          onGewijzigd(regel.copyWith(eenheid: waarde));
-                        },
-                      ),
+                              );
+                            },
+                          )
+                        : const _PrijsRegelWaardeVak(tekst: '%', hint: true),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 8,
+                    child: _PrijsRegelWaardeVak(
+                      tekst: winstHeeftWaarde ? _bedrag(winstBedrag) : '€',
+                      hint: !winstHeeftWaarde,
                     ),
-                    ruimte(),
-                    cel(
-                      _PrijsRegelInvoerVeld(
-                        sleutel: 'prijs_${regel.id}',
-                        beginTekst: _getal(regel.eenheidsPrijsExclBtw),
-                        hintText: 'Prijs',
-                        numeriek: true,
-                        prefixText: '€ ',
-                        onBewaren: (waarde) {
-                          onGewijzigd(
-                            regel.copyWith(
-                              eenheidsPrijsExclBtw: _leesDouble(waarde),
-                            ),
-                          );
-                        },
-                      ),
+                  ),
+                  ruimte(),
+                  cel(
+                    flex: 9,
+                    child: _PrijsRegelWaardeVak(
+                      tekst: eindtotaalHeeftWaarde
+                          ? _bedrag(eindTotaal)
+                          : 'Eindtotaal',
+                      vet: eindtotaalHeeftWaarde,
+                      hint: !eindtotaalHeeftWaarde,
+                      achtergrond: const Color(0xFFE7F6EC),
+                      randKleur: const Color(0xFFCDE9D5),
                     ),
-                    ruimte(),
-                    cel(
-                      _PrijsRegelWaardeVak(
-                        tekst: totaalHeeftWaarde
-                            ? _bedrag(regel.basisTotaalExclBtw)
-                            : 'Totaal',
-                        hint: !totaalHeeftWaarde,
-                      ),
-                    ),
-                    ruimte(),
-                    cel(
-                      regel.isAankoop
-                          ? _PrijsRegelInvoerVeld(
-                              sleutel: 'winst_${regel.id}',
-                              beginTekst: _getal(regel.winstPercentage),
-                              hintText: 'Winst %',
-                              numeriek: true,
-                              suffixText: '%',
-                              onBewaren: (waarde) {
-                                onGewijzigd(
-                                  regel.copyWith(
-                                    winstPercentage: _leesDouble(waarde),
-                                  ),
-                                );
-                              },
-                            )
-                          : const _PrijsRegelWaardeVak(
-                              tekst: 'Winst %',
-                              hint: true,
-                            ),
-                    ),
-                    ruimte(),
-                    cel(
-                      _PrijsRegelWaardeVak(
-                        tekst: winstHeeftWaarde
-                            ? _bedrag(regel.winstBedragExclBtw)
-                            : 'Winst €',
-                        hint: !winstHeeftWaarde,
-                      ),
-                    ),
-                    ruimte(),
-                    cel(
-                      _PrijsRegelWaardeVak(
-                        tekst: eindtotaalHeeftWaarde
-                            ? _bedrag(regel.eindTotaalExclBtw)
-                            : 'Eindtotaal',
-                        vet: eindtotaalHeeftWaarde,
-                        hint: !eindtotaalHeeftWaarde,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PrijsRegelCompactKeuzeMenu<T> extends StatelessWidget {
+  const _PrijsRegelCompactKeuzeMenu({
+    required this.waarde,
+    required this.waarden,
+    required this.hintText,
+    required this.tekstVoor,
+    required this.onGekozen,
+    this.tekstGrootte = 10,
+    this.tekstVet = false,
+  });
+
+  final T? waarde;
+  final List<T> waarden;
+  final String hintText;
+  final String Function(T waarde) tekstVoor;
+  final ValueChanged<T> onGekozen;
+  final double tekstGrootte;
+  final bool tekstVet;
+
+  @override
+  Widget build(BuildContext context) {
+    final huidigeTekst = waarde == null ? '' : tekstVoor(waarde as T).trim();
+
+    return PopupMenuButton<T>(
+      tooltip: hintText,
+      position: PopupMenuPosition.under,
+      padding: EdgeInsets.zero,
+      onSelected: onGekozen,
+      itemBuilder: (context) {
+        return waarden
+            .map(
+              (item) => PopupMenuItem<T>(
+                value: item,
+                height: 36,
+                child: Text(
+                  tekstVoor(item),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: item == waarde
+                        ? FontWeight.w900
+                        : FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+            .toList(growable: false);
+      },
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.only(left: 5, right: 2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(7),
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                huidigeTekst.isEmpty ? hintText : huidigeTekst,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: huidigeTekst.isEmpty
+                      ? const Color(0xFF9CA3AF)
+                      : const Color(0xFF111827),
+                  fontSize: tekstGrootte,
+                  fontWeight: tekstVet ? FontWeight.w900 : FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.arrow_drop_down_rounded,
+              size: 15,
+              color: Color(0xFF6B7280),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -904,11 +1090,15 @@ class _PrijsRegelWaardeVak extends StatelessWidget {
     required this.tekst,
     this.vet = false,
     this.hint = false,
+    this.achtergrond = Colors.white,
+    this.randKleur = const Color(0xFFE5E7EB),
   });
 
   final String tekst;
   final bool vet;
   final bool hint;
+  final Color achtergrond;
+  final Color randKleur;
 
   @override
   Widget build(BuildContext context) {
@@ -917,21 +1107,24 @@ class _PrijsRegelWaardeVak extends StatelessWidget {
       alignment: Alignment.centerRight,
       padding: const EdgeInsets.symmetric(horizontal: 7),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: achtergrond,
         borderRadius: BorderRadius.circular(7),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: randKleur),
       ),
-      child: Text(
-        tekst,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.right,
-        style: TextStyle(
-          color: hint ? const Color(0xFF9CA3AF) : const Color(0xFF111827),
-          fontSize: 10,
-          fontWeight: hint
-              ? FontWeight.w600
-              : (vet ? FontWeight.w900 : FontWeight.w700),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Text(
+          tekst,
+          maxLines: 1,
+          textAlign: TextAlign.right,
+          style: TextStyle(
+            color: hint ? const Color(0xFF9CA3AF) : const Color(0xFF111827),
+            fontSize: vet ? 13 : 12.5,
+            fontWeight: hint
+                ? FontWeight.w600
+                : (vet ? FontWeight.w900 : FontWeight.w700),
+          ),
         ),
       ),
     );
@@ -1098,6 +1291,8 @@ class _PrijsRegelInvoerVeld extends StatefulWidget {
     required this.hintText,
     required this.onBewaren,
     this.numeriek = false,
+    this.maxGeheleCijfers,
+    this.maxDecimalen = 2,
     this.prefixText,
     this.suffixText,
   });
@@ -1107,6 +1302,8 @@ class _PrijsRegelInvoerVeld extends StatefulWidget {
   final String hintText;
   final ValueChanged<String> onBewaren;
   final bool numeriek;
+  final int? maxGeheleCijfers;
+  final int maxDecimalen;
   final String? prefixText;
   final String? suffixText;
 
@@ -1180,8 +1377,24 @@ class _PrijsRegelInvoerVeldState extends State<_PrijsRegelInvoerVeld> {
       inputFormatters: widget.numeriek
           ? <TextInputFormatter>[
               TextInputFormatter.withFunction((oudeWaarde, nieuweWaarde) {
-                final geldig = RegExp(r'^\d*([,.]\d{0,4})?$');
-                return geldig.hasMatch(nieuweWaarde.text)
+                final maxGeheleCijfers = widget.maxGeheleCijfers;
+                final maxDecimalen = widget.maxDecimalen < 0
+                    ? 0
+                    : widget.maxDecimalen;
+
+                final patroon = maxGeheleCijfers == null
+                    ? RegExp(
+                        r'^\d*([,.]\d{0,' + maxDecimalen.toString() + r'})?$',
+                      )
+                    : RegExp(
+                        r'^\d{0,' +
+                            maxGeheleCijfers.toString() +
+                            r'}([,.]\d{0,' +
+                            maxDecimalen.toString() +
+                            r'})?$',
+                      );
+
+                return patroon.hasMatch(nieuweWaarde.text)
                     ? nieuweWaarde
                     : oudeWaarde;
               }),
@@ -1194,7 +1407,7 @@ class _PrijsRegelInvoerVeldState extends State<_PrijsRegelInvoerVeld> {
       ),
       style: const TextStyle(
         color: Color(0xFF111827),
-        fontSize: 10.5,
+        fontSize: 12.5,
         fontWeight: FontWeight.w700,
       ),
       onSubmitted: (_) => _bewaar(),
@@ -1222,11 +1435,26 @@ InputDecoration _regelDecoratie({
     hintText: hintText,
     prefixText: prefixText,
     suffixText: suffixText,
+    hintStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF9CA3AF),
+    ),
+    prefixStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF111827),
+    ),
+    suffixStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: Color(0xFF111827),
+    ),
     isDense: true,
     filled: true,
     fillColor: Colors.white,
     constraints: const BoxConstraints.tightFor(height: 40),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 9),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 6),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(7),
       borderSide: const BorderSide(color: Color(0xFFE5E7EB)),

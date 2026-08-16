@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-BIBLIOTHEEK-ONEDRIVE-SYNC-20260815
+// THIMACO-CONTROLE: LEGACY-PRIJS-PROFIELEN-NIET-MEER-SYNCEN-20260815
+// THIMACO-CONTROLE: VASTE-INZETHOR-STANDAARDPRIJS-EIGEN-ONEDRIVE-SYNC-20260815
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-ONEDRIVE-SYNC-20260815
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-BIBLIOTHEEK-ONEDRIVE-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-20260814
 // THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-ONEDRIVE-SYNC-20260806
 // THIMACO-CONTROLE: ONEDRIVE-NOOIT-INTERACTIEF-TIJDENS-AUTOMATISCHE-SYNC-20260805
@@ -49,6 +54,27 @@ class OneDriveSyncService {
       'thimaco_offerte_prijs_per_artikel_templates';
   static const String _offertePrijsPerArtikelTemplatesSyncMetaKey =
       'thimaco_offerte_prijs_per_artikel_templates_sync_meta';
+
+  static const String _offertePrijsVoorAllePositiesTemplatesKey =
+      'thimaco_offerte_prijs_voor_alle_posities_templates';
+  static const String _offertePrijsVoorAllePositiesTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_voor_alle_posities_templates_sync_meta';
+
+  static const String _offertePrijsVerdeeldOverTemplatesKey =
+      'thimaco_offerte_prijs_verdeeld_over_templates';
+  static const String _offertePrijsVerdeeldOverTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_verdeeld_over_templates_sync_meta';
+
+  static const String _offerteTechnischeKeuzePrijzenKey =
+      'thimaco_offerte_technische_keuze_prijzen';
+  static const String _offerteTechnischeKeuzePrijzenSyncMetaKey =
+      'thimaco_offerte_technische_keuze_prijzen_sync_meta';
+
+  static const String _offerteVasteInzethorStandaardPrijsinstellingenKey =
+      'thimaco_offerte_vaste_inzethor_standaard_prijsinstellingen';
+  static const String
+  _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey =
+      'thimaco_offerte_vaste_inzethor_standaard_prijsinstellingen_sync_meta';
 
   static const String _offerteVersiesKey = 'thimaco_offerte_versies';
   static const String _offerteVersiesSyncMetaKey =
@@ -352,17 +378,16 @@ class OneDriveSyncService {
         cloudTitelhoofden,
       );
 
-      final lokalePrijsprofielen = await AppStorage.laadOffertePrijsProfielen();
-      final cloudPrijsprofielen =
+      // Alleen nog als eenmalige migratiebron voor oude vaste-inzethorwaarden.
+      // Deze legacyprofielen worden niet meer gemerged of terug gesynchroniseerd.
+      final lokalePrijsprofielenLegacy =
+          await AppStorage.laadOffertePrijsProfielen();
+      final cloudPrijsprofielenLegacy =
           AppStorage.decodeOffertePrijsProfielenVoorSync(
             cloudBackup['offertePrijsProfielen'] is String
                 ? cloudBackup['offertePrijsProfielen'] as String
                 : null,
           );
-      final mergedPrijsprofielen = SyncMergeService.mergeOffertePrijsprofielen(
-        lokalePrijsprofielen,
-        cloudPrijsprofielen,
-      );
 
       final lokaleCollectieFallbackDatum =
           prefs.getString(_backupDatumKey) ?? backupDatum;
@@ -438,6 +463,87 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: cloudBackupDatum,
       );
+      final mergedOffertePrijsVoorAllePositiesTemplates =
+          _mergeJsonLijstCollectie(
+            prefs: prefs,
+            cloudData: cloudBackup,
+            lokaleDataKey: _offertePrijsVoorAllePositiesTemplatesKey,
+            lokaleMetadataKey:
+                _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+            cloudDataVeld: 'offertePrijsVoorAllePositiesTemplates',
+            cloudMetadataVeld: 'offertePrijsVoorAllePositiesTemplatesSyncMeta',
+            lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+            cloudFallbackDatum: cloudBackupDatum,
+          );
+      final mergedOffertePrijsVerdeeldOverTemplates = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: cloudBackup,
+        lokaleDataKey: _offertePrijsVerdeeldOverTemplatesKey,
+        lokaleMetadataKey: _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+        cloudDataVeld: 'offertePrijsVerdeeldOverTemplates',
+        cloudMetadataVeld: 'offertePrijsVerdeeldOverTemplatesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: cloudBackupDatum,
+      );
+      final mergedOfferteTechnischeKeuzePrijzen = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: cloudBackup,
+        lokaleDataKey: _offerteTechnischeKeuzePrijzenKey,
+        lokaleMetadataKey: _offerteTechnischeKeuzePrijzenSyncMetaKey,
+        cloudDataVeld: 'offerteTechnischeKeuzePrijzen',
+        cloudMetadataVeld: 'offerteTechnischeKeuzePrijzenSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: cloudBackupDatum,
+      );
+      final lokaleVasteInzethorStandaardPrijsinstellingen =
+          AppStorage.decodeJsonMapLijstVoorSync(
+            prefs.getString(_offerteVasteInzethorStandaardPrijsinstellingenKey),
+          );
+      final cloudVasteInzethorStandaardPrijsinstellingen =
+          AppStorage.decodeJsonMapLijstVoorSync(
+            cloudBackup['offerteVasteInzethorStandaardPrijsinstellingen']
+                    is String
+                ? cloudBackup['offerteVasteInzethorStandaardPrijsinstellingen']
+                      as String
+                : null,
+          );
+
+      // Eerste migratie: alleen wanneer de nieuwe collectie zowel lokaal als in
+      // OneDrive nog ontbreekt, nemen we de reeds samengevoegde legacywaarde over.
+      if (lokaleVasteInzethorStandaardPrijsinstellingen.isEmpty &&
+          cloudVasteInzethorStandaardPrijsinstellingen.isEmpty) {
+        final legacyVasteInzethor =
+            AppStorage.vasteInzethorStandaardPrijsinstellingenUitLegacyProfielen(
+              lokalePrijsprofielenLegacy,
+            ) ??
+            AppStorage.vasteInzethorStandaardPrijsinstellingenUitLegacyProfielen(
+              cloudPrijsprofielenLegacy,
+            );
+        if (legacyVasteInzethor != null) {
+          await AppStorage.bewaarVasteInzethorStandaardPrijsinstellingenVoorSync(
+            standaardPrijsPerStukExclBtw:
+                legacyVasteInzethor.standaardPrijsPerStukExclBtw,
+            standaardWinstmargePercentage:
+                legacyVasteInzethor.standaardWinstmargePercentage,
+            standaardKortingPercentage:
+                legacyVasteInzethor.standaardKortingPercentage,
+          );
+        }
+      }
+
+      final mergedVasteInzethorStandaardPrijsinstellingen =
+          _mergeJsonLijstCollectie(
+            prefs: prefs,
+            cloudData: cloudBackup,
+            lokaleDataKey: _offerteVasteInzethorStandaardPrijsinstellingenKey,
+            lokaleMetadataKey:
+                _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey,
+            cloudDataVeld: 'offerteVasteInzethorStandaardPrijsinstellingen',
+            cloudMetadataVeld:
+                'offerteVasteInzethorStandaardPrijsinstellingenSyncMeta',
+            lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+            cloudFallbackDatum: cloudBackupDatum,
+          );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: cloudBackup,
@@ -786,9 +892,37 @@ class OneDriveSyncService {
             SyncMergeService.encodeJsonRecordMetadata(
               mergedOffertePrijsPerArtikelTemplates.metadata,
             ),
-        'offertePrijsProfielen': AppStorage.encodeOffertePrijsProfielenVoorSync(
-          mergedPrijsprofielen,
+        'offertePrijsVoorAllePositiesTemplates':
+            AppStorage.encodeJsonMapLijstVoorSync(
+              mergedOffertePrijsVoorAllePositiesTemplates.records,
+            ),
+        'offertePrijsVoorAllePositiesTemplatesSyncMeta':
+            SyncMergeService.encodeJsonRecordMetadata(
+              mergedOffertePrijsVoorAllePositiesTemplates.metadata,
+            ),
+        'offertePrijsVerdeeldOverTemplates':
+            AppStorage.encodeJsonMapLijstVoorSync(
+              mergedOffertePrijsVerdeeldOverTemplates.records,
+            ),
+        'offertePrijsVerdeeldOverTemplatesSyncMeta':
+            SyncMergeService.encodeJsonRecordMetadata(
+              mergedOffertePrijsVerdeeldOverTemplates.metadata,
+            ),
+        'offerteTechnischeKeuzePrijzen': AppStorage.encodeJsonMapLijstVoorSync(
+          mergedOfferteTechnischeKeuzePrijzen.records,
         ),
+        'offerteTechnischeKeuzePrijzenSyncMeta':
+            SyncMergeService.encodeJsonRecordMetadata(
+              mergedOfferteTechnischeKeuzePrijzen.metadata,
+            ),
+        'offerteVasteInzethorStandaardPrijsinstellingen':
+            AppStorage.encodeJsonMapLijstVoorSync(
+              mergedVasteInzethorStandaardPrijsinstellingen.records,
+            ),
+        'offerteVasteInzethorStandaardPrijsinstellingenSyncMeta':
+            SyncMergeService.encodeJsonRecordMetadata(
+              mergedVasteInzethorStandaardPrijsinstellingen.metadata,
+            ),
         'deurpanelenBibliotheek': deurpanelenBibliotheek.waarde,
         'deurpanelenBibliotheekGewijzigdOp': deurpanelenBibliotheek.gewijzigdOp,
         'deurpanelenDxfBibliotheek': deurpanelenDxfBibliotheek.waarde,
@@ -883,10 +1017,6 @@ class OneDriveSyncService {
       await AppStorage.bewaarOpmetingProjectTitelhoofdenVoorSync(
         mergedTitelhoofden,
       );
-      await AppStorage.bewaarOffertePrijsProfielenVoorSync(
-        mergedPrijsprofielen,
-      );
-
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
         dataKey: _dagtaakTemplatesKey,
@@ -928,6 +1058,30 @@ class OneDriveSyncService {
         dataKey: _offertePrijsPerArtikelTemplatesKey,
         metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
         resultaat: mergedOffertePrijsPerArtikelTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsVoorAllePositiesTemplatesKey,
+        metadataKey: _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsVoorAllePositiesTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsVerdeeldOverTemplatesKey,
+        metadataKey: _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsVerdeeldOverTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteTechnischeKeuzePrijzenKey,
+        metadataKey: _offerteTechnischeKeuzePrijzenSyncMetaKey,
+        resultaat: mergedOfferteTechnischeKeuzePrijzen,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteVasteInzethorStandaardPrijsinstellingenKey,
+        metadataKey: _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey,
+        resultaat: mergedVasteInzethorStandaardPrijsinstellingen,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
@@ -1633,17 +1787,16 @@ class OneDriveSyncService {
         cloudTitelhoofden,
       );
 
-      final lokalePrijsprofielen = await AppStorage.laadOffertePrijsProfielen();
-      final cloudPrijsprofielen =
+      // Alleen nog als eenmalige migratiebron voor oude vaste-inzethorwaarden.
+      // Deze legacyprofielen worden niet meer gemerged of terug gesynchroniseerd.
+      final lokalePrijsprofielenLegacy =
+          await AppStorage.laadOffertePrijsProfielen();
+      final cloudPrijsprofielenLegacy =
           AppStorage.decodeOffertePrijsProfielenVoorSync(
             data['offertePrijsProfielen'] is String
                 ? data['offertePrijsProfielen'] as String
                 : null,
           );
-      final mergedPrijsprofielen = SyncMergeService.mergeOffertePrijsprofielen(
-        lokalePrijsprofielen,
-        cloudPrijsprofielen,
-      );
 
       final lokaleCollectieFallbackDatum =
           prefs.getString(_backupDatumKey) ?? backupDatum;
@@ -1719,6 +1872,84 @@ class OneDriveSyncService {
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: backupDatum,
       );
+      final mergedOffertePrijsVoorAllePositiesTemplates =
+          _mergeJsonLijstCollectie(
+            prefs: prefs,
+            cloudData: data,
+            lokaleDataKey: _offertePrijsVoorAllePositiesTemplatesKey,
+            lokaleMetadataKey:
+                _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+            cloudDataVeld: 'offertePrijsVoorAllePositiesTemplates',
+            cloudMetadataVeld: 'offertePrijsVoorAllePositiesTemplatesSyncMeta',
+            lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+            cloudFallbackDatum: backupDatum,
+          );
+      final mergedOffertePrijsVerdeeldOverTemplates = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: data,
+        lokaleDataKey: _offertePrijsVerdeeldOverTemplatesKey,
+        lokaleMetadataKey: _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+        cloudDataVeld: 'offertePrijsVerdeeldOverTemplates',
+        cloudMetadataVeld: 'offertePrijsVerdeeldOverTemplatesSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: backupDatum,
+      );
+      final mergedOfferteTechnischeKeuzePrijzen = _mergeJsonLijstCollectie(
+        prefs: prefs,
+        cloudData: data,
+        lokaleDataKey: _offerteTechnischeKeuzePrijzenKey,
+        lokaleMetadataKey: _offerteTechnischeKeuzePrijzenSyncMetaKey,
+        cloudDataVeld: 'offerteTechnischeKeuzePrijzen',
+        cloudMetadataVeld: 'offerteTechnischeKeuzePrijzenSyncMeta',
+        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+        cloudFallbackDatum: backupDatum,
+      );
+      final lokaleVasteInzethorStandaardPrijsinstellingen =
+          AppStorage.decodeJsonMapLijstVoorSync(
+            prefs.getString(_offerteVasteInzethorStandaardPrijsinstellingenKey),
+          );
+      final cloudVasteInzethorStandaardPrijsinstellingen =
+          AppStorage.decodeJsonMapLijstVoorSync(
+            data['offerteVasteInzethorStandaardPrijsinstellingen'] is String
+                ? data['offerteVasteInzethorStandaardPrijsinstellingen']
+                      as String
+                : null,
+          );
+
+      if (lokaleVasteInzethorStandaardPrijsinstellingen.isEmpty &&
+          cloudVasteInzethorStandaardPrijsinstellingen.isEmpty) {
+        final legacyVasteInzethor =
+            AppStorage.vasteInzethorStandaardPrijsinstellingenUitLegacyProfielen(
+              lokalePrijsprofielenLegacy,
+            ) ??
+            AppStorage.vasteInzethorStandaardPrijsinstellingenUitLegacyProfielen(
+              cloudPrijsprofielenLegacy,
+            );
+        if (legacyVasteInzethor != null) {
+          await AppStorage.bewaarVasteInzethorStandaardPrijsinstellingenVoorSync(
+            standaardPrijsPerStukExclBtw:
+                legacyVasteInzethor.standaardPrijsPerStukExclBtw,
+            standaardWinstmargePercentage:
+                legacyVasteInzethor.standaardWinstmargePercentage,
+            standaardKortingPercentage:
+                legacyVasteInzethor.standaardKortingPercentage,
+          );
+        }
+      }
+
+      final mergedVasteInzethorStandaardPrijsinstellingen =
+          _mergeJsonLijstCollectie(
+            prefs: prefs,
+            cloudData: data,
+            lokaleDataKey: _offerteVasteInzethorStandaardPrijsinstellingenKey,
+            lokaleMetadataKey:
+                _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey,
+            cloudDataVeld: 'offerteVasteInzethorStandaardPrijsinstellingen',
+            cloudMetadataVeld:
+                'offerteVasteInzethorStandaardPrijsinstellingenSyncMeta',
+            lokaleFallbackDatum: lokaleCollectieFallbackDatum,
+            cloudFallbackDatum: backupDatum,
+          );
       final mergedRaamKeuzemenus = _mergeJsonLijstCollectie(
         prefs: prefs,
         cloudData: data,
@@ -1901,10 +2132,6 @@ class OneDriveSyncService {
       await AppStorage.bewaarOpmetingProjectTitelhoofdenVoorSync(
         mergedTitelhoofden,
       );
-      await AppStorage.bewaarOffertePrijsProfielenVoorSync(
-        mergedPrijsprofielen,
-      );
-
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
         dataKey: _dagtaakTemplatesKey,
@@ -1946,6 +2173,30 @@ class OneDriveSyncService {
         dataKey: _offertePrijsPerArtikelTemplatesKey,
         metadataKey: _offertePrijsPerArtikelTemplatesSyncMetaKey,
         resultaat: mergedOffertePrijsPerArtikelTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsVoorAllePositiesTemplatesKey,
+        metadataKey: _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsVoorAllePositiesTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offertePrijsVerdeeldOverTemplatesKey,
+        metadataKey: _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+        resultaat: mergedOffertePrijsVerdeeldOverTemplates,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteTechnischeKeuzePrijzenKey,
+        metadataKey: _offerteTechnischeKeuzePrijzenSyncMetaKey,
+        resultaat: mergedOfferteTechnischeKeuzePrijzen,
+      );
+      await _bewaarJsonLijstCollectie(
+        prefs: prefs,
+        dataKey: _offerteVasteInzethorStandaardPrijsinstellingenKey,
+        metadataKey: _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey,
+        resultaat: mergedVasteInzethorStandaardPrijsinstellingen,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,

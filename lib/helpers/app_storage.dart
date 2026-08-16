@@ -1,3 +1,9 @@
+// THIMACO-CONTROLE: LEGACY-PRIJS-PROFIELEN-ALLEEN-LEZEN-MIGRATIE-20260815
+// THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-BIBLIOTHEEK-OPSLAG-EN-SYNC-20260815
+// THIMACO-CONTROLE: VASTE-INZETHOR-EIGEN-STANDAARDPRIJSOPSLAG-MET-LEGACY-FALLBACK-20260815
+// THIMACO-CONTROLE: VASTE-INZETHOR-STANDAARDPRIJS-ZONDER-CONTROLLER-PROFIELMODEL-20260815
+// THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-OPSLAG-EN-SYNC-20260815
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-BIBLIOTHEEK-OPSLAG-EN-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-ACTIEF-20260814
 // THIMACO-CONTROLE: OFFERTEVARIANTEN-ATOMAIRE-OPSLAG-20260811
 // THIMACO-CONTROLE: PROJECT-TITELHOOFD-ATOMAIRE-OPSLAG-BEREKEN-20260810
@@ -42,6 +48,9 @@ import 'offerte/versies/offerte_versie_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 import 'offerte/prijzen/offerte_prijs_per_artikel_template_model.dart';
+import 'offerte/prijzen/offerte_prijs_voor_alle_posities_template_model.dart';
+import 'offerte/prijzen/offerte_prijs_verdeeld_over_template_model.dart';
+import 'offerte/prijzen/offerte_technische_keuze_prijs_model.dart';
 
 class AppStorageOpmetingMutatieResultaat<T> {
   const AppStorageOpmetingMutatieResultaat({
@@ -170,12 +179,37 @@ class AppStorage {
   static const String _offertePrijsProfielenKey =
       'thimaco_offerte_prijs_profielen';
 
+  static const String _offerteVasteInzethorStandaardPrijsinstellingenKey =
+      'thimaco_offerte_vaste_inzethor_standaard_prijsinstellingen';
+
+  static const String
+  _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey =
+      'thimaco_offerte_vaste_inzethor_standaard_prijsinstellingen_sync_meta';
+
   // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-OPSLAG-20260813
   static const String _offertePrijsPerArtikelTemplatesKey =
       'thimaco_offerte_prijs_per_artikel_templates';
 
   static const String _offertePrijsPerArtikelTemplatesSyncMetaKey =
       'thimaco_offerte_prijs_per_artikel_templates_sync_meta';
+
+  static const String _offertePrijsVoorAllePositiesTemplatesKey =
+      'thimaco_offerte_prijs_voor_alle_posities_templates';
+
+  static const String _offertePrijsVoorAllePositiesTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_voor_alle_posities_templates_sync_meta';
+
+  static const String _offertePrijsVerdeeldOverTemplatesKey =
+      'thimaco_offerte_prijs_verdeeld_over_templates';
+
+  static const String _offertePrijsVerdeeldOverTemplatesSyncMetaKey =
+      'thimaco_offerte_prijs_verdeeld_over_templates_sync_meta';
+
+  static const String _offerteTechnischeKeuzePrijzenKey =
+      'thimaco_offerte_technische_keuze_prijzen';
+
+  static const String _offerteTechnischeKeuzePrijzenSyncMetaKey =
+      'thimaco_offerte_technische_keuze_prijzen_sync_meta';
 
   static const String _offerteVersiesKey = 'thimaco_offerte_versies';
 
@@ -940,12 +974,6 @@ class AppStorage {
     return OffertePrijsOpslagCodec.decode(jsonString);
   }
 
-  static String encodeOffertePrijsProfielenVoorSync(
-    List<OffertePrijsprofielModel> profielen,
-  ) {
-    return OffertePrijsOpslagCodec.encode(profielen);
-  }
-
   static Future<List<OffertePrijsprofielModel>>
   laadOffertePrijsProfielen() async {
     final prefs = await openBox();
@@ -955,23 +983,10 @@ class AppStorage {
     );
   }
 
-  static Future<void> bewaarOffertePrijsProfielenVoorSync(
-    List<OffertePrijsprofielModel> profielen,
-  ) async {
-    final prefs = await openBox();
-
-    await prefs.setString(
-      _offertePrijsProfielenKey,
-      encodeOffertePrijsProfielenVoorSync(profielen),
-    );
-  }
-
-  static Future<void> bewaarOffertePrijsProfielen(
-    List<OffertePrijsprofielModel> profielen,
-  ) async {
-    await bewaarOffertePrijsProfielenVoorSync(profielen);
-    await _syncBackup();
-  }
+  // Legacy prijsprofielen zijn vanaf hier uitsluitend nog een leesbron voor
+  // de eenmalige migratie van oude vaste-inzethorstandaardwaarden. Nieuwe
+  // prijsinstellingen worden uitsluitend in de nieuwe afzonderlijke collecties
+  // opgeslagen; deze oude collectie wordt niet meer geschreven.
 
   static Future<OffertePrijsprofielModel?> laadOffertePrijsProfiel(
     String formulierType,
@@ -993,35 +1008,183 @@ class AppStorage {
     return null;
   }
 
-  static Future<void> bewaarOffertePrijsProfiel(
-    OffertePrijsprofielModel profiel,
-  ) async {
-    final formulierType = profiel.formulierType.trim();
-
-    if (formulierType.isEmpty) {
-      return;
+  static double _leesPrijsDouble(dynamic waarde) {
+    if (waarde is num) {
+      return waarde.toDouble();
     }
 
-    final profielen = await laadOffertePrijsProfielen();
-    final sleutel = formulierType.toLowerCase();
-    final bijgewerkt = profiel.metWijzigingsDatum();
-    final index = profielen.indexWhere((bestaand) {
-      return bestaand.formulierType.trim().toLowerCase() == sleutel;
-    });
+    return double.tryParse(
+          waarde?.toString().trim().replaceAll(',', '.') ?? '',
+        ) ??
+        0.0;
+  }
 
-    if (index >= 0) {
-      profielen[index] = bijgewerkt;
-    } else {
-      profielen.add(bijgewerkt);
-    }
+  static Map<String, dynamic> _vasteInzethorStandaardPrijsinstellingenRecord({
+    required double standaardPrijsPerStukExclBtw,
+    required double standaardWinstmargePercentage,
+    required double standaardKortingPercentage,
+  }) {
+    return <String, dynamic>{
+      'id': 'vasteInzethor',
+      'standaardPrijsPerStukExclBtw': standaardPrijsPerStukExclBtw,
+      'standaardWinstmargePercentage': standaardWinstmargePercentage,
+      'standaardKortingPercentage': standaardKortingPercentage,
+    };
+  }
 
-    profielen.sort((eerste, tweede) {
-      return eerste.formulierNaam.toLowerCase().compareTo(
-        tweede.formulierNaam.toLowerCase(),
+  static ({
+    double standaardPrijsPerStukExclBtw,
+    double standaardWinstmargePercentage,
+    double standaardKortingPercentage,
+  })?
+  _decodeVasteInzethorStandaardPrijsinstellingen(
+    Iterable<Map<String, dynamic>> records,
+  ) {
+    for (final record in records) {
+      if (record['id']?.toString().trim().toLowerCase() != 'vasteinzethor') {
+        continue;
+      }
+
+      return (
+        standaardPrijsPerStukExclBtw: _leesPrijsDouble(
+          record['standaardPrijsPerStukExclBtw'],
+        ),
+        standaardWinstmargePercentage: _leesPrijsDouble(
+          record['standaardWinstmargePercentage'],
+        ),
+        standaardKortingPercentage: _leesPrijsDouble(
+          record['standaardKortingPercentage'],
+        ),
       );
-    });
+    }
 
-    await bewaarOffertePrijsProfielen(profielen);
+    return null;
+  }
+
+  static ({
+    double standaardPrijsPerStukExclBtw,
+    double standaardWinstmargePercentage,
+    double standaardKortingPercentage,
+  })?
+  vasteInzethorStandaardPrijsinstellingenUitLegacyProfielen(
+    Iterable<OffertePrijsprofielModel> profielen,
+  ) {
+    for (final profiel in profielen) {
+      if (profiel.formulierType.trim().toLowerCase() != 'vasteinzethor') {
+        continue;
+      }
+
+      return (
+        standaardPrijsPerStukExclBtw: profiel.standaardPrijsPerStukExclBtw,
+        standaardWinstmargePercentage: profiel.standaardWinstmargePercentage,
+        standaardKortingPercentage: profiel.standaardKortingPercentage,
+      );
+    }
+
+    return null;
+  }
+
+  static Future<void> _bewaarVasteInzethorStandaardPrijsinstellingen({
+    required double standaardPrijsPerStukExclBtw,
+    required double standaardWinstmargePercentage,
+    required double standaardKortingPercentage,
+    required bool sync,
+  }) async {
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offerteVasteInzethorStandaardPrijsinstellingenKey,
+      metadataKey: _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey,
+      records: <Map<String, dynamic>>[
+        _vasteInzethorStandaardPrijsinstellingenRecord(
+          standaardPrijsPerStukExclBtw: standaardPrijsPerStukExclBtw,
+          standaardWinstmargePercentage: standaardWinstmargePercentage,
+          standaardKortingPercentage: standaardKortingPercentage,
+        ),
+      ],
+      idVoorRecord: _standaardSyncId,
+      sync: sync,
+    );
+  }
+
+  static Future<void> bewaarVasteInzethorStandaardPrijsinstellingen({
+    required double standaardPrijsPerStukExclBtw,
+    required double standaardWinstmargePercentage,
+    required double standaardKortingPercentage,
+  }) {
+    return _bewaarVasteInzethorStandaardPrijsinstellingen(
+      standaardPrijsPerStukExclBtw: standaardPrijsPerStukExclBtw,
+      standaardWinstmargePercentage: standaardWinstmargePercentage,
+      standaardKortingPercentage: standaardKortingPercentage,
+      sync: true,
+    );
+  }
+
+  /// Alleen voor de OneDrive-migratie. De syncservice bewaart daarna zelf de
+  /// samengevoegde metadata, net zoals bij de andere JSON-lijstcollecties.
+  static Future<void> bewaarVasteInzethorStandaardPrijsinstellingenVoorSync({
+    required double standaardPrijsPerStukExclBtw,
+    required double standaardWinstmargePercentage,
+    required double standaardKortingPercentage,
+  }) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offerteVasteInzethorStandaardPrijsinstellingenKey,
+      encodeJsonMapLijstVoorSync(<Map<String, dynamic>>[
+        _vasteInzethorStandaardPrijsinstellingenRecord(
+          standaardPrijsPerStukExclBtw: standaardPrijsPerStukExclBtw,
+          standaardWinstmargePercentage: standaardWinstmargePercentage,
+          standaardKortingPercentage: standaardKortingPercentage,
+        ),
+      ]),
+    );
+  }
+
+  /// Nieuwe vaste-inzethoropslag eerst. Alleen wanneer die nog niet bestaat,
+  /// lezen we éénmalig de oude prijsprofielwaarde en migreren we die meteen.
+  static Future<
+    ({
+      double standaardPrijsPerStukExclBtw,
+      double standaardWinstmargePercentage,
+      double standaardKortingPercentage,
+    })
+  >
+  laadVasteInzethorStandaardPrijsinstellingen() async {
+    final prefs = await openBox();
+    final opgeslagen = _decodeVasteInzethorStandaardPrijsinstellingen(
+      decodeJsonMapLijstVoorSync(
+        prefs.getString(_offerteVasteInzethorStandaardPrijsinstellingenKey),
+      ),
+    );
+
+    if (opgeslagen != null) {
+      return opgeslagen;
+    }
+
+    final profiel = await laadOffertePrijsProfiel('vasteInzethor');
+    final legacy = profiel == null
+        ? null
+        : (
+            standaardPrijsPerStukExclBtw: profiel.standaardPrijsPerStukExclBtw,
+            standaardWinstmargePercentage:
+                profiel.standaardWinstmargePercentage,
+            standaardKortingPercentage: profiel.standaardKortingPercentage,
+          );
+
+    if (legacy == null) {
+      return (
+        standaardPrijsPerStukExclBtw: 0.0,
+        standaardWinstmargePercentage: 0.0,
+        standaardKortingPercentage: 0.0,
+      );
+    }
+
+    await _bewaarVasteInzethorStandaardPrijsinstellingen(
+      standaardPrijsPerStukExclBtw: legacy.standaardPrijsPerStukExclBtw,
+      standaardWinstmargePercentage: legacy.standaardWinstmargePercentage,
+      standaardKortingPercentage: legacy.standaardKortingPercentage,
+      sync: true,
+    );
+
+    return legacy;
   }
 
   // ------------------------------------------------------------
@@ -1105,6 +1268,261 @@ class AppStorage {
     final prefs = await openBox();
     await prefs.setString(
       _offertePrijsPerArtikelTemplatesSyncMetaKey,
+      metadataJson,
+    );
+  }
+
+  // ------------------------------------------------------------
+  // PRIJS VOOR ALLE POSITIES - HERBRUIKBARE BIBLIOTHEEK
+  // ------------------------------------------------------------
+
+  static Future<List<OffertePrijsVoorAllePositiesTemplateModel>>
+  laadOffertePrijsVoorAllePositiesTemplates() async {
+    final prefs = await openBox();
+    final records = decodeJsonMapLijstVoorSync(
+      prefs.getString(_offertePrijsVoorAllePositiesTemplatesKey),
+    );
+    final resultaat = <OffertePrijsVoorAllePositiesTemplateModel>[];
+
+    for (final record in records) {
+      try {
+        final template = OffertePrijsVoorAllePositiesTemplateModel.fromJson(
+          record,
+        );
+        if (template.isGeldig) resultaat.add(template);
+      } catch (_) {
+        // Eén beschadigde bibliotheekregel mag de overige regels niet blokkeren.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+      if (volgorde != 0) return volgorde;
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return resultaat;
+  }
+
+  static Future<void> bewaarOffertePrijsVoorAllePositiesTemplates(
+    List<OffertePrijsVoorAllePositiesTemplateModel> templates,
+  ) async {
+    final geldigeTemplates = templates
+        .where((template) => template.isGeldig)
+        .toList(growable: false);
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offertePrijsVoorAllePositiesTemplatesKey,
+      metadataKey: _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+      records: geldigeTemplates.map((template) => template.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
+    );
+  }
+
+  static Future<void> bewaarOffertePrijsVoorAllePositiesTemplatesVoorSync(
+    List<OffertePrijsVoorAllePositiesTemplateModel> templates,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsVoorAllePositiesTemplatesKey,
+      encodeJsonMapLijstVoorSync(
+        templates
+            .where((template) => template.isGeldig)
+            .map((template) => template.toJson()),
+      ),
+    );
+  }
+
+  static Future<String>
+  laadOffertePrijsVoorAllePositiesTemplatesJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsVoorAllePositiesTemplatesKey) ?? '';
+  }
+
+  static Future<String>
+  laadOffertePrijsVoorAllePositiesTemplatesSyncMetadataJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsVoorAllePositiesTemplatesSyncMetaKey) ??
+        '';
+  }
+
+  static Future<void>
+  bewaarOffertePrijsVoorAllePositiesTemplatesSyncMetadataJsonVoorSync(
+    String metadataJson,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsVoorAllePositiesTemplatesSyncMetaKey,
+      metadataJson,
+    );
+  }
+
+  // ------------------------------------------------------------
+  // PRIJZEN VERDEELD OVER - HERBRUIKBARE BIBLIOTHEEK
+  // ------------------------------------------------------------
+
+  static Future<List<OffertePrijsVerdeeldOverTemplateModel>>
+  laadOffertePrijsVerdeeldOverTemplates() async {
+    final prefs = await openBox();
+    final records = decodeJsonMapLijstVoorSync(
+      prefs.getString(_offertePrijsVerdeeldOverTemplatesKey),
+    );
+    final resultaat = <OffertePrijsVerdeeldOverTemplateModel>[];
+
+    for (final record in records) {
+      try {
+        final template = OffertePrijsVerdeeldOverTemplateModel.fromJson(record);
+        if (template.isGeldig) resultaat.add(template);
+      } catch (_) {
+        // Eén beschadigde bibliotheekregel mag de overige regels niet blokkeren.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+      if (volgorde != 0) return volgorde;
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return resultaat;
+  }
+
+  static Future<void> bewaarOffertePrijsVerdeeldOverTemplates(
+    List<OffertePrijsVerdeeldOverTemplateModel> templates,
+  ) async {
+    final geldigeTemplates = templates
+        .where((template) => template.isGeldig)
+        .toList(growable: false);
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offertePrijsVerdeeldOverTemplatesKey,
+      metadataKey: _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+      records: geldigeTemplates.map((template) => template.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
+    );
+  }
+
+  static Future<void> bewaarOffertePrijsVerdeeldOverTemplatesVoorSync(
+    List<OffertePrijsVerdeeldOverTemplateModel> templates,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsVerdeeldOverTemplatesKey,
+      encodeJsonMapLijstVoorSync(
+        templates
+            .where((template) => template.isGeldig)
+            .map((template) => template.toJson()),
+      ),
+    );
+  }
+
+  static Future<String>
+  laadOffertePrijsVerdeeldOverTemplatesJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsVerdeeldOverTemplatesKey) ?? '';
+  }
+
+  static Future<String>
+  laadOffertePrijsVerdeeldOverTemplatesSyncMetadataJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offertePrijsVerdeeldOverTemplatesSyncMetaKey) ?? '';
+  }
+
+  static Future<void>
+  bewaarOffertePrijsVerdeeldOverTemplatesSyncMetadataJsonVoorSync(
+    String metadataJson,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offertePrijsVerdeeldOverTemplatesSyncMetaKey,
+      metadataJson,
+    );
+  }
+
+  // ------------------------------------------------------------
+  // PRIJS BIJ TECHNISCHE KEUZES - CENTRALE FICHE-ONAFHANKELIJKE LIJST
+  // ------------------------------------------------------------
+
+  static Future<List<OfferteTechnischeKeuzePrijsModel>>
+  laadOfferteTechnischeKeuzePrijzen() async {
+    final prefs = await openBox();
+    final records = decodeJsonMapLijstVoorSync(
+      prefs.getString(_offerteTechnischeKeuzePrijzenKey),
+    );
+    final resultaat = <OfferteTechnischeKeuzePrijsModel>[];
+
+    for (final record in records) {
+      try {
+        final prijs = OfferteTechnischeKeuzePrijsModel.fromJson(record);
+        if (prijs.isGeldig) {
+          resultaat.add(prijs);
+        }
+      } catch (_) {
+        // Eén beschadigde technische prijs mag de overige regels niet blokkeren.
+      }
+    }
+
+    resultaat.sort((eerste, tweede) {
+      return eerste.omschrijving.toLowerCase().compareTo(
+        tweede.omschrijving.toLowerCase(),
+      );
+    });
+
+    return resultaat;
+  }
+
+  static Future<void> bewaarOfferteTechnischeKeuzePrijzen(
+    List<OfferteTechnischeKeuzePrijsModel> prijzen,
+  ) async {
+    final geldigePrijzen = prijzen
+        .where((prijs) => prijs.isGeldig)
+        .toList(growable: false);
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: _offerteTechnischeKeuzePrijzenKey,
+      metadataKey: _offerteTechnischeKeuzePrijzenSyncMetaKey,
+      records: geldigePrijzen.map((prijs) => prijs.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
+    );
+  }
+
+  static Future<void> bewaarOfferteTechnischeKeuzePrijzenVoorSync(
+    List<OfferteTechnischeKeuzePrijsModel> prijzen,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offerteTechnischeKeuzePrijzenKey,
+      encodeJsonMapLijstVoorSync(
+        prijzen.where((prijs) => prijs.isGeldig).map((prijs) => prijs.toJson()),
+      ),
+    );
+  }
+
+  static Future<String> laadOfferteTechnischeKeuzePrijzenJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offerteTechnischeKeuzePrijzenKey) ?? '';
+  }
+
+  static Future<String>
+  laadOfferteTechnischeKeuzePrijzenSyncMetadataJsonVoorSync() async {
+    final prefs = await openBox();
+    return prefs.getString(_offerteTechnischeKeuzePrijzenSyncMetaKey) ?? '';
+  }
+
+  static Future<void>
+  bewaarOfferteTechnischeKeuzePrijzenSyncMetadataJsonVoorSync(
+    String metadataJson,
+  ) async {
+    final prefs = await openBox();
+    await prefs.setString(
+      _offerteTechnischeKeuzePrijzenSyncMetaKey,
       metadataJson,
     );
   }

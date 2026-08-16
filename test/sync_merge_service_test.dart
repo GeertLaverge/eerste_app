@@ -1,5 +1,5 @@
+// THIMACO-CONTROLE: LEGACY-PRIJS-PROFIEL-MERGE-TESTS-VERWIJDERD-20260815
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
-import 'package:eerste_app/helpers/offerte/prijzen/offerte_prijsprofiel_model.dart';
 import 'package:eerste_app/helpers/opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'package:eerste_app/helpers/sync/sync_merge_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,76 +106,6 @@ void main() {
         expect(resultaat['2026-07-26']!.single.isVerwijderd, isFalse);
       },
     );
-  });
-
-  group('SyncMergeService prijsprofielen', () {
-    test('behoudt profielen van verschillende formuliertypes', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'PVC raam lokaal',
-            gewijzigdOp: '2026-07-26T08:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'vliegendeur',
-            naam: 'Vliegendeur cloud',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat, hasLength(2));
-      expect(
-        resultaat.map((profiel) => profiel.formulierType),
-        containsAll(<String>['pvcRaam', 'vliegendeur']),
-      );
-    });
-
-    test('nieuwste profiel van hetzelfde formuliertype wint', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Lokale oude naam',
-            gewijzigdOp: '2026-07-26T08:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Cloud nieuwe naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat, hasLength(1));
-      expect(resultaat.single.formulierNaam, 'Cloud nieuwe naam');
-    });
-
-    test('lokale versie wint bij gelijke wijzigingsdatum', () {
-      final resultaat = SyncMergeService.mergeOffertePrijsprofielen(
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Lokale naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-        <OffertePrijsprofielModel>[
-          _prijsprofiel(
-            type: 'pvcRaam',
-            naam: 'Cloud naam',
-            gewijzigdOp: '2026-07-26T09:00:00.000Z',
-          ),
-        ],
-      );
-
-      expect(resultaat.single.formulierNaam, 'Lokale naam');
-    });
   });
 
   group('SyncMergeService projecttitelhoofden', () {
@@ -359,18 +289,6 @@ AgendaItem _agendaItem({
     deletedAt: deletedAt,
     titel: 'Testafspraak',
     type: 'afspraak',
-  );
-}
-
-OffertePrijsprofielModel _prijsprofiel({
-  required String type,
-  required String naam,
-  required String gewijzigdOp,
-}) {
-  return OffertePrijsprofielModel(
-    formulierType: type,
-    formulierNaam: naam,
-    gewijzigdOp: gewijzigdOp,
   );
 }
 

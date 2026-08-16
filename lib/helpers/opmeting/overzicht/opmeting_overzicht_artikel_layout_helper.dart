@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: TECHNISCHE-CONTAINER-EXACT-PER-REGEL-20260815
+// THIMACO-CONTROLE: TECHNISCHE-LEEGTE-1-REGEL-20260814
 // THIMACO-CONTROLE: ALGEMENE-OVERZICHT-ARTIKEL-LAYOUT-20260720
 import 'package:flutter/material.dart';
 
@@ -244,15 +246,19 @@ class OpmetingOverzichtArtikelLayoutHelper {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          child: regelWeergaven.isEmpty
-              ? bouwLegeTechnischeContainer(tekst: legeTekst)
-              : bouwTechnischeRegelsMetPrijsContainer(
-                  regelWeergaven,
-                  scrollbaar: scrollbaar,
-                  toonPrijsZone: toonPrijsZone,
-                ),
-        ),
+        if (regelWeergaven.isEmpty)
+          bouwLegeTechnischeContainer(tekst: legeTekst)
+        else
+          SizedBox(
+            height:
+                (regelWeergaven.length * technischeRegelHoogte) +
+                technischeContainerRandReserve,
+            child: bouwTechnischeRegelsMetPrijsContainer(
+              regelWeergaven,
+              scrollbaar: scrollbaar,
+              toonPrijsZone: toonPrijsZone,
+            ),
+          ),
         for (final widget in onderWidgets) ...<Widget>[
           const SizedBox(height: 9),
           widget,
@@ -264,21 +270,26 @@ class OpmetingOverzichtArtikelLayoutHelper {
   static Widget bouwLegeTechnischeContainer({
     String tekst = 'Geen technische kenmerken ingevuld.',
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: technischAchtergrond,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: rand),
-      ),
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Text(
-          tekst,
-          style: const TextStyle(
-            color: tekstGrijs,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+    return SizedBox(
+      height: technischeRegelHoogte,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11),
+        decoration: BoxDecoration(
+          color: technischAchtergrond,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: rand),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            tekst,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: tekstGrijs,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

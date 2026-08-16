@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSOVERZICHT-PRIJS-PER-POSITIE-EN-ALLE-POSITIES-20260815
 /// Afgeleid weergavemodel voor het interne prijs- en margeoverzicht.
 ///
 /// Dit model wordt niet opgeslagen en wijzigt geen bestaande prijsmodellen
@@ -131,23 +132,25 @@ class OffertePrijsOverzichtData {
     );
   }
 
-  double get vrijePrijsregelsTotaalExclBtw {
+  double get prijsPerPositieTotaalExclBtw {
     return _somPrijsregels(
-      hoofdPrijsregelsVoorType(OffertePrijsOverzichtRegelType.vrij),
+      hoofdPrijsregelsVoorType(OffertePrijsOverzichtRegelType.prijsPerPositie),
     );
   }
 
-  double get alleArtikelenPrijsregelsTotaalExclBtw {
+  double get prijsVoorAllePositiesTotaalExclBtw {
     return _somPrijsregels(
-      hoofdPrijsregelsVoorType(OffertePrijsOverzichtRegelType.alleArtikelen),
+      hoofdPrijsregelsVoorType(
+        OffertePrijsOverzichtRegelType.prijsVoorAllePosities,
+      ),
     );
   }
 
   double get prijsregelsTotaalExclBtw {
     return _rondBedrag(
       technischePrijsregelsTotaalExclBtw +
-          vrijePrijsregelsTotaalExclBtw +
-          alleArtikelenPrijsregelsTotaalExclBtw,
+          prijsPerPositieTotaalExclBtw +
+          prijsVoorAllePositiesTotaalExclBtw,
     );
   }
 
@@ -155,8 +158,8 @@ class OffertePrijsOverzichtData {
     return _rondBedrag(
       basisTotaalExclBtw +
           technischePrijsregelsTotaalExclBtw +
-          vrijePrijsregelsTotaalExclBtw +
-          alleArtikelenPrijsregelsTotaalExclBtw +
+          prijsPerPositieTotaalExclBtw +
+          prijsVoorAllePositiesTotaalExclBtw +
           totaleWinstmargeExclBtw -
           totaleKortingExclBtw,
     );
@@ -230,9 +233,9 @@ class OffertePrijsOverzichtArtikel {
 }
 
 enum OffertePrijsOverzichtRegelType {
-  technisch('Technische prijsregels'),
-  vrij('Vrije prijsregels'),
-  alleArtikelen('Prijsregels voor alle artikelen');
+  technisch('Prijs bij technische keuzes'),
+  prijsPerPositie('Prijs per positie'),
+  prijsVoorAllePosities('Prijs voor alle posities');
 
   const OffertePrijsOverzichtRegelType(this.label);
 

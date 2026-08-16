@@ -1,3 +1,7 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-NIET-MEER-PER-ARTIKEL-20260816
+// THIMACO-CONTROLE: VERDEELDE-KOST-HOOGTE-IN-PRIJSZONE-20260816
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE2-ARTIKELKAART-20260815
+// THIMACO-CONTROLE: TECHNISCHE-LEEGTE-UNIFORM-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-KAART-20260813
 // THIMACO-CONTROLE: COMPACTE-PRIJSBEREKENING-RECHTERKOLOM-20260813
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-HELPER-UITSPLITSING-20260813
@@ -25,6 +29,7 @@ import 'package:flutter/material.dart';
 
 import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
+import '../../offerte/prijzen/offerte_prijs_voor_alle_posities_regel_model.dart';
 import '../../offerte/prijzen/offerte_berekening_resultaat.dart';
 import '../../offerte/prijzen/offerte_toegepaste_prijsregel_model.dart';
 import '../fotos/opmeting_foto_model.dart';
@@ -62,6 +67,7 @@ import 'opmeting_artikel_type_omschrijving_helper.dart';
 import 'opmeting_overzicht_artikel_layout_helper.dart';
 import 'opmeting_overzicht_model.dart';
 import 'opmeting_overzicht_prijs_per_positie.dart';
+import 'opmeting_overzicht_prijs_voor_alle_posities.dart';
 import 'opmeting_overzicht_technische_prijs_koppel_helper.dart';
 import 'opmeting_overzicht_tekening.dart';
 
@@ -80,6 +86,10 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     required this.onWinstmargeGewijzigd,
     required this.onKortingGewijzigd,
     required this.onPrijsPerPositieRegelsGewijzigd,
+    required this.prijsVoorAllePositiesRegels,
+    required this.prijsDoelPosities,
+    required this.onPrijsVoorAllePositiesRegelsGewijzigd,
+    this.toonPrijsVoorAllePosities = true,
     required this.onOmhoog,
     required this.onOmlaag,
   });
@@ -97,6 +107,12 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   final ValueChanged<double> onKortingGewijzigd;
   final ValueChanged<List<OffertePrijsPerPositieRegelModel>>
   onPrijsPerPositieRegelsGewijzigd;
+  final List<OffertePrijsVoorAllePositiesRegelModel>
+  prijsVoorAllePositiesRegels;
+  final List<OpmetingOverzichtPrijsDoelPositie> prijsDoelPosities;
+  final ValueChanged<List<OffertePrijsVoorAllePositiesRegelModel>>
+  onPrijsVoorAllePositiesRegelsGewijzigd;
+  final bool toonPrijsVoorAllePosities;
   final VoidCallback? onOmhoog;
   final VoidCallback? onOmlaag;
 
@@ -401,17 +417,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                 const SizedBox(width: 18),
                 Expanded(
                   child: technischeRegels.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.only(top: 4),
-                          child: Text(
-                            'Geen technische kenmerken ingevuld.',
-                            style: TextStyle(
-                              color: _tekstGrijs,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        )
+                      ? OpmetingOverzichtArtikelLayoutHelper.bouwLegeTechnischeContainer()
                       : _bouwTechnischeTekst(technischeRegels),
                 ),
               ],
@@ -489,7 +495,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen technische keuzes ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -533,7 +539,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen technische keuzes ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -577,7 +583,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen technische keuzes ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -760,7 +766,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -808,7 +814,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -854,7 +860,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -898,7 +904,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen gegevens ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -946,7 +952,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         tekenvlak: tekenvlak,
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
-          legeTekst: 'Geen technische keuzes ingevuld.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: false,
           toonPrijsZone: false,
         ),
@@ -1047,7 +1053,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
         rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
           technischeRegels: technischeRegels,
           technischeRegelsMetPrijs: technischeRegelsMetPrijs,
-          legeTekst: 'Geen Velux-catalogusartikelen gekozen.',
+          legeTekst: 'Geen technische kenmerken ingevuld.',
           scrollbaar: true,
           toonPrijsZone: true,
         ),
@@ -1223,6 +1229,9 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           toonWinstEnKorting: toonWinstEnKorting,
           toonTechnischePrijsregels: toonTechnischePrijsregelsInSamenvatting,
           heeftAlgemenePrijsUitsplitsing: heeftAlgemenePrijsUitsplitsing,
+          prijsVoorAllePositiesRegels: prijsVoorAllePositiesRegels,
+          huidigePositieId: item.id,
+          toonPrijsVoorAllePositiesEditor: toonPrijsVoorAllePosities,
         );
 
     final standaardGemeenschappelijkeHoogte =
@@ -1270,6 +1279,15 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       onWinstmargeGewijzigd: onWinstmargeGewijzigd,
       onKortingGewijzigd: onKortingGewijzigd,
       onPrijsPerPositieRegelsGewijzigd: onPrijsPerPositieRegelsGewijzigd,
+      // De regels blijven altijd beschikbaar voor het positietotaal. Alleen
+      // de editor zelf wordt in het artikel verborgen wanneer hij één keer
+      // onderaan het volledige overzicht wordt getoond.
+      prijsVoorAllePositiesRegels: prijsVoorAllePositiesRegels,
+      huidigePositieId: item.id,
+      prijsDoelPosities: prijsDoelPosities,
+      onPrijsVoorAllePositiesRegelsGewijzigd: toonPrijsVoorAllePosities
+          ? onPrijsVoorAllePositiesRegelsGewijzigd
+          : null,
       basisOmschrijving: basisOmschrijving,
       algemeneVerkoopPrijsTotaalExclBtw: algemeneVerkoopPrijsTotaalExclBtw,
       algemeneAankoopPrijsTotaalExclBtw: algemeneAankoopPrijsTotaalExclBtw,
