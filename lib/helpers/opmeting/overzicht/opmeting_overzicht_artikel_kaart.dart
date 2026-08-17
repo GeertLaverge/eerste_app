@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-EIGEN-AANKOOP-VERKOOP-PRIJSZONE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-DYNAMISCHE-REGELHOOGTE-20260817
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-NIET-MEER-PER-ARTIKEL-20260816
 // THIMACO-CONTROLE: VERDEELDE-KOST-HOOGTE-IN-PRIJSZONE-20260816
@@ -693,6 +694,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       toonPrijsPerStukVeld: false,
       toonWinstEnKorting: true,
       toonTechnischePrijsregelsInSamenvatting: false,
+      toonPrijsPerPositieRegelsBlok: false,
       algemeneVerkoopPrijsTotaalExclBtw: model.verkoopPrijsTotaalExclBtw,
       algemeneAankoopPrijsTotaalExclBtw: model.aankoopPrijsTotaalExclBtw,
     );
@@ -1215,6 +1217,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     bool toonPrijsPerStukVeld = true,
     bool toonWinstEnKorting = true,
     bool toonTechnischePrijsregelsInSamenvatting = false,
+    bool toonPrijsPerPositieRegelsBlok = true,
     String? basisOmschrijving,
     double? algemeneVerkoopPrijsTotaalExclBtw,
     double? algemeneAankoopPrijsTotaalExclBtw,
@@ -1230,6 +1233,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           toonWinstEnKorting: toonWinstEnKorting,
           toonTechnischePrijsregels: toonTechnischePrijsregelsInSamenvatting,
           heeftAlgemenePrijsUitsplitsing: heeftAlgemenePrijsUitsplitsing,
+          toonPrijsPerPositieRegelsBlok: toonPrijsPerPositieRegelsBlok,
           prijsVoorAllePositiesRegels: prijsVoorAllePositiesRegels,
           huidigePositieId: item.id,
           toonPrijsVoorAllePositiesEditor: toonPrijsVoorAllePosities,
@@ -1253,6 +1257,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
       toonWinstEnKorting: toonWinstEnKorting,
       toonTechnischePrijsregelsInSamenvatting:
           toonTechnischePrijsregelsInSamenvatting,
+      toonPrijsPerPositieRegelsBlok: toonPrijsPerPositieRegelsBlok,
       kortingToestaan: !item.isOfferteOptie,
       onPrijsGewijzigd: onPrijsGewijzigd,
       onWinstmargeGewijzigd: onWinstmargeGewijzigd,

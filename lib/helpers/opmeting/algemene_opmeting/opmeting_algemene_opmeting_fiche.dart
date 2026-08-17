@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-GEEN-LOKALE-PRIJS-PER-POSITIE-20260817
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-ALGEMENE-OPMETING-ZONDER-OUDE-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ANALYZERFIX-ALGEMENE-OPMETING-20260814
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-FICHE-20260802
@@ -215,6 +216,7 @@ class _OpmetingAlgemeneOpmetingFicheState
       prijsPerStukExclBtw: model.prijsTotaalExclBtw,
       toegepasteTechnischePrijsregels: const [],
       technischePrijsSignatuur: '',
+      prijsPerPositieRegels: const [],
     );
     final klantNaam =
         (widget.klantNaam ?? widget.bestaandeOpmeting?.klantNaam ?? '').trim();

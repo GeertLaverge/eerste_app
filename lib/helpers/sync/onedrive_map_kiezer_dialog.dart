@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-KIEZER-TOONT-MAPPEN-EN-BESTANDEN-20260817
 // THIMACO-CONTROLE: ONEDRIVE-MAP-KIEZER-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'package:flutter/material.dart';
 
@@ -56,7 +57,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
     const _OneDrivePadStap(id: null, naam: 'OneDrive'),
   ];
 
-  List<OneDriveMapItem> _mappen = <OneDriveMapItem>[];
+  List<OneDriveMapItem> _items = <OneDriveMapItem>[];
   bool _laden = true;
   bool _mapAanmaken = false;
   String _fout = '';
@@ -85,12 +86,12 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
 
   String get _huidigePad => _pad.map((stap) => stap.naam).join(' / ');
 
-  List<OneDriveMapItem> get _gefilterdeMappen {
+  List<OneDriveMapItem> get _gefilterdeItems {
     final zoekterm = _zoekController.text.trim().toLowerCase();
-    if (zoekterm.isEmpty) return _mappen;
+    if (zoekterm.isEmpty) return _items;
 
-    return _mappen
-        .where((map) => map.naam.toLowerCase().contains(zoekterm))
+    return _items
+        .where((item) => item.naam.toLowerCase().contains(zoekterm))
         .toList(growable: false);
   }
 
@@ -100,18 +101,18 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
     setState(() {
       _laden = true;
       _fout = '';
-      _mappen = <OneDriveMapItem>[];
+      _items = <OneDriveMapItem>[];
     });
 
     try {
-      final mappen = await widget.service.laadMappen(
+      final items = await widget.service.laadItems(
         bovenliggendeMapId: _huidigeStap.id,
       );
 
       if (!mounted || versie != _laadVersie) return;
 
       setState(() {
-        _mappen = mappen;
+        _items = items;
         _laden = false;
       });
     } on OneDriveKlantdocumentException catch (fout) {
@@ -544,14 +545,14 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
       );
     }
 
-    final zichtbareMappen = _gefilterdeMappen;
+    final zichtbareItems = _gefilterdeItems;
 
-    if (zichtbareMappen.isEmpty) {
+    if (zichtbareItems.isEmpty) {
       return Center(
         child: Text(
           _zoekController.text.trim().isEmpty
-              ? 'Deze map bevat geen submappen.'
-              : 'Geen map gevonden voor “${_zoekController.text.trim()}”.',
+              ? 'Deze map is leeg.'
+              : 'Geen map of bestand gevonden voor “${_zoekController.text.trim()}”.',
           style: const TextStyle(color: _tekstGrijs),
         ),
       );
@@ -560,10 +561,10 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
     return Scrollbar(
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-        itemCount: zichtbareMappen.length,
+        itemCount: zichtbareItems.length,
         separatorBuilder: (_, _) => const SizedBox(height: 6),
         itemBuilder: (context, index) {
-          final map = zichtbareMappen[index];
+          final item = zichtbareItems[index];
 
           return Material(
             color: Colors.white,
@@ -573,18 +574,111 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
             ),
             child: ListTile(
               dense: true,
-              leading: const Icon(Icons.folder_rounded, color: _groen),
-              title: Text(
-                map.naam,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+              leading: Icon(
+                _icoonVoorItem(item),
+                color: item.isMap ? _groen : _kleurVoorBestand(item),
               ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => _openMap(map),
+              title: Text(
+                item.naam,
+                style: TextStyle(
+                  fontWeight: item.isMap ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+              subtitle: item.isMap
+                  ? null
+                  : Text(
+                      _bestandSubtitel(item),
+                      style: const TextStyle(color: _tekstGrijs, fontSize: 11),
+                    ),
+              trailing: item.isMap
+                  ? const Icon(Icons.chevron_right_rounded)
+                  : null,
+              onTap: item.isMap ? () => _openMap(item) : null,
             ),
           );
         },
       ),
     );
+  }
+
+  IconData _icoonVoorItem(OneDriveMapItem item) {
+    if (item.isMap) return Icons.folder_rounded;
+
+    final naam = item.naam.toLowerCase();
+    final mime = item.mimeType.toLowerCase();
+
+    if (naam.endsWith('.pdf') || mime == 'application/pdf') {
+      return Icons.picture_as_pdf_rounded;
+    }
+
+    if (mime.startsWith('image/') ||
+        naam.endsWith('.jpg') ||
+        naam.endsWith('.jpeg') ||
+        naam.endsWith('.png') ||
+        naam.endsWith('.webp')) {
+      return Icons.image_outlined;
+    }
+
+    if (naam.endsWith('.xlsx') || naam.endsWith('.xls')) {
+      return Icons.table_chart_outlined;
+    }
+
+    if (naam.endsWith('.docx') || naam.endsWith('.doc')) {
+      return Icons.description_outlined;
+    }
+
+    return Icons.insert_drive_file_outlined;
+  }
+
+  Color _kleurVoorBestand(OneDriveMapItem item) {
+    final naam = item.naam.toLowerCase();
+    final mime = item.mimeType.toLowerCase();
+
+    if (naam.endsWith('.pdf') || mime == 'application/pdf') {
+      return const Color(0xFFB91C1C);
+    }
+
+    return _tekstGrijs;
+  }
+
+  String _bestandSubtitel(OneDriveMapItem item) {
+    final delen = <String>[];
+    final naam = item.naam.toLowerCase();
+    final mime = item.mimeType.toLowerCase();
+
+    if (naam.endsWith('.pdf') || mime == 'application/pdf') {
+      delen.add('PDF');
+    } else {
+      final punt = item.naam.lastIndexOf('.');
+      if (punt >= 0 && punt < item.naam.length - 1) {
+        delen.add(item.naam.substring(punt + 1).toUpperCase());
+      } else {
+        delen.add('Bestand');
+      }
+    }
+
+    if (item.grootteBytes > 0) {
+      delen.add(_formatteerBestandsgrootte(item.grootteBytes));
+    }
+
+    return delen.join(' · ');
+  }
+
+  String _formatteerBestandsgrootte(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+
+    final kb = bytes / 1024.0;
+    if (kb < 1024) {
+      return '${kb.toStringAsFixed(kb >= 100 ? 0 : 1)} KB';
+    }
+
+    final mb = kb / 1024.0;
+    if (mb < 1024) {
+      return '${mb.toStringAsFixed(mb >= 100 ? 0 : 1)} MB';
+    }
+
+    final gb = mb / 1024.0;
+    return '${gb.toStringAsFixed(gb >= 100 ? 0 : 1)} GB';
   }
 
   Widget _bouwOnderbalk() {

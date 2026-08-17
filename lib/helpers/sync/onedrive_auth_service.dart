@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-CENTRAAL-GRAPH-TOKEN-20260817
 // THIMACO-CONTROLE: ONEDRIVE-AFMELDEN-NA-VEILIGE-UPLOAD-20260805
 // THIMACO-CONTROLE: ONEDRIVE-AUTOMATISCH-ALTIJD-SILENT-20260802
 // THIMACO-CONTROLE: ONEDRIVE-ACCOUNT-DEBUG-MET-ECHT-EMAILADRES-20260802
@@ -126,6 +127,19 @@ class OneDriveAuthService {
   /// aanroepen. Hierdoor kan synchronisatie, mail of OneDrive-navigatie nooit
   /// uit zichzelf een Microsoft-venster openen.
   Future<String> login() => tokenSilent();
+
+  /// Enig toegangspunt voor services die Microsoft Graph aanroepen.
+  ///
+  /// Bij een 401 kan de service [forceerVernieuwen] gebruiken. Dan wordt alleen
+  /// de tijdelijke geheugencache gewist en vraagt MSAL opnieuw stil een token.
+  /// Er wordt hier nooit automatisch een interactief aanmeldvenster geopend.
+  Future<String> tokenVoorGraph({bool forceerVernieuwen = false}) async {
+    if (forceerVernieuwen) {
+      wisTijdelijkToken();
+    }
+
+    return tokenSilent();
+  }
 
   /// Verwijdert uitsluitend de tijdelijke tokenbuffer in het appgeheugen.
   /// De blijvende MSAL-accountgegevens in de iOS-Keychain blijven behouden.

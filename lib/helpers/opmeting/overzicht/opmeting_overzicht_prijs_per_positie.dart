@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-ZONDER-PRIJS-PER-POSITIE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-NIET-DUBBEL-IN-PRIJSBEREKENING-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-GEEN-RUIMTE-PER-ARTIKEL-20260816
 // THIMACO-CONTROLE: VERDEELDE-KOST-IN-PRIJSBEREKENING-ONDER-KORTING-20260816
@@ -48,6 +49,7 @@ class OpmetingOverzichtPrijsPerPositie {
     required bool toonWinstEnKorting,
     required bool toonTechnischePrijsregels,
     required bool heeftAlgemenePrijsUitsplitsing,
+    bool toonPrijsPerPositieRegelsBlok = true,
     List<OffertePrijsVoorAllePositiesRegelModel> prijsVoorAllePositiesRegels =
         const <OffertePrijsVoorAllePositiesRegelModel>[],
     String huidigePositieId = '',
@@ -64,8 +66,9 @@ class OpmetingOverzichtPrijsPerPositie {
     final invoerHoogte =
         (toonPrijsPerStukVeld ? 52.0 : 0.0) +
         (toonWinstEnKorting ? 104.0 : 0.0);
-    final prijsPerPositieHoogte =
-        54.0 + (prijsResultaat.prijsPerPositieRegels.length * 98.0);
+    final prijsPerPositieHoogte = toonPrijsPerPositieRegelsBlok
+        ? 54.0 + (prijsResultaat.prijsPerPositieRegels.length * 98.0)
+        : 0.0;
     final positieId = huidigePositieId.trim();
     final aantalVerdeeldeRegels = positieId.isEmpty
         ? 0
@@ -116,6 +119,7 @@ class OpmetingOverzichtPrijsPerPositie {
     required ValueChanged<double> onKortingGewijzigd,
     required ValueChanged<List<OffertePrijsPerPositieRegelModel>>
     onPrijsPerPositieRegelsGewijzigd,
+    bool toonPrijsPerPositieRegelsBlok = true,
     List<OffertePrijsVoorAllePositiesRegelModel> prijsVoorAllePositiesRegels =
         const <OffertePrijsVoorAllePositiesRegelModel>[],
     String huidigePositieId = '',
@@ -143,6 +147,7 @@ class OpmetingOverzichtPrijsPerPositie {
         onWinstmargeGewijzigd: onWinstmargeGewijzigd,
         onKortingGewijzigd: onKortingGewijzigd,
         onPrijsPerPositieRegelsGewijzigd: onPrijsPerPositieRegelsGewijzigd,
+        toonPrijsPerPositieRegelsBlok: toonPrijsPerPositieRegelsBlok,
         prijsVoorAllePositiesRegels: prijsVoorAllePositiesRegels,
         huidigePositieId: huidigePositieId,
         prijsDoelPosities: prijsDoelPosities,
@@ -168,6 +173,7 @@ class _PrijsBerekeningKaart extends StatelessWidget {
     required this.onWinstmargeGewijzigd,
     required this.onKortingGewijzigd,
     required this.onPrijsPerPositieRegelsGewijzigd,
+    required this.toonPrijsPerPositieRegelsBlok,
     required this.prijsVoorAllePositiesRegels,
     required this.huidigePositieId,
     required this.prijsDoelPosities,
@@ -188,6 +194,7 @@ class _PrijsBerekeningKaart extends StatelessWidget {
   final ValueChanged<double> onKortingGewijzigd;
   final ValueChanged<List<OffertePrijsPerPositieRegelModel>>
   onPrijsPerPositieRegelsGewijzigd;
+  final bool toonPrijsPerPositieRegelsBlok;
   final List<OffertePrijsVoorAllePositiesRegelModel>
   prijsVoorAllePositiesRegels;
   final String huidigePositieId;
@@ -327,14 +334,16 @@ class _PrijsBerekeningKaart extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        if (toonPrijsPerPositieRegelsBlok) ...<Widget>[
+          const SizedBox(height: 10),
 
-        // 2. Lokale prijs per positie heeft zijn eigen duidelijke container.
-        _PrijsPerPositieRegelsBlok(
-          resultaat: resultaat,
-          regels: prijsData.prijsPerPositieRegels,
-          onGewijzigd: onPrijsPerPositieRegelsGewijzigd,
-        ),
+          // 2. Lokale prijs per positie heeft zijn eigen duidelijke container.
+          _PrijsPerPositieRegelsBlok(
+            resultaat: resultaat,
+            regels: prijsData.prijsPerPositieRegels,
+            onGewijzigd: onPrijsPerPositieRegelsGewijzigd,
+          ),
+        ],
         if (huidigePositieId.trim().isNotEmpty &&
             onPrijsVoorAllePositiesRegelsGewijzigd != null) ...<Widget>[
           const SizedBox(height: 8),

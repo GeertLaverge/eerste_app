@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLING-PER-KADER-OVERZICHT-ACTUEEL-20260817
 // THIMACO-CONTROLE: VASTE-MODELTEKENING-IPAD-ROTATIE-FASE1-20260812
 // THIMACO-CONTROLE: IPAD-ROTATIE-OVERZICHT-SNAPSHOT-NA-SCHAAL-20260727
 // THIMACO-CONTROLE: SCHUIFRAAM-ZIJKADERS-LOKALE-GEOMETRIE-20260726
@@ -1498,6 +1499,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
     return OpmetingRaamTekenvlakOverzichtDataHelper.lijstMapVoorWeergave(
       heeftSamenstelling: _bruikbareKaderSamenstelling != null,
       bewaardePerKader: _vullingToewijzingenPerKader,
+      actieveKaderId: _huidigOpvullingKaderId,
+      actieveLijst: _vullingToewijzingen,
     );
   }
 
@@ -1682,15 +1685,15 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       return;
     }
 
-    if (!_vullingToewijzingenPerKader.containsKey(kaderId) &&
-        _vullingToewijzingen.isNotEmpty) {
-      _vullingToewijzingenPerKader[kaderId] =
-          List<OpmetingRaamVullingToewijzing>.unmodifiable(
-            _vullingToewijzingen,
-          );
-    }
+    // De actieve lijst is de meest actuele toestand van dit kader.
+    // Overschrijf daarom altijd de per-kaderlijst. Dit bewaart ook een
+    // kleurwijziging en het verwijderen van de laatste opvulling correct.
+    _vullingToewijzingenPerKader[kaderId] =
+        List<OpmetingRaamVullingToewijzing>.unmodifiable(_vullingToewijzingen);
 
-    if (_geselecteerdeVulvlakIds.isNotEmpty) {
+    if (_geselecteerdeVulvlakIds.isEmpty) {
+      _geselecteerdeVulvlakIdsPerKader.remove(kaderId);
+    } else {
       _geselecteerdeVulvlakIdsPerKader[kaderId] = Set<String>.unmodifiable(
         _geselecteerdeVulvlakIds,
       );

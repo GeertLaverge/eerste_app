@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPVULLING-TEKST-PER-KADER-OVERZICHT-20260817
 // THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-OVERZICHT-BUILDER-20260812
 // THIMACO-CONTROLE: ALLEEN-HOE-UITSCHRIJVEN-LINKS-20260720
 import '../../fotos/opmeting_foto_model.dart';
@@ -323,15 +324,13 @@ class _OpmetingRaamOverzichtContext {
       );
     }
 
-    if (gekozenOpvullingen.isNotEmpty) {
+    final opvullingTekst = _opvullingTekstVoorVolledigOverzicht();
+
+    if (opvullingTekst.isNotEmpty) {
       regels.add(
         OpmetingOverzichtTechnischeRegel(
           titel: 'Opvulling',
-          waarde: gekozenOpvullingen
-              .map((opvulling) {
-                return '${opvulling.nummer}. ${opvulling.naam}';
-              })
-              .join('\n'),
+          waarde: opvullingTekst,
         ),
       );
     }
@@ -415,17 +414,26 @@ class _OpmetingRaamOverzichtContext {
   ) {
     final regels = <OpmetingOverzichtTechnischeRegel>[];
 
+    final vulvlakken = _lijstVoorKader<OpmetingRaamVulvlak>(
+      perKader: tekeningData.vulvlakkenPerKader,
+      basis: tekeningData.vulvlakken,
+      kaderId: kaderId,
+    );
     final vullingToewijzingen = _lijstVoorKader<OpmetingRaamVullingToewijzing>(
       perKader: tekeningData.vullingToewijzingenPerKader,
       basis: tekeningData.vullingToewijzingen,
       kaderId: kaderId,
     );
+    final opvullingTekst = _opvullingTekstVoorKader(
+      vulvlakken: vulvlakken,
+      toewijzingen: vullingToewijzingen,
+    );
 
-    if (vullingToewijzingen.isNotEmpty) {
+    if (opvullingTekst.isNotEmpty) {
       regels.add(
         OpmetingOverzichtTechnischeRegel(
           titel: 'Opvulling',
-          waarde: _opvullingTekstVoorOverzicht(vullingToewijzingen.length),
+          waarde: opvullingTekst,
         ),
       );
     }
@@ -639,16 +647,119 @@ class _OpmetingRaamOverzichtContext {
     return ids;
   }
 
-  String _opvullingTekstVoorOverzicht(int aantalVlakken) {
-    if (gekozenOpvullingen.isNotEmpty) {
-      return gekozenOpvullingen
-          .map((opvulling) {
-            return '${opvulling.nummer}. ${opvulling.naam}';
-          })
+  String _opvullingTekstVoorVolledigOverzicht() {
+    final kaders = kaderSamenstelling.kaders;
+
+    if (kaders.length <= 1) {
+      final kaderId = kaders.isEmpty ? '' : kaders.first.id;
+      final vulvlakken = kaderId.isEmpty
+          ? tekeningData.vulvlakken
+          : _lijstVoorKader<OpmetingRaamVulvlak>(
+              perKader: tekeningData.vulvlakkenPerKader,
+              basis: tekeningData.vulvlakken,
+              kaderId: kaderId,
+            );
+      final toewijzingen = kaderId.isEmpty
+          ? tekeningData.vullingToewijzingen
+          : _lijstVoorKader<OpmetingRaamVullingToewijzing>(
+              perKader: tekeningData.vullingToewijzingenPerKader,
+              basis: tekeningData.vullingToewijzingen,
+              kaderId: kaderId,
+            );
+
+      final tekst = _opvullingTekstVoorKader(
+        vulvlakken: vulvlakken,
+        toewijzingen: toewijzingen,
+      );
+
+      if (tekst.isNotEmpty) {
+        return tekst;
+      }
+
+      return _globaleOpvullingLegendaTekst();
+    }
+
+    final regels = <String>[];
+
+    for (final kader in kaders) {
+      final vulvlakken = _lijstVoorKader<OpmetingRaamVulvlak>(
+        perKader: tekeningData.vulvlakkenPerKader,
+        basis: tekeningData.vulvlakken,
+        kaderId: kader.id,
+      );
+      final toewijzingen = _lijstVoorKader<OpmetingRaamVullingToewijzing>(
+        perKader: tekeningData.vullingToewijzingenPerKader,
+        basis: tekeningData.vullingToewijzingen,
+        kaderId: kader.id,
+      );
+      final tekst = _opvullingTekstVoorKader(
+        vulvlakken: vulvlakken,
+        toewijzingen: toewijzingen,
+      );
+
+      if (tekst.isEmpty) {
+        continue;
+      }
+
+      regels.add('${_raamkaderTitelVoorId(kader.id)}: $tekst');
+    }
+
+    if (regels.isNotEmpty) {
+      return regels.join('\n');
+    }
+
+    return _globaleOpvullingLegendaTekst();
+  }
+
+  String _opvullingTekstVoorKader({
+    required List<OpmetingRaamVulvlak> vulvlakken,
+    required List<OpmetingRaamVullingToewijzing> toewijzingen,
+  }) {
+    if (toewijzingen.isEmpty) {
+      return '';
+    }
+
+    final legenda = OpmetingRaamVullingHelper.bepaalLegenda(
+      vulvlakken: vulvlakken,
+      toewijzingen: toewijzingen,
+    );
+
+    if (legenda.isNotEmpty) {
+      return legenda
+          .map((opvulling) => '${opvulling.nummer}. ${opvulling.naam}')
           .join(', ');
     }
 
+    // Compatibiliteitsfallback voor een oudere fiche waarvan de opgeslagen
+    // vulvlakgeometrie niet meer exact bij de toewijzingen aansluit.
+    final namen = <String>[];
+
+    for (final toewijzing in toewijzingen) {
+      final naam = toewijzing.naam.trim();
+
+      if (naam.isEmpty || namen.contains(naam)) {
+        continue;
+      }
+
+      namen.add(naam);
+    }
+
+    if (namen.isNotEmpty) {
+      return namen.join(', ');
+    }
+
+    final aantalVlakken = toewijzingen.length;
     return '$aantalVlakken vlak${aantalVlakken == 1 ? '' : 'ken'} ingevuld';
+  }
+
+  String _globaleOpvullingLegendaTekst() {
+    if (gekozenOpvullingen.isEmpty) {
+      return '';
+    }
+
+    return gekozenOpvullingen
+        .map((opvulling) => '${opvulling.nummer}. ${opvulling.naam}')
+        .join(', ');
   }
 
   String _uniekeTekst(Iterable<String> waarden) {
