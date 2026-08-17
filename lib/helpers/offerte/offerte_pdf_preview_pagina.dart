@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-IPAD-NATIVE-PRINT-A4-20260817
 // THIMACO-CONTROLE: OFFERTE-IPAD-PRINT-A4-FORCE-CUSTOM-PAPER-20260817
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE3-OP-ACTUELE-PDF-PREVIEW-20260815
@@ -13,9 +14,9 @@
 // THIMACO-CONTROLE: OFFERTE-GOEDKEURING-IPAD-PAPIER-MAIL-20260801
 // THIMACO-CONTROLE: OFFERTE-PDF-ONEDRIVE-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
@@ -101,6 +102,9 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
   static const Color _rand = Color(0xFFE5E7EB);
+  static const MethodChannel _nativePrintKanaal = MethodChannel(
+    'be.thimaco.app/native_print',
+  );
 
   final OneDriveKlantdocumentService _oneDriveService =
       OneDriveKlantdocumentService();
@@ -284,20 +288,41 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       final pdfBytes = await _pdfFuture;
       if (!mounted) return;
 
-      await Printing.layoutPdf(
-        name: _maakBestandsnaam(),
-        format: PdfPageFormat.a4,
-        dynamicLayout: false,
-        usePrinterSettings: false,
-        forceCustomPrintPaper: true,
-        onLayout: (_) async => pdfBytes,
+      if (Theme.of(context).platform == TargetPlatform.iOS) {
+        await _nativePrintKanaal.invokeMethod<String>(
+          'printPdfA4',
+          <String, Object>{
+            'bytes': pdfBytes,
+            'bestandsnaam': _maakBestandsnaam(),
+          },
+        );
+      } else {
+        await Printing.layoutPdf(
+          name: _maakBestandsnaam(),
+          format: PdfPageFormat.a4,
+          dynamicLayout: false,
+          onLayout: (_) async => pdfBytes,
+        );
+      }
+    } on PlatformException catch (fout) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            fout.message?.trim().isNotEmpty == true
+                ? 'Afdrukken kon niet worden gestart.\n${fout.message}'
+                : 'Afdrukken kon niet worden gestart.\n${fout.code}',
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
       );
     } catch (fout) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Afdrukken op A4 kon niet worden gestart.\n$fout'),
+          content: Text('Afdrukken kon niet worden gestart.\n$fout'),
           backgroundColor: const Color(0xFFDC2626),
         ),
       );
