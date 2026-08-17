@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-NIET-DUBBEL-IN-PRIJSBEREKENING-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-GEEN-RUIMTE-PER-ARTIKEL-20260816
 // THIMACO-CONTROLE: VERDEELDE-KOST-IN-PRIJSBEREKENING-ONDER-KORTING-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-MEETELLEN-IN-POSITIETOTAAL-20260815
@@ -56,11 +57,9 @@ class OpmetingOverzichtPrijsPerPositie {
       return 0.0;
     }
 
-    final aantalSamenvattingRegels =
-        (heeftAlgemenePrijsUitsplitsing ? 2 : (toonPrijsPerStukVeld ? 0 : 1)) +
-        (toonTechnischePrijsregels
-            ? prijsResultaat.technischePrijsregels.length
-            : 0);
+    final aantalSamenvattingRegels = heeftAlgemenePrijsUitsplitsing
+        ? 2
+        : (toonPrijsPerStukVeld ? 0 : 1);
 
     final invoerHoogte =
         (toonPrijsPerStukVeld ? 52.0 : 0.0) +
@@ -139,7 +138,6 @@ class OpmetingOverzichtPrijsPerPositie {
         aantal: aantal,
         toonPrijsPerStukVeld: toonPrijsPerStukVeld,
         toonWinstEnKorting: toonWinstEnKorting,
-        toonTechnischePrijsregels: toonTechnischePrijsregelsInSamenvatting,
         kortingToestaan: kortingToestaan,
         onPrijsGewijzigd: onPrijsGewijzigd,
         onWinstmargeGewijzigd: onWinstmargeGewijzigd,
@@ -165,7 +163,6 @@ class _PrijsBerekeningKaart extends StatelessWidget {
     required this.aantal,
     required this.toonPrijsPerStukVeld,
     required this.toonWinstEnKorting,
-    required this.toonTechnischePrijsregels,
     required this.kortingToestaan,
     required this.onPrijsGewijzigd,
     required this.onWinstmargeGewijzigd,
@@ -185,7 +182,6 @@ class _PrijsBerekeningKaart extends StatelessWidget {
   final int aantal;
   final bool toonPrijsPerStukVeld;
   final bool toonWinstEnKorting;
-  final bool toonTechnischePrijsregels;
   final bool kortingToestaan;
   final ValueChanged<double> onPrijsGewijzigd;
   final ValueChanged<double> onWinstmargeGewijzigd;
@@ -326,17 +322,6 @@ class _PrijsBerekeningKaart extends StatelessWidget {
                   return _PrijsSamenvattingRij(
                     omschrijving: omschrijving,
                     bedrag: bedrag,
-                  );
-                }),
-              if (toonTechnischePrijsregels)
-                ...resultaat.technischePrijsregels.map((prijsregel) {
-                  final omschrijving = prijsregel.isOptie
-                      ? '${prijsregel.omschrijving} · technische keuze · optie'
-                      : '${prijsregel.omschrijving} · technische keuze';
-                  return _PrijsSamenvattingRij(
-                    omschrijving: omschrijving,
-                    bedrag: prijsregel.totaalExclBtw,
-                    optie: prijsregel.isOptie,
                   );
                 }),
             ],
@@ -1471,13 +1456,11 @@ class _PrijsSamenvattingRij extends StatelessWidget {
     required this.omschrijving,
     required this.bedrag,
     this.vet = false,
-    this.optie = false,
   });
 
   final String omschrijving;
   final double bedrag;
   final bool vet;
-  final bool optie;
 
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
@@ -1503,28 +1486,6 @@ class _PrijsSamenvattingRij extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (optie) ...<Widget>[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: const Color(0xFFFED7AA)),
-                    ),
-                    child: const Text(
-                      'optie',
-                      style: TextStyle(
-                        color: Color(0xFF9A3412),
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

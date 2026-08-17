@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-DYNAMISCHE-REGELHOOGTE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-CONTAINER-EXACT-PER-REGEL-20260815
 // THIMACO-CONTROLE: TECHNISCHE-LEEGTE-1-REGEL-20260814
 // THIMACO-CONTROLE: ALGEMENE-OVERZICHT-ARTIKEL-LAYOUT-20260720
@@ -38,11 +39,12 @@ class OpmetingOverzichtArtikelLayoutHelper {
   static const double minimumHoogte = 500;
   static const double maximumHoogte = 1450;
 
-  // Eén technische regel krijgt overal exact dezelfde hoogte. De
-  // niet-scrollbare artikelkaart kan daardoor haar hoogte betrouwbaar
-  // berekenen, zonder schattingen die bij veel regels een RenderFlex-overflow
-  // veroorzaken.
+  // Een technische keuze start op één regel van 31 px. Lange tekst wordt
+  // nooit kleiner gemaakt: de rij groeit per extra tekstregel automatisch mee.
   static const double technischeRegelHoogte = 31;
+  static const double technischeRegelVerticalePadding = 7;
+  static const double technischeTekstGrootte = 12;
+  static const double technischeTekstRegelhoogte = 1.25;
   static const double technischeContainerRandReserve = 2;
 
   static List<OpmetingOverzichtTechnischeRegel> combineerTechnischeRegels(
@@ -121,6 +123,64 @@ class OpmetingOverzichtArtikelLayoutHelper {
     }
 
     return List<OpmetingOverzichtTechnischeRegelPrijs>.unmodifiable(resultaat);
+  }
+
+  /// Berekent de echte breedte van de technische kolom binnen [bouwLayout].
+  /// Omdat dit op de actuele layoutbreedte gebeurt, wordt de teksthoogte
+  /// automatisch opnieuw bepaald wanneer het scherm staand/liggend draait.
+  static double berekenTechnischeKolomBreedte(double totaleBreedte) {
+    if (!totaleBreedte.isFinite || totaleBreedte <= 0) {
+      return 320;
+    }
+
+    final bruikbareBreedte = totaleBreedte - tussenruimte;
+    if (bruikbareBreedte <= 0) {
+      return totaleBreedte;
+    }
+
+    return bruikbareBreedte *
+        technischeKolomFlex /
+        (tekenvlakFlex + technischeKolomFlex);
+  }
+
+  /// Hoogte van alle technische keuzes bij de werkelijk beschikbare breedte.
+  /// Elke keuze krijgt minimaal één leesbare regel; langere tekst krijgt
+  /// automatisch twee, drie, ... regels.
+  static double berekenTechnischeRegelsHoogte({
+    required List<OpmetingOverzichtTechnischeRegelPrijs> technischeRegels,
+    required double beschikbareBreedte,
+    bool toonPrijsZone = true,
+    TextDirection textDirection = TextDirection.ltr,
+  }) {
+    final samengevoegdeRegels = combineerTechnischeRegelsMetPrijs(
+      technischeRegels,
+    );
+
+    if (samengevoegdeRegels.isEmpty) {
+      return technischeRegelHoogte;
+    }
+
+    final tekstBreedte = _technischeTekstBreedte(
+      beschikbareBreedte: beschikbareBreedte,
+      toonPrijsZone: toonPrijsZone,
+    );
+
+    var totaleHoogte = technischeContainerRandReserve;
+
+    for (final weergave in samengevoegdeRegels) {
+      final painter = TextPainter(
+        text: _technischeTekstSpan(weergave.regel),
+        textDirection: textDirection,
+      )..layout(maxWidth: tekstBreedte);
+
+      final gemetenHoogte =
+          painter.height + (technischeRegelVerticalePadding * 2);
+      totaleHoogte += gemetenHoogte < technischeRegelHoogte
+          ? technischeRegelHoogte
+          : gemetenHoogte;
+    }
+
+    return totaleHoogte;
   }
 
   static double berekenGemeenschappelijkeHoogte({
@@ -243,27 +303,38 @@ class OpmetingOverzichtArtikelLayoutHelper {
               .toList(growable: false),
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        if (regelWeergaven.isEmpty)
-          bouwLegeTechnischeContainer(tekst: legeTekst)
-        else
-          SizedBox(
-            height:
-                (regelWeergaven.length * technischeRegelHoogte) +
-                technischeContainerRandReserve,
-            child: bouwTechnischeRegelsMetPrijsContainer(
-              regelWeergaven,
-              scrollbaar: scrollbaar,
-              toonPrijsZone: toonPrijsZone,
-            ),
-          ),
-        for (final widget in onderWidgets) ...<Widget>[
-          const SizedBox(height: 9),
-          widget,
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final technischeHoogte = regelWeergaven.isEmpty
+            ? technischeRegelHoogte
+            : berekenTechnischeRegelsHoogte(
+                technischeRegels: regelWeergaven,
+                beschikbareBreedte: constraints.maxWidth,
+                toonPrijsZone: toonPrijsZone,
+                textDirection: Directionality.of(context),
+              );
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            if (regelWeergaven.isEmpty)
+              bouwLegeTechnischeContainer(tekst: legeTekst)
+            else
+              SizedBox(
+                height: technischeHoogte,
+                child: bouwTechnischeRegelsMetPrijsContainer(
+                  regelWeergaven,
+                  scrollbaar: scrollbaar,
+                  toonPrijsZone: toonPrijsZone,
+                ),
+              ),
+            for (final widget in onderWidgets) ...<Widget>[
+              const SizedBox(height: 9),
+              widget,
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -316,83 +387,53 @@ class OpmetingOverzichtArtikelLayoutHelper {
     );
 
     final inhoud = Column(
+      mainAxisSize: MainAxisSize.min,
       children: List<Widget>.generate(samengevoegdeRegels.length, (index) {
         final weergave = samengevoegdeRegels[index];
         final regel = weergave.regel;
 
-        return SizedBox(
-          height: technischeRegelHoogte,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 11),
-            decoration: BoxDecoration(
-              border: index == samengevoegdeRegels.length - 1
-                  ? null
-                  : const Border(bottom: BorderSide(color: rand, width: 0.8)),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text.rich(
-                        TextSpan(
-                          children: <InlineSpan>[
-                            TextSpan(
-                              text: regel.titel,
-                              style: const TextStyle(
-                                color: tekstGrijs,
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                height: 1.15,
-                              ),
-                            ),
-                            if (regel.titel.isNotEmpty &&
-                                regel.waarde.isNotEmpty)
-                              const TextSpan(text: ': '),
-                            if (regel.waarde.isNotEmpty)
-                              TextSpan(
-                                text: regel.waarde,
-                                style: const TextStyle(
-                                  color: tekstDonker,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.15,
-                                ),
-                              ),
-                          ],
-                        ),
-                        maxLines: 1,
-                        softWrap: false,
-                      ),
+        return Container(
+          constraints: const BoxConstraints(minHeight: technischeRegelHoogte),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 11,
+            vertical: technischeRegelVerticalePadding,
+          ),
+          decoration: BoxDecoration(
+            border: index == samengevoegdeRegels.length - 1
+                ? null
+                : const Border(bottom: BorderSide(color: rand, width: 0.8)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              Expanded(
+                child: Text.rich(
+                  _technischeTekstSpan(regel),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+              if (toonPrijsZone) ...<Widget>[
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: prijsZoneBreedte,
+                  child: Text(
+                    weergave.heeftBedrag
+                        ? _formatteerBedrag(weergave.bedragExclBtw!)
+                        : '',
+                    maxLines: 1,
+                    softWrap: false,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: tekstDonker,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w900,
+                      height: technischeTekstRegelhoogte,
                     ),
                   ),
                 ),
-                if (toonPrijsZone) ...<Widget>[
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: prijsZoneBreedte,
-                    child: Text(
-                      weergave.heeftBedrag
-                          ? _formatteerBedrag(weergave.bedragExclBtw!)
-                          : '',
-                      maxLines: 1,
-                      softWrap: false,
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: tekstDonker,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w900,
-                        height: 1.15,
-                      ),
-                    ),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         );
       }),
@@ -409,6 +450,59 @@ class OpmetingOverzichtArtikelLayoutHelper {
           ? SingleChildScrollView(padding: EdgeInsets.zero, child: inhoud)
           : inhoud,
     );
+  }
+
+  static TextSpan _technischeTekstSpan(OpmetingOverzichtTechnischeRegel regel) {
+    return TextSpan(
+      style: const TextStyle(
+        fontSize: technischeTekstGrootte,
+        height: technischeTekstRegelhoogte,
+      ),
+      children: <InlineSpan>[
+        TextSpan(
+          text: regel.titel,
+          style: const TextStyle(
+            color: tekstGrijs,
+            fontSize: technischeTekstGrootte,
+            fontWeight: FontWeight.w700,
+            height: technischeTekstRegelhoogte,
+          ),
+        ),
+        if (regel.titel.isNotEmpty && regel.waarde.isNotEmpty)
+          const TextSpan(
+            text: ': ',
+            style: TextStyle(
+              color: tekstGrijs,
+              fontSize: technischeTekstGrootte,
+              fontWeight: FontWeight.w700,
+              height: technischeTekstRegelhoogte,
+            ),
+          ),
+        if (regel.waarde.isNotEmpty)
+          TextSpan(
+            text: regel.waarde,
+            style: const TextStyle(
+              color: tekstDonker,
+              fontSize: technischeTekstGrootte,
+              fontWeight: FontWeight.w800,
+              height: technischeTekstRegelhoogte,
+            ),
+          ),
+      ],
+    );
+  }
+
+  static double _technischeTekstBreedte({
+    required double beschikbareBreedte,
+    required bool toonPrijsZone,
+  }) {
+    final veiligeBreedte = beschikbareBreedte.isFinite && beschikbareBreedte > 0
+        ? beschikbareBreedte
+        : 320.0;
+    final prijsReserve = toonPrijsZone ? 10 + prijsZoneBreedte : 0.0;
+    final tekstBreedte = veiligeBreedte - 22 - 2 - prijsReserve;
+
+    return tekstBreedte < 40 ? 40 : tekstBreedte;
   }
 
   static String _opEenRegel(String waarde) {

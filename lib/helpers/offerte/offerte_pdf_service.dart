@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFSERVICE-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-ONDER-OFFERTENUMMER-20260809-2030
 // THIMACO-CONTROLE: OFFERTE-PDF-4-ANALYZER-ISSUES-FIX-20260809-1918
@@ -470,6 +471,8 @@ class OffertePdfService {
           _projectKleurRegel('Binnen', data.projectKleurBinnen),
           _projectKleurRegel('Buiten', data.projectKleurBuiten),
           _projectKleurRegel('RAL toebehoren', data.ralKleurToebehoren),
+          if (data.kleurAfwijking.trim().isNotEmpty)
+            _projectKleurRegel('Afwijking', data.kleurAfwijking),
         ],
       ),
     );

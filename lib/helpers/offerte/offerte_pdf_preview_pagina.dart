@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE3-OP-ACTUELE-PDF-PREVIEW-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-PDF-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTEVARIANTEN-BEWERKEN-OPSLAAN-ALS-NIEUW-20260811
@@ -766,6 +767,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       projectKleurBinnen: titelhoofd.projectKleurBinnen,
       projectKleurBuiten: titelhoofd.projectKleurBuiten,
       ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
+      kleurAfwijking: titelhoofd.kleurAfwijking,
       posities: prijsPosities,
       pvcRaamTekeningen: pvcRaamTekeningen,
     );
@@ -2397,6 +2399,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       projectKleurBinnen: titelhoofd.projectKleurBinnen,
       projectKleurBuiten: titelhoofd.projectKleurBuiten,
       ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
+      kleurAfwijking: titelhoofd.kleurAfwijking,
       posities: prijsPosities,
       pvcRaamTekeningen: pvcRaamTekeningen,
     );

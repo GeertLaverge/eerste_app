@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFMODEL-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-IN-PDF-DATA-20260809-2030
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-OFFERTE-PDF-MODEL-20260728
@@ -101,6 +102,7 @@ class OfferteDocumentData {
     this.projectKleurBinnen = '',
     this.projectKleurBuiten = '',
     this.ralKleurToebehoren = '',
+    this.kleurAfwijking = '',
     String kortingOmschrijving = 'Korting',
     Map<String, Uint8List> pvcRaamTekeningen = const <String, Uint8List>{},
   }) : pvcRaamTekeningen = Map<String, Uint8List>.unmodifiable(
@@ -119,6 +121,7 @@ class OfferteDocumentData {
   final String projectKleurBinnen;
   final String projectKleurBuiten;
   final String ralKleurToebehoren;
+  final String kleurAfwijking;
   final List<OpmetingOverzichtRaamItem> posities;
   final Map<String, Uint8List> pvcRaamTekeningen;
 
@@ -256,7 +259,8 @@ class OfferteDocumentData {
   bool get heeftProjectKleuren {
     return projectKleurBinnen.trim().isNotEmpty ||
         projectKleurBuiten.trim().isNotEmpty ||
-        ralKleurToebehoren.trim().isNotEmpty;
+        ralKleurToebehoren.trim().isNotEmpty ||
+        kleurAfwijking.trim().isNotEmpty;
   }
 
   int hoofdofferteArtikelNummer(OpmetingOverzichtRaamItem positie) {

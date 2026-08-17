@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-DYNAMISCHE-REGELHOOGTE-20260817
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-NIET-MEER-PER-ARTIKEL-20260816
 // THIMACO-CONTROLE: VERDEELDE-KOST-HOOGTE-IN-PRIJSZONE-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE2-ARTIKELKAART-20260815
@@ -1213,7 +1214,7 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
     bool toonTechnischePrijsZone = true,
     bool toonPrijsPerStukVeld = true,
     bool toonWinstEnKorting = true,
-    bool toonTechnischePrijsregelsInSamenvatting = true,
+    bool toonTechnischePrijsregelsInSamenvatting = false,
     String? basisOmschrijving,
     double? algemeneVerkoopPrijsTotaalExclBtw,
     double? algemeneAankoopPrijsTotaalExclBtw,
@@ -1233,28 +1234,6 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           huidigePositieId: item.id,
           toonPrijsVoorAllePositiesEditor: toonPrijsVoorAllePosities,
         );
-
-    final standaardGemeenschappelijkeHoogte =
-        OpmetingOverzichtArtikelLayoutHelper.berekenGemeenschappelijkeHoogte(
-          aantalTechnischeRegels: technischeRegels.length,
-          toonPrijzen: berekenPrijzen,
-          prijsVeldHoogte: 0,
-          prijsCorrectieVeldHoogte: 0,
-          prijsSamenvattingHoogte: prijsSamenvattingHoogte,
-        );
-    final nietScrollbareTechnischeHoogte = technischeRegelsScrollbaar
-        ? 0.0
-        : OpmetingOverzichtArtikelLayoutHelper.berekenNietScrollbareTechnischeHoogte(
-            technischeRegels: technischeRegels,
-            minimaleHoogte: 0,
-          );
-    final nietScrollbareTotaleHoogte =
-        nietScrollbareTechnischeHoogte +
-        (berekenPrijzen ? prijsSamenvattingHoogte + 27.0 : 0.0);
-    final gemeenschappelijkeHoogte =
-        nietScrollbareTotaleHoogte > standaardGemeenschappelijkeHoogte
-        ? nietScrollbareTotaleHoogte
-        : standaardGemeenschappelijkeHoogte;
 
     final technischeRegelsMetPrijs =
         technischeRegelsMetPrijsOverride ??
@@ -1303,16 +1282,55 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
               .toList(growable: false)
         : prijsWidgets;
 
-    return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
-      hoogte: gemeenschappelijkeHoogte,
-      tekenvlak: tekenvlak,
-      rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
-        technischeRegels: technischeRegels,
-        technischeRegelsMetPrijs: technischeRegelsMetPrijs,
-        onderWidgets: geblokkeerdePrijsWidgets,
-        scrollbaar: technischeRegelsScrollbaar,
-        toonPrijsZone: toonTechnischePrijsZone,
-      ),
+    final regelsVoorHoogte =
+        technischeRegelsMetPrijs ??
+        technischeRegels
+            .map((regel) => OpmetingOverzichtTechnischeRegelPrijs(regel: regel))
+            .toList(growable: false);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final technischeKolomBreedte =
+            OpmetingOverzichtArtikelLayoutHelper.berekenTechnischeKolomBreedte(
+              constraints.maxWidth,
+            );
+        final dynamischeTechnischeHoogte =
+            OpmetingOverzichtArtikelLayoutHelper.berekenTechnischeRegelsHoogte(
+              technischeRegels: regelsVoorHoogte,
+              beschikbareBreedte: technischeKolomBreedte,
+              toonPrijsZone: toonTechnischePrijsZone,
+              textDirection: Directionality.of(context),
+            );
+
+        final standaardGemeenschappelijkeHoogte =
+            OpmetingOverzichtArtikelLayoutHelper.berekenGemeenschappelijkeHoogte(
+              aantalTechnischeRegels: technischeRegels.length,
+              toonPrijzen: berekenPrijzen,
+              prijsVeldHoogte: 0,
+              prijsCorrectieVeldHoogte: 0,
+              prijsSamenvattingHoogte: prijsSamenvattingHoogte,
+            );
+
+        final dynamischeTotaleHoogte =
+            dynamischeTechnischeHoogte +
+            (berekenPrijzen ? prijsSamenvattingHoogte + 27.0 : 0.0);
+        final gemeenschappelijkeHoogte =
+            dynamischeTotaleHoogte > standaardGemeenschappelijkeHoogte
+            ? dynamischeTotaleHoogte
+            : standaardGemeenschappelijkeHoogte;
+
+        return OpmetingOverzichtArtikelLayoutHelper.bouwLayout(
+          hoogte: gemeenschappelijkeHoogte,
+          tekenvlak: tekenvlak,
+          rechterkolom: OpmetingOverzichtArtikelLayoutHelper.bouwRechterkolom(
+            technischeRegels: technischeRegels,
+            technischeRegelsMetPrijs: technischeRegelsMetPrijs,
+            onderWidgets: geblokkeerdePrijsWidgets,
+            scrollbaar: technischeRegelsScrollbaar,
+            toonPrijsZone: toonTechnischePrijsZone,
+          ),
+        );
+      },
     );
   }
 
