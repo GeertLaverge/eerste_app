@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OFFERTE-IPAD-PRINT-A4-FORCE-CUSTOM-PAPER-20260817
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE3-OP-ACTUELE-PDF-PREVIEW-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D2-PDF-ZONDER-PROJECTPRIJS-20260814
@@ -114,6 +115,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
   List<OfferteVersieModel> _versies = const <OfferteVersieModel>[];
   int _pdfVersie = 0;
   bool _opslaanNaarOneDriveBezig = false;
+  bool _afdrukkenBezig = false;
   bool _ondertekenenBezig = false;
   bool _versieBewarenBezig = false;
   bool _versiesLaden = true;
@@ -269,6 +271,43 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
 
   void _vernieuwPdf() {
     setState(_maakNieuwePdfFuture);
+  }
+
+  Future<void> _drukA4Af() async {
+    if (_afdrukkenBezig) return;
+
+    setState(() {
+      _afdrukkenBezig = true;
+    });
+
+    try {
+      final pdfBytes = await _pdfFuture;
+      if (!mounted) return;
+
+      await Printing.layoutPdf(
+        name: _maakBestandsnaam(),
+        format: PdfPageFormat.a4,
+        dynamicLayout: false,
+        usePrinterSettings: false,
+        forceCustomPrintPaper: true,
+        onLayout: (_) async => pdfBytes,
+      );
+    } catch (fout) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Afdrukken op A4 kon niet worden gestart.\n$fout'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _afdrukkenBezig = false;
+        });
+      }
+    }
   }
 
   String _maakBestandsnaam() {
@@ -2598,6 +2637,20 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
           _bouwVersiesActie(context),
           _bouwOndertekenActie(context),
           _bouwMailActie(),
+          IconButton(
+            tooltip: 'Afdrukken op A4',
+            onPressed: _afdrukkenBezig ? null : _drukA4Af,
+            icon: _afdrukkenBezig
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.print_outlined),
+          ),
           _bouwOneDriveActie(context),
           const SizedBox(width: 4),
           IconButton(
@@ -2639,7 +2692,7 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
                   canChangePageFormat: false,
                   canChangeOrientation: false,
                   canDebug: false,
-                  allowPrinting: true,
+                  allowPrinting: false,
                   allowSharing: true,
                   pdfFileName: bestandsnaam,
                   build: (_) => _pdfFuture,
