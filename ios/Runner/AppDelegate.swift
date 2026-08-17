@@ -1,5 +1,6 @@
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-NATIVE-PRIVACY-SCHILD-20260806
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-DAGELIJKSE-IMAP-20260802
+// THIMACO-CONTROLE: NATIVE-IOS-A4-PRINT-20260817
 
 import Flutter
 import MessageUI
@@ -7,11 +8,16 @@ import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate,
-  MFMailComposeViewControllerDelegate
+  MFMailComposeViewControllerDelegate, UIPrintInteractionControllerDelegate
 {
   private static let mailKanaalNaam = "be.thimaco.app/offerte_mail"
+  private static let printKanaalNaam = "be.thimaco.app/native_print"
   private static let privacyKanaalNaam = "be.thimaco.app/financiele_privacy"
   private static let privacySchildTag = 0x54484D46
+  private static let a4PaginaGrootte = CGSize(
+    width: 210.0 / 25.4 * 72.0,
+    height: 297.0 / 25.4 * 72.0
+  )
 
   private var mailResultaat: FlutterResult?
   private var financieelSchermActief = false
@@ -56,6 +62,20 @@ import UIKit
       }
 
       self?.openMailComposer(call: call, result: result)
+    }
+
+    let printKanaal = FlutterMethodChannel(
+      name: Self.printKanaalNaam,
+      binaryMessenger: messenger
+    )
+
+    printKanaal.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "printPdfA4" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+
+      self?.openA4Print(call: call, result: result)
     }
 
     let privacyKanaal = FlutterMethodChannel(
@@ -226,6 +246,143 @@ import UIKit
       .compactMap { $0 as? UIWindowScene }
       .flatMap { $0.windows }
       .filter { !$0.isHidden && $0.alpha > 0 }
+  }
+
+  private func openA4Print(
+    call: FlutterMethodCall,
+    result: @escaping FlutterResult
+  ) {
+    guard UIPrintInteractionController.isPrintingAvailable else {
+      result(
+        FlutterError(
+          code: "PRINT_NIET_BESCHIKBAAR",
+          message: "Afdrukken is op dit toestel niet beschikbaar.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    guard let argumenten = call.arguments as? [String: Any] else {
+      result(
+        FlutterError(
+          code: "PRINT_ONGELDIGE_ARGUMENTEN",
+          message: "De afdrukgegevens konden niet worden gelezen.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    guard
+      let typedData = argumenten["bytes"] as? FlutterStandardTypedData,
+      !typedData.data.isEmpty
+    else {
+      result(
+        FlutterError(
+          code: "PRINT_GEEN_PDF",
+          message: "De PDF voor het afdrukken ontbreekt.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    let pdfData = typedData.data
+    guard UIPrintInteractionController.canPrint(pdfData) else {
+      result(
+        FlutterError(
+          code: "PRINT_PDF_NIET_GELDIG",
+          message: "iOS herkent het document niet als een afdrukbare PDF.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    let bestandsnaam =
+      (argumenten["bestandsnaam"] as? String)?
+      .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Thimaco_offerte.pdf"
+
+    guard let presentator = bovensteViewController() else {
+      result(
+        FlutterError(
+          code: "PRINT_GEEN_PRESENTATOR",
+          message: "Het iPad-afdrukvenster kon niet worden weergegeven.",
+          details: nil
+        )
+      )
+      return
+    }
+
+    let toonPrintVenster = {
+      let controller = UIPrintInteractionController.shared
+      let printInfo = UIPrintInfo(dictionary: nil)
+
+      printInfo.outputType = .general
+      printInfo.orientation = .portrait
+      printInfo.jobName = bestandsnaam.isEmpty ? "Thimaco offerte" : bestandsnaam
+
+      controller.delegate = self
+      controller.printInfo = printInfo
+      controller.printingItem = pdfData as NSData
+      controller.showsPageRange = true
+      controller.showsNumberOfCopies = true
+      controller.showsPaperOrientation = false
+      controller.showsPaperSelectionForLoadedPapers = true
+
+      let anker = CGRect(
+        x: presentator.view.bounds.midX,
+        y: presentator.view.bounds.minY + 44.0,
+        width: 1.0,
+        height: 1.0
+      )
+
+      let getoond = controller.present(
+        from: anker,
+        in: presentator.view,
+        animated: true
+      ) { _, voltooid, fout in
+        if let fout = fout {
+          result(
+            FlutterError(
+              code: "PRINT_MISLUKT",
+              message: "Afdrukken is mislukt: \(fout.localizedDescription)",
+              details: fout.localizedDescription
+            )
+          )
+          return
+        }
+
+        result(voltooid ? "printed" : "cancelled")
+      }
+
+      if !getoond {
+        result(
+          FlutterError(
+            code: "PRINT_VENSTER_NIET_GEOPEND",
+            message: "Het iPad-afdrukvenster kon niet worden geopend.",
+            details: nil
+          )
+        )
+      }
+    }
+
+    if Thread.isMainThread {
+      toonPrintVenster()
+    } else {
+      DispatchQueue.main.async(execute: toonPrintVenster)
+    }
+  }
+
+  func printInteractionController(
+    _ printInteractionController: UIPrintInteractionController,
+    choosePaper paperList: [UIPrintPaper]
+  ) -> UIPrintPaper {
+    return UIPrintPaper.bestPaper(
+      forPageSize: Self.a4PaginaGrootte,
+      withPapersFrom: paperList
+    )
   }
 
   private func openMailComposer(
