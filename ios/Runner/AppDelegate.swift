@@ -1,6 +1,6 @@
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-NATIVE-PRIVACY-SCHILD-20260806
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-DAGELIJKSE-IMAP-20260802
-// THIMACO-CONTROLE: NATIVE-IOS-A4-PRINT-20260817
+// THIMACO-CONTROLE: NATIVE-IOS-A4-PRINT-PLUGIN-REGISTRAR-20260817
 
 import Flutter
 import MessageUI
@@ -20,6 +20,7 @@ import UIKit
   )
 
   private var mailResultaat: FlutterResult?
+  private var nativePrintKanaal: FlutterMethodChannel?
   private var financieelSchermActief = false
 
   override func application(
@@ -64,18 +65,27 @@ import UIKit
       self?.openMailComposer(call: call, result: result)
     }
 
-    let printKanaal = FlutterMethodChannel(
-      name: Self.printKanaalNaam,
-      binaryMessenger: messenger
-    )
+    // Registreer het native printkanaal via een echte FlutterPluginRegistrar.
+    // Dit zorgt ervoor dat het kanaal aan exact dezelfde implicit FlutterEngine
+    // hangt als de Dart MethodChannel.
+    if let printRegistrar = engineBridge.pluginRegistry.registrar(
+      forPlugin: "ThimacoNativePrintPlugin"
+    ) {
+      let printKanaal = FlutterMethodChannel(
+        name: Self.printKanaalNaam,
+        binaryMessenger: printRegistrar.messenger()
+      )
 
-    printKanaal.setMethodCallHandler { [weak self] call, result in
-      guard call.method == "printPdfA4" else {
-        result(FlutterMethodNotImplemented)
-        return
+      printKanaal.setMethodCallHandler { [weak self] call, result in
+        guard call.method == "printPdfA4" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+
+        self?.openA4Print(call: call, result: result)
       }
 
-      self?.openA4Print(call: call, result: result)
+      nativePrintKanaal = printKanaal
     }
 
     let privacyKanaal = FlutterMethodChannel(
