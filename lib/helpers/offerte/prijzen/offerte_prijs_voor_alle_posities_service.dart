@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-CENTRALE-BEREKENING-20260815
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'offerte_artikel_prijs_data_model.dart';
@@ -7,13 +8,13 @@ import 'offerte_prijs_voor_alle_posities_regel_model.dart';
 /// Centrale reken- en projectiehelper voor "Prijs voor alle posities".
 ///
 /// De projectregel blijft één keer in het projecttitelhoofd opgeslagen.
-/// Voor berekening/PDF wordt alleen tijdelijk een prijs-per-positieregel-kopie
-/// in de prijsdata van de doelpositie geprojecteerd. De echte opmeting wordt
+/// Voor schermberekeningen kan tijdelijk een prijs-per-positieregel-kopie in de
+/// prijsdata van de doelpositie worden geprojecteerd. De echte opmeting wordt
 /// daarbij niet opgeslagen of gewijzigd.
 ///
-/// Hierdoor hergebruiken scherm, totaaltelling en PDF exact dezelfde bestaande
-/// prijs-per-positieberekening inclusief A/V, eenheden, winst en
-/// Uit/Tekst/€-weergave.
+/// De offerte-PDF projecteert deze regels bewust niet meer in de afzonderlijke
+/// posities. Voor de PDF worden de regels centraal over hun doelposities
+/// opgeteld en één keer onder alle artikelen uitgeschreven.
 class OffertePrijsVoorAllePositiesService {
   const OffertePrijsVoorAllePositiesService._();
 
@@ -98,6 +99,71 @@ class OffertePrijsVoorAllePositiesService {
                 hoogteMm: hoogteMm,
               );
         });
+
+    return _rondBedragAf(totaal);
+  }
+
+  static bool heeftToepassingOpPosities({
+    required OffertePrijsVoorAllePositiesRegelModel regel,
+    required List<OpmetingOverzichtRaamItem> posities,
+  }) {
+    if (!regel.isGeldig || posities.isEmpty) {
+      return false;
+    }
+
+    return posities.any(
+      (artikel) => _regelPastBijArtikel(regel: regel, artikel: artikel),
+    );
+  }
+
+  static double totaalVoorRegelOverPosities({
+    required OffertePrijsVoorAllePositiesRegelModel regel,
+    required List<OpmetingOverzichtRaamItem> posities,
+  }) {
+    if (!regel.isGeldig || posities.isEmpty) {
+      return 0.0;
+    }
+
+    var totaal = 0.0;
+    for (final artikel in posities) {
+      if (!_regelPastBijArtikel(regel: regel, artikel: artikel)) {
+        continue;
+      }
+
+      final resultaat =
+          OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
+            artikel,
+            kortingToestaan: false,
+          );
+      if (resultaat == null) {
+        continue;
+      }
+
+      totaal += regel.prijsregel.eindTotaalExclBtwVoorMaten(
+        breedteMm: resultaat.breedteMm,
+        hoogteMm: resultaat.hoogteMm,
+      );
+    }
+
+    return _rondBedragAf(totaal);
+  }
+
+  static double totaalOverPosities({
+    required List<OffertePrijsVoorAllePositiesRegelModel> regels,
+    required List<OpmetingOverzichtRaamItem> posities,
+  }) {
+    if (regels.isEmpty || posities.isEmpty) {
+      return 0.0;
+    }
+
+    final totaal = regels
+        .where((regel) => regel.isGeldig)
+        .fold<double>(
+          0.0,
+          (som, regel) =>
+              som +
+              totaalVoorRegelOverPosities(regel: regel, posities: posities),
+        );
 
     return _rondBedragAf(totaal);
   }

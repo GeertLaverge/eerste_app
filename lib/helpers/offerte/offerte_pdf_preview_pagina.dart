@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: OFFERTE-IPAD-NATIVE-PRINT-A4-20260817
 // THIMACO-CONTROLE: OFFERTE-IPAD-PRINT-A4-FORCE-CUSTOM-PAPER-20260817
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
@@ -30,7 +31,6 @@ import 'mail/offerte_mail_verzend_dialog.dart';
 import 'offerte_pdf_model.dart';
 import 'offerte_pdf_service.dart';
 import 'offerte_pvc_raam_tekening_service.dart';
-import 'prijzen/offerte_prijs_voor_alle_posities_service.dart';
 import 'versies/offerte_versie_model.dart';
 import 'versies/offerte_versie_service.dart';
 
@@ -813,12 +813,6 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
       _versieService.positiesVan(versie),
     );
-    final prijsPosities =
-        OffertePrijsVoorAllePositiesService.projecteerOpPosities(
-          posities: posities,
-          regels: titelhoofd.prijsVoorAllePositiesRegels,
-        );
-
     final pvcRaamTekeningen =
         await OffertePvcRaamTekeningService.maakTekeningen(posities);
     final data = OfferteDocumentData(
@@ -832,7 +826,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       projectKleurBuiten: titelhoofd.projectKleurBuiten,
       ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
       kleurAfwijking: titelhoofd.kleurAfwijking,
-      posities: prijsPosities,
+      posities: posities,
+      prijsVoorAllePositiesRegels: titelhoofd.prijsVoorAllePositiesRegels,
       pvcRaamTekeningen: pvcRaamTekeningen,
     );
 
@@ -2444,12 +2439,6 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
     final posities = List<OpmetingOverzichtRaamItem>.unmodifiable(
       widget.posities,
     );
-    final prijsPosities =
-        OffertePrijsVoorAllePositiesService.projecteerOpPosities(
-          posities: posities,
-          regels: titelhoofd.prijsVoorAllePositiesRegels,
-        );
-
     final pvcRaamTekeningen =
         await OffertePvcRaamTekeningService.maakTekeningen(posities);
 
@@ -2464,7 +2453,8 @@ class _OffertePdfPreviewPaginaState extends State<OffertePdfPreviewPagina> {
       projectKleurBuiten: titelhoofd.projectKleurBuiten,
       ralKleurToebehoren: titelhoofd.ralKleurToebehoren,
       kleurAfwijking: titelhoofd.kleurAfwijking,
-      posities: prijsPosities,
+      posities: posities,
+      prijsVoorAllePositiesRegels: titelhoofd.prijsVoorAllePositiesRegels,
       pvcRaamTekeningen: pvcRaamTekeningen,
     );
 

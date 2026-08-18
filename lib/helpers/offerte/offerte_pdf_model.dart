@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFMODEL-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-IN-PDF-DATA-20260809-2030
@@ -8,6 +9,8 @@ import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/project/opmeting_project_titelhoofd_model.dart';
 import 'prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import 'prijzen/offerte_berekening_resultaat.dart';
+import 'prijzen/offerte_prijs_voor_alle_posities_regel_model.dart';
+import 'prijzen/offerte_prijs_voor_alle_posities_service.dart';
 import 'prijzen/offerte_prijsregel_weergave_service.dart';
 import 'prijzen/offerte_toegepaste_prijsregel_model.dart';
 
@@ -91,6 +94,20 @@ class OfferteSamengevoegdeArtikelPrijsregel {
       toonAfzonderlijkePrijs || toonOmschrijvingZonderPrijs || toonAlsOptie;
 }
 
+class OffertePrijsVoorAllePositiesPdfRegel {
+  const OffertePrijsVoorAllePositiesPdfRegel({
+    required this.id,
+    required this.omschrijving,
+    required this.totaalExclBtw,
+    required this.toonPrijs,
+  });
+
+  final String id;
+  final String omschrijving;
+  final double totaalExclBtw;
+  final bool toonPrijs;
+}
+
 class OfferteDocumentData {
   OfferteDocumentData({
     required this.klant,
@@ -104,8 +121,14 @@ class OfferteDocumentData {
     this.ralKleurToebehoren = '',
     this.kleurAfwijking = '',
     String kortingOmschrijving = 'Korting',
+    List<OffertePrijsVoorAllePositiesRegelModel> prijsVoorAllePositiesRegels =
+        const <OffertePrijsVoorAllePositiesRegelModel>[],
     Map<String, Uint8List> pvcRaamTekeningen = const <String, Uint8List>{},
-  }) : pvcRaamTekeningen = Map<String, Uint8List>.unmodifiable(
+  }) : prijsVoorAllePositiesRegels =
+           List<OffertePrijsVoorAllePositiesRegelModel>.unmodifiable(
+             prijsVoorAllePositiesRegels,
+           ),
+       pvcRaamTekeningen = Map<String, Uint8List>.unmodifiable(
          pvcRaamTekeningen,
        ),
        kortingOmschrijving = kortingOmschrijving.trim().isEmpty
@@ -123,6 +146,8 @@ class OfferteDocumentData {
   final String ralKleurToebehoren;
   final String kleurAfwijking;
   final List<OpmetingOverzichtRaamItem> posities;
+  final List<OffertePrijsVoorAllePositiesRegelModel>
+  prijsVoorAllePositiesRegels;
   final Map<String, Uint8List> pvcRaamTekeningen;
 
   Uint8List? pvcRaamTekeningVoor(OpmetingOverzichtRaamItem positie) {
@@ -444,6 +469,54 @@ class OfferteDocumentData {
   bool get heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte =>
       algemeneArtikelPrijsregelsInbegrepenInOfferte.isNotEmpty;
 
+  List<OffertePrijsVoorAllePositiesPdfRegel>
+  get prijsVoorAllePositiesRegelsVoorOfferte {
+    final regels =
+        prijsVoorAllePositiesRegels
+            .where(
+              (regel) =>
+                  regel.isGeldig &&
+                  regel.prijsregel.toonOmschrijvingOpOfferte &&
+                  OffertePrijsVoorAllePositiesService.heeftToepassingOpPosities(
+                    regel: regel,
+                    posities: hoofdoffertePosities,
+                  ),
+            )
+            .toList(growable: true)
+          ..sort((eerste, tweede) {
+            final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+            if (volgorde != 0) {
+              return volgorde;
+            }
+            return eerste.id.compareTo(tweede.id);
+          });
+
+    return List<OffertePrijsVoorAllePositiesPdfRegel>.unmodifiable(
+      regels.map((regel) {
+        return OffertePrijsVoorAllePositiesPdfRegel(
+          id: regel.id,
+          omschrijving: regel.omschrijving.trim(),
+          totaalExclBtw:
+              OffertePrijsVoorAllePositiesService.totaalVoorRegelOverPosities(
+                regel: regel,
+                posities: hoofdoffertePosities,
+              ),
+          toonPrijs: regel.prijsregel.toonPrijsOpOfferte,
+        );
+      }),
+    );
+  }
+
+  bool get heeftPrijsVoorAllePositiesRegelsVoorOfferte =>
+      prijsVoorAllePositiesRegelsVoorOfferte.isNotEmpty;
+
+  double get prijsVoorAllePositiesTotaalExclBtw {
+    return OffertePrijsVoorAllePositiesService.totaalOverPosities(
+      regels: prijsVoorAllePositiesRegels,
+      posities: hoofdoffertePosities,
+    );
+  }
+
   bool get btwIsVerlegd => btwTarief.trim().toLowerCase() == 'btw verlegd';
 
   double get btwPercentage {
@@ -474,7 +547,9 @@ class OfferteDocumentData {
   }
 
   double get totaalVoorKortingExclBtw {
-    return _rondBedragAf(artikelTotaalVoorKortingExclBtw);
+    return _rondBedragAf(
+      artikelTotaalVoorKortingExclBtw + prijsVoorAllePositiesTotaalExclBtw,
+    );
   }
 
   double get totaalExclusiefBtw {

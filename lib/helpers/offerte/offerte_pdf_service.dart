@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFSERVICE-ZONDER-PROJECTPRIJS-20260814
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-ONDER-OFFERTENUMMER-20260809-2030
@@ -790,8 +791,12 @@ class OffertePdfService {
               _bouwLossePrijsOpties(data),
               pw.SizedBox(height: 10),
             ],
+            if (data.heeftPrijsVoorAllePositiesRegelsVoorOfferte) ...<
+              pw.Widget
+            >[_bouwPrijsVoorAllePosities(data), pw.SizedBox(height: 10)],
             if (data.heeftAlgemeneArtikelPrijsregelsInbegrepenInOfferte ||
-                data.heeftLossePrijsOpties)
+                data.heeftLossePrijsOpties ||
+                data.heeftPrijsVoorAllePositiesRegelsVoorOfferte)
               pw.SizedBox(height: 4),
           ],
           _bouwPaginaVoet(
@@ -1439,12 +1444,17 @@ class OffertePdfService {
     final aantalAlgemeneRegels =
         data.algemeneArtikelPrijsregelsInbegrepenInOfferte.length;
     final aantalLossePrijsOpties = data.lossePrijsOpties.length;
+    final aantalPrijsVoorAllePositiesRegels =
+        data.prijsVoorAllePositiesRegelsVoorOfferte.length;
     var reserve = _basisEindBerekeningReserve;
     if (aantalAlgemeneRegels > 0) {
       reserve += 38.0 + (aantalAlgemeneRegels * 25.0);
     }
     if (aantalLossePrijsOpties > 0) {
       reserve += 38.0 + (aantalLossePrijsOpties * 24.0);
+    }
+    if (aantalPrijsVoorAllePositiesRegels > 0) {
+      reserve += 38.0 + (aantalPrijsVoorAllePositiesRegels * 25.0);
     }
     return reserve;
   }
@@ -1519,6 +1529,69 @@ class OffertePdfService {
           ),
         ),
       ],
+    );
+  }
+
+  static pw.Widget _bouwPrijsVoorAllePosities(OfferteDocumentData data) {
+    final regels = data.prijsVoorAllePositiesRegelsVoorOfferte;
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        color: const PdfColor.fromInt(0xFFF9FAFB),
+        borderRadius: pw.BorderRadius.circular(8),
+        border: pw.Border.all(color: rand, width: 0.9),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: <pw.Widget>[
+          pw.Container(
+            padding: const pw.EdgeInsets.fromLTRB(12, 8, 12, 7),
+            decoration: pw.BoxDecoration(
+              color: const PdfColor.fromInt(0xFFE7F6EC),
+              borderRadius: pw.BorderRadius.circular(7),
+            ),
+            child: pw.Text(
+              'Prijs voor alle posities',
+              style: pw.TextStyle(
+                color: tekstDonker,
+                fontSize: 8.6,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ),
+          for (var index = 0; index < regels.length; index++) ...<pw.Widget>[
+            if (index > 0) pw.Container(height: 0.7, color: rand),
+            pw.Padding(
+              padding: const pw.EdgeInsets.fromLTRB(12, 7, 12, 7),
+              child: pw.Row(
+                children: <pw.Widget>[
+                  pw.Expanded(
+                    child: pw.Text(
+                      regels[index].omschrijving,
+                      style: const pw.TextStyle(
+                        color: tekstGrijs,
+                        fontSize: 8.5,
+                      ),
+                    ),
+                  ),
+                  if (regels[index].toonPrijs) ...<pw.Widget>[
+                    pw.SizedBox(width: 18),
+                    pw.Text(
+                      _formatteerEuro(regels[index].totaalExclBtw),
+                      textAlign: pw.TextAlign.right,
+                      style: pw.TextStyle(
+                        color: tekstDonker,
+                        fontSize: 8.6,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

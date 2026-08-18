@@ -1,6 +1,6 @@
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-NATIVE-PRIVACY-SCHILD-20260806
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-DAGELIJKSE-IMAP-20260802
-// THIMACO-CONTROLE: NATIVE-IOS-A4-PRINT-PLUGIN-REGISTRAR-20260817
+// THIMACO-CONTROLE: NATIVE-IOS-A4-PAPIER-DIAGNOSE-20260818
 
 import Flutter
 import MessageUI
@@ -21,6 +21,7 @@ import UIKit
 
   private var mailResultaat: FlutterResult?
   private var nativePrintKanaal: FlutterMethodChannel?
+  private var laatstePapierDiagnose: String?
   private var financieelSchermActief = false
 
   override func application(
@@ -326,6 +327,8 @@ import UIKit
     }
 
     let toonPrintVenster = {
+      self.laatstePapierDiagnose = nil
+
       let controller = UIPrintInteractionController.shared
       let printInfo = UIPrintInfo(dictionary: nil)
 
@@ -352,7 +355,7 @@ import UIKit
         from: anker,
         in: presentator.view,
         animated: true
-      ) { _, voltooid, fout in
+      ) { [weak self] _, voltooid, fout in
         if let fout = fout {
           result(
             FlutterError(
@@ -365,6 +368,14 @@ import UIKit
         }
 
         result(voltooid ? "printed" : "cancelled")
+
+        guard let self = self, let diagnose = self.laatstePapierDiagnose else {
+          return
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+          self?.toonPapierDiagnose(diagnose)
+        }
       }
 
       if !getoond {
@@ -389,10 +400,88 @@ import UIKit
     _ printInteractionController: UIPrintInteractionController,
     choosePaper paperList: [UIPrintPaper]
   ) -> UIPrintPaper {
-    return UIPrintPaper.bestPaper(
-      forPageSize: Self.a4PaginaGrootte,
+    let a4 = Self.a4PaginaGrootte
+
+    func verschilMetA4(_ papier: UIPrintPaper) -> CGFloat {
+      let formaat = papier.paperSize
+      let recht = abs(formaat.width - a4.width) + abs(formaat.height - a4.height)
+      let gedraaid = abs(formaat.width - a4.height) + abs(formaat.height - a4.width)
+      return min(recht, gedraaid)
+    }
+
+    // Kies A4 alleen wanneer iOS/het printerstuurprogramma werkelijk een
+    // A4-formaat in paperList aanbiedt. Tolerantie 2 punten (ongeveer 0,7 mm).
+    let exactA4 = paperList
+      .map { ($0, verschilMetA4($0)) }
+      .filter { $0.1 <= 2.0 }
+      .min { $0.1 < $1.1 }?
+      .0
+
+    let gekozen = exactA4 ?? UIPrintPaper.bestPaper(
+      forPageSize: a4,
       withPapersFrom: paperList
     )
+
+    laatstePapierDiagnose = maakPapierDiagnose(
+      paperList: paperList,
+      gekozen: gekozen,
+      exactA4Gevonden: exactA4 != nil
+    )
+
+    return gekozen
+  }
+
+  private func maakPapierDiagnose(
+    paperList: [UIPrintPaper],
+    gekozen: UIPrintPaper,
+    exactA4Gevonden: Bool
+  ) -> String {
+    func mm(_ punten: CGFloat) -> Double {
+      return Double(punten) * 25.4 / 72.0
+    }
+
+    func formaat(_ grootte: CGSize) -> String {
+      return String(format: "%.1f × %.1f mm", mm(grootte.width), mm(grootte.height))
+    }
+
+    func rect(_ rechthoek: CGRect) -> String {
+      return String(
+        format: "%.1f × %.1f mm; start %.1f / %.1f mm",
+        mm(rechthoek.width),
+        mm(rechthoek.height),
+        mm(rechthoek.origin.x),
+        mm(rechthoek.origin.y)
+      )
+    }
+
+    var regels: [String] = []
+    regels.append("Aantal formaten van iOS: \(paperList.count)")
+    regels.append(exactA4Gevonden ? "EXACT A4 GEVONDEN: JA" : "EXACT A4 GEVONDEN: NEE")
+    regels.append("Gekozen: \(formaat(gekozen.paperSize))")
+    regels.append("")
+
+    for (index, papier) in paperList.enumerated() {
+      regels.append(
+        "\(index + 1). \(formaat(papier.paperSize)) | afdrukbaar \(rect(papier.printableRect))"
+      )
+    }
+
+    return regels.joined(separator: "\n")
+  }
+
+  private func toonPapierDiagnose(_ tekst: String) {
+    guard let presentator = bovensteViewController() else {
+      return
+    }
+
+    let melding = UIAlertController(
+      title: "AirPrint papierdiagnose",
+      message: tekst,
+      preferredStyle: .alert
+    )
+
+    melding.addAction(UIAlertAction(title: "OK", style: .default))
+    presentator.present(melding, animated: true)
   }
 
   private func openMailComposer(
