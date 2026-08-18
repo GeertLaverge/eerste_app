@@ -1,4 +1,5 @@
-// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-MAATEENHEDEN-20260818
+// THIMACO-BESTAND-VERSIE: 2026-08-18 14:46
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-DIRECTE-ARTIKELMATEN-20260818-1446
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-CENTRALE-BEREKENING-20260815
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
@@ -128,15 +129,6 @@ class OffertePrijsVoorAllePositiesService {
     var totaal = 0.0;
     for (final artikel in posities) {
       if (!_regelPastBijArtikel(regel: regel, artikel: artikel)) {
-        continue;
-      }
-
-      final resultaat =
-          OfferteArtikelPrijsKoppelingService.resultaatVoorArtikel(
-            artikel,
-            kortingToestaan: false,
-          );
-      if (resultaat == null) {
         continue;
       }
 
