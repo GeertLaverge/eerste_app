@@ -1,10 +1,120 @@
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-NATIVE-PRIVACY-SCHILD-20260806
 // THIMACO-CONTROLE: NATIVE-IOS-MAILCOMPOSER-DAGELIJKSE-IMAP-20260802
 // THIMACO-CONTROLE: NATIVE-IOS-A4-PAPIER-DIAGNOSE-20260818
+// THIMACO-CONTROLE: NATIVE-IOS-A4-PDF-PAGE-RENDERER-20260818
 
+import CoreGraphics
 import Flutter
 import MessageUI
 import UIKit
+
+
+/// Tekent de bestaande A4-PDF zelf pagina per pagina in de iOS-printcontext.
+///
+/// Belangrijk: sommige AirPrint-combinaties bieden aan Thimaco alleen US Legal
+/// aan, ook al is de bron-PDF A4. Daarom beperken we de tekening bewust tot de
+/// eerste A4-zone van het gekozen papier en tot het werkelijk afdrukbare vlak.
+/// Zo kan een Legal-printcontext de A4-inhoud niet meer onderaan buiten het
+/// fysieke A4-vel plaatsen.
+final class ThimacoA4PdfPrintRenderer: UIPrintPageRenderer {
+  private let document: CGPDFDocument
+  private let a4PaginaGrootte: CGSize
+  private let veiligheidsMarge: CGFloat
+
+  init?(
+    pdfData: Data,
+    a4PaginaGrootte: CGSize,
+    veiligheidsMarge: CGFloat = 6.0
+  ) {
+    guard
+      let provider = CGDataProvider(data: pdfData as CFData),
+      let document = CGPDFDocument(provider),
+      document.numberOfPages > 0
+    else {
+      return nil
+    }
+
+    self.document = document
+    self.a4PaginaGrootte = a4PaginaGrootte
+    self.veiligheidsMarge = max(0.0, veiligheidsMarge)
+    super.init()
+  }
+
+  override var numberOfPages: Int {
+    document.numberOfPages
+  }
+
+  override func drawPage(at pageIndex: Int, in printableRect: CGRect) {
+    guard
+      pageIndex >= 0,
+      pageIndex < document.numberOfPages,
+      let pagina = document.page(at: pageIndex + 1),
+      let context = UIGraphicsGetCurrentContext()
+    else {
+      return
+    }
+
+    let actiefPapier = paperRect.isEmpty
+      ? CGRect(origin: .zero, size: a4PaginaGrootte)
+      : paperRect
+
+    // A4 wordt aan de boven-/linkerzijde van de door iOS gekozen pagina
+    // verankerd. Bij US Legal gebruiken we dus bewust niet de extra 59 mm
+    // hoogte die onder een fysiek A4-vel zou uitsteken.
+    let a4Zone = CGRect(
+      x: actiefPapier.minX,
+      y: actiefPapier.minY,
+      width: min(a4PaginaGrootte.width, actiefPapier.width),
+      height: min(a4PaginaGrootte.height, actiefPapier.height)
+    )
+
+    var doelRect = a4Zone.intersection(printableRect)
+    if doelRect.isNull || doelRect.isEmpty {
+      doelRect = printableRect
+    }
+
+    // Kleine extra veiligheidsmarge bovenop de hardwaremarge van de printer.
+    // De PDF wordt proportioneel geschaald; er wordt niets afgesneden.
+    let maxInsetX = max(0.0, (doelRect.width - 1.0) / 2.0)
+    let maxInsetY = max(0.0, (doelRect.height - 1.0) / 2.0)
+    let inset = min(veiligheidsMarge, min(maxInsetX, maxInsetY))
+    doelRect = doelRect.insetBy(dx: inset, dy: inset)
+
+    guard doelRect.width > 1.0, doelRect.height > 1.0 else {
+      return
+    }
+
+    context.saveGState()
+
+    // UIKit gebruikt hier een boven-links georiënteerd paginastelsel; een
+    // CGPDFPage wordt door Quartz in een onder-links georiënteerd stelsel
+    // getekend. Spiegel daarom één keer rond de volledige papierhoogte.
+    let spiegelAs = actiefPapier.minY + actiefPapier.maxY
+    context.translateBy(x: 0.0, y: spiegelAs)
+    context.scaleBy(x: 1.0, y: -1.0)
+
+    let quartzDoelRect = CGRect(
+      x: doelRect.minX,
+      y: spiegelAs - doelRect.maxY,
+      width: doelRect.width,
+      height: doelRect.height
+    )
+
+    context.clip(to: quartzDoelRect)
+
+    let transformatie = pagina.getDrawingTransform(
+      .mediaBox,
+      rect: quartzDoelRect,
+      rotate: 0,
+      preserveAspectRatio: true
+    )
+
+    context.concatenate(transformatie)
+    context.clip(to: pagina.getBoxRect(.mediaBox))
+    context.drawPDFPage(pagina)
+    context.restoreGState()
+  }
+}
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate,
@@ -311,6 +421,20 @@ import UIKit
       return
     }
 
+    guard let renderer = ThimacoA4PdfPrintRenderer(
+      pdfData: pdfData,
+      a4PaginaGrootte: Self.a4PaginaGrootte
+    ) else {
+      result(
+        FlutterError(
+          code: "PRINT_PDF_RENDERER_MISLUKT",
+          message: "De A4-PDF kon niet door de iPad-renderer worden geopend.",
+          details: nil
+        )
+      )
+      return
+    }
+
     let bestandsnaam =
       (argumenten["bestandsnaam"] as? String)?
       .trimmingCharacters(in: .whitespacesAndNewlines) ?? "Thimaco_offerte.pdf"
@@ -338,7 +462,16 @@ import UIKit
 
       controller.delegate = self
       controller.printInfo = printInfo
-      controller.printingItem = pdfData as NSData
+
+      // Niet langer `printingItem = pdfData`: Apple behandelt printingItem als
+      // een kant-en-klaar printobject. Met printPageRenderer tekenen we de A4-
+      // pagina's zelf en houden we de inhoud ook bij een Legal-context binnen
+      // een fysiek A4-veilige zone.
+      controller.printingItem = nil
+      controller.printingItems = nil
+      controller.printFormatter = nil
+      controller.printPageRenderer = renderer
+
       controller.showsPageRange = true
       controller.showsNumberOfCopies = true
       controller.showsPaperOrientation = false
@@ -455,6 +588,7 @@ import UIKit
     }
 
     var regels: [String] = []
+    regels.append("Renderer: UIPrintPageRenderer · A4-veilige zone")
     regels.append("Aantal formaten van iOS: \(paperList.count)")
     regels.append(exactA4Gevonden ? "EXACT A4 GEVONDEN: JA" : "EXACT A4 GEVONDEN: NEE")
     regels.append("Gekozen: \(formaat(gekozen.paperSize))")
