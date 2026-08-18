@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-MAATEENHEDEN-20260818
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-CENTRALE-BEREKENING-20260815
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
@@ -139,9 +140,19 @@ class OffertePrijsVoorAllePositiesService {
         continue;
       }
 
+      // Gebruik voor projectbrede prijsregels exact dezelfde artikelmaten als
+      // het overzicht. Sommige prijsresultaten bevatten voor specifieke
+      // artikeltypes geen bruikbare maatvelden, terwijl de centrale
+      // artikelkoppeling de actuele breedte/hoogte wel correct kent.
+      final breedteMm =
+          OfferteArtikelPrijsKoppelingService.breedteMmVoorArtikel(artikel);
+      final hoogteMm = OfferteArtikelPrijsKoppelingService.hoogteMmVoorArtikel(
+        artikel,
+      );
+
       totaal += regel.prijsregel.eindTotaalExclBtwVoorMaten(
-        breedteMm: resultaat.breedteMm,
-        hoogteMm: resultaat.hoogteMm,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
       );
     }
 

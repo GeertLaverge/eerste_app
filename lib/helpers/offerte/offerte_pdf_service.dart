@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-TITEL-ORANJE-20260818
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
 // THIMACO-CONTROLE: OFFERTE-PDF-KLEURAFWIJKING-VOORBLAD-20260816
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-PDFSERVICE-ZONDER-PROJECTPRIJS-20260814
@@ -1547,7 +1548,7 @@ class OffertePdfService {
           pw.Container(
             padding: const pw.EdgeInsets.fromLTRB(12, 8, 12, 7),
             decoration: pw.BoxDecoration(
-              color: const PdfColor.fromInt(0xFFE7F6EC),
+              color: const PdfColor.fromInt(0xFFFFF7ED),
               borderRadius: pw.BorderRadius.circular(7),
             ),
             child: pw.Text(
