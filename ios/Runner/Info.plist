@@ -56,6 +56,14 @@
 
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+<dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+</dict>
+
+<key>NSLocalNetworkUsageDescription</key>
+<string>Thimaco gebruikt het lokale netwerk om tijdens tests verbinding te maken met de Thimaco-website op deze computer.</string>
 
 	<key>NSCameraUsageDescription</key>
 	<string>Thimaco gebruikt de camera om foto's te nemen voor werfinstructies en klantendossiers.</string>
