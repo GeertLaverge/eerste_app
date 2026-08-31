@@ -12,6 +12,7 @@ import '../../helpers/sync/sync_navigatie_helper.dart';
 import '../../paginas/magazijn/magazijn_pagina.dart';
 import '../../paginas/notities_bureau_pagina.dart';
 import '../../paginas/opmeting_pagina.dart' as opmeting;
+import '../../paginas/website_showroom_pagina.dart';
 
 class HomeZijMenu extends StatefulWidget {
   final bool compact;
@@ -146,6 +147,11 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                     'Bibliotheek',
                     Icons.local_library_outlined,
                   ),
+                  _menuKnop(
+                    context,
+                    'Website &\nshowroom',
+                    Icons.language_outlined,
+                  ),
                 ],
               ),
             ),
@@ -263,6 +269,16 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => const opmeting.OpmetingPagina(),
+                      ),
+                    );
+                    return;
+                  }
+
+                  if (titel == 'Website &\nshowroom') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const WebsiteShowroomPagina(),
                       ),
                     );
                     return;
