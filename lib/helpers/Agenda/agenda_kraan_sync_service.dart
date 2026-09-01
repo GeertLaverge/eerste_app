@@ -15,6 +15,56 @@ class AgendaKraanSyncService {
     return zelfdeKlantNr || (itemNaam.isNotEmpty && itemNaam == ficheNaam);
   }
 
+  static bool _isGeneriekePlanningTitel(String waarde) {
+    final titel = waarde.trim().toLowerCase();
+
+    return titel.isEmpty ||
+        titel == 'planning' ||
+        titel == 'opvolging' ||
+        titel == 'nadienst' ||
+        titel == 'afspraak' ||
+        titel == 'klant';
+  }
+
+  static bool _kraanHoortBijKlant({
+    required AgendaItem kraanItem,
+    required AgendaItem klantItem,
+  }) {
+    final klantNr = klantItem.klantNr.trim();
+    final kraanKlantNr = kraanItem.klantNr.trim();
+
+    if (klantNr.isNotEmpty && kraanKlantNr.isNotEmpty) {
+      return klantNr == kraanKlantNr;
+    }
+
+    final klantNaam = klantItem.naamKlant.trim().toLowerCase();
+    final klantTitel = klantItem.titel.trim().toLowerCase();
+    final kraanNaam = kraanItem.naamKlant.trim().toLowerCase();
+    final kraanTitel = kraanItem.titel.trim().toLowerCase();
+
+    if (klantNaam.isNotEmpty) {
+      if (kraanNaam == klantNaam) {
+        return true;
+      }
+
+      if (kraanTitel.isNotEmpty && kraanTitel.contains(klantNaam)) {
+        return true;
+      }
+    }
+
+    if (!_isGeneriekePlanningTitel(klantTitel)) {
+      if (kraanNaam == klantTitel) {
+        return true;
+      }
+
+      if (kraanTitel.isNotEmpty && kraanTitel.contains(klantTitel)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   static Future<void> updateFicheNaKraanAanpassing({
     required DateTime dag,
     required AgendaItem kraanItem,
@@ -83,57 +133,47 @@ class AgendaKraanSyncService {
       return itemsPerDag;
     }
 
-    final klantNaam = klantItem.naamKlant.trim().toLowerCase();
-    final klantTitel = klantItem.titel.trim().toLowerCase();
-
     AgendaItem? kraanItem;
     DateTime? kraanDag;
 
-    itemsPerDag.forEach((datumKey, items) {
-      for (final item in items) {
+    zoekKraan:
+    for (final entry in itemsPerDag.entries) {
+      final datum = DateTime.tryParse(entry.key);
+      if (datum == null) {
+        continue;
+      }
+
+      for (final item in entry.value) {
         if (item.isVerwijderd) continue;
         if (item.type != 'kraan') continue;
 
-        final itemNaam = item.naamKlant.trim().toLowerCase();
-        final itemTitel = item.titel.trim().toLowerCase();
-
-        final zelfdeKlant =
-            itemNaam == klantNaam ||
-            itemNaam == klantTitel ||
-            itemTitel.contains(klantNaam) ||
-            itemTitel.contains(klantTitel);
-
-        if (zelfdeKlant) {
-          kraanItem = item;
-          kraanDag = DateTime.tryParse(datumKey);
-          return;
+        if (!_kraanHoortBijKlant(kraanItem: item, klantItem: klantItem)) {
+          continue;
         }
+
+        kraanItem = item;
+        kraanDag = datum;
+        break zoekKraan;
       }
-    });
+    }
 
     if (kraanItem == null || kraanDag == null) {
       return itemsPerDag;
     }
 
-    final eerstVerwijderd = await AgendaRepository.verwijder(
-      dag: kraanDag!,
-      item: kraanItem!,
+    // De kraan wordt als één echte verplaatsing verwerkt.
+    // Er is dus geen opgeslagen tussentoestand meer waarin de kraan al
+    // verwijderd is maar nog niet op de nieuwe dag staat.
+    final nieuweItems = await AgendaRepository.verplaats(
+      oudeDag: kraanDag,
+      nieuweDag: nieuweDag,
+      item: kraanItem,
       itemsPerDag: itemsPerDag,
-    );
-
-    final nieuwKraanItem = kraanItem!.copyWith(
-      updatedAt: DateTime.now().toIso8601String(),
-    );
-
-    final nieuweItems = await AgendaRepository.voegToe(
-      dag: nieuweDag,
-      item: nieuwKraanItem,
-      itemsPerDag: eerstVerwijderd,
     );
 
     await updateFicheNaKraanAanpassing(
       dag: nieuweDag,
-      kraanItem: nieuwKraanItem,
+      kraanItem: kraanItem,
     );
 
     return nieuweItems;

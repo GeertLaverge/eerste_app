@@ -37,7 +37,7 @@ class AgendaSleepService {
   }) {
     final kopieItem = item.copyWith(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
-      updatedAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toUtc().toIso8601String(),
       deletedAt: '',
     );
 

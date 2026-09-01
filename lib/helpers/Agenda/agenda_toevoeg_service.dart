@@ -31,15 +31,16 @@ class AgendaToevoegService {
 
     final bestaandeItems = List<AgendaItem>.from(kopie[datumKey] ?? []);
 
-    final nu = DateTime.now().toIso8601String();
+    final nu = DateTime.now().toUtc().toIso8601String();
 
     final itemMetSync = nieuwItem.copyWith(
       id: nieuwItem.id.trim().isNotEmpty
           ? nieuwItem.id
           : DateTime.now().microsecondsSinceEpoch.toString(),
-      updatedAt: nieuwItem.updatedAt.trim().isNotEmpty
-          ? nieuwItem.updatedAt
-          : nu,
+      // Iedere echte toevoeging is een nieuwe lokale agenda-mutatie.
+      // Een eventueel oude updatedAt uit bijvoorbeeld "in te plannen"
+      // mag daarom niet worden hergebruikt.
+      updatedAt: nu,
       deletedAt: '',
     );
 

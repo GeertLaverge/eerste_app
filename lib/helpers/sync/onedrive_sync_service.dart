@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ONEDRIVE-UPLOAD-DOWNLOAD-GESERIALISEERD-20260901
 // THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-BIBLIOTHEEK-ONEDRIVE-SYNC-20260815
 // THIMACO-CONTROLE: LEGACY-PRIJS-PROFIELEN-NIET-MEER-SYNCEN-20260815
 // THIMACO-CONTROLE: VASTE-INZETHOR-STANDAARDPRIJS-EIGEN-ONEDRIVE-SYNC-20260815
@@ -12,6 +13,7 @@
 // THIMACO-CONTROLE: OPMEETINSTELLINGEN-ONEDRIVE-SYNC-FASE2-20260805
 // THIMACO-CONTROLE: MAGAZIJN-ONEDRIVE-SYNC-COMPILE-FIX-20260805
 // THIMACO-CONTROLE: PLOOIWERKEN-INSTELLINGEN-ONEDRIVE-20260728
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -158,6 +160,28 @@ class OneDriveSyncService {
   static bool _downloadBezig = false;
   static bool _fotoDownloadBezig = false;
 
+  // Upload en download mogen nooit tegelijk dezelfde lokale/cloudgegevens
+  // lezen, mergen en terugschrijven. Alle gewone OneDrive-syncbewerkingen
+  // lopen daarom door één centrale wachtrij.
+  static Future<void> _syncWachtrij = Future<void>.value();
+
+  static Future<T> _voerSyncGeserialiseerdUit<T>(
+    Future<T> Function() taak,
+  ) {
+    final completer = Completer<T>();
+
+    _syncWachtrij = _syncWachtrij.then((_) async {
+      try {
+        final resultaat = await taak();
+        completer.complete(resultaat);
+      } catch (fout, stackTrace) {
+        completer.completeError(fout, stackTrace);
+      }
+    });
+
+    return completer.future;
+  }
+
   static String laatsteSyncActie = 'Nog geen sync uitgevoerd';
 
   static Future<void> registreerLokaleWijziging() async {
@@ -203,8 +227,10 @@ class OneDriveSyncService {
       _backupBezig = true;
 
       try {
-        resultaat = await _uploadBackupZonderVergrendeling(
-          uploadFotos: uploadFotos,
+        resultaat = await _voerSyncGeserialiseerdUit(
+          () => _uploadBackupZonderVergrendeling(
+            uploadFotos: uploadFotos,
+          ),
         );
       } finally {
         _backupBezig = false;
@@ -1562,6 +1588,22 @@ class OneDriveSyncService {
     _downloadBezig = true;
 
     try {
+      return await _voerSyncGeserialiseerdUit(
+        () => _downloadBackupMetTokenZonderVergrendeling(
+          token,
+          downloadFotos: downloadFotos,
+        ),
+      );
+    } finally {
+      _downloadBezig = false;
+    }
+  }
+
+  Future<String> _downloadBackupMetTokenZonderVergrendeling(
+    String token, {
+    bool downloadFotos = false,
+  }) async {
+    try {
       if (token.startsWith('FOUT')) {
         return token;
       }
@@ -2312,8 +2354,6 @@ class OneDriveSyncService {
       return downloadFotos ? 'IMPORT_OK' : 'IMPORT_OK_ZONDER_FOTOS';
     } catch (e) {
       return 'IMPORT_EXCEPTION: $e';
-    } finally {
-      _downloadBezig = false;
     }
   }
 

@@ -389,6 +389,27 @@ class AppStorage {
   // NIEUWE AGENDA ITEMS
   // ------------------------------------------------------------
 
+  // THIMACO-CONTROLE: AGENDA-ATOMAIRE-OPSLAG-EN-SYNC-MERGE-20260901
+  // Alle agenda-reads en -writes lopen door dezelfde wachtrij. Daardoor kan
+  // een vertraagde lokale save, upload of download nooit tegelijk een oudere
+  // volledige agenda-snapshot over een nieuwere lokale toestand schrijven.
+  static Future<void> _agendaWachtrij = Future<void>.value();
+
+  static Future<T> _voerAgendaActieGeserialiseerdUit<T>(
+    Future<T> Function() actie,
+  ) {
+    final taak = _agendaWachtrij.then<T>((_) => actie());
+
+    // De wachtrij zelf blijft altijd bruikbaar, ook wanneer één concrete
+    // agenda-actie een fout teruggeeft aan haar aanroeper.
+    _agendaWachtrij = taak.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+
+    return taak;
+  }
+
   static Map<String, List<AgendaItem>> _decodeAgendaItems(String? jsonString) {
     if (jsonString == null || jsonString.isEmpty) {
       return {};
@@ -416,10 +437,12 @@ class AppStorage {
   }
 
   static Future<Map<String, List<AgendaItem>>>
-  laadAgendaItemsNieuwVoorSync() async {
-    final prefs = await openBox();
+  laadAgendaItemsNieuwVoorSync() {
+    return _voerAgendaActieGeserialiseerdUit(() async {
+      final prefs = await openBox();
 
-    return _decodeAgendaItems(prefs.getString(_agendaItemsNieuwKey));
+      return _decodeAgendaItems(prefs.getString(_agendaItemsNieuwKey));
+    });
   }
 
   static Future<Map<String, List<AgendaItem>>> laadAgendaItemsNieuw() async {
@@ -443,32 +466,62 @@ class AppStorage {
   static Future<void> bewaarAgendaItemsNieuw(
     Map<String, List<AgendaItem>> itemsPerDag,
   ) async {
-    final prefs = await openBox();
-    final opgeslagenItems = _decodeAgendaItems(
-      prefs.getString(_agendaItemsNieuwKey),
-    );
-    final itemsMetTombstones = SyncMergeService.behoudAgendaTombstones(
-      actueleItems: itemsPerDag,
-      opgeslagenItems: opgeslagenItems,
-    );
+    await _voerAgendaActieGeserialiseerdUit<void>(() async {
+      final prefs = await openBox();
+      final opgeslagenItems = _decodeAgendaItems(
+        prefs.getString(_agendaItemsNieuwKey),
+      );
 
-    await prefs.setString(
-      _agendaItemsNieuwKey,
-      encodeAgendaItemsVoorSync(itemsMetTombstones),
-    );
+      final itemsMetTombstones = SyncMergeService.behoudAgendaTombstones(
+        actueleItems: itemsPerDag,
+        opgeslagenItems: opgeslagenItems,
+      );
 
+      // Een aanroeper kan nog met een iets oudere UI-snapshot werken. Merge
+      // daarom vlak voor de fysieke save nogmaals met de allernieuwste lokale
+      // toestand. Per sync-ID wint de nieuwste wijziging. Bij gelijke datum
+      // krijgt de aangeleverde lokale mutatie voorrang.
+      final samengevoegd = SyncMergeService.mergeAgendaMap(
+        itemsMetTombstones,
+        opgeslagenItems,
+      );
+
+      await prefs.setString(
+        _agendaItemsNieuwKey,
+        encodeAgendaItemsVoorSync(samengevoegd),
+      );
+    });
+
+    // Pas nadat de fysieke lokale save volledig klaar is, registreren we de
+    // wijziging en starten we de lichte OneDrive-upload. De agenda-lock wordt
+    // hierbij niet vastgehouden, zodat de sync later veilig opnieuw kan lezen.
     await _syncBackup();
   }
 
   static Future<void> bewaarAgendaItemsNieuwVoorSync(
     Map<String, List<AgendaItem>> itemsPerDag,
-  ) async {
-    final prefs = await openBox();
+  ) {
+    return _voerAgendaActieGeserialiseerdUit<void>(() async {
+      final prefs = await openBox();
 
-    await prefs.setString(
-      _agendaItemsNieuwKey,
-      encodeAgendaItemsVoorSync(itemsPerDag),
-    );
+      // De sync kan minuten eerder een mergedAgenda hebben berekend. Lees vlak
+      // voor de write opnieuw de actuele lokale agenda en merge nogmaals. Zo
+      // kan een afspraak die tijdens een upload/download werd ingepland nooit
+      // meer door die oudere sync-snapshot verdwijnen.
+      final laatsteLokaleItems = _decodeAgendaItems(
+        prefs.getString(_agendaItemsNieuwKey),
+      );
+
+      final veiligSamengevoegd = SyncMergeService.mergeAgendaMap(
+        laatsteLokaleItems,
+        itemsPerDag,
+      );
+
+      await prefs.setString(
+        _agendaItemsNieuwKey,
+        encodeAgendaItemsVoorSync(veiligSamengevoegd),
+      );
+    });
   }
 
   // ------------------------------------------------------------

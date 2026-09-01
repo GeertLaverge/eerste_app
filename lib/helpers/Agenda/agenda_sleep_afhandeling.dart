@@ -235,16 +235,14 @@ class AgendaSleepAfhandeling {
       );
     }
 
-    final eerstVerwijderd = await AgendaRepository.verwijder(
-      dag: oudeDag,
-      item: item,
-      itemsPerDag: itemsPerDag,
-    );
-
-    var nieuweItems = await AgendaRepository.voegToe(
-      dag: nieuweDag,
+    // Een verplaatsing is één enkele agenda-mutatie en één enkele opslag.
+    // Daardoor bestaat er nooit meer een tussentoestand waarin het item al
+    // verwijderd is maar nog niet op de nieuwe dag werd toegevoegd.
+    var nieuweItems = await AgendaRepository.verplaats(
+      oudeDag: oudeDag,
+      nieuweDag: nieuweDag,
       item: nieuwItem,
-      itemsPerDag: eerstVerwijderd,
+      itemsPerDag: itemsPerDag,
     );
 
     if (nieuwItem.type == 'kraan') {

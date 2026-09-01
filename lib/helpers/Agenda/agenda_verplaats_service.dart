@@ -64,7 +64,7 @@ class AgendaVerplaatsService {
     final nieuweItems = List<AgendaItem>.from(kopie[nieuweKey] ?? []);
 
     final verplaatstItem = item.copyWith(
-      updatedAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toUtc().toIso8601String(),
       deletedAt: '',
     );
 

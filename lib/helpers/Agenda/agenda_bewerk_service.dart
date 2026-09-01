@@ -53,7 +53,7 @@ class AgendaBewerkService {
 
     final aangepastItem = nieuwItem.copyWith(
       id: oudItem.id,
-      updatedAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toUtc().toIso8601String(),
       deletedAt: '',
     );
 
@@ -81,7 +81,7 @@ class AgendaBewerkService {
 
     final index = items.indexWhere((bestaand) => zelfdeItem(bestaand, item));
 
-    final nu = DateTime.now().toIso8601String();
+    final nu = DateTime.now().toUtc().toIso8601String();
 
     final verwijderdItem = item.copyWith(updatedAt: nu, deletedAt: nu);
 

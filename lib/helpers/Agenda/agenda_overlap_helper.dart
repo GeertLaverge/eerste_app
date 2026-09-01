@@ -16,6 +16,12 @@ class AgendaOverlapHelper {
     required AgendaItem nieuwItem,
     required List<AgendaItem> bestaandeItems,
   }) {
+    final tijdMelding = ongeldigeTijdMelding(nieuwItem);
+
+    if (tijdMelding != null) {
+      return tijdMelding;
+    }
+
     for (final bestaand in bestaandeItems) {
       if (!tijdenOverlappen(nieuwItem, bestaand)) {
         continue;
@@ -24,6 +30,21 @@ class AgendaOverlapHelper {
       if (!magOverlappen(nieuwItem.type, bestaand.type)) {
         return '${nieuwItem.titel} overlapt met ${bestaand.titel}.';
       }
+    }
+
+    return null;
+  }
+
+  static String? ongeldigeTijdMelding(AgendaItem item) {
+    if (item.volledigeDag || !item.heeftTijd) {
+      return null;
+    }
+
+    final start = item.startMinuten;
+    final einde = (item.eindUur! * 60) + item.eindMinuut!;
+
+    if (einde <= start) {
+      return 'De eindtijd moet later zijn dan de starttijd.';
     }
 
     return null;
