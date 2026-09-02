@@ -49,6 +49,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
   TimeOfDay eindTijd = const TimeOfDay(hour: 15, minute: 30);
 
   bool volledigeDag = false;
+  bool showroomAfspraak = false;
 
   bool get isBewerken => widget.bestaandItem != null;
 
@@ -109,6 +110,7 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
       opmerkingenController.text = item.opmerkingen;
 
       type = item.type;
+      showroomAfspraak = item.afspraakSoort.trim().toLowerCase() == 'showroom';
 
       volledigeDag = item.volledigeDag;
 
@@ -306,6 +308,11 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
         gsm2: gsm2Controller.text.trim(),
         email: emailController.text.trim(),
         opmerkingen: opmerkingenController.text.trim(),
+        afspraakSoort: type == 'afspraak'
+            ? (showroomAfspraak ? 'showroom' : 'algemeen')
+            : (widget.bestaandItem?.afspraakSoort ?? 'algemeen'),
+        bron: widget.bestaandItem?.bron ?? 'app',
+        externId: widget.bestaandItem?.externId ?? '',
         volledigeDag: volledigeDag,
         startUur: volledigeDag ? null : startTijd.hour,
         startMinuut: volledigeDag ? null : startTijd.minute,
@@ -892,6 +899,30 @@ class _AgendaToevoegPopupState extends State<AgendaToevoegPopup> {
                 veld(gsmController, 'GSM'),
                 veld(gsm2Controller, 'GSM 2'),
                 veld(emailController, 'Email'),
+                if (type == 'afspraak') ...[
+                  const SizedBox(height: 2),
+                  SwitchListTile(
+                    value: showroomAfspraak,
+                    activeThumbColor: const Color(0xFF0B7A3B),
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(
+                      Icons.home_outlined,
+                      color: Color(0xFF0B7A3B),
+                    ),
+                    onChanged: (waarde) {
+                      setState(() {
+                        showroomAfspraak = waarde;
+                      });
+                    },
+                    title: const Text(
+                      'Afspraak in de toonzaal',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: const Text(
+                      'Hiermee markeren we deze blauwe afspraak als showroomafspraak.',
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 SwitchListTile(
                   value: volledigeDag,

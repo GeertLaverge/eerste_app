@@ -29,6 +29,9 @@ class AgendaItem {
     this.dagenVooraf = 0,
     this.homeDatum = '',
     this.heeftOverlap = false,
+    this.afspraakSoort = 'algemeen',
+    this.bron = 'app',
+    this.externId = '',
   });
 
   static const Object _ongewijzigd = Object();
@@ -77,6 +80,26 @@ class AgendaItem {
 
   /// Tijdelijke UI-markering die door de agenda-filtering gebruikt wordt.
   final bool heeftOverlap;
+
+  /// Subtype van een gewone afspraak.
+  /// `algemeen` = gewone blauwe afspraak.
+  /// `showroom` = afspraak in de toonzaal.
+  final String afspraakSoort;
+
+  /// Herkomst van het agenda-item.
+  /// Handmatige/bestaande items gebruiken `app`.
+  /// Online showroomboekingen gebruiken later `website_showroom`.
+  final String bron;
+
+  /// Unieke ID van een externe bron, bijvoorbeeld de websiteboeking.
+  final String externId;
+
+  bool get isShowroomAfspraak =>
+      type.trim().toLowerCase() == 'afspraak' &&
+      afspraakSoort.trim().toLowerCase() == 'showroom';
+
+  bool get isWebsiteShowroomAfspraak =>
+      bron.trim().toLowerCase() == 'website_showroom';
 
   String get syncId => id.trim().isNotEmpty ? id.trim() : _legacySyncId;
 
@@ -154,6 +177,9 @@ class AgendaItem {
     int? dagenVooraf,
     String? homeDatum,
     bool? heeftOverlap,
+    String? afspraakSoort,
+    String? bron,
+    String? externId,
   }) {
     return AgendaItem(
       id: id ?? this.id,
@@ -193,6 +219,9 @@ class AgendaItem {
       dagenVooraf: dagenVooraf ?? this.dagenVooraf,
       homeDatum: homeDatum ?? this.homeDatum,
       heeftOverlap: heeftOverlap ?? this.heeftOverlap,
+      afspraakSoort: afspraakSoort ?? this.afspraakSoort,
+      bron: bron ?? this.bron,
+      externId: externId ?? this.externId,
     );
   }
 
@@ -256,6 +285,9 @@ class AgendaItem {
       'dagenVooraf': dagenVooraf,
       'homeDatum': homeDatum,
       'heeftOverlap': heeftOverlap,
+      'afspraakSoort': afspraakSoort,
+      'bron': bron,
+      'externId': externId,
     };
   }
 
@@ -336,6 +368,20 @@ class AgendaItem {
       dagenVooraf: _leesInt(json['dagenVooraf'], standaardWaarde: 0),
       homeDatum: _leesTekst(json, const <String>['homeDatum', 'datumHome']),
       heeftOverlap: _leesBool(json['heeftOverlap']),
+      afspraakSoort: _leesTekst(
+        json,
+        const <String>['afspraakSoort', 'appointmentType'],
+        standaardWaarde: 'algemeen',
+      ),
+      bron: _leesTekst(
+        json,
+        const <String>['bron', 'source'],
+        standaardWaarde: 'app',
+      ),
+      externId: _leesTekst(
+        json,
+        const <String>['externId', 'externalId', 'external_id'],
+      ),
     );
   }
 

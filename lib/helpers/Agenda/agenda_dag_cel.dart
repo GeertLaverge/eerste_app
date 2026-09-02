@@ -209,6 +209,14 @@ class AgendaDagCel extends StatelessWidget {
   Widget titelMetKraan({required AgendaItem item, required Color kleur}) {
     return Row(
       children: [
+        if (item.isShowroomAfspraak) ...[
+          Icon(
+            Icons.home_rounded,
+            color: kleur,
+            size: 15,
+          ),
+          const SizedBox(width: 4),
+        ],
         Expanded(
           child: Text(
             item.titel,

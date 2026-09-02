@@ -44,6 +44,14 @@ class JaarItemBlok extends StatelessWidget {
               ),
             ),
           if (item.tijdTekst.isNotEmpty) const SizedBox(width: 3),
+          if (item.isShowroomAfspraak) ...[
+            Icon(
+              Icons.home_rounded,
+              color: tekstKleur,
+              size: 12,
+            ),
+            const SizedBox(width: 3),
+          ],
           Flexible(
             child: Text(
               item.titel,

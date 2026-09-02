@@ -36,8 +36,7 @@ class WebsiteShowroomBooking {
     return WebsiteShowroomBooking(
       id: json['id']?.toString() ?? '',
       reference: json['reference']?.toString() ?? '',
-      datum:
-          DateTime.tryParse(json['booking_date']?.toString() ?? '') ??
+      datum: DateTime.tryParse(json['booking_date']?.toString() ?? '') ??
           DateTime(2000),
       startTijd: _tijdZonderSeconden(json['start_time']?.toString() ?? ''),
       eindTijd: _tijdZonderSeconden(json['end_time']?.toString() ?? ''),
@@ -61,6 +60,8 @@ class WebsiteShowroomBlock {
     required this.eindMinuut,
     required this.reden,
     required this.notitie,
+    required this.source,
+    required this.agendaItemId,
   });
 
   final String id;
@@ -69,17 +70,22 @@ class WebsiteShowroomBlock {
   final int eindMinuut;
   final String reden;
   final String notitie;
+  final String source;
+  final String agendaItemId;
+
+  bool get isAgendaBlokkering => agendaItemId.trim().isNotEmpty;
 
   factory WebsiteShowroomBlock.fromJson(Map<String, dynamic> json) {
     return WebsiteShowroomBlock(
       id: json['id']?.toString() ?? '',
-      datum:
-          DateTime.tryParse(json['block_date']?.toString() ?? '') ??
+      datum: DateTime.tryParse(json['block_date']?.toString() ?? '') ??
           DateTime(2000),
       startMinuut: int.tryParse(json['start_minute']?.toString() ?? '') ?? 0,
       eindMinuut: int.tryParse(json['end_minute']?.toString() ?? '') ?? 0,
       reden: json['reason']?.toString() ?? '',
       notitie: json['note']?.toString() ?? '',
+      source: json['source']?.toString() ?? '',
+      agendaItemId: json['agenda_item_id']?.toString() ?? '',
     );
   }
 }
@@ -106,11 +112,9 @@ class WebsiteBericht {
       id: json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? 'Mededeling',
       tekst: json['message']?.toString() ?? '',
-      vanaf:
-          DateTime.tryParse(json['starts_at']?.toString() ?? '')?.toLocal() ??
+      vanaf: DateTime.tryParse(json['starts_at']?.toString() ?? '')?.toLocal() ??
           DateTime.now(),
-      tot:
-          DateTime.tryParse(json['ends_at']?.toString() ?? '')?.toLocal() ??
+      tot: DateTime.tryParse(json['ends_at']?.toString() ?? '')?.toLocal() ??
           DateTime.now().add(const Duration(days: 1)),
       actief: json['active'] == true,
     );
@@ -131,7 +135,7 @@ class WebsiteShowroomData {
 
 class ThimacoWebsiteService {
   ThimacoWebsiteService({OneDriveAuthService? authService})
-    : _authService = authService ?? OneDriveAuthService();
+      : _authService = authService ?? OneDriveAuthService();
 
   final OneDriveAuthService _authService;
 
@@ -144,9 +148,8 @@ class ThimacoWebsiteService {
   }
 
   Uri _beheerUri({Map<String, String>? query}) {
-    return Uri.parse(
-      '$basisUrl/api/thimaco-app/website-beheer',
-    ).replace(queryParameters: query);
+    return Uri.parse('$basisUrl/api/thimaco-app/website-beheer')
+        .replace(queryParameters: query);
   }
 
   Future<WebsiteShowroomData> laadMaand(DateTime maand) async {
@@ -167,18 +170,16 @@ class ThimacoWebsiteService {
 
     final bookings = (data['bookings'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
-        .map(
-          (json) =>
-              WebsiteShowroomBooking.fromJson(Map<String, dynamic>.from(json)),
-        )
+        .map((json) => WebsiteShowroomBooking.fromJson(
+              Map<String, dynamic>.from(json),
+            ))
         .toList(growable: false);
 
     final blocks = (data['blocks'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
-        .map(
-          (json) =>
-              WebsiteShowroomBlock.fromJson(Map<String, dynamic>.from(json)),
-        )
+        .map((json) => WebsiteShowroomBlock.fromJson(
+              Map<String, dynamic>.from(json),
+            ))
         .toList(growable: false);
 
     WebsiteBericht? bericht;
@@ -193,6 +194,53 @@ class ThimacoWebsiteService {
       blocks: blocks,
       bericht: bericht,
     );
+  }
+
+  Future<bool> bewaarAgendaBlokkering({
+    required String agendaItemId,
+    required DateTime datum,
+    required int startMinuut,
+    required int eindMinuut,
+  }) async {
+    final id = agendaItemId.trim();
+    if (id.isEmpty) {
+      throw const WebsiteServiceException(
+        'Agenda-item-ID ontbreekt voor websiteblokkering.',
+      );
+    }
+
+    final response = await _request(
+      method: 'POST',
+      uri: _beheerUri(),
+      jsonBody: <String, dynamic>{
+        'action': 'upsert_agenda_block',
+        'agendaItemId': id,
+        'blockDate': _datumKey(datum),
+        'startMinute': startMinuut,
+        'endMinute': eindMinuut,
+      },
+    );
+
+    final data = _decodeMap(response);
+    return data['coveredByBooking'] == true;
+  }
+
+  Future<void> verwijderAgendaBlokkering(String agendaItemId) async {
+    final id = agendaItemId.trim();
+    if (id.isEmpty) {
+      return;
+    }
+
+    final response = await _request(
+      method: 'POST',
+      uri: _beheerUri(),
+      jsonBody: <String, dynamic>{
+        'action': 'delete_agenda_block',
+        'agendaItemId': id,
+      },
+    );
+
+    _decodeMap(response);
   }
 
   Future<void> voegBlokkeringToe({
@@ -222,7 +270,10 @@ class ThimacoWebsiteService {
     final response = await _request(
       method: 'POST',
       uri: _beheerUri(),
-      jsonBody: <String, dynamic>{'action': 'delete_block', 'id': id},
+      jsonBody: <String, dynamic>{
+        'action': 'delete_block',
+        'id': id,
+      },
     );
 
     _decodeMap(response);
@@ -259,7 +310,9 @@ class ThimacoWebsiteService {
       );
     }
 
-    return WebsiteBericht.fromJson(Map<String, dynamic>.from(announcement));
+    return WebsiteBericht.fromJson(
+      Map<String, dynamic>.from(announcement),
+    );
   }
 
   Future<http.Response> _request({
@@ -322,9 +375,7 @@ class ThimacoWebsiteService {
       case 'POST':
         return http.post(uri, headers: headers, body: body);
       default:
-        throw WebsiteServiceException(
-          'Niet ondersteunde HTTP-methode: $method',
-        );
+        throw WebsiteServiceException('Niet ondersteunde HTTP-methode: $method');
     }
   }
 

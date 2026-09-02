@@ -74,6 +74,14 @@ class AgendaDagDetail extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
+                              if (item.isShowroomAfspraak) ...[
+                                Icon(
+                                  Icons.home_outlined,
+                                  color: kleur,
+                                  size: 17,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
                               Expanded(
                                 child: Text(
                                   item.titel,
@@ -90,24 +98,26 @@ class AgendaDagDetail extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: () => onItemVerwijder(item),
-                        borderRadius: BorderRadius.circular(10),
-                        child: Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.red,
-                            size: 18,
+                      if (!item.isWebsiteShowroomAfspraak) ...[
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => onItemVerwijder(item),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            width: 34,
+                            height: 34,
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
+                              size: 18,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 );
