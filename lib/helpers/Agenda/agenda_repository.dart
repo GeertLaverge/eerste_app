@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:eerste_app/helpers/app_storage.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_bewerk_service.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
@@ -42,12 +40,12 @@ class AgendaRepository {
     // Eerst lokaal veilig bewaren.
     await bewaarItems(nieuw);
 
-    // Daarna pas website-sync. Deze mag de lokale opslag nooit blokkeren.
-    unawaited(
-      AgendaWebsiteSyncService.synchroniseerAfspraak(
-        dag: dag,
-        item: itemMetId,
-      ),
+    // Daarna website-sync afwachten.
+    // Een tijdelijke website-/internetfout wordt in de sync-service zelf
+    // opgevangen en kan de lokale agenda-opslag dus nooit terugdraaien.
+    await AgendaWebsiteSyncService.synchroniseerAfspraak(
+      dag: dag,
+      item: itemMetId,
     );
 
     return nieuw;
@@ -74,12 +72,10 @@ class AgendaRepository {
       alternatief: nieuwItem,
     );
 
-    unawaited(
-      AgendaWebsiteSyncService.synchroniseerBewerking(
-        dag: dag,
-        oudItem: oudItem,
-        nieuwItem: opgeslagenItem,
-      ),
+    await AgendaWebsiteSyncService.synchroniseerBewerking(
+      dag: dag,
+      oudItem: oudItem,
+      nieuwItem: opgeslagenItem,
     );
 
     return nieuw;
@@ -96,13 +92,13 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
+    // Eerst de verwijdering veilig lokaal bewaren.
     await bewaarItems(nieuw);
 
-    unawaited(
-      AgendaWebsiteSyncService.verwijderAfspraak(
-        dag: dag,
-        item: item,
-      ),
+    // Daarna wachten tot dezelfde afspraak ook van de website verwijderd is.
+    await AgendaWebsiteSyncService.verwijderAfspraak(
+      dag: dag,
+      item: item,
     );
 
     return nieuw;
@@ -123,12 +119,10 @@ class AgendaRepository {
 
     await bewaarItems(nieuw);
 
-    unawaited(
-      AgendaWebsiteSyncService.synchroniseerVerplaatsing(
-        oudeDag: oudeDag,
-        nieuweDag: nieuweDag,
-        item: item,
-      ),
+    await AgendaWebsiteSyncService.synchroniseerVerplaatsing(
+      oudeDag: oudeDag,
+      nieuweDag: nieuweDag,
+      item: item,
     );
 
     return nieuw;
@@ -168,11 +162,9 @@ class AgendaRepository {
         );
 
     if (kopie != null) {
-      unawaited(
-        AgendaWebsiteSyncService.synchroniseerAfspraak(
-          dag: nieuweDag,
-          item: kopie,
-        ),
+      await AgendaWebsiteSyncService.synchroniseerAfspraak(
+        dag: nieuweDag,
+        item: kopie,
       );
     }
 

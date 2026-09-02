@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: UITVALSCHERM-PRIJS-MUTATIE-ADAPTER-20260902
 // THIMACO-CONTROLE: BUITENJALOEZIE-PRIJS-MUTATIE-EXACT-ZOALS-VOORZETSCREEN-20260803
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJS-CORRECTIE-ADAPTER-20260802
 // THIMACO-CONTROLE: VOORZETROLLUIK-STUKPRIJS-MUTATIE-ADAPTER-20260731
@@ -81,6 +82,8 @@ class OfferteArtikelPrijsMutatieService {
       _BuitenjaloeziePrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter voorzetrolluik =
       _VoorzetrolluikPrijsMutatieAdapter();
+  static const OfferteArtikelPrijsMutatieAdapter uitvalscherm =
+      _UitvalschermPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter sektionalePoort =
       _SektionalePoortPrijsMutatieAdapter();
   static const OfferteArtikelPrijsMutatieAdapter algemeneOpmeting =
@@ -101,6 +104,7 @@ class OfferteArtikelPrijsMutatieService {
         voorzetscreen,
         buitenjaloezie,
         voorzetrolluik,
+        uitvalscherm,
         sektionalePoort,
         algemeneOpmeting,
       ];
@@ -657,6 +661,64 @@ class _VoorzetrolluikPrijsMutatieAdapter
       artikel,
     );
     return koppeling?.adapterId == id && artikel.voorzetrolluikData != null;
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsPerStuk({
+    required OpmetingOverzichtRaamItem artikel,
+    required double prijsPerStukExclBtw,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        prijsPerStukExclBtw: prijsPerStukExclBtw,
+      ),
+    );
+  }
+
+  @override
+  OpmetingOverzichtRaamItem schrijfPrijsCorrecties({
+    required OpmetingOverzichtRaamItem artikel,
+    double? kortingPercentage,
+    double? winstmargePercentage,
+  }) {
+    final prijsData = OfferteArtikelPrijsKoppelingService.prijsDataVoorArtikel(
+      artikel,
+    );
+    if (prijsData == null) return artikel;
+
+    return OfferteArtikelPrijsKoppelingService.schrijfPrijsData(
+      artikel: artikel,
+      prijsData: OfferteArtikelPrijsKoppelingService.wijzigPrijsData(
+        prijsData: prijsData,
+        artikelKortingPercentage:
+            kortingPercentage ?? prijsData.artikelKortingPercentage,
+        artikelWinstmargePercentage:
+            winstmargePercentage ?? prijsData.artikelWinstmargePercentage,
+      ),
+    );
+  }
+}
+
+class _UitvalschermPrijsMutatieAdapter
+    extends OfferteArtikelPrijsMutatieAdapter {
+  const _UitvalschermPrijsMutatieAdapter();
+
+  @override
+  String get id => 'uitvalscherm';
+
+  @override
+  bool isGeschiktVoor(OpmetingOverzichtRaamItem artikel) {
+    final koppeling = OfferteArtikelPrijsKoppelingService.koppelingVoorArtikel(
+      artikel,
+    );
+    return koppeling?.adapterId == id && artikel.uitvalschermData != null;
   }
 
   @override
