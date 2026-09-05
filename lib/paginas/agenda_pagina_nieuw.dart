@@ -25,6 +25,7 @@ import '../helpers/Agenda/agenda_verlof_popup.dart';
 import '../helpers/Agenda/agenda_verplaats_balk.dart';
 import '../helpers/Agenda/agenda_verplaats_service.dart';
 import '../helpers/Agenda/agenda_verplaats_state.dart';
+import '../helpers/Agenda/agenda_website_booking_sync_service.dart';
 import '../helpers/Agenda/agenda_weekdag_balk.dart';
 import '../helpers/Agenda/agenda_weergave_type.dart';
 import '../helpers/Agenda/agenda_melding_service.dart';
@@ -59,6 +60,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   int _laatsteVerwerkteDownloadVersie = 0;
   bool _agendaHerladenNaSync = false;
   bool _agendaNogmaalsHerladenNaSync = false;
+  bool _websiteBoekingenSynchroniseren = false;
+  bool _websiteBoekingenNogmaalsSynchroniseren = false;
 
   @override
   void initState() {
@@ -69,6 +72,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
 
     laadAlles().then((_) {
+      if (!mounted) {
+        return;
+      }
+
+      unawaited(_synchroniseerWebsiteBoekingenVoorZichtbareMaanden());
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         scrollNaarVandaag();
       });
@@ -132,6 +141,45 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         _agendaNogmaalsHerladenNaSync = false;
 
         unawaited(_herlaadAgendaNaAchtergrondSync());
+      }
+    }
+  }
+
+  Future<void> _synchroniseerWebsiteBoekingenVoorZichtbareMaanden() async {
+    if (_websiteBoekingenSynchroniseren) {
+      _websiteBoekingenNogmaalsSynchroniseren = true;
+      return;
+    }
+
+    _websiteBoekingenSynchroniseren = true;
+
+    try {
+      do {
+        _websiteBoekingenNogmaalsSynchroniseren = false;
+
+        final geladenItems =
+            await AgendaWebsiteBookingSyncService.synchroniseerMaanden(
+              zichtbareMaanden(),
+            );
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          agendaItems = geladenItems;
+        });
+      } while (_websiteBoekingenNogmaalsSynchroniseren && mounted);
+    } catch (error) {
+      debugPrint(
+        'AgendaPaginaNieuw: websiteboekingen konden niet worden gesynchroniseerd: $error',
+      );
+    } finally {
+      _websiteBoekingenSynchroniseren = false;
+
+      if (_websiteBoekingenNogmaalsSynchroniseren && mounted) {
+        _websiteBoekingenNogmaalsSynchroniseren = false;
+        unawaited(_synchroniseerWebsiteBoekingenVoorZichtbareMaanden());
       }
     }
   }
@@ -725,11 +773,13 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
               setState(() {
                 selectie = selectie.vorigeMaand();
               });
+              unawaited(_synchroniseerWebsiteBoekingenVoorZichtbareMaanden());
             },
             onVolgendeMaand: () {
               setState(() {
                 selectie = selectie.volgendeMaand();
               });
+              unawaited(_synchroniseerWebsiteBoekingenVoorZichtbareMaanden());
             },
             onToevoegen: openToevoegPopup,
           ),

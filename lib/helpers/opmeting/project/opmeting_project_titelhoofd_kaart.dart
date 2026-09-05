@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: KLANTNAAM-SPATIES-EN-OFFERTENUMMER-TOETSENBORD-20260903
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-SPATIES-BEHOUDEN-20260810_0817
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-CIJFERFOCUS-OP-LAATSTE-KLEURVERSIE-20260809-2048
 // THIMACO-CONTROLE: ALIPLAST-SUBMENUS-EN-COMPACTE-KLEURKOPPELINGEN-20260808-1902
@@ -513,7 +514,7 @@ class _OpmetingProjectTitelhoofdKaartState
     _aanspreking = normaliseerOpmetingAanspreking(titelhoofd.aanspreking);
     _zetControllerTekst(
       _klantNaamController,
-      opmetingKlantNaamZonderAanspreking(titelhoofd.klantNaam),
+      titelhoofd.klantNaam,
     );
     _zetControllerTekst(_contactpersoonController, titelhoofd.contactpersoon);
     _zetControllerTekst(_adresController, titelhoofd.adres);
@@ -613,9 +614,7 @@ class _OpmetingProjectTitelhoofdKaartState
     widget.onTitelhoofdGewijzigd(
       widget.titelhoofd.copyWith(
         aanspreking: _aanspreking,
-        klantNaam: opmetingKlantNaamZonderAanspreking(
-          _klantNaamController.text,
-        ),
+        klantNaam: _klantNaamController.text,
         contactpersoon: _contactpersoonController.text,
         adres: _adresController.text,
         huisnummer: _huisnummerController.text,
@@ -1620,7 +1619,21 @@ class _OpmetingProjectTitelhoofdKaartState
 
     void focusVolgendVak() {
       if (!heeftVolgendVak) return;
-      _offerteNummerFocusNodes[controllerIndex + 1].requestFocus();
+
+      final volgendeIndex = controllerIndex + 1;
+      final volgendeFocusNode = _offerteNummerFocusNodes[volgendeIndex];
+      final volgendeController = alleControllers[volgendeIndex];
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        volgendeFocusNode.requestFocus();
+        volgendeController.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: volgendeController.text.length,
+        );
+        SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+      });
     }
 
     return SizedBox(
