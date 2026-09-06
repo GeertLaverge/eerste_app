@@ -76,7 +76,10 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
                 icon: Icon(Icons.calendar_month_outlined),
                 text: 'Showroomagenda',
               ),
-              Tab(icon: Icon(Icons.campaign_outlined), text: 'Websitebericht'),
+              Tab(
+                icon: Icon(Icons.campaign_outlined),
+                text: 'Websitebericht',
+              ),
             ],
           ),
         ),
@@ -100,24 +103,28 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
     }
 
     if (_fout != null) {
-      return _FoutPaneel(tekst: _fout!, onOpnieuw: _laadMaand);
+      return _FoutPaneel(
+        tekst: _fout!,
+        onOpnieuw: _laadMaand,
+      );
     }
 
-    final data =
-        _data ??
-        const WebsiteShowroomData(bookings: [], blocks: [], bericht: null);
+    final data = _data ??
+        const WebsiteShowroomData(
+          bookings: [],
+          blocks: [],
+          bericht: null,
+        );
 
-    final dagBookings =
-        data.bookings
-            .where((item) => _zelfdeDag(item.datum, _geselecteerdeDag))
-            .toList()
-          ..sort((a, b) => a.startTijd.compareTo(b.startTijd));
+    final dagBookings = data.bookings
+        .where((item) => _zelfdeDag(item.datum, _geselecteerdeDag))
+        .toList()
+      ..sort((a, b) => a.startTijd.compareTo(b.startTijd));
 
-    final dagBlocks =
-        data.blocks
-            .where((item) => _zelfdeDag(item.datum, _geselecteerdeDag))
-            .toList()
-          ..sort((a, b) => a.startMinuut.compareTo(b.startMinuut));
+    final dagBlocks = data.blocks
+        .where((item) => _zelfdeDag(item.datum, _geselecteerdeDag))
+        .toList()
+      ..sort((a, b) => a.startMinuut.compareTo(b.startMinuut));
 
     return RefreshIndicator(
       onRefresh: _laadMaand,
@@ -201,12 +208,12 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryContainer,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -221,8 +228,8 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
                         ? 'Showroomadvies'
                         : booking.klantNaam,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
                 ),
               ],
@@ -239,7 +246,10 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
                 runSpacing: 6,
                 children: [
                   if (booking.gsm.trim().isNotEmpty)
-                    _InfoRegel(icoon: Icons.phone_outlined, tekst: booking.gsm),
+                    _InfoRegel(
+                      icoon: Icons.phone_outlined,
+                      tekst: booking.gsm,
+                    ),
                   if (booking.email.trim().isNotEmpty)
                     _InfoRegel(
                       icoon: Icons.email_outlined,
@@ -267,15 +277,16 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.block_outlined)),
+        leading: const CircleAvatar(
+          child: Icon(Icons.block_outlined),
+        ),
         title: Text(
           '${_tijdVanMinuten(block.startMinuut)} – '
           '${_tijdVanMinuten(block.eindMinuut)} · ${block.reden}',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: block.notitie.trim().isEmpty
-            ? null
-            : Text(block.notitie.trim()),
+        subtitle:
+            block.notitie.trim().isEmpty ? null : Text(block.notitie.trim()),
         trailing: IconButton(
           tooltip: 'Blokkering verwijderen',
           icon: const Icon(Icons.delete_outline),
@@ -347,7 +358,10 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
 
   void _toonMelding(String tekst, {bool fout = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(tekst), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(tekst),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
@@ -415,9 +429,9 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
       children: [
         Text(
           'Tijdelijk bericht op de website',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -435,10 +449,22 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
             border: OutlineInputBorder(),
           ),
           items: const [
-            DropdownMenuItem(value: 'Mededeling', child: Text('Mededeling')),
-            DropdownMenuItem(value: 'Gesloten', child: Text('Gesloten')),
-            DropdownMenuItem(value: 'Verlof', child: Text('Verlof')),
-            DropdownMenuItem(value: 'Actie', child: Text('Actie')),
+            DropdownMenuItem(
+              value: 'Mededeling',
+              child: Text('Mededeling'),
+            ),
+            DropdownMenuItem(
+              value: 'Gesloten',
+              child: Text('Gesloten'),
+            ),
+            DropdownMenuItem(
+              value: 'Verlof',
+              child: Text('Verlof'),
+            ),
+            DropdownMenuItem(
+              value: 'Actie',
+              child: Text('Actie'),
+            ),
           ],
           onChanged: (value) {
             if (value != null) setState(() => _type = value);
@@ -477,14 +503,25 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
           ],
         ),
         const SizedBox(height: 10),
-        SwitchListTile.adaptive(
+        CheckboxListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Bericht actief'),
-          subtitle: const Text(
-            'U kunt een bericht vooraf opslaan en pas later activeren.',
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text(
+            'Bericht tonen op website',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            _actief
+                ? 'Aangevinkt: het bericht wordt op de website getoond.'
+                : 'Uitgevinkt: het bericht wordt niet op de website getoond.',
           ),
           value: _actief,
-          onChanged: (value) => setState(() => _actief = value),
+          onChanged: _opslaan
+              ? null
+              : (value) {
+                  if (value == null) return;
+                  _wijzigZichtbaarheid(value);
+                },
         ),
         const SizedBox(height: 18),
         FilledButton.icon(
@@ -522,6 +559,68 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
         _tot = DateTime(gekozen.year, gekozen.month, gekozen.day, 23, 59);
       }
     });
+  }
+
+  Future<void> _wijzigZichtbaarheid(bool zichtbaar) async {
+    final vorigeWaarde = _actief;
+
+    setState(() => _actief = zichtbaar);
+
+    // Bij een nog niet opgeslagen nieuw bericht volstaat het om de keuze
+    // te onthouden; de knop 'Websitebericht opslaan' bewaart alles samen.
+    if (_id.trim().isEmpty) {
+      return;
+    }
+
+    final tekst = _tekstController.text.trim();
+
+    if (tekst.isEmpty || !_tot.isAfter(_vanaf)) {
+      setState(() => _actief = vorigeWaarde);
+      _toonMelding(
+        'De zichtbaarheid kon niet worden aangepast. Controleer het bericht en de datums.',
+      );
+      return;
+    }
+
+    setState(() => _opslaan = true);
+
+    try {
+      final opgeslagen = await widget.service.bewaarWebsiteBericht(
+        id: _id,
+        type: _type,
+        tekst: tekst,
+        vanaf: _vanaf,
+        tot: _tot,
+        actief: zichtbaar,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _id = opgeslagen.id;
+        _type = opgeslagen.type;
+        _tekstController.text = opgeslagen.tekst;
+        _vanaf = opgeslagen.vanaf;
+        _tot = opgeslagen.tot;
+        _actief = opgeslagen.actief;
+      });
+
+      await widget.onOpgeslagen();
+      if (!mounted) return;
+
+      _toonMelding(
+        opgeslagen.actief
+            ? 'Websitebericht wordt nu getoond.'
+            : 'Websitebericht is nu verborgen.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() => _actief = vorigeWaarde);
+      _toonMelding(error.toString());
+    } finally {
+      if (mounted) setState(() => _opslaan = false);
+    }
   }
 
   Future<void> _bewaar() async {
@@ -571,7 +670,10 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
 
   void _toonMelding(String tekst) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(tekst), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(tekst),
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 }
@@ -600,9 +702,9 @@ class _MaandKop extends StatelessWidget {
           child: Text(
             _maandNaam(maand),
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
           ),
         ),
         IconButton(
@@ -670,12 +772,10 @@ class _MaandRaster extends StatelessWidget {
                 final dagnummer = index - legeCellen + 1;
                 final dag = DateTime(maand.year, maand.month, dagnummer);
 
-                final aantalBookings = bookings
-                    .where((item) => _zelfdeDag(item.datum, dag))
-                    .length;
-                final aantalBlocks = blocks
-                    .where((item) => _zelfdeDag(item.datum, dag))
-                    .length;
+                final aantalBookings =
+                    bookings.where((item) => _zelfdeDag(item.datum, dag)).length;
+                final aantalBlocks =
+                    blocks.where((item) => _zelfdeDag(item.datum, dag)).length;
 
                 final geselecteerd = _zelfdeDag(dag, geselecteerdeDag);
                 final vandaag = _zelfdeDag(dag, DateTime.now());
@@ -741,16 +841,19 @@ class _Weekdag extends StatelessWidget {
       child: Text(
         tekst,
         textAlign: TextAlign.center,
-        style: Theme.of(
-          context,
-        ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
       ),
     );
   }
 }
 
 class _DagBadge extends StatelessWidget {
-  const _DagBadge({required this.icoon, required this.aantal});
+  const _DagBadge({
+    required this.icoon,
+    required this.aantal,
+  });
 
   final IconData icoon;
   final int aantal;
@@ -764,7 +867,10 @@ class _DagBadge extends StatelessWidget {
         const SizedBox(width: 2),
         Text(
           '$aantal',
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ],
     );
@@ -814,12 +920,18 @@ class _NieuweBlokkeringDialogState extends State<_NieuweBlokkeringDialog> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Hele dag', child: Text('Hele dag')),
+                  DropdownMenuItem(
+                    value: 'Hele dag',
+                    child: Text('Hele dag'),
+                  ),
                   DropdownMenuItem(
                     value: 'Voormiddag',
                     child: Text('Voormiddag'),
                   ),
-                  DropdownMenuItem(value: 'Namiddag', child: Text('Namiddag')),
+                  DropdownMenuItem(
+                    value: 'Namiddag',
+                    child: Text('Namiddag'),
+                  ),
                   DropdownMenuItem(
                     value: 'Eigen uren',
                     child: Text('Eigen uren'),
@@ -886,7 +998,10 @@ class _NieuweBlokkeringDialogState extends State<_NieuweBlokkeringDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Annuleren'),
         ),
-        FilledButton(onPressed: _bewaar, child: const Text('Blokkeren')),
+        FilledButton(
+          onPressed: _bewaar,
+          child: const Text('Blokkeren'),
+        ),
       ],
     );
   }
@@ -923,9 +1038,8 @@ class _NieuweBlokkeringDialogState extends State<_NieuweBlokkeringDialog> {
         eindMinuut = _einde.hour * 60 + _einde.minute;
       default:
         startMinuut = 9 * 60;
-        eindMinuut = widget.datum.weekday == DateTime.saturday
-            ? 12 * 60
-            : 18 * 60;
+        eindMinuut =
+            widget.datum.weekday == DateTime.saturday ? 12 * 60 : 18 * 60;
     }
 
     if (eindMinuut <= startMinuut) {
@@ -982,9 +1096,9 @@ class _SectieTitel extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           titel,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
         ),
         const SizedBox(width: 8),
         Text('($aantal)'),
@@ -994,7 +1108,10 @@ class _SectieTitel extends StatelessWidget {
 }
 
 class _InfoRegel extends StatelessWidget {
-  const _InfoRegel({required this.icoon, required this.tekst});
+  const _InfoRegel({
+    required this.icoon,
+    required this.tekst,
+  });
 
   final IconData icoon;
   final String tekst;
@@ -1003,7 +1120,11 @@ class _InfoRegel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [Icon(icoon, size: 16), const SizedBox(width: 5), Text(tekst)],
+      children: [
+        Icon(icoon, size: 16),
+        const SizedBox(width: 5),
+        Text(tekst),
+      ],
     );
   }
 }
@@ -1028,7 +1149,10 @@ class _DatumKnop extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text(titel, style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            titel,
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
           const SizedBox(height: 3),
           Text(
             _korteDatum(datum),
@@ -1042,7 +1166,10 @@ class _DatumKnop extends StatelessWidget {
 }
 
 class _FoutPaneel extends StatelessWidget {
-  const _FoutPaneel({required this.tekst, required this.onOpnieuw});
+  const _FoutPaneel({
+    required this.tekst,
+    required this.onOpnieuw,
+  });
 
   final String tekst;
   final VoidCallback onOpnieuw;
@@ -1065,7 +1192,10 @@ class _FoutPaneel extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              Text(tekst, textAlign: TextAlign.center),
+              Text(
+                tekst,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: onOpnieuw,
