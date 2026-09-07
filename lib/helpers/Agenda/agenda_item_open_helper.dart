@@ -6,18 +6,29 @@ import 'agenda_verlof_popup.dart';
 import 'agenda_toevoeg_popup.dart';
 
 class AgendaItemOpenHelper {
+  static const Color _thimacoGroen = Color(0xFF0B7A3B);
+
   static Future<Object?> open({
     required BuildContext context,
     required AgendaItem item,
     required List<AgendaItem> geplandeItems,
   }) async {
     if (item.isWebsiteShowroomAfspraak) {
-      await showDialog<void>(
+      return showDialog<Object>(
         context: context,
-        builder: (context) {
+        builder: (dialogContext) {
           return AlertDialog(
-            icon: const Icon(Icons.home_outlined),
-            title: const Text('Showroomadvies'),
+            icon: const Icon(
+              Icons.home_outlined,
+              color: _thimacoGroen,
+            ),
+            title: const Text(
+              'Showroomadvies',
+              style: TextStyle(
+                color: _thimacoGroen,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -40,25 +51,76 @@ class AgendaItemOpenHelper {
                     ),
                   const SizedBox(height: 10),
                   Text(
-                    'Deze afspraak werd via de website geboekt en is hier alleen-lezen.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    'Deze afspraak werd via de website geboekt. '
+                    'De gegevens kunnen hier niet gewijzigd worden.',
+                    style: Theme.of(dialogContext).textTheme.bodySmall?.copyWith(
+                      color:
+                          Theme.of(dialogContext).colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
             actions: [
+              TextButton.icon(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+                onPressed: () async {
+                  final bevestigd = await showDialog<bool>(
+                    context: dialogContext,
+                    builder: (bevestigContext) {
+                      return AlertDialog(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        title: const Text('Afspraak verwijderen?'),
+                        content: const Text(
+                          'Deze showroomafspraak wordt verwijderd uit de '
+                          'agenda. Het tijdstip komt opnieuw vrij op de '
+                          'website.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(bevestigContext, false),
+                            child: const Text('Annuleren'),
+                          ),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                            ),
+                            onPressed: () =>
+                                Navigator.pop(bevestigContext, true),
+                            icon: const Icon(Icons.delete_outline),
+                            label: const Text('Verwijderen'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+
+                  if (bevestigd == true && dialogContext.mounted) {
+                    Navigator.pop(dialogContext, 'website_verwijderen');
+                  }
+                },
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Verwijderen'),
+              ),
               FilledButton(
-                onPressed: () => Navigator.pop(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: _thimacoGroen,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Sluiten'),
               ),
             ],
           );
         },
       );
-
-      return null;
     }
 
     return showDialog<Object>(

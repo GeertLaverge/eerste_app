@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../helpers/website/thimaco_website_service.dart';
 
+const Color _thimacoGroen = Color(0xFF0B7A3B);
+const Color _thimacoLichtGroen = Color(0xFFE7F6EC);
+const Color _thimacoDonkerGroen = Color(0xFF07552A);
+
 class WebsiteShowroomPagina extends StatefulWidget {
   const WebsiteShowroomPagina({super.key});
 
@@ -65,33 +69,50 @@ class _WebsiteShowroomPaginaState extends State<WebsiteShowroomPagina> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Website & showroom'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(
-                icon: Icon(Icons.calendar_month_outlined),
-                text: 'Showroomagenda',
-              ),
-              Tab(
-                icon: Icon(Icons.campaign_outlined),
-                text: 'Websitebericht',
+    final basisTheme = Theme.of(context);
+    final thimacoScheme = basisTheme.colorScheme.copyWith(
+      primary: _thimacoGroen,
+      secondary: _thimacoGroen,
+      primaryContainer: _thimacoLichtGroen,
+      onPrimary: Colors.white,
+      onPrimaryContainer: _thimacoDonkerGroen,
+    );
+
+    return Theme(
+      data: basisTheme.copyWith(
+        colorScheme: thimacoScheme,
+        progressIndicatorTheme: const ProgressIndicatorThemeData(
+          color: _thimacoGroen,
+        ),
+      ),
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('Website & showroom'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(
+                  icon: Icon(Icons.calendar_month_outlined),
+                  text: 'Showroomagenda',
+                ),
+                Tab(
+                  icon: Icon(Icons.campaign_outlined),
+                  text: 'Websitebericht',
+                ),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            children: [
+              _bouwAgendaTab(),
+              WebsiteBerichtTab(
+                service: _service,
+                initieelBericht: _data?.bericht,
+                onOpgeslagen: _laadMaand,
               ),
             ],
           ),
-        ),
-        body: TabBarView(
-          children: [
-            _bouwAgendaTab(),
-            WebsiteBerichtTab(
-              service: _service,
-              initieelBericht: _data?.bericht,
-              onOpgeslagen: _laadMaand,
-            ),
-          ],
         ),
       ),
     );
@@ -389,8 +410,10 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
   String _type = 'Mededeling';
   DateTime _vanaf = DateTime.now();
   DateTime _tot = DateTime.now().add(const Duration(days: 7));
-  bool _actief = true;
-  bool _opslaan = false;
+  bool _actief = false;
+  bool _bezig = false;
+
+  bool get _heeftOpgeslagenBericht => _id.trim().isNotEmpty;
 
   @override
   void initState() {
@@ -401,13 +424,31 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
   @override
   void didUpdateWidget(covariant WebsiteBerichtTab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initieelBericht?.id != widget.initieelBericht?.id) {
-      _vulVanBericht(widget.initieelBericht);
+
+    final oud = oldWidget.initieelBericht;
+    final nieuw = widget.initieelBericht;
+
+    if (oud?.id != nieuw?.id ||
+        oud?.tekst != nieuw?.tekst ||
+        oud?.type != nieuw?.type ||
+        oud?.actief != nieuw?.actief ||
+        oud?.vanaf != nieuw?.vanaf ||
+        oud?.tot != nieuw?.tot) {
+      _vulVanBericht(nieuw);
     }
   }
 
   void _vulVanBericht(WebsiteBericht? bericht) {
-    if (bericht == null) return;
+    if (bericht == null) {
+      _id = '';
+      _type = 'Mededeling';
+      _tekstController.clear();
+      _vanaf = DateTime.now();
+      _tot = DateTime.now().add(const Duration(days: 7));
+      _actief = false;
+      return;
+    }
+
     _id = bericht.id;
     _type = bericht.type;
     _tekstController.text = bericht.tekst;
@@ -424,118 +465,227 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
-      children: [
-        Text(
-          'Tijdelijk bericht op de website',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+    return RefreshIndicator(
+      onRefresh: widget.onOpgeslagen,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 32),
+        children: [
+          Text(
+            'Websitebericht',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: _thimacoDonkerGroen,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Sla de tekst op en bepaal daarna apart of het bericht op de '
+            'website zichtbaar is. Uitschakelen wist de tekst niet.',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _WebsiteBerichtStatus(
+            titel: _statusTitel(),
+            uitleg: _statusUitleg(),
+            zichtbaar: _isNuZichtbaar(),
+            actief: _actief,
+            heeftBericht: _heeftOpgeslagenBericht,
+          ),
+          const SizedBox(height: 18),
+          DropdownButtonFormField<String>(
+            initialValue: _type,
+            decoration: const InputDecoration(
+              labelText: 'Type',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'Mededeling',
+                child: Text('Mededeling'),
               ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Er wordt maximaal één actief bericht getoond. '
-          'Na de einddatum verdwijnt het automatisch.',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+              DropdownMenuItem(
+                value: 'Gesloten',
+                child: Text('Gesloten'),
+              ),
+              DropdownMenuItem(
+                value: 'Verlof',
+                child: Text('Verlof'),
+              ),
+              DropdownMenuItem(
+                value: 'Actie',
+                child: Text('Actie'),
+              ),
+            ],
+            onChanged: _bezig
+                ? null
+                : (value) {
+                    if (value != null) setState(() => _type = value);
+                  },
           ),
-        ),
-        const SizedBox(height: 20),
-        DropdownButtonFormField<String>(
-          initialValue: _type,
-          decoration: const InputDecoration(
-            labelText: 'Type',
-            border: OutlineInputBorder(),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _tekstController,
+            enabled: !_bezig,
+            maxLength: 180,
+            minLines: 3,
+            maxLines: 5,
+            decoration: const InputDecoration(
+              labelText: 'Bericht',
+              hintText: 'Bijvoorbeeld: zaterdag uitzonderlijk gesloten.',
+              border: OutlineInputBorder(),
+            ),
           ),
-          items: const [
-            DropdownMenuItem(
-              value: 'Mededeling',
-              child: Text('Mededeling'),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _DatumKnop(
+                  titel: 'Van',
+                  datum: _vanaf,
+                  onTap: _bezig ? () {} : () => _kiesDatum(vanaf: true),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _DatumKnop(
+                  titel: 'Tot',
+                  datum: _tot,
+                  onTap: _bezig ? () {} : () => _kiesDatum(vanaf: false),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: _thimacoLichtGroen,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _thimacoGroen.withValues(alpha: 0.25),
+              ),
             ),
-            DropdownMenuItem(
-              value: 'Gesloten',
-              child: Text('Gesloten'),
+            child: SwitchListTile.adaptive(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 4,
+              ),
+              title: const Text(
+                'Tonen op website',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: _thimacoDonkerGroen,
+                ),
+              ),
+              subtitle: Text(
+                !_heeftOpgeslagenBericht
+                    ? 'Sla het bericht eerst op. Daarna kunt u het hier aanzetten.'
+                    : _actief
+                        ? 'AAN: het bericht is geactiveerd. De datums bepalen wanneer het zichtbaar is.'
+                        : 'UIT: het bericht blijft opgeslagen, maar wordt niet op de website getoond.',
+              ),
+              value: _actief,
+              onChanged: _bezig || !_heeftOpgeslagenBericht
+                  ? null
+                  : _wijzigZichtbaarheid,
             ),
-            DropdownMenuItem(
-              value: 'Verlof',
-              child: Text('Verlof'),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            style: FilledButton.styleFrom(
+              backgroundColor: _thimacoGroen,
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(50),
             ),
-            DropdownMenuItem(
-              value: 'Actie',
-              child: Text('Actie'),
+            onPressed: _bezig ? null : _bewaar,
+            icon: _bezig
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(_bezig ? 'Even wachten…' : 'Bericht opslaan'),
+          ),
+          if (_heeftOpgeslagenBericht) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                minimumSize: const Size.fromHeight(48),
+              ),
+              onPressed: _bezig ? null : _verwijderDefinitief,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Bericht definitief wissen'),
             ),
           ],
-          onChanged: (value) {
-            if (value != null) setState(() => _type = value);
-          },
-        ),
-        const SizedBox(height: 14),
-        TextField(
-          controller: _tekstController,
-          maxLength: 180,
-          minLines: 3,
-          maxLines: 5,
-          decoration: const InputDecoration(
-            labelText: 'Bericht',
-            hintText: 'Bijvoorbeeld: zaterdag uitzonderlijk gesloten.',
-            border: OutlineInputBorder(),
+          const SizedBox(height: 10),
+          Text(
+            'Aan/uit verandert alleen de zichtbaarheid. '
+            'Alleen "Bericht definitief wissen" verwijdert de opgeslagen tekst.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _DatumKnop(
-                titel: 'Van',
-                datum: _vanaf,
-                onTap: () => _kiesDatum(vanaf: true),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _DatumKnop(
-                titel: 'Tot',
-                datum: _tot,
-                onTap: () => _kiesDatum(vanaf: false),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        CheckboxListTile(
-          contentPadding: EdgeInsets.zero,
-          controlAffinity: ListTileControlAffinity.leading,
-          title: const Text(
-            'Bericht tonen op website',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          subtitle: Text(
-            _actief
-                ? 'Aangevinkt: het bericht wordt op de website getoond.'
-                : 'Uitgevinkt: het bericht wordt niet op de website getoond.',
-          ),
-          value: _actief,
-          onChanged: _opslaan
-              ? null
-              : (value) {
-                  if (value == null) return;
-                  _wijzigZichtbaarheid(value);
-                },
-        ),
-        const SizedBox(height: 18),
-        FilledButton.icon(
-          onPressed: _opslaan ? null : _bewaar,
-          icon: _opslaan
-              ? const SizedBox.square(
-                  dimension: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.save_outlined),
-          label: Text(_opslaan ? 'Opslaan…' : 'Websitebericht opslaan'),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  bool _isNuZichtbaar() {
+    if (!_heeftOpgeslagenBericht || !_actief) return false;
+
+    final nu = DateTime.now();
+    return !nu.isBefore(_vanaf) && !nu.isAfter(_tot);
+  }
+
+  String _statusTitel() {
+    if (!_heeftOpgeslagenBericht) {
+      return 'Nog geen opgeslagen websitebericht';
+    }
+
+    if (!_actief) {
+      return 'NIET ZICHTBAAR OP WEBSITE';
+    }
+
+    final nu = DateTime.now();
+
+    if (nu.isBefore(_vanaf)) {
+      return 'INGEPLAND - NOG NIET ZICHTBAAR';
+    }
+
+    if (nu.isAfter(_tot)) {
+      return 'NIET ZICHTBAAR - EINDDATUM VERSTREKEN';
+    }
+
+    return 'ZICHTBAAR OP WEBSITE';
+  }
+
+  String _statusUitleg() {
+    if (!_heeftOpgeslagenBericht) {
+      return 'Vul een bericht in en druk eerst op "Bericht opslaan".';
+    }
+
+    if (!_actief) {
+      return 'Het bericht blijft bewaard. Zet "Tonen op website" aan om het zichtbaar te maken.';
+    }
+
+    final nu = DateTime.now();
+
+    if (nu.isBefore(_vanaf)) {
+      return 'Het bericht staat aan en verschijnt automatisch vanaf ${_korteDatum(_vanaf)}.';
+    }
+
+    if (nu.isAfter(_tot)) {
+      return 'Het bericht staat nog aan, maar de einddatum ${_korteDatum(_tot)} is voorbij.';
+    }
+
+    return 'Het bericht staat aan en valt binnen de ingestelde periode.';
   }
 
   Future<void> _kiesDatum({required bool vanaf}) async {
@@ -561,28 +711,23 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
     });
   }
 
-  Future<void> _wijzigZichtbaarheid(bool zichtbaar) async {
-    final vorigeWaarde = _actief;
+  Future<void> _bewaar() async {
+    final tekst = _tekstController.text.trim();
 
-    setState(() => _actief = zichtbaar);
-
-    // Bij een nog niet opgeslagen nieuw bericht volstaat het om de keuze
-    // te onthouden; de knop 'Websitebericht opslaan' bewaart alles samen.
-    if (_id.trim().isEmpty) {
+    if (tekst.isEmpty) {
+      _toonMelding('Vul eerst een websitebericht in.', fout: true);
       return;
     }
 
-    final tekst = _tekstController.text.trim();
-
-    if (tekst.isEmpty || !_tot.isAfter(_vanaf)) {
-      setState(() => _actief = vorigeWaarde);
+    if (!_tot.isAfter(_vanaf)) {
       _toonMelding(
-        'De zichtbaarheid kon niet worden aangepast. Controleer het bericht en de datums.',
+        'De einddatum moet na de begindatum liggen.',
+        fout: true,
       );
       return;
     }
 
-    setState(() => _opslaan = true);
+    setState(() => _bezig = true);
 
     try {
       final opgeslagen = await widget.service.bewaarWebsiteBericht(
@@ -591,6 +736,50 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
         tekst: tekst,
         vanaf: _vanaf,
         tot: _tot,
+        // Nieuwe tekst wordt eerst veilig opgeslagen en niet automatisch getoond.
+        actief: _heeftOpgeslagenBericht ? _actief : false,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _id = opgeslagen.id;
+        _type = opgeslagen.type;
+        _tekstController.text = opgeslagen.tekst;
+        _vanaf = opgeslagen.vanaf;
+        _tot = opgeslagen.tot;
+        _actief = opgeslagen.actief;
+      });
+
+      await widget.onOpgeslagen();
+      if (!mounted) return;
+
+      _toonMelding(
+        _actief
+            ? 'Bericht opgeslagen en blijft actief.'
+            : 'Bericht opgeslagen. Het staat niet zichtbaar op de website.',
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _toonMelding(error.toString(), fout: true);
+    } finally {
+      if (mounted) setState(() => _bezig = false);
+    }
+  }
+
+  Future<void> _wijzigZichtbaarheid(bool zichtbaar) async {
+    if (!_heeftOpgeslagenBericht) return;
+
+    final vorigeWaarde = _actief;
+
+    setState(() {
+      _actief = zichtbaar;
+      _bezig = true;
+    });
+
+    try {
+      final opgeslagen = await widget.service.stelWebsiteBerichtActief(
+        id: _id,
         actief: zichtbaar,
       );
 
@@ -608,71 +797,162 @@ class _WebsiteBerichtTabState extends State<WebsiteBerichtTab> {
       await widget.onOpgeslagen();
       if (!mounted) return;
 
-      _toonMelding(
-        opgeslagen.actief
-            ? 'Websitebericht wordt nu getoond.'
-            : 'Websitebericht is nu verborgen.',
-      );
+      if (_isNuZichtbaar()) {
+        _toonMelding('Websitebericht staat nu zichtbaar op de website.');
+      } else if (_actief) {
+        _toonMelding(
+          'Websitebericht staat aan. Het valt momenteel buiten de ingestelde periode.',
+        );
+      } else {
+        _toonMelding('Websitebericht staat uit. De tekst blijft opgeslagen.');
+      }
     } catch (error) {
       if (!mounted) return;
 
       setState(() => _actief = vorigeWaarde);
-      _toonMelding(error.toString());
+      _toonMelding(error.toString(), fout: true);
     } finally {
-      if (mounted) setState(() => _opslaan = false);
+      if (mounted) setState(() => _bezig = false);
     }
   }
 
-  Future<void> _bewaar() async {
-    final tekst = _tekstController.text.trim();
-    if (tekst.isEmpty) {
-      _toonMelding('Vul eerst een websitebericht in.');
-      return;
-    }
+  Future<void> _verwijderDefinitief() async {
+    if (!_heeftOpgeslagenBericht) return;
 
-    if (!_tot.isAfter(_vanaf)) {
-      _toonMelding('De einddatum moet na de begindatum liggen.');
-      return;
-    }
+    final akkoord = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          icon: const Icon(
+            Icons.delete_outline,
+            color: Colors.red,
+          ),
+          title: const Text('Websitebericht definitief wissen?'),
+          content: const Text(
+            'De opgeslagen tekst wordt volledig verwijderd. '
+            'Als het bericht zichtbaar is, verdwijnt het van de website. '
+            'Dit kan niet ongedaan worden gemaakt.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Definitief wissen'),
+            ),
+          ],
+        );
+      },
+    );
 
-    setState(() => _opslaan = true);
+    if (akkoord != true) return;
+
+    setState(() => _bezig = true);
 
     try {
-      final opgeslagen = await widget.service.bewaarWebsiteBericht(
-        id: _id,
-        type: _type,
-        tekst: tekst,
-        vanaf: _vanaf,
-        tot: _tot,
-        actief: _actief,
-      );
+      await widget.service.verwijderWebsiteBericht(_id);
+      await widget.onOpgeslagen();
 
       if (!mounted) return;
+
       setState(() {
-        _id = opgeslagen.id;
-        _type = opgeslagen.type;
-        _tekstController.text = opgeslagen.tekst;
-        _vanaf = opgeslagen.vanaf;
-        _tot = opgeslagen.tot;
-        _actief = opgeslagen.actief;
+        _id = '';
+        _type = 'Mededeling';
+        _tekstController.clear();
+        _vanaf = DateTime.now();
+        _tot = DateTime.now().add(const Duration(days: 7));
+        _actief = false;
       });
 
-      await widget.onOpgeslagen();
-      if (!mounted) return;
-      _toonMelding('Websitebericht opgeslagen.');
+      _toonMelding('Websitebericht is definitief gewist.');
     } catch (error) {
       if (!mounted) return;
-      _toonMelding(error.toString());
+      _toonMelding(error.toString(), fout: true);
     } finally {
-      if (mounted) setState(() => _opslaan = false);
+      if (mounted) setState(() => _bezig = false);
     }
   }
 
-  void _toonMelding(String tekst) {
+  void _toonMelding(String tekst, {bool fout = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(tekst),
         behavior: SnackBarBehavior.floating,
+        backgroundColor: fout ? Colors.red : _thimacoGroen,
+      ),
+    );
+  }
+}
+
+class _WebsiteBerichtStatus extends StatelessWidget {
+  const _WebsiteBerichtStatus({
+    required this.titel,
+    required this.uitleg,
+    required this.zichtbaar,
+    required this.actief,
+    required this.heeftBericht,
+  });
+
+  final String titel;
+  final String uitleg;
+  final bool zichtbaar;
+  final bool actief;
+  final bool heeftBericht;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color kleur;
+    final IconData icoon;
+
+    if (zichtbaar) {
+      kleur = _thimacoGroen;
+      icoon = Icons.visibility_outlined;
+    } else if (actief && heeftBericht) {
+      kleur = Colors.orange;
+      icoon = Icons.schedule_outlined;
+    } else {
+      kleur = Theme.of(context).colorScheme.onSurfaceVariant;
+      icoon = Icons.visibility_off_outlined;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: kleur.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: kleur.withValues(alpha: 0.30),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icoon, color: kleur),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titel,
+                  style: TextStyle(
+                    color: kleur,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(uitleg),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

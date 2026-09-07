@@ -33,6 +33,7 @@ import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
+import '../helpers/website/thimaco_website_service.dart';
 import 'jaar_planning_pagina_nieuw.dart';
 
 class AgendaPaginaNieuw extends StatefulWidget {
@@ -471,6 +472,81 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
     if (resultaat == 'verplaatsen') {
       startVerplaatsen(oudeDag: dag, item: item);
+
+      return;
+    }
+
+    if (resultaat == 'website_verwijderen') {
+      final externId = item.externId.trim();
+
+      if (externId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Deze websiteafspraak heeft geen geldig booking-ID.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      try {
+        await ThimacoWebsiteService()
+            .annuleerShowroomBooking(externId)
+            .timeout(const Duration(seconds: 12));
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Afspraak kon niet verwijderd worden: $error',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+
+        return;
+      }
+
+      await AgendaMeldingService.verwijderMelding(
+        dag: dag,
+        item: item,
+      );
+
+      final nieuweItems = await AgendaRepository.verwijder(
+        dag: dag,
+        item: item,
+        itemsPerDag: agendaItems,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        agendaItems = Map<String, List<AgendaItem>>.from(
+          nieuweItems.map(
+            (key, value) => MapEntry(
+              key,
+              List<AgendaItem>.from(value),
+            ),
+          ),
+        );
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Afspraak verwijderd. Het tijdstip is opnieuw vrij op de website.',
+          ),
+          backgroundColor: Color(0xFF0B7A3B),
+        ),
+      );
 
       return;
     }

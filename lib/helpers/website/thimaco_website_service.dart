@@ -1,4 +1,4 @@
-import 'dart:convert';
+ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -273,6 +273,82 @@ class ThimacoWebsiteService {
       jsonBody: <String, dynamic>{
         'action': 'delete_block',
         'id': id,
+      },
+    );
+
+    _decodeMap(response);
+  }
+
+  Future<void> annuleerShowroomBooking(String id) async {
+    final bookingId = id.trim();
+
+    if (bookingId.isEmpty) {
+      throw const WebsiteServiceException(
+        'De websiteafspraak heeft geen geldig booking-ID.',
+      );
+    }
+
+    final response = await _request(
+      method: 'POST',
+      uri: _beheerUri(),
+      jsonBody: <String, dynamic>{
+        'action': 'cancel_booking',
+        'id': bookingId,
+      },
+    );
+
+    _decodeMap(response);
+  }
+
+  Future<WebsiteBericht> stelWebsiteBerichtActief({
+    required String id,
+    required bool actief,
+  }) async {
+    final berichtId = id.trim();
+
+    if (berichtId.isEmpty) {
+      throw const WebsiteServiceException(
+        'Websitebericht-ID ontbreekt.',
+      );
+    }
+
+    final response = await _request(
+      method: 'POST',
+      uri: _beheerUri(),
+      jsonBody: <String, dynamic>{
+        'action': 'set_announcement_active',
+        'id': berichtId,
+        'active': actief,
+      },
+    );
+
+    final data = _decodeMap(response);
+    final announcement = data['announcement'];
+
+    if (announcement is! Map) {
+      throw const WebsiteServiceException(
+        'De zichtbaarheid werd aangepast, maar het bericht kon niet opnieuw geladen worden.',
+      );
+    }
+
+    return WebsiteBericht.fromJson(
+      Map<String, dynamic>.from(announcement),
+    );
+  }
+
+  Future<void> verwijderWebsiteBericht(String id) async {
+    final berichtId = id.trim();
+
+    if (berichtId.isEmpty) {
+      return;
+    }
+
+    final response = await _request(
+      method: 'POST',
+      uri: _beheerUri(),
+      jsonBody: <String, dynamic>{
+        'action': 'delete_announcement',
+        'id': berichtId,
       },
     );
 

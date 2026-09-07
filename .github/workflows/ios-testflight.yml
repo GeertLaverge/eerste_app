@@ -146,7 +146,7 @@ jobs:
             --build-number="${{ inputs.build_number }}" \
             --dart-define=THIMACO_FINANCE_OWNER_BUILD=true \
             --dart-define=THIMACO_FINANCE_ACTIVATION_SHA256="$THIMACO_FINANCE_ACTIVATION_SHA256" \
-            --dart-define=THIMACO_WEBSITE_URL="http://192.168.0.115:3000"
+            --dart-define=THIMACO_WEBSITE_URL="https://thimaco-website-eijqxkp4n-info-22535247.vercel.app"
 
       - name: Archive signed iOS app
         run: |
