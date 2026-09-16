@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-REDDINGSSCAN-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-VRIJE-BESTANDSCONTROLE-20260916
 import 'dart:async';
 import 'dart:ui';
 
@@ -311,6 +311,89 @@ class FinancieleKluisSessieController extends ChangeNotifier {
           } catch (_) {
             // De .bak-versie blijft beschikbaar en wordt bij een volgende
             // ontgrendeling automatisch opnieuw beoordeeld.
+          }
+        }
+        if (!keychainGeactiveerd && keychainTransactie != null) {
+          try {
+            await _toegangService.annuleerHersteldeRegistratie(
+              keychainTransactie,
+            );
+          } catch (_) {
+            // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
+          }
+        }
+        rethrow;
+      }
+
+      _masterKey = Uint8List.fromList(herstel.masterKey);
+      _inhoud = Map<String, dynamic>.from(herstel.inhoud);
+      _zetStatus(FinancieleKluisStatus.ontgrendeld);
+      registreerActiviteit();
+      return true;
+    } catch (fout) {
+      _wisGeheugen();
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      final tijdelijkeHerstelKey = herstelResultaat?.masterKey;
+      if (tijdelijkeHerstelKey != null) {
+        tijdelijkeHerstelKey.fillRange(0, tijdelijkeHerstelKey.length, 0);
+      }
+      _stopBewerking();
+    }
+  }
+
+  Future<bool> herstelVanVrijGekozenBestand({
+    required String herstelcode,
+  }) async {
+    _startBewerking();
+    FinancieleHerstelResultaat? herstelResultaat;
+
+    try {
+      if (_status != FinancieleKluisStatus.nietGeactiveerd &&
+          _status != FinancieleKluisStatus.herstelNodig &&
+          _status != FinancieleKluisStatus.vergrendeld) {
+        throw const FinancieleSessieException(
+          'Een herstelbestand kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden gecontroleerd.',
+        );
+      }
+
+      final herstel = await _noodbackupService.kiesVrijBestandEnHerstel(
+        herstelcode: herstelcode,
+      );
+      if (herstel == null) {
+        return false;
+      }
+      herstelResultaat = herstel;
+
+      FinancieleKeychainHerstelTransactie? keychainTransactie;
+      var opslagVoorbereid = false;
+      var keychainGeactiveerd = false;
+
+      try {
+        keychainTransactie = await _toegangService
+            .bereidHersteldeRegistratieVoor(herstel.masterKey);
+
+        await _opslagService.schrijfVersleuteldeEnvelop(
+          herstel.kluisEnvelop,
+          behoudVorigeVersie: true,
+        );
+        opslagVoorbereid = true;
+
+        await _toegangService.voltooiHersteldeRegistratie(keychainTransactie);
+        keychainGeactiveerd = true;
+
+        try {
+          await _opslagService.voltooiHerstelSchrijfbeurt();
+        } catch (_) {
+          // Geen blokkering: sleutel en actuele kluis zijn al consistent.
+        }
+      } catch (_) {
+        if (!keychainGeactiveerd && opslagVoorbereid) {
+          try {
+            await _opslagService.annuleerHerstelSchrijfbeurt();
+          } catch (_) {
+            // De .bak-versie blijft beschikbaar voor veilig herstel.
           }
         }
         if (!keychainGeactiveerd && keychainTransactie != null) {

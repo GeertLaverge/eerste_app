@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-REDDINGSSCAN-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-VRIJE-BESTANDSCONTROLE-20260916
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -217,6 +217,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           icon: const Icon(Icons.manage_search_rounded),
           label: const Text('Zoek oude noodback-up op deze iPad'),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitVrijGekozenBestand,
+          icon: const Icon(Icons.folder_open_rounded),
+          label: const Text('Kies ander bestand om te controleren'),
+        ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
           _bouwFoutKaart(_controller.foutBericht),
@@ -260,6 +269,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           label: const Text('Zoek oude noodback-up op deze iPad'),
         ),
         const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitVrijGekozenBestand,
+          icon: const Icon(Icons.folder_open_rounded),
+          label: const Text('Kies ander bestand om te controleren'),
+        ),
+        const SizedBox(height: 10),
         _bouwWaarschuwing(
           'Gebruik noodherstel alleen wanneer biometrisch ontgrendelen niet '
           'meer lukt, bijvoorbeeld nadat Face ID of Touch ID op deze iPad '
@@ -301,6 +319,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
               : _herstelUitTijdelijkeNoodbackup,
           icon: const Icon(Icons.manage_search_rounded),
           label: const Text('Zoek oude noodback-up op deze iPad'),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitVrijGekozenBestand,
+          icon: const Icon(Icons.folder_open_rounded),
+          label: const Text('Kies ander bestand om te controleren'),
         ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
@@ -497,6 +524,91 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
       if (!mounted) return;
       _toonMelding(fout.toString(), fout: true);
     }
+  }
+
+  Future<void> _herstelUitVrijGekozenBestand() async {
+    final bevestigd = await _bevestigVrijeBestandscontrole();
+    if (bevestigd != true || !mounted) {
+      return;
+    }
+
+    final herstelcode = await _vraagHerstelcode();
+    if (herstelcode == null || !mounted) {
+      return;
+    }
+
+    try {
+      final hersteld = await _controller.herstelVanVrijGekozenBestand(
+        herstelcode: herstelcode,
+      );
+      if (!mounted) return;
+
+      if (hersteld) {
+        _toonMelding(
+          'Het gekozen bestand is een geldige Thimaco-noodback-up. De financiële kluis is hersteld.',
+        );
+      }
+    } catch (fout) {
+      if (!mounted) return;
+      _toonMelding(fout.toString(), fout: true);
+    }
+  }
+
+  Future<bool?> _bevestigVrijeBestandscontrole() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
+          ),
+          title: const Row(
+            children: <Widget>[
+              Icon(Icons.folder_open_rounded, color: _groen),
+              SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Ander bestand controleren?',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          content: const SizedBox(
+            width: 500,
+            child: Text(
+              'De iPad opent nu Bestanden zonder filter op .thimacofin. Zo kun je '
+              'ook in iCloud Drive, Op mijn iPad, Downloads en OneDrive een bestand '
+              'kiezen waarvan de naam of extensie mogelijk veranderd is.\n\n'
+              'De app leest het gekozen bestand eerst en controleert of het echt een '
+              'Thimaco financiële noodback-up is. Alleen wanneer de papieren '
+              'herstelcode klopt, wordt de kluis hersteld. Een fout bestand wijzigt '
+              'de bestaande lokale kluis niet.',
+              style: TextStyle(color: _tekstDonker, height: 1.45),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: _groen,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.folder_open_rounded),
+              label: const Text('Bestand kiezen'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool?> _bevestigReddingsscan() {

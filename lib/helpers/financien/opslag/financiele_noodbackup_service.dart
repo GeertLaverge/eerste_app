@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-NOODBACKUP-20260806
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-NOODBACKUP-VRIJE-BESTANDSCONTROLE-20260916
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -56,7 +56,12 @@ class FinancieleNoodbackupService {
         text:
             'Bewaar dit versleutelde bestand op een veilige locatie. '
             'Het bestand is uitsluitend herstelbaar met de papieren herstelcode.',
-        files: <XFile>[XFile.fromData(bytes, mimeType: 'application/json')],
+        files: <XFile>[
+          XFile.fromData(
+            bytes,
+            mimeType: 'application/json',
+          ),
+        ],
         fileNameOverrides: <String>[bestandsnaam],
         sharePositionOrigin: sharePositionOrigin,
       ),
@@ -101,7 +106,56 @@ class FinancieleNoodbackupService {
       );
     }
 
-    return herstelUitBytes(bytes: bytes, herstelcode: herstelcode);
+    return herstelUitBytes(
+      bytes: bytes,
+      herstelcode: herstelcode,
+    );
+  }
+
+  Future<FinancieleHerstelResultaat?> kiesVrijBestandEnHerstel({
+    required String herstelcode,
+  }) async {
+    // Tijdelijke reddingsroute: toon in iOS Bestanden alle bestandstypes.
+    // Zo kan een noodback-up ook worden teruggevonden wanneer een cloudprovider
+    // de oorspronkelijke .thimacofin-extensie heeft gewijzigd of verwijderd.
+    final resultaat = await FilePicker.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      withData: true,
+    );
+
+    if (resultaat == null || resultaat.files.isEmpty) {
+      return null;
+    }
+
+    final gekozen = resultaat.files.single;
+    if (gekozen.size <= 0 || gekozen.size > _maximaleBackupGrootte) {
+      throw const FinancieleNoodbackupException(
+        'Het gekozen bestand is leeg of groter dan 20 MB.',
+      );
+    }
+
+    Uint8List? bytes = gekozen.bytes;
+
+    if (bytes == null && gekozen.path != null) {
+      bytes = await File(gekozen.path!).readAsBytes();
+    }
+
+    if (bytes == null || bytes.isEmpty) {
+      throw const FinancieleNoodbackupException(
+        'Het gekozen bestand kon niet worden gelezen.',
+      );
+    }
+    if (bytes.length > _maximaleBackupGrootte) {
+      throw const FinancieleNoodbackupException(
+        'Het gekozen bestand is groter dan 20 MB.',
+      );
+    }
+
+    return herstelUitBytes(
+      bytes: bytes,
+      herstelcode: herstelcode,
+    );
   }
 
   Future<FinancieleHerstelResultaat> herstelUitBytes({
@@ -117,7 +171,8 @@ class FinancieleNoodbackupService {
       }
 
       final backup = Map<String, dynamic>.from(decoded);
-      if (backup['formaat']?.toString() != _formaat || backup['versie'] != 1) {
+      if (backup['formaat']?.toString() != _formaat ||
+          backup['versie'] != 1) {
         throw const FinancieleNoodbackupException(
           'Dit bestand is geen ondersteunde Thimaco financiële noodback-up.',
         );
@@ -127,7 +182,10 @@ class FinancieleNoodbackupService {
         backup['sleutelVerpakking'],
         'sleutelVerpakking',
       );
-      final kluisEnvelop = _leesMap(backup['kluisEnvelop'], 'kluisEnvelop');
+      final kluisEnvelop = _leesMap(
+        backup['kluisEnvelop'],
+        'kluisEnvelop',
+      );
 
       final masterKey = await _versleutelingService.ontpakMasterKey(
         verpakking: sleutelVerpakking,
