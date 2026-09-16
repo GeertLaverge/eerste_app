@@ -1,8 +1,10 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_schuifraam_model.dart';
 import 'opmeting_schuifraam_opbouw_storage_helper.dart';
 import 'opmeting_schuifraam_teken_helper.dart';
@@ -27,8 +29,8 @@ toonOpmetingSchuifraamSamenstellingDialog({
   required int hoogteMm,
   OpmetingSchuifraamSamenstelling? bestaandeSamenstelling,
 }) {
-  const groen = Color(0xFF0B7A3B);
-  const lichtGroen = Color(0xFFE7F6EC);
+  const groen = ThimacoKleuren.oranje;
+  const lichtGroen = ThimacoKleuren.oranjeLicht;
 
   return showDialog<OpmetingSchuifraamSamenstellingResultaat>(
     context: context,
@@ -136,11 +138,10 @@ class _OpmetingSchuifraamSamenstellingDialog extends StatefulWidget {
 
 class _OpmetingSchuifraamSamenstellingDialogState
     extends State<_OpmetingSchuifraamSamenstellingDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _achtergrond = Color(0xFFF9FAFB);
-  static const Color _rood = Color(0xFFDC2626);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _achtergrond = ThimacoKleuren.achtergrond;
+  static const Color _rood = ThimacoKleuren.rood;
 
   late final List<OpmetingSchuifraamSysteem> _beschikbareSystemen;
   late OpmetingSchuifraamSysteem _systeem;
@@ -667,26 +668,26 @@ class _OpmetingSchuifraamSamenstellingDialogState
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      titlePadding: EdgeInsets.zero,
-      title: Container(
-        padding: const EdgeInsets.fromLTRB(18, 14, 12, 14),
-        decoration: const BoxDecoration(
-          color: _lichtGroen,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.view_week_outlined, color: _groen),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Schuifraam samenstellen',
-                style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
-              ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: ThimacoKleuren.rand),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(18, 15, 14, 0),
+      title: const Row(
+        children: [
+          Icon(
+            Icons.view_week_outlined,
+            color: ThimacoKleuren.antraciet,
+            size: 20,
+          ),
+          SizedBox(width: 9),
+          Expanded(
+            child: ThimacoSectieTitel(
+              tekst: 'Schuifraam samenstellen',
+              compact: false,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
       content: SizedBox(
         width: 720,
@@ -725,31 +726,25 @@ class _OpmetingSchuifraamSamenstellingDialogState
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
               ),
               const SizedBox(height: 14),
-              SegmentedButton<OpmetingSchuifraamType>(
-                segments: OpmetingSchuifraamType.values.map((type) {
-                  return ButtonSegment<OpmetingSchuifraamType>(
-                    value: type,
-                    enabled: _systeem.ondersteuntType(type),
-                    label: Text(type.label),
-                    icon: Icon(
-                      type == OpmetingSchuifraamType.mono
-                          ? Icons.filter_1_outlined
-                          : Icons.filter_2_outlined,
-                    ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 2,
+                children: OpmetingSchuifraamType.values.map((type) {
+                  final beschikbaar = _systeem.ondersteuntType(type);
+                  return ThimacoTekstKeuze(
+                    tekst: type.label,
+                    geselecteerd: type == _type,
+                    onPressed: beschikbaar
+                        ? () {
+                            setState(() {
+                              _type = type;
+                              _foutmelding = null;
+                            });
+                          }
+                        : null,
+                    compact: false,
                   );
                 }).toList(),
-                selected: <OpmetingSchuifraamType>{_type},
-                onSelectionChanged: (selectie) {
-                  if (selectie.isEmpty ||
-                      !_systeem.ondersteuntType(selectie.first)) {
-                    return;
-                  }
-
-                  setState(() {
-                    _type = selectie.first;
-                    _foutmelding = null;
-                  });
-                },
               ),
               const SizedBox(height: 20),
               Row(
@@ -896,25 +891,24 @@ class _OpmetingSchuifraamSamenstellingDialogState
                 style: const TextStyle(color: Color(0xFF6B7280), fontSize: 12),
               ),
               const SizedBox(height: 10),
-              SegmentedButton<_SchuifraamBreedteKeuze>(
-                segments: _SchuifraamBreedteKeuze.values.map((keuze) {
-                  return ButtonSegment<_SchuifraamBreedteKeuze>(
-                    value: keuze,
-                    enabled: _heeftEnkelVastEnSchuif,
-                    label: Text(keuze.label),
+              Wrap(
+                spacing: 12,
+                runSpacing: 2,
+                children: _SchuifraamBreedteKeuze.values.map((keuze) {
+                  return ThimacoTekstKeuze(
+                    tekst: keuze.label,
+                    geselecteerd: keuze == _breedteKeuze,
+                    onPressed: _heeftEnkelVastEnSchuif
+                        ? () {
+                            setState(() {
+                              _breedteKeuze = keuze;
+                              _foutmelding = null;
+                            });
+                          }
+                        : null,
+                    compact: false,
                   );
                 }).toList(),
-                selected: <_SchuifraamBreedteKeuze>{_breedteKeuze},
-                onSelectionChanged: (selectie) {
-                  if (selectie.isEmpty || !_heeftEnkelVastEnSchuif) {
-                    return;
-                  }
-
-                  setState(() {
-                    _breedteKeuze = selectie.first;
-                    _foutmelding = null;
-                  });
-                },
               ),
               const SizedBox(height: 18),
               const Text(
@@ -1068,7 +1062,7 @@ class _OpmetingSchuifraamSamenstellingDialogState
     return SizedBox(
       width: 150,
       child: Material(
-        color: geselecteerd ? _lichtGroen : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -1090,13 +1084,19 @@ class _OpmetingSchuifraamSamenstellingDialogState
                       child: Text(
                         opbouw.code,
                         style: TextStyle(
-                          color: geselecteerd
-                              ? _groen
-                              : const Color(0xFF111827),
+                          color: ThimacoKleuren.antraciet,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
+                    if (geselecteerd) ...[
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: ThimacoKleuren.oranje,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 2),
+                    ],
                     IconButton(
                       visualDensity: VisualDensity.compact,
                       tooltip: 'Type wissen',

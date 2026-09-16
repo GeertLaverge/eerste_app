@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import '../fotos/opmeting_foto_model.dart';
 
 class OpmetingRaamNotities extends StatefulWidget {
@@ -22,10 +23,6 @@ class OpmetingRaamNotities extends StatefulWidget {
 }
 
 class _OpmetingRaamNotitiesState extends State<OpmetingRaamNotities> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-
   final ImagePicker _imagePicker = ImagePicker();
   bool _cameraBezig = false;
 
@@ -164,58 +161,62 @@ class _OpmetingRaamNotitiesState extends State<OpmetingRaamNotities> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 9, 12, 11),
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _rand),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const Expanded(
-                child: Text(
-                  'Opmerkingen',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              Tooltip(
-                message: 'Foto nemen',
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(9),
-                  onTap: _cameraBezig ? null : _neemFoto,
-                  child: Container(
-                    width: 34,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: _lichtGroen,
-                      borderRadius: BorderRadius.circular(9),
-                      border: Border.all(color: const Color(0xFFC7E8D1)),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Opmerkingen',
+                      style: TextStyle(
+                        color: ThimacoKleuren.antraciet,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    alignment: Alignment.center,
-                    child: _cameraBezig
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: _groen,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.camera_alt_outlined,
-                            size: 19,
-                            color: _groen,
-                          ),
-                  ),
+                    SizedBox(height: 3),
+                    SizedBox(
+                      width: 32,
+                      child: Divider(
+                        height: 1.5,
+                        thickness: 1.5,
+                        color: ThimacoKleuren.oranje,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (_cameraBezig)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: SizedBox(
+                    width: 17,
+                    height: 17,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.8,
+                      color: ThimacoKleuren.oranje,
+                    ),
+                  ),
+                )
+              else
+                ThimacoIcoonActie(
+                  icoon: Icons.camera_alt_outlined,
+                  tooltip: 'Foto nemen',
+                  onPressed: _neemFoto,
+                  grootte: 19,
+                ),
             ],
           ),
           const SizedBox(height: 7),
@@ -224,26 +225,38 @@ class _OpmetingRaamNotitiesState extends State<OpmetingRaamNotities> {
             minLines: 1,
             maxLines: 3,
             textInputAction: TextInputAction.newline,
+            cursorColor: ThimacoKleuren.oranje,
+            style: const TextStyle(
+              color: ThimacoKleuren.antraciet,
+              fontSize: 12.5,
+            ),
             decoration: InputDecoration(
               hintText: 'Opmerkingen bij deze positie...',
+              hintStyle: const TextStyle(
+                color: ThimacoKleuren.tekstGrijs,
+                fontSize: 12,
+              ),
               isDense: true,
               filled: true,
-              fillColor: const Color(0xFFFAFAFA),
+              fillColor: ThimacoKleuren.achtergrond,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 10,
                 vertical: 9,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _rand),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: ThimacoKleuren.rand),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _rand),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: ThimacoKleuren.rand),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _groen, width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(
+                  color: ThimacoKleuren.oranje,
+                  width: 1.4,
+                ),
               ),
             ),
           ),
@@ -263,21 +276,21 @@ class _OpmetingRaamNotitiesState extends State<OpmetingRaamNotities> {
                     clipBehavior: Clip.none,
                     children: [
                       InkWell(
-                        borderRadius: BorderRadius.circular(9),
+                        borderRadius: BorderRadius.circular(8),
                         onTap: bytes.isEmpty ? null : () => _toonFoto(foto),
                         child: Container(
                           width: 86,
                           height: 66,
                           clipBehavior: Clip.antiAlias,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF3F4F6),
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(color: _rand),
+                            color: ThimacoKleuren.achtergrond,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: ThimacoKleuren.rand),
                           ),
                           child: bytes.isEmpty
                               ? const Icon(
                                   Icons.broken_image_outlined,
-                                  color: Color(0xFF9CA3AF),
+                                  color: ThimacoKleuren.tekstGrijs,
                                 )
                               : Image.memory(
                                   bytes,
@@ -296,7 +309,7 @@ class _OpmetingRaamNotitiesState extends State<OpmetingRaamNotities> {
                             width: 23,
                             height: 23,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDC2626),
+                              color: ThimacoKleuren.rood,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                             ),

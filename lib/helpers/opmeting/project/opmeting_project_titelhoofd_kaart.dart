@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: AGENDA-KLANTKEUZE-RUSTIGE-PROGRAMMASTIJL-FASE15-20260913
+// THIMACO-CONTROLE: ZWEVENDE-PROJECTPANELEN-RUSTIGE-ACTIES-FASE13-20260913
+// THIMACO-CONTROLE: ZWEVENDE-PROJECTPANELEN-ORANJE-HUISSTIJL-FASE7-20260913
 // THIMACO-CONTROLE: KLANTNAAM-SPATIES-EN-OFFERTENUMMER-TOETSENBORD-20260903
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-SPATIES-BEHOUDEN-20260810_0817
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-CIJFERFOCUS-OP-LAATSTE-KLEURVERSIE-20260809-2048
@@ -19,6 +22,7 @@ import 'package:flutter/services.dart';
 // THIMACO-CONTROLE: KLANTVELDEN-ZELFDE-HOOGTE-EN-KAART-VOLLEDIG-BENUT-20260720
 
 import '../../app_storage.dart';
+import '../../ui/thimaco_huisstijl.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import 'aliplast_kleuren.dart';
 import 'aliplast_standaard_ral_kleuren_storage.dart';
@@ -28,6 +32,13 @@ import 'opmeting_project_titelhoofd_model.dart';
 import 'ral_classic_kleuren.dart';
 import 'schuco_folie_kleur_model.dart';
 import 'schuco_folie_kleuren_storage.dart';
+
+enum OpmetingProjectPaneel {
+  klantgegevens,
+  projectkleur,
+  inhoudFiche,
+  offerteInstellingen,
+}
 
 class OpmetingProjectTypeSamenvatting {
   const OpmetingProjectTypeSamenvatting({
@@ -67,6 +78,8 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
     required this.onToggleFormulierType,
     this.verborgenNietRekenenPositieIds = const <String>{},
     this.onToggleNietRekenenPositie,
+    this.paneel,
+    this.zwevendeWeergave = false,
   });
 
   final OpmetingProjectTitelhoofd titelhoofd;
@@ -78,6 +91,8 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
   final ValueChanged<String> onToggleFormulierType;
   final Set<String> verborgenNietRekenenPositieIds;
   final ValueChanged<String>? onToggleNietRekenenPositie;
+  final OpmetingProjectPaneel? paneel;
+  final bool zwevendeWeergave;
 
   @override
   State<OpmetingProjectTitelhoofdKaart> createState() {
@@ -87,15 +102,15 @@ class OpmetingProjectTitelhoofdKaart extends StatefulWidget {
 
 class _OpmetingProjectTitelhoofdKaartState
     extends State<OpmetingProjectTitelhoofdKaart> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _accent = ThimacoKleuren.oranje;
+  static const Color _accentLicht = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
   static const Color _achtergrondKaart = Colors.white;
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
   static const Color _oranjeLicht = Color(0xFFFFF7ED);
-  static const Color _oranje = Color(0xFFEA580C);
-  static const Color _rood = Color(0xFFDC2626);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _rood = ThimacoKleuren.rood;
   static const Color _roodLicht = Color(0xFFFEF2F2);
   static const Color _roodRand = Color(0xFFFCA5A5);
 
@@ -426,7 +441,7 @@ class _OpmetingProjectTitelhoofdKaartState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: _groen, width: 1.4),
+          borderSide: const BorderSide(color: _accent, width: 1.4),
         ),
       ),
       items: const <DropdownMenuItem<String>>[
@@ -717,10 +732,10 @@ class _OpmetingProjectTitelhoofdKaartState
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(9),
-            borderSide: const BorderSide(color: _groen, width: 1.4),
+            borderSide: const BorderSide(color: _accent, width: 1.4),
           ),
           floatingLabelStyle: const TextStyle(
-            color: _groen,
+            color: _accent,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -741,12 +756,12 @@ class _OpmetingProjectTitelhoofdKaartState
           actionsPadding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
           title: const Row(
             children: <Widget>[
-              Icon(Icons.home_work_outlined, color: _groen, size: 21),
+              Icon(Icons.home_work_outlined, color: _accent, size: 21),
               SizedBox(width: 9),
               Text(
                 'Projectadres',
                 style: TextStyle(
-                  color: _groen,
+                  color: _accent,
                   fontSize: 17,
                   fontWeight: FontWeight.w900,
                 ),
@@ -811,8 +826,8 @@ class _OpmetingProjectTitelhoofdKaartState
             ),
           ),
           actions: <Widget>[
-            TextButton.icon(
-              style: TextButton.styleFrom(foregroundColor: _tekstGrijs),
+            ThimacoTekstActie(
+              tekst: 'Leegmaken',
               onPressed: () {
                 straatController.clear();
                 huisnummerController.clear();
@@ -820,18 +835,14 @@ class _OpmetingProjectTitelhoofdKaartState
                 postcodeController.clear();
                 gemeenteController.clear();
               },
-              icon: const Icon(Icons.delete_sweep_outlined, size: 17),
-              label: const Text('Leegmaken'),
             ),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: _groen),
+            ThimacoTekstActie(
+              tekst: 'Annuleren',
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Annuleren'),
             ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _groen),
+            ThimacoTekstActie(
+              tekst: 'Opslaan',
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Opslaan'),
             ),
           ],
         );
@@ -864,6 +875,17 @@ class _OpmetingProjectTitelhoofdKaartState
 
   @override
   Widget build(BuildContext context) {
+    final paneel = widget.paneel;
+    if (paneel != null) {
+      return switch (paneel) {
+        OpmetingProjectPaneel.klantgegevens => _bouwKlantKaart(),
+        OpmetingProjectPaneel.projectkleur => _bouwProjectKleurKaart(),
+        OpmetingProjectPaneel.inhoudFiche => _bouwInhoudKaart(),
+        OpmetingProjectPaneel.offerteInstellingen =>
+          _bouwOfferteInstellingenKaart(),
+      };
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final breed = constraints.maxWidth >= 1050;
@@ -947,54 +969,22 @@ class _OpmetingProjectTitelhoofdKaartState
       actie: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Tooltip(
-            message: _heeftProjectAdresInvoer
-                ? 'Projectadres wijzigen'
-                : 'Projectadres invullen',
-            child: SizedBox(
-              width: 28,
-              height: 28,
-              child: IconButton(
-                onPressed: _openProjectAdresDialog,
-                padding: EdgeInsets.zero,
-                style: IconButton.styleFrom(
-                  foregroundColor: _groen,
-                  backgroundColor: _heeftProjectAdresInvoer
-                      ? _lichtGroen
-                      : Colors.white,
-                  side: const BorderSide(color: _groen),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                icon: const Icon(Icons.home_work_outlined, size: 15),
-              ),
+          SizedBox(
+            width: 28,
+            height: 28,
+            child: ThimacoIcoonActie(
+              icoon: Icons.home_work_outlined,
+              tooltip: _heeftProjectAdresInvoer
+                  ? 'Projectadres wijzigen'
+                  : 'Projectadres invullen',
+              grootte: 16,
+              onPressed: _openProjectAdresDialog,
             ),
           ),
-          const SizedBox(width: 5),
-          SizedBox(
-            height: 28,
-            child: OutlinedButton.icon(
-              onPressed: widget.onKlantLaden,
-              icon: const Icon(Icons.event_available_outlined, size: 13),
-              label: const Text('Klant laden'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _groen,
-                side: const BorderSide(color: _groen),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: const VisualDensity(
-                  horizontal: -3,
-                  vertical: -4,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 7),
-                textStyle: const TextStyle(
-                  fontSize: 10.25,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
+          const SizedBox(width: 3),
+          ThimacoTekstActie(
+            tekst: 'Klant laden',
+            onPressed: widget.onKlantLaden,
           ),
         ],
       ),
@@ -1151,7 +1141,7 @@ class _OpmetingProjectTitelhoofdKaartState
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(7),
-            borderSide: const BorderSide(color: _groen, width: 1.2),
+            borderSide: const BorderSide(color: _accent, width: 1.2),
           ),
         ),
         items: <DropdownMenuItem<String>>[
@@ -1194,15 +1184,11 @@ class _OpmetingProjectTitelhoofdKaartState
               onChanged: _verwerkBuitenkleurGewijzigd,
             ),
             const SizedBox(height: 5),
-            const Text(
-              'Kleuren toebehoren',
-              style: TextStyle(
-                color: _tekstGrijs,
-                fontSize: 9.5,
-                fontWeight: FontWeight.w900,
-              ),
+            const ThimacoSectieTitel(
+              tekst: 'Kleuren toebehoren',
+              compact: true,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Row(
               children: <Widget>[
                 Expanded(flex: 3, child: _bouwToebehorenKleurBronVeld()),
@@ -1300,7 +1286,7 @@ class _OpmetingProjectTitelhoofdKaartState
               child: Checkbox(
                 value: value,
                 onChanged: (waarde) => onChanged(waarde ?? false),
-                activeColor: _groen,
+                activeColor: _accent,
                 visualDensity: const VisualDensity(
                   horizontal: -4,
                   vertical: -4,
@@ -1349,7 +1335,7 @@ class _OpmetingProjectTitelhoofdKaartState
           dense: true,
           visualDensity: VisualDensity.compact,
           controlAffinity: ListTileControlAffinity.leading,
-          activeColor: _groen,
+          activeColor: _accent,
           title: const Text(
             'Berekenen',
             style: TextStyle(
@@ -1398,10 +1384,10 @@ class _OpmetingProjectTitelhoofdKaartState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(9),
-                borderSide: const BorderSide(color: _groen, width: 1.4),
+                borderSide: const BorderSide(color: _accent, width: 1.4),
               ),
               floatingLabelStyle: const TextStyle(
-                color: _groen,
+                color: _accent,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1458,10 +1444,10 @@ class _OpmetingProjectTitelhoofdKaartState
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _groen, width: 1.4),
+              borderSide: const BorderSide(color: _accent, width: 1.4),
             ),
             floatingLabelStyle: const TextStyle(
-              color: _groen,
+              color: _accent,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1497,10 +1483,10 @@ class _OpmetingProjectTitelhoofdKaartState
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _groen, width: 1.4),
+              borderSide: const BorderSide(color: _accent, width: 1.4),
             ),
             floatingLabelStyle: const TextStyle(
-              color: _groen,
+              color: _accent,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1515,15 +1501,11 @@ class _OpmetingProjectTitelhoofdKaartState
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Offertenummer',
-          style: TextStyle(
-            color: _tekstGrijs,
-            fontSize: 10,
-            fontWeight: FontWeight.w900,
-          ),
+        const ThimacoSectieTitel(
+          tekst: 'Offertenummer',
+          compact: true,
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -1679,7 +1661,7 @@ class _OpmetingProjectTitelhoofdKaartState
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(5),
-            borderSide: const BorderSide(color: _groen, width: 1.4),
+            borderSide: const BorderSide(color: _accent, width: 1.4),
           ),
         ),
         onTap: selecteerBestaandCijfer,
@@ -1807,33 +1789,20 @@ class _OpmetingProjectTitelhoofdKaartState
     Widget? actie,
     double titelFontSize = 14,
   }) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
-      decoration: BoxDecoration(
-        color: _achtergrondKaart,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: _rand),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final inhoud = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (!widget.zwevendeWeergave) ...<Widget>[
           Row(
             children: [
               Container(
                 width: 28,
                 height: 28,
                 decoration: BoxDecoration(
-                  color: _lichtGroen,
+                  color: _accentLicht,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: Icon(icoon, color: _groen, size: 17),
+                child: Icon(icoon, color: _accent, size: 17),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1852,9 +1821,36 @@ class _OpmetingProjectTitelhoofdKaartState
             ],
           ),
           const SizedBox(height: 8),
-          Expanded(child: kind),
+        ] else if (actie != null) ...<Widget>[
+          Align(alignment: Alignment.centerRight, child: actie),
+          const SizedBox(height: 7),
+        ],
+        Expanded(child: kind),
+      ],
+    );
+
+    if (widget.zwevendeWeergave) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+        child: inhoud,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+      decoration: BoxDecoration(
+        color: _achtergrondKaart,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _rand),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
         ],
       ),
+      child: inhoud,
     );
   }
 
@@ -1936,7 +1932,7 @@ class _OpmetingProjectTitelhoofdKaartState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(extraCompact ? 8 : 9),
-          borderSide: const BorderSide(color: _groen, width: 1.4),
+          borderSide: const BorderSide(color: _accent, width: 1.4),
         ),
       ),
       onChanged: (_) {
@@ -2025,7 +2021,7 @@ class _OpmetingProjectTitelhoofdKaartState
                     ..showSnackBar(
                       SnackBar(
                         content: Text(_toebehorenKleurLeegMelding),
-                        backgroundColor: _groen,
+                        backgroundColor: _accent,
                       ),
                     );
                   return;
@@ -2071,7 +2067,7 @@ class _OpmetingProjectTitelhoofdKaartState
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(9),
-              borderSide: const BorderSide(color: _groen, width: 1.4),
+              borderSide: const BorderSide(color: _accent, width: 1.4),
             ),
           ),
           onChanged: (waarde) {
@@ -2225,7 +2221,7 @@ class _OpmetingProjectTitelhoofdKaartState
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(9),
-          borderSide: const BorderSide(color: _groen, width: 1.4),
+          borderSide: const BorderSide(color: _accent, width: 1.4),
         ),
       ),
       onChanged: (waarde) {
@@ -2270,7 +2266,7 @@ class _OpmetingProjectTitelhoofdKaartState
   }
 
   Widget _inhoudRegel(OpmetingProjectTypeSamenvatting item) {
-    final kleur = item.zichtbaar ? _groen : _tekstGrijs;
+    final kleur = item.zichtbaar ? _accent : _tekstGrijs;
 
     return InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -2473,7 +2469,10 @@ class _AgendaKlantKeuzeDialog extends StatefulWidget {
 }
 
 class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _accent = ThimacoKleuren.oranje;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
+  static const Color _rand = ThimacoKleuren.rand;
 
   final TextEditingController _zoekController = TextEditingController();
 
@@ -2495,10 +2494,37 @@ class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
     }).toList();
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(
-        'Klant laden uit blauwe agenda',
-        style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: _rand),
+      ),
+      titlePadding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+      contentPadding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+      actionsPadding: const EdgeInsets.fromLTRB(12, 2, 12, 12),
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            'Klant laden uit blauwe agenda',
+            style: TextStyle(
+              color: _tekstDonker,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          SizedBox(height: 5),
+          SizedBox(
+            width: 54,
+            child: Divider(
+              height: 1,
+              thickness: 1.5,
+              color: _accent,
+            ),
+          ),
+        ],
       ),
       content: SizedBox(
         width: 560,
@@ -2508,11 +2534,35 @@ class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
             TextField(
               controller: _zoekController,
               autofocus: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+              cursorColor: _accent,
+              style: const TextStyle(
+                color: _tekstDonker,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: _tekstDonker,
+                  size: 20,
+                ),
                 labelText: 'Zoeken',
-                border: OutlineInputBorder(),
+                labelStyle: const TextStyle(color: _tekstGrijs),
                 isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: _rand),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: _accent, width: 1.4),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: _rand),
+                ),
               ),
               onChanged: (_) {
                 setState(() {});
@@ -2536,9 +2586,13 @@ class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
 
                         return ListTile(
                           dense: true,
+                          hoverColor: ThimacoKleuren.oranjeLicht,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           leading: const Icon(
                             Icons.event_available_outlined,
-                            color: _groen,
+                            color: _tekstDonker,
                           ),
                           title: Text(
                             klant.klantNaamMetAanspreking,
@@ -2569,11 +2623,11 @@ class _AgendaKlantKeuzeDialogState extends State<_AgendaKlantKeuzeDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        ThimacoTekstActie(
+          tekst: 'Annuleren',
           onPressed: () {
             Navigator.pop(context);
           },
-          child: const Text('Annuleren'),
         ),
       ],
     );

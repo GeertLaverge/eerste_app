@@ -1,12 +1,17 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
+// THIMACO-CONTROLE: DEURVLEUGEL-MENU-PROGRAMMASTIJL-FASE1-20260914
 // THIMACO-CONTROLE: OPVULLING-PER-KADER-OVERZICHT-ACTUEEL-20260817
 // THIMACO-CONTROLE: VASTE-MODELTEKENING-IPAD-ROTATIE-FASE1-20260812
 // THIMACO-CONTROLE: IPAD-ROTATIE-OVERZICHT-SNAPSHOT-NA-SCHAAL-20260727
 // THIMACO-CONTROLE: SCHUIFRAAM-ZIJKADERS-LOKALE-GEOMETRIE-20260726
 // THIMACO-CONTROLE: KADERLOKALE-DATA-ROTATIE-EN-HEROPENEN-20260722
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import '../deurpanelen/opmeting_deurpaneel_actie_helper.dart';
 import '../deurpanelen/opmeting_deurpaneel_actieve_keuze_controller.dart';
@@ -3970,7 +3975,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       wisSchuifraamSamenstelling: widget.schuifraamSamenstelling == null,
     );
 
-    final signatuur = data.wijzigingsSignatuur;
+    // Gebruik de werkelijk opgeslagen inhoud als wijzigingssignatuur. De oude
+    // signatuur steunde op toString() van lijsten met modelobjecten en kon
+    // daardoor wijzigingen missen wanneer het aantal objecten gelijk bleef.
+    // JSON bevat de effectieve vleugel-, opvulling- en kleinhoutgegevens.
+    final signatuur = jsonEncode(data.toJson());
 
     if (signatuur == _laatsteOverzichtTekeningSignatuur) {
       return;
@@ -5108,17 +5117,25 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
 
             Widget sectieTitel(String tekst) {
               return Padding(
-                padding: const EdgeInsets.only(top: 12, bottom: 7),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    tekst,
-                    style: const TextStyle(
-                      color: Color(0xFF0B7A3B),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
+                padding: const EdgeInsets.only(top: 11, bottom: 6),
+                child: Row(
+                  children: [
+                    Text(
+                      tekst,
+                      style: const TextStyle(
+                        color: ThimacoKleuren.antraciet,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Container(
+                        height: 1,
+                        color: ThimacoKleuren.rand,
+                      ),
+                    ),
+                  ],
                 ),
               );
             }
@@ -5128,55 +5145,11 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
               required String titel,
               required VoidCallback onTap,
             }) {
-              return InkWell(
-                borderRadius: BorderRadius.circular(10),
-                onTap: onTap,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: geselecteerd
-                        ? const Color(0xFFE7F6EC)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: geselecteerd
-                          ? const Color(0xFF0B7A3B)
-                          : const Color(0xFFE5E7EB),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        geselecteerd
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        size: 17,
-                        color: geselecteerd
-                            ? const Color(0xFF0B7A3B)
-                            : const Color(0xFF9CA3AF),
-                      ),
-                      const SizedBox(width: 7),
-                      Flexible(
-                        child: Text(
-                          titel,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: geselecteerd
-                                ? const Color(0xFF0B7A3B)
-                                : const Color(0xFF111827),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              return ThimacoTekstKeuze(
+                tekst: titel,
+                geselecteerd: geselecteerd,
+                onPressed: onTap,
+                compact: false,
               );
             }
 
@@ -5190,122 +5163,114 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
               final geselecteerd = vleugelKeuze == keuzeWaarde;
 
               return SizedBox(
-                width: 246,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    setDialogState(() {
-                      vleugelKeuze = keuzeWaarde;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(
-                      color: geselecteerd
-                          ? const Color(0xFFE7F6EC)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: geselecteerd
-                            ? const Color(0xFF0B7A3B)
-                            : const Color(0xFFE5E7EB),
-                        width: geselecteerd ? 1.6 : 1,
+                width: 230,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(9),
+                    onTap: () {
+                      setDialogState(() {
+                        vleugelKeuze = keuzeWaarde;
+                      });
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(
+                          color: geselecteerd
+                              ? ThimacoKleuren.oranje
+                              : ThimacoKleuren.rand,
+                          width: geselecteerd ? 1.6 : 1,
+                        ),
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x0F111827),
-                          blurRadius: 7,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 76,
-                          height: 86,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(9),
-                            border: Border.all(
-                              color: geselecteerd
-                                  ? const Color(0xFF0B7A3B)
-                                  : const Color(0xFFE5E7EB),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 62,
+                            height: 72,
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(7),
+                              border: Border.all(color: ThimacoKleuren.rand),
+                            ),
+                            child: CustomPaint(
+                              painter: _DeurVleugelVoorbeeldPainter(
+                                aantal: aantal,
+                                krukZijde: krukZijde,
+                                draairichting: draairichting,
+                                geselecteerd: geselecteerd,
+                              ),
                             ),
                           ),
-                          child: CustomPaint(
-                            painter: _DeurVleugelVoorbeeldPainter(
-                              aantal: aantal,
-                              krukZijde: krukZijde,
-                              draairichting: draairichting,
-                              geselecteerd: geselecteerd,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    geselecteerd
-                                        ? Icons.check_circle_rounded
-                                        : Icons.radio_button_unchecked_rounded,
-                                    size: 17,
-                                    color: geselecteerd
-                                        ? const Color(0xFF0B7A3B)
-                                        : const Color(0xFF9CA3AF),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      titel,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: geselecteerd
-                                            ? const Color(0xFF0B7A3B)
-                                            : const Color(0xFF111827),
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w900,
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      geselecteerd
+                                          ? Icons.check_circle_rounded
+                                          : Icons.radio_button_unchecked_rounded,
+                                      size: 15,
+                                      color: geselecteerd
+                                          ? ThimacoKleuren.oranje
+                                          : const Color(0xFF9CA3AF),
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Expanded(
+                                      child: Text(
+                                        titel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: ThimacoKleuren.antraciet,
+                                          fontSize: 11.5,
+                                          fontWeight: geselecteerd
+                                              ? FontWeight.w900
+                                              : FontWeight.w800,
+                                        ),
                                       ),
                                     ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  ondertitel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: ThimacoKleuren.tekstGrijs,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                ondertitel,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Color(0xFF6B7280),
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
                                 ),
-                              ),
-                              const SizedBox(height: 5),
-                              Text(
-                                draairichting ==
-                                        OpmetingRaamDeurDraairichting
-                                            .binnendraaiend
-                                    ? 'Binnendraaiend'
-                                    : 'Buitendraaiend',
-                                style: TextStyle(
-                                  color: geselecteerd
-                                      ? const Color(0xFF0B7A3B)
-                                      : const Color(0xFF374151),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
+                                const SizedBox(height: 3),
+                                Text(
+                                  draairichting ==
+                                          OpmetingRaamDeurDraairichting
+                                              .binnendraaiend
+                                      ? 'Binnendraaiend'
+                                      : 'Buitendraaiend',
+                                  style: TextStyle(
+                                    color: geselecteerd
+                                        ? ThimacoKleuren.oranje
+                                        : ThimacoKleuren.tekstGrijs,
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -5313,36 +5278,69 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
             }
 
             return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              elevation: 10,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: ThimacoKleuren.rand),
               ),
-              titlePadding: const EdgeInsets.fromLTRB(18, 16, 12, 0),
-              contentPadding: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              title: Row(
+              titlePadding: const EdgeInsets.fromLTRB(14, 12, 10, 0),
+              contentPadding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+              actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Text(
-                      toonWissen
-                          ? 'Deurvleugel aanpassen'
-                          : 'Deurvleugel selecteren',
-                      style: const TextStyle(
-                        color: Color(0xFF0B7A3B),
-                        fontWeight: FontWeight.w900,
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.door_front_door_outlined,
+                        size: 18,
+                        color: ThimacoKleuren.antraciet,
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          toonWissen
+                              ? 'Deurvleugel aanpassen'
+                              : 'Deurvleugel selecteren',
+                          style: const TextStyle(
+                            color: ThimacoKleuren.antraciet,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Sluiten',
+                        visualDensity: VisualDensity.compact,
+                        onPressed: () {
+                          Navigator.pop(dialogContext);
+                        },
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          size: 19,
+                          color: ThimacoKleuren.tekstGrijs,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: 34,
+                      height: 2,
+                      margin: const EdgeInsets.only(left: 25),
+                      decoration: BoxDecoration(
+                        color: ThimacoKleuren.oranje,
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    onPressed: () {
-                      Navigator.pop(dialogContext);
-                    },
-                    icon: const Icon(Icons.close_rounded),
-                    color: const Color(0xFF0B7A3B),
                   ),
                 ],
               ),
               content: SizedBox(
-                width: 520,
+                width: 490,
                 child: SingleChildScrollView(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -5350,8 +5348,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                     children: [
                       sectieTitel('Draairichting'),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           keuzeKnop(
                             geselecteerd:
@@ -5381,8 +5379,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                       ),
                       sectieTitel('Vleugel en krukkant'),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           deurVleugelKaart(
                             keuzeWaarde: 'enkel_links',
@@ -5416,8 +5414,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                       ),
                       sectieTitel('Kruk'),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           keuzeKnop(
                             geselecteerd:
@@ -5435,7 +5433,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                             geselecteerd:
                                 krukPlaatsing ==
                                 OpmetingRaamDeurKrukPlaatsing.binnenEnBuiten,
-                            titel: 'Kruk binnen\nen buiten',
+                            titel: 'Kruk binnen en buiten',
                             onTap: () {
                               setDialogState(() {
                                 krukPlaatsing = OpmetingRaamDeurKrukPlaatsing
@@ -5445,22 +5443,37 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 10),
-                      CheckboxListTile(
-                        value: rolluikkruk,
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: const Color(0xFF0B7A3B),
-                        title: const Text(
-                          'Rolluikkruk',
-                          style: TextStyle(fontWeight: FontWeight.w800),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9FAFB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: ThimacoKleuren.rand),
                         ),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        onChanged: (waarde) {
-                          setDialogState(() {
-                            rolluikkruk = waarde == true;
-                          });
-                        },
+                        child: CheckboxListTile(
+                          value: rolluikkruk,
+                          dense: true,
+                          visualDensity: VisualDensity.compact,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          activeColor: ThimacoKleuren.oranje,
+                          checkColor: Colors.white,
+                          title: const Text(
+                            'Rolluikkruk',
+                            style: TextStyle(
+                              color: ThimacoKleuren.antraciet,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          onChanged: (waarde) {
+                            setDialogState(() {
+                              rolluikkruk = waarde == true;
+                            });
+                          },
+                        ),
                       ),
                       if (isDubbel) ...[
                         sectieTitel('Verdeling dubbele deur'),
@@ -5473,8 +5486,14 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                             labelText: 'Verschuiving vanaf midden in mm',
                             helperText:
                                 '100 = rechterdeel 100 mm kleiner · -100 = linkerdeel 100 mm kleiner',
-                            border: OutlineInputBorder(),
                             isDense: true,
+                            border: OutlineInputBorder(),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: ThimacoKleuren.oranje,
+                                width: 1.6,
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -5494,12 +5513,12 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                         _DeurVleugelPlaatsKeuze.wissen(),
                       );
                     },
-                    icon: const Icon(Icons.delete_outline_rounded),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
                     label: const Text('Wissen'),
                   ),
                 TextButton(
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF0B7A3B),
+                    foregroundColor: ThimacoKleuren.tekstGrijs,
                   ),
                   onPressed: () {
                     Navigator.pop(dialogContext);
@@ -5508,7 +5527,12 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                 ),
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0B7A3B),
+                    backgroundColor: ThimacoKleuren.oranje,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                   ),
                   onPressed: () {
                     final isDubbel = vleugelKeuze.startsWith('dubbel');
@@ -5539,7 +5563,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.check_rounded),
+                  icon: const Icon(Icons.check_rounded, size: 18),
                   label: const Text('Plaatsen'),
                 ),
               ],
@@ -5791,19 +5815,20 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
         return AlertDialog(
           backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
           ),
           title: const Row(
             children: [
-              Icon(Icons.delete_outline_rounded, color: Color(0xFF0B7A3B)),
+              Icon(
+                Icons.delete_outline_rounded,
+                color: ThimacoKleuren.rood,
+              ),
               SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Kader wissen?',
-                  style: TextStyle(
-                    color: Color(0xFF064E3B),
-                    fontWeight: FontWeight.w900,
-                  ),
+                child: ThimacoSectieTitel(
+                  tekst: 'Kader wissen?',
+                  compact: false,
                 ),
               ),
             ],
@@ -5824,7 +5849,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
             ),
             FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0B7A3B),
+                backgroundColor: ThimacoKleuren.rood,
                 foregroundColor: Colors.white,
               ),
               onPressed: () {
@@ -6482,7 +6507,7 @@ class _DeurVleugelVoorbeeldPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final accent = Paint()
-      ..color = geselecteerd ? const Color(0xFF0B7A3B) : const Color(0xFF374151)
+      ..color = geselecteerd ? ThimacoKleuren.oranje : ThimacoKleuren.antraciet
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -6504,7 +6529,7 @@ class _DeurVleugelVoorbeeldPainter extends CustomPainter {
     tekstPainter.text = TextSpan(
       text: bovenTekst,
       style: TextStyle(
-        color: geselecteerd ? const Color(0xFF0B7A3B) : const Color(0xFF6B7280),
+        color: geselecteerd ? ThimacoKleuren.oranje : ThimacoKleuren.tekstGrijs,
         fontSize: 8.5,
         fontWeight: FontWeight.w900,
       ),

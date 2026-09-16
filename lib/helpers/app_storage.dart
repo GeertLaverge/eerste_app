@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: LOCAL-FIRST-GEEN-SYNC-TIJDENS-WERKEN-20260914
+// THIMACO-CONTROLE: SYNC-PERFORMANCE-ISOLATE-FASE2-20260914
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
+// THIMACO-CONTROLE: APPSTORAGE-ZONDER-OUDE-OFFERTEVERSIES-20260912
+// THIMACO-CONTROLE: PROJECTBESTAND-OPSLAG-ACHTERWAARTS-COMPATIBEL-FASE1-20260912
 // THIMACO-CONTROLE: LEGACY-PRIJS-PROFIELEN-ALLEEN-LEZEN-MIGRATIE-20260815
 // THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-BIBLIOTHEEK-OPSLAG-EN-SYNC-20260815
 // THIMACO-CONTROLE: VASTE-INZETHOR-EIGEN-STANDAARDPRIJSOPSLAG-MET-LEGACY-FALLBACK-20260815
@@ -5,10 +10,8 @@
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-OPSLAG-EN-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-BIBLIOTHEEK-OPSLAG-EN-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-ACTIEF-20260814
-// THIMACO-CONTROLE: OFFERTEVARIANTEN-ATOMAIRE-OPSLAG-20260811
 // THIMACO-CONTROLE: PROJECT-TITELHOOFD-ATOMAIRE-OPSLAG-BEREKEN-20260810
 // THIMACO-CONTROLE: OPMETINGEN-ATOMAIRE-OPSLAG-GLOBAAL-20260810
-// THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-OPSLAG-20260806
 // THIMACO-CONTROLE: BUITENJALOEZIE-APP-STORAGE-FASE-3A-20260803
 // THIMACO-CONTROLE: OFFERTE-MAIL-TEKSTEN-APP-STORAGE-20260802
 // THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-APP-STORAGE-20260802
@@ -21,6 +24,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'Agenda/agenda_dagtaak_template.dart';
@@ -32,6 +36,7 @@ import '../helpers/notities/notitie_actie_model.dart';
 import 'bibliotheek/bibliotheek_model.dart';
 import '../helpers/notities/notitie_model.dart';
 import 'opmeting/raam/opmeting_raam_keuzemenu_model.dart';
+import 'opmeting/raam/opmeting_raam_technische_groep_model.dart';
 import 'opmeting/raam/opmeting_raam_opvulling_model.dart';
 import 'opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'opmeting/project/opmeting_project_kleur_model.dart';
@@ -44,7 +49,6 @@ import 'opmeting/toebehoren/uitvalscherm/opmeting_uitvalscherm_instellingen_mode
 import 'opmeting/toebehoren/sektionale_poort/opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting/toebehoren/velux_dakramen/opmeting_velux_dakraam_instellingen_model.dart';
 import 'offerte/mail/offerte_mail_tekst_model.dart';
-import 'offerte/versies/offerte_versie_model.dart';
 import 'offerte/prijzen/offerte_prijs_opslag_codec.dart';
 import 'offerte/prijzen/offerte_prijsprofiel_model.dart';
 import 'offerte/prijzen/offerte_prijs_per_artikel_template_model.dart';
@@ -76,20 +80,6 @@ class AppStorageProjectTitelhoofdMutatieResultaat<T> {
 
   final T resultaat;
   final Map<String, OpmetingProjectTitelhoofd> titelhoofden;
-  final bool gewijzigd;
-  final bool startSync;
-}
-
-class AppStorageOfferteVersieMutatieResultaat<T> {
-  const AppStorageOfferteVersieMutatieResultaat({
-    required this.resultaat,
-    required this.versies,
-    required this.gewijzigd,
-    this.startSync = true,
-  });
-
-  final T resultaat;
-  final List<OfferteVersieModel> versies;
   final bool gewijzigd;
   final bool startSync;
 }
@@ -145,6 +135,25 @@ class AppStorage {
 
   static const String _opmetingSchuifraamKeuzemenusAluKey =
       'opmeting_schuifraam_keuzemenus_alu';
+
+
+  static const String _opmetingRaamTechnischeGroepenKey =
+      'opmeting_raam_technische_groepen';
+
+  static const String _opmetingRaamTechnischeGroepenAluKey =
+      'opmeting_raam_technische_groepen_alu';
+
+  static const String _opmetingDeurTechnischeGroepenPvcKey =
+      'opmeting_deur_technische_groepen_pvc';
+
+  static const String _opmetingDeurTechnischeGroepenAluKey =
+      'opmeting_deur_technische_groepen_alu';
+
+  static const String _opmetingSchuifraamTechnischeGroepenPvcKey =
+      'opmeting_schuifraam_technische_groepen_pvc';
+
+  static const String _opmetingSchuifraamTechnischeGroepenAluKey =
+      'opmeting_schuifraam_technische_groepen_alu';
 
   static const String _opmetingProjectTitelhoofdenKey =
       'thimaco_opmeting_project_titelhoofden';
@@ -211,11 +220,6 @@ class AppStorage {
   static const String _offerteTechnischeKeuzePrijzenSyncMetaKey =
       'thimaco_offerte_technische_keuze_prijzen_sync_meta';
 
-  static const String _offerteVersiesKey = 'thimaco_offerte_versies';
-
-  static const String _offerteVersiesSyncMetaKey =
-      'thimaco_offerte_versies_sync_meta';
-
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
   static Future<SharedPreferences> openBox() async {
@@ -223,8 +227,17 @@ class AppStorage {
   }
 
   static Future<void> _syncBackup() async {
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    /*
+     * Local-first: een bewaarmethode schrijft uitsluitend lokaal.
+     * OneDrive wordt tijdens actief werken NIET meer gestart.
+     *
+     * We registreren alleen licht dat er lokaal iets veranderde. De echte
+     * synchronisatie gebeurt op Home, bij opstarten of bij expliciet afsluiten.
+     * De module-sync vergelijkt bovendien stabiele lokale hashes, zodat ook een
+     * wijziging die vlak vóór een crash gebeurde bij de volgende Home/opstart
+     * alsnog wordt ontdekt.
+     */
+    unawaited(OneDriveSyncService.registreerLokaleWijziging());
   }
 
   static List<Map<String, dynamic>> decodeJsonMapLijstVoorSync(
@@ -255,6 +268,33 @@ class AppStorage {
     return jsonEncode(records.toList());
   }
 
+  static List<Map<String, dynamic>> _decodeJsonMapLijstWorker(
+    String jsonString,
+  ) {
+    return decodeJsonMapLijstVoorSync(jsonString);
+  }
+
+  static String _encodeJsonMapLijstWorker(
+    List<Map<String, dynamic>> records,
+  ) {
+    return encodeJsonMapLijstVoorSync(records);
+  }
+
+  static Future<List<Map<String, dynamic>>> _decodeJsonMapLijstAchtergrond(
+    String? jsonString,
+  ) {
+    return compute(_decodeJsonMapLijstWorker, jsonString ?? '');
+  }
+
+  static Future<String> _encodeJsonMapLijstAchtergrond(
+    Iterable<Map<String, dynamic>> records,
+  ) {
+    return compute(
+      _encodeJsonMapLijstWorker,
+      records.map(Map<String, dynamic>.from).toList(growable: false),
+    );
+  }
+
   static String _standaardSyncId(Map<String, dynamic> record) {
     return record['id']?.toString().trim() ?? '';
   }
@@ -271,7 +311,9 @@ class AppStorage {
     required bool sync,
   }) async {
     final prefs = await openBox();
-    final oudeRecords = decodeJsonMapLijstVoorSync(prefs.getString(dataKey));
+    final oudeRecords = await _decodeJsonMapLijstAchtergrond(
+      prefs.getString(dataKey),
+    );
     final bestaandeMetadata = SyncMergeService.decodeJsonRecordMetadata(
       prefs.getString(metadataKey),
     );
@@ -284,7 +326,8 @@ class AppStorage {
       gewijzigdOp: gewijzigdOp,
     );
 
-    await prefs.setString(dataKey, encodeJsonMapLijstVoorSync(records));
+    final gecodeerdeRecords = await _encodeJsonMapLijstAchtergrond(records);
+    await prefs.setString(dataKey, gecodeerdeRecords);
     await prefs.setString(
       metadataKey,
       SyncMergeService.encodeJsonRecordMetadata(nieuweMetadata),
@@ -436,12 +479,44 @@ class AppStorage {
     return jsonEncode(data);
   }
 
+  static Map<String, List<AgendaItem>> _decodeAgendaItemsWorker(
+    String jsonString,
+  ) {
+    return _decodeAgendaItems(jsonString);
+  }
+
+  static String _encodeAgendaItemsWorker(
+    Map<String, List<AgendaItem>> itemsPerDag,
+  ) {
+    return encodeAgendaItemsVoorSync(itemsPerDag);
+  }
+
+  static Future<Map<String, List<AgendaItem>>> _decodeAgendaItemsAchtergrond(
+    String? jsonString,
+  ) {
+    return compute(_decodeAgendaItemsWorker, jsonString ?? '');
+  }
+
+  static Future<String> _encodeAgendaItemsAchtergrond(
+    Map<String, List<AgendaItem>> itemsPerDag,
+  ) {
+    return compute(
+      _encodeAgendaItemsWorker,
+      <String, List<AgendaItem>>{
+        for (final entry in itemsPerDag.entries)
+          entry.key: List<AgendaItem>.from(entry.value),
+      },
+    );
+  }
+
   static Future<Map<String, List<AgendaItem>>>
   laadAgendaItemsNieuwVoorSync() {
     return _voerAgendaActieGeserialiseerdUit(() async {
       final prefs = await openBox();
 
-      return _decodeAgendaItems(prefs.getString(_agendaItemsNieuwKey));
+      return _decodeAgendaItemsAchtergrond(
+        prefs.getString(_agendaItemsNieuwKey),
+      );
     });
   }
 
@@ -468,7 +543,7 @@ class AppStorage {
   ) async {
     await _voerAgendaActieGeserialiseerdUit<void>(() async {
       final prefs = await openBox();
-      final opgeslagenItems = _decodeAgendaItems(
+      final opgeslagenItems = await _decodeAgendaItemsAchtergrond(
         prefs.getString(_agendaItemsNieuwKey),
       );
 
@@ -486,10 +561,10 @@ class AppStorage {
         opgeslagenItems,
       );
 
-      await prefs.setString(
-        _agendaItemsNieuwKey,
-        encodeAgendaItemsVoorSync(samengevoegd),
+      final gecodeerdeAgenda = await _encodeAgendaItemsAchtergrond(
+        samengevoegd,
       );
+      await prefs.setString(_agendaItemsNieuwKey, gecodeerdeAgenda);
     });
 
     // Pas nadat de fysieke lokale save volledig klaar is, registreren we de
@@ -508,7 +583,7 @@ class AppStorage {
       // voor de write opnieuw de actuele lokale agenda en merge nogmaals. Zo
       // kan een afspraak die tijdens een upload/download werd ingepland nooit
       // meer door die oudere sync-snapshot verdwijnen.
-      final laatsteLokaleItems = _decodeAgendaItems(
+      final laatsteLokaleItems = await _decodeAgendaItemsAchtergrond(
         prefs.getString(_agendaItemsNieuwKey),
       );
 
@@ -517,10 +592,10 @@ class AppStorage {
         itemsPerDag,
       );
 
-      await prefs.setString(
-        _agendaItemsNieuwKey,
-        encodeAgendaItemsVoorSync(veiligSamengevoegd),
+      final gecodeerdeAgenda = await _encodeAgendaItemsAchtergrond(
+        veiligSamengevoegd,
       );
+      await prefs.setString(_agendaItemsNieuwKey, gecodeerdeAgenda);
     });
   }
 
@@ -655,9 +730,7 @@ class AppStorage {
       return [];
     }
 
-    final lijst = jsonDecode(jsonString) as List<dynamic>;
-
-    return lijst.map((item) => Map<String, dynamic>.from(item)).toList();
+    return _decodeJsonMapLijstAchtergrond(jsonString);
   }
 
   static Future<void> bewaarKlantenFiches(
@@ -665,7 +738,8 @@ class AppStorage {
   ) async {
     final prefs = await openBox();
 
-    await prefs.setString(_klantenFichesKey, jsonEncode(klanten));
+    final gecodeerdeKlanten = await _encodeJsonMapLijstAchtergrond(klanten);
+    await prefs.setString(_klantenFichesKey, gecodeerdeKlanten);
 
     await _syncBackup();
   }
@@ -675,7 +749,8 @@ class AppStorage {
   ) async {
     final prefs = await openBox();
 
-    await prefs.setString(_klantenFichesKey, jsonEncode(klanten));
+    final gecodeerdeKlanten = await _encodeJsonMapLijstAchtergrond(klanten);
+    await prefs.setString(_klantenFichesKey, gecodeerdeKlanten);
   }
 
   // ------------------------------------------------------------
@@ -838,6 +913,96 @@ class AppStorage {
       default:
         return _opmetingRaamKeuzemenusKey;
     }
+  }
+
+  static String _opmetingRaamTechnischeGroepenKeyVoorFormulier(
+    String formulierType,
+  ) {
+    switch (formulierType.trim()) {
+      case 'aluRaam':
+      case 'alu_raam':
+      case 'ALU Raam':
+        return _opmetingRaamTechnischeGroepenAluKey;
+      case 'pvcDeur':
+      case 'pvc_deur':
+      case 'PVC Deur':
+        return _opmetingDeurTechnischeGroepenPvcKey;
+      case 'aluDeur':
+      case 'alu_deur':
+      case 'ALU Deur':
+        return _opmetingDeurTechnischeGroepenAluKey;
+      case 'pvcSchuifraam':
+      case 'pvc_schuifraam':
+      case 'PVC Schuifraam':
+        return _opmetingSchuifraamTechnischeGroepenPvcKey;
+      case 'aluSchuifraam':
+      case 'alu_schuifraam':
+      case 'ALU Schuifraam':
+        return _opmetingSchuifraamTechnischeGroepenAluKey;
+      case 'pvcRaam':
+      case 'pvc_raam':
+      case 'PVC Raam':
+      case 'raam':
+      case '':
+      default:
+        return _opmetingRaamTechnischeGroepenKey;
+    }
+  }
+
+  static Future<List<OpmetingRaamTechnischeGroep>>
+  laadOpmetingRaamTechnischeGroepenVoorFormulier(String formulierType) async {
+    final prefs = await openBox();
+    final key = _opmetingRaamTechnischeGroepenKeyVoorFormulier(formulierType);
+    final jsonString = prefs.getString(key);
+
+    if (jsonString == null || jsonString.trim().isEmpty) {
+      return <OpmetingRaamTechnischeGroep>[];
+    }
+
+    try {
+      final decoded = jsonDecode(jsonString);
+      if (decoded is! List) {
+        return <OpmetingRaamTechnischeGroep>[];
+      }
+
+      final groepen = decoded
+          .whereType<Map>()
+          .map(
+            (item) => OpmetingRaamTechnischeGroep.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .where((groep) => groep.id.isNotEmpty && groep.naam.isNotEmpty)
+          .toList()
+        ..sort((eerste, tweede) {
+          final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+          if (volgorde != 0) return volgorde;
+          return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+        });
+
+      return List<OpmetingRaamTechnischeGroep>.unmodifiable(groepen);
+    } catch (_) {
+      return <OpmetingRaamTechnischeGroep>[];
+    }
+  }
+
+  static Future<void> bewaarOpmetingRaamTechnischeGroepenVoorFormulier({
+    required String formulierType,
+    required List<OpmetingRaamTechnischeGroep> groepen,
+  }) async {
+    final key = _opmetingRaamTechnischeGroepenKeyVoorFormulier(formulierType);
+    final genormaliseerd = List<OpmetingRaamTechnischeGroep>.generate(
+      groepen.length,
+      (index) => groepen[index].copyWith(volgorde: index),
+    );
+
+    await _bewaarJsonMapLijstMetSyncMetadata(
+      dataKey: key,
+      metadataKey: _syncMetaKeyVoorDataKey(key),
+      records: genormaliseerd.map((groep) => groep.toJson()).toList(),
+      idVoorRecord: _standaardSyncId,
+      sync: true,
+    );
   }
 
   static Future<List<OpmetingRaamKeuzeMenu>>
@@ -1581,132 +1746,6 @@ class AppStorage {
   }
 
   // ------------------------------------------------------------
-  // OFFERTE - BEWERKBARE VARIANTEN + ONDERTEKENDE MOMENTOPNAMES
-  // ------------------------------------------------------------
-
-  // Net zoals de opmetingen krijgen offertevarianten één centrale wachtrij.
-  // Daardoor kan een update van Offerte 2 nooit een gelijktijdig aangemaakte
-  // Offerte 3 of ondertekende momentopname overschrijven.
-  static Future<void> _offerteVersiesWachtrij = Future<void>.value();
-
-  static List<OfferteVersieModel> _decodeOfferteVersies(String? jsonString) {
-    final records = decodeJsonMapLijstVoorSync(jsonString);
-    final resultaat = <OfferteVersieModel>[];
-
-    for (final record in records) {
-      try {
-        final versie = OfferteVersieModel.fromJson(record);
-        if (versie.isGeldig) resultaat.add(versie);
-      } catch (_) {
-        // Eén beschadigde versie mag de overige offertevarianten niet blokkeren.
-      }
-    }
-
-    return resultaat;
-  }
-
-  static Future<T> muteerOfferteVersiesAtomair<T>(
-    FutureOr<AppStorageOfferteVersieMutatieResultaat<T>> Function(
-      List<OfferteVersieModel> actueleVersies,
-    )
-    mutatie,
-  ) {
-    final completer = Completer<T>();
-
-    _offerteVersiesWachtrij = _offerteVersiesWachtrij.then((_) async {
-      try {
-        final prefs = await openBox();
-        final oudeRecords = decodeJsonMapLijstVoorSync(
-          prefs.getString(_offerteVersiesKey),
-        );
-        final actueel = _decodeOfferteVersies(
-          prefs.getString(_offerteVersiesKey),
-        );
-
-        final mutatieResultaat = await mutatie(
-          List<OfferteVersieModel>.from(actueel),
-        );
-
-        if (mutatieResultaat.gewijzigd) {
-          final nieuweVersies = mutatieResultaat.versies
-              .where((versie) => versie.isGeldig)
-              .toList(growable: false);
-          final nieuweRecords = nieuweVersies
-              .map((versie) => versie.toJson())
-              .toList(growable: false);
-          final bestaandeMetadata = SyncMergeService.decodeJsonRecordMetadata(
-            prefs.getString(_offerteVersiesSyncMetaKey),
-          );
-          final gewijzigdOp = DateTime.now().toUtc().toIso8601String();
-          final nieuweMetadata = SyncMergeService.updateJsonRecordMetadata(
-            oudeRecords: oudeRecords,
-            nieuweRecords: nieuweRecords,
-            bestaandeMetadata: bestaandeMetadata,
-            idVoorRecord: _standaardSyncId,
-            gewijzigdOp: gewijzigdOp,
-          );
-
-          await prefs.setString(
-            _offerteVersiesKey,
-            encodeJsonMapLijstVoorSync(nieuweRecords),
-          );
-          await prefs.setString(
-            _offerteVersiesSyncMetaKey,
-            SyncMergeService.encodeJsonRecordMetadata(nieuweMetadata),
-          );
-
-          if (mutatieResultaat.startSync) {
-            await _syncBackup();
-          }
-        }
-
-        completer.complete(mutatieResultaat.resultaat);
-      } catch (fout, stackTrace) {
-        completer.completeError(fout, stackTrace);
-      }
-    });
-
-    return completer.future;
-  }
-
-  static Future<List<OfferteVersieModel>> laadOfferteVersies() async {
-    // Een lezer krijgt nooit een toestand van vóór een reeds gestarte
-    // variantmutatie.
-    await _offerteVersiesWachtrij;
-
-    final prefs = await openBox();
-    final resultaat = _decodeOfferteVersies(
-      prefs.getString(_offerteVersiesKey),
-    );
-
-    resultaat.sort((eerste, tweede) {
-      final project = eerste.projectSleutel.compareTo(tweede.projectSleutel);
-      if (project != 0) return project;
-
-      final nummer = eerste.versieNummer.compareTo(tweede.versieNummer);
-      if (nummer != 0) return nummer;
-
-      return eerste.opgeslagenOp.compareTo(tweede.opgeslagenOp);
-    });
-
-    return resultaat;
-  }
-
-  /// Compatibele volledige save. Nieuwe offertecode gebruikt bij voorkeur
-  /// [muteerOfferteVersiesAtomair] zodat één variant gericht wordt gewijzigd.
-  static Future<void> bewaarOfferteVersies(
-    List<OfferteVersieModel> versies,
-  ) async {
-    await muteerOfferteVersiesAtomair<void>((_) {
-      return AppStorageOfferteVersieMutatieResultaat<void>(
-        resultaat: null,
-        versies: List<OfferteVersieModel>.from(versies),
-        gewijzigd: true,
-      );
-    });
-  }
-
-  // ------------------------------------------------------------
   // OPMETING - PROJECT TITELHOOFD
   // ------------------------------------------------------------
 
@@ -1756,7 +1795,10 @@ class AppStorage {
     final gewijzigdOp = titelhoofd.gewijzigdOp.trim();
     if (gewijzigdOp.isEmpty) return null;
 
-    final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+    final sleutel = opmetingProjectBestandOpslagSleutel(
+      projectBestandId: titelhoofd.projectBestandId,
+      klantNaam: titelhoofd.klantNaam,
+    );
     return _projectTitelhoofdBasisMomentopnames['$sleutel\u0000$gewijzigdOp'];
   }
 
@@ -1780,11 +1822,29 @@ class AppStorage {
           return;
         }
 
-        final titelhoofd = OpmetingProjectTitelhoofd.fromJson(
+        final gelezenTitelhoofd = OpmetingProjectTitelhoofd.fromJson(
           Map<String, dynamic>.from(waarde),
         );
 
-        resultaat[sleutel.toString()] = titelhoofd;
+        final klantNaam = gelezenTitelhoofd.klantNaam.trim().isNotEmpty
+            ? gelezenTitelhoofd.klantNaam.trim()
+            : sleutel.toString().trim();
+        final projectBestandId =
+            gelezenTitelhoofd.projectBestandId.trim().isNotEmpty
+            ? gelezenTitelhoofd.projectBestandId.trim()
+            : opmetingLegacyProjectBestandId(klantNaam);
+        final bestandsNaam = gelezenTitelhoofd.bestandsNaam.trim().isNotEmpty
+            ? gelezenTitelhoofd.bestandsNaam.trim()
+            : OpmetingProjectTitelhoofd.standaardBestaandBestandsNaam;
+
+        // Oude back-ups blijven onder hun bestaande klant-sleutel staan.
+        // Nieuwe projectbestanden gebruiken hun unieke projectBestandId als sleutel.
+        // Zo ontstaat tijdens de overgang geen dubbele klantmap in de sync.
+        resultaat[sleutel.toString()] = gelezenTitelhoofd.copyWith(
+          klantNaam: klantNaam,
+          projectBestandId: projectBestandId,
+          bestandsNaam: bestandsNaam,
+        );
       });
 
       return resultaat;
@@ -1880,13 +1940,70 @@ class AppStorage {
   }
 
   static Future<OpmetingProjectTitelhoofd> laadOpmetingProjectTitelhoofd(
-    String klantNaam,
-  ) async {
+    String klantNaam, {
+    String projectBestandId = '',
+  }) async {
     final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
-    final sleutel = opmetingProjectTitelhoofdSleutel(klantNaam);
-    final titelhoofd =
-        titelhoofden[sleutel] ??
-        OpmetingProjectTitelhoofd(klantNaam: klantNaam.trim());
+    final klantSleutel = opmetingProjectTitelhoofdSleutel(klantNaam);
+    final gewensteProjectId = projectBestandId.trim();
+    final legacyProjectId = opmetingLegacyProjectBestandId(klantNaam);
+
+    String? gevondenSleutel;
+    OpmetingProjectTitelhoofd? titelhoofd;
+
+    if (gewensteProjectId.isNotEmpty) {
+      for (final entry in titelhoofden.entries) {
+        if (entry.key.trim() == gewensteProjectId ||
+            entry.value.projectBestandId.trim() == gewensteProjectId) {
+          gevondenSleutel = entry.key;
+          titelhoofd = entry.value;
+          break;
+        }
+      }
+    } else {
+      // Bestaande aanroepers kennen nog geen project-ID. Geef eerst het
+      // oorspronkelijke legacy-bestand van de klant terug. Daardoor blijft
+      // de app volledig bruikbaar tijdens deze eerste migratiefase.
+      titelhoofd = titelhoofden[klantSleutel];
+      if (titelhoofd != null) {
+        gevondenSleutel = klantSleutel;
+      }
+
+      if (titelhoofd == null) {
+        for (final entry in titelhoofden.entries) {
+          if (entry.value.projectBestandId.trim() == legacyProjectId) {
+            gevondenSleutel = entry.key;
+            titelhoofd = entry.value;
+            break;
+          }
+        }
+      }
+
+      if (titelhoofd == null) {
+        for (final entry in titelhoofden.entries) {
+          if (opmetingKlantNaamSleutel(entry.value.klantNaam) ==
+              opmetingKlantNaamSleutel(klantNaam)) {
+            gevondenSleutel = entry.key;
+            titelhoofd = entry.value;
+            break;
+          }
+        }
+      }
+    }
+
+    titelhoofd ??= OpmetingProjectTitelhoofd(
+      klantNaam: klantNaam.trim(),
+      projectBestandId: gewensteProjectId.isNotEmpty
+          ? gewensteProjectId
+          : legacyProjectId,
+      bestandsNaam: OpmetingProjectTitelhoofd.standaardBestaandBestandsNaam,
+    );
+
+    final sleutel = gevondenSleutel ??
+        opmetingProjectBestandOpslagSleutel(
+          projectBestandId: titelhoofd.projectBestandId,
+          klantNaam: titelhoofd.klantNaam,
+        );
 
     if (titelhoofd.gewijzigdOp.trim().isNotEmpty) {
       _projectTitelhoofdBasisMomentopnames[_projectTitelhoofdMomentopnameSleutel(
@@ -1898,6 +2015,29 @@ class AppStorage {
     return titelhoofd;
   }
 
+  static Future<List<OpmetingProjectTitelhoofd>>
+  laadOpmetingProjectBestandenVoorKlant(String klantNaam) async {
+    final titelhoofden = await laadOpmetingProjectTitelhoofdenVoorSync();
+    final klantSleutel = opmetingKlantNaamSleutel(klantNaam);
+
+    final resultaat = titelhoofden.values
+        .where(
+          (titelhoofd) =>
+              opmetingKlantNaamSleutel(titelhoofd.klantNaam) == klantSleutel,
+        )
+        .toList(growable: false);
+
+    resultaat.sort((eerste, tweede) {
+      final naamVergelijking = eerste.bestandsNaam.toLowerCase().compareTo(
+        tweede.bestandsNaam.toLowerCase(),
+      );
+      if (naamVergelijking != 0) return naamVergelijking;
+      return eerste.projectBestandId.compareTo(tweede.projectBestandId);
+    });
+
+    return resultaat;
+  }
+
   /// Bestaande publieke save blijft bruikbaar, maar schrijft nooit meer buiten
   /// de centrale titelhoofd-wachtrij. Een aantoonbaar oudere snapshot kan een
   /// nieuwere opgeslagen toestand niet terug overschrijven.
@@ -1905,21 +2045,34 @@ class AppStorage {
     OpmetingProjectTitelhoofd titelhoofd,
   ) async {
     await _muteerProjectTitelhoofdenAtomair<void>((actueel) {
-      final sleutel = opmetingProjectTitelhoofdSleutel(titelhoofd.klantNaam);
+      final projectBestandId = titelhoofd.projectBestandId.trim().isNotEmpty
+          ? titelhoofd.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(titelhoofd.klantNaam);
+      final bestandsNaam = titelhoofd.bestandsNaam.trim().isNotEmpty
+          ? titelhoofd.bestandsNaam.trim()
+          : OpmetingProjectTitelhoofd.standaardBestaandBestandsNaam;
+      final voorbereid = titelhoofd.copyWith(
+        projectBestandId: projectBestandId,
+        bestandsNaam: bestandsNaam,
+      );
+      final sleutel = opmetingProjectBestandOpslagSleutel(
+        projectBestandId: projectBestandId,
+        klantNaam: voorbereid.klantNaam,
+      );
       final huidig = actueel[sleutel];
 
-      OpmetingProjectTitelhoofd kandidaat = titelhoofd;
+      OpmetingProjectTitelhoofd kandidaat = voorbereid;
       if (huidig != null) {
-        final basis = _zoekProjectTitelhoofdBasisMomentopname(titelhoofd);
+        final basis = _zoekProjectTitelhoofdBasisMomentopname(voorbereid);
         if (basis != null) {
           kandidaat = _driewegSamenvoegenProjectTitelhoofd(
             basis: basis,
-            gewijzigd: titelhoofd,
+            gewijzigd: voorbereid,
             actueel: huidig,
           );
         } else {
           final huidigeDatum = DateTime.tryParse(huidig.gewijzigdOp);
-          final inkomendeDatum = DateTime.tryParse(titelhoofd.gewijzigdOp);
+          final inkomendeDatum = DateTime.tryParse(voorbereid.gewijzigdOp);
 
           if (huidigeDatum != null &&
               inkomendeDatum != null &&
@@ -1938,6 +2091,8 @@ class AppStorage {
       }
 
       final opgeslagen = kandidaat.copyWith(
+        projectBestandId: projectBestandId,
+        bestandsNaam: bestandsNaam,
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       );
       final nieuweMap = Map<String, OpmetingProjectTitelhoofd>.from(actueel);
@@ -1964,15 +2119,42 @@ class AppStorage {
     return _muteerProjectTitelhoofdenAtomair<OpmetingProjectTitelhoofd>((
       actueel,
     ) {
-      final oudeSleutel = opmetingProjectTitelhoofdSleutel(basis.klantNaam);
-      final nieuweSleutel = opmetingProjectTitelhoofdSleutel(
-        gewijzigd.klantNaam,
+      final basisProjectId = basis.projectBestandId.trim().isNotEmpty
+          ? basis.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(basis.klantNaam);
+      final gewijzigdProjectId = gewijzigd.projectBestandId.trim().isNotEmpty
+          ? gewijzigd.projectBestandId.trim()
+          : basisProjectId;
+      final basisBestandsNaam = basis.bestandsNaam.trim().isNotEmpty
+          ? basis.bestandsNaam.trim()
+          : OpmetingProjectTitelhoofd.standaardBestaandBestandsNaam;
+      final gewijzigdBestandsNaam = gewijzigd.bestandsNaam.trim().isNotEmpty
+          ? gewijzigd.bestandsNaam.trim()
+          : basisBestandsNaam;
+
+      final voorbereideBasis = basis.copyWith(
+        projectBestandId: basisProjectId,
+        bestandsNaam: basisBestandsNaam,
       );
-      final huidig = actueel[oudeSleutel] ?? actueel[nieuweSleutel] ?? basis;
+      final voorbereidGewijzigd = gewijzigd.copyWith(
+        projectBestandId: gewijzigdProjectId,
+        bestandsNaam: gewijzigdBestandsNaam,
+      );
+
+      final oudeSleutel = opmetingProjectBestandOpslagSleutel(
+        projectBestandId: basisProjectId,
+        klantNaam: voorbereideBasis.klantNaam,
+      );
+      final nieuweSleutel = opmetingProjectBestandOpslagSleutel(
+        projectBestandId: gewijzigdProjectId,
+        klantNaam: voorbereidGewijzigd.klantNaam,
+      );
+      final huidig =
+          actueel[oudeSleutel] ?? actueel[nieuweSleutel] ?? voorbereideBasis;
 
       final kandidaat = _driewegSamenvoegenProjectTitelhoofd(
-        basis: basis,
-        gewijzigd: gewijzigd,
+        basis: voorbereideBasis,
+        gewijzigd: voorbereidGewijzigd,
         actueel: huidig,
       );
 
@@ -1985,6 +2167,8 @@ class AppStorage {
       }
 
       final opgeslagen = kandidaat.copyWith(
+        projectBestandId: gewijzigdProjectId,
+        bestandsNaam: gewijzigdBestandsNaam,
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
       );
       final nieuweMap = Map<String, OpmetingProjectTitelhoofd>.from(actueel);
@@ -2902,6 +3086,16 @@ class AppStorage {
               Map<String, dynamic>.from(item),
             ),
           )
+          .map((opmeting) {
+            if (opmeting.projectBestandId.trim().isNotEmpty) {
+              return opmeting;
+            }
+            return opmeting.copyWith(
+              projectBestandId: opmetingLegacyProjectBestandId(
+                opmeting.klantNaam,
+              ),
+            );
+          })
           .where((opmeting) => opmeting.id.trim().isNotEmpty)
           .toList();
     } catch (_) {
@@ -2915,6 +3109,39 @@ class AppStorage {
     return jsonEncode(opmetingen.map((opmeting) => opmeting.toJson()).toList());
   }
 
+  /// Zware opmetings-JSON wordt op native toestellen buiten de UI-isolate
+  /// verwerkt. Dit voorkomt dat een grote klantenfiche/opmeetlijst de Flutter-
+  /// interface enkele seconden blokkeert tijdens bewaren of synchroniseren.
+  static List<OpmetingOverzichtRaamItem> _decodeOpmetingenWorker(
+    String jsonString,
+  ) {
+    return _decodeOpmetingen(jsonString);
+  }
+
+  static String _encodeOpmetingenWorker(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    return encodeOpmetingenVoorSync(opmetingen);
+  }
+
+  static Future<List<OpmetingOverzichtRaamItem>>
+  _decodeOpmetingenAchtergrond(String? jsonString) async {
+    if (jsonString == null || jsonString.isEmpty) {
+      return <OpmetingOverzichtRaamItem>[];
+    }
+
+    return compute(_decodeOpmetingenWorker, jsonString);
+  }
+
+  static Future<String> _encodeOpmetingenAchtergrond(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    return compute(
+      _encodeOpmetingenWorker,
+      List<OpmetingOverzichtRaamItem>.from(opmetingen),
+    );
+  }
+
   static Future<T> muteerOpmetingenAtomair<T>(
     FutureOr<AppStorageOpmetingMutatieResultaat<T>> Function(
       List<OpmetingOverzichtRaamItem> actueleOpmetingen,
@@ -2926,7 +3153,9 @@ class AppStorage {
     _opmetingenWachtrij = _opmetingenWachtrij.then((_) async {
       try {
         final prefs = await openBox();
-        final actueel = _decodeOpmetingen(prefs.getString(_opmetingenKey));
+        final actueel = await _decodeOpmetingenAchtergrond(
+          prefs.getString(_opmetingenKey),
+        );
         _onthoudOpmetingMomentopnames(actueel);
 
         final mutatieResultaat = await mutatie(
@@ -2937,10 +3166,10 @@ class AppStorage {
           final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
             mutatieResultaat.opmetingen,
           );
-          await prefs.setString(
-            _opmetingenKey,
-            encodeOpmetingenVoorSync(nieuweLijst),
+          final gecodeerdeOpmetingen = await _encodeOpmetingenAchtergrond(
+            nieuweLijst,
           );
+          await prefs.setString(_opmetingenKey, gecodeerdeOpmetingen);
           _onthoudOpmetingMomentopnames(nieuweLijst);
 
           if (mutatieResultaat.startSync) {
@@ -2963,7 +3192,9 @@ class AppStorage {
     await _opmetingenWachtrij;
 
     final prefs = await openBox();
-    final opmetingen = _decodeOpmetingen(prefs.getString(_opmetingenKey));
+    final opmetingen = await _decodeOpmetingenAchtergrond(
+      prefs.getString(_opmetingenKey),
+    );
     _onthoudOpmetingMomentopnames(opmetingen);
     return opmetingen;
   }
@@ -3038,8 +3269,13 @@ class AppStorage {
         }
       }
 
+      final projectBestandId = opmeting.projectBestandId.trim().isNotEmpty
+          ? opmeting.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+
       final opmetingVoorOpslag = opmeting.copyWith(
         id: id,
+        projectBestandId: projectBestandId,
         gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
         isVerwijderd: false,
       );
@@ -3072,19 +3308,25 @@ class AppStorage {
       }
 
       final huidige = actueel[index];
-      final basis = _zoekOpmetingBasisMomentopname(opmeting);
+      final opmetingMetProject = opmeting.projectBestandId.trim().isNotEmpty
+          ? opmeting
+          : opmeting.copyWith(projectBestandId: huidige.projectBestandId);
+      final basis = _zoekOpmetingBasisMomentopname(opmetingMetProject);
 
       OpmetingOverzichtRaamItem kandidaat;
       if (basis != null) {
         kandidaat = _driewegSamenvoegenPositie(
           basis: basis,
-          gewijzigd: opmeting,
+          gewijzigd: opmetingMetProject,
           actueel: huidige,
         );
-      } else if (opmeting.gewijzigdOp.trim() == huidige.gewijzigdOp.trim()) {
-        kandidaat = opmeting;
+      } else if (opmetingMetProject.gewijzigdOp.trim() ==
+          huidige.gewijzigdOp.trim()) {
+        kandidaat = opmetingMetProject;
       } else {
-        final inkomendeDatum = DateTime.tryParse(opmeting.gewijzigdOp);
+        final inkomendeDatum = DateTime.tryParse(
+          opmetingMetProject.gewijzigdOp,
+        );
         final huidigeDatum = DateTime.tryParse(huidige.gewijzigdOp);
 
         // Zonder bekende basisversie krijgt een aantoonbaar nieuwere invoer
@@ -3093,7 +3335,7 @@ class AppStorage {
         kandidaat =
             inkomendeDatum != null &&
                 (huidigeDatum == null || inkomendeDatum.isAfter(huidigeDatum))
-            ? opmeting
+            ? opmetingMetProject
             : huidige;
       }
 

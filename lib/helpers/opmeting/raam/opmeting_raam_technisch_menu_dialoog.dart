@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-EN-PROGRAMMASTIJL-FASE10-20260913
 // THIMACO-CONTROLE: TECHNISCHE-STAMBOOM-VOLGORDE-BINNEN-ZELFDE-NIVEAU-20260728
 // THIMACO-CONTROLE: TECHNISCHE-STAMBOOM-HERNOEMEN-KOPIEREN-VERPLAATSEN-20260728
 // THIMACO-CONTROLE: STAMBOOM-WISSEN-INKLAPPEN-KEUZE-KOPIEREN-20260727
@@ -11,7 +12,9 @@
 // THIMACO-CONTROLE: HOE-UITSCHRIJVEN-KEUZE-OPLADEN-20260720
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
+import 'opmeting_raam_technische_groep_model.dart';
 import 'opmeting_raam_niet_combineerbaar_keuzemenu.dart';
 import 'opmeting_raam_technische_tekening_editor.dart';
 
@@ -100,12 +103,14 @@ class OpmetingRaamTechnischMenuResultaat {
     required this.soorten,
     required this.actief,
     this.items = const <OpmetingRaamKeuzeMenuItem>[],
+    this.groepId = '',
   });
 
   final String titel;
   final List<OpmetingRaamTechnischeSoortResultaat> soorten;
   final List<OpmetingRaamKeuzeMenuItem> items;
   final bool actief;
+  final String groepId;
 }
 
 enum OpmetingRaamTechnischMenuBeginActie {
@@ -139,8 +144,10 @@ toonOpmetingRaamTechnischMenuDialoog({
   OpmetingRaamTechnischMenuBeginToevoeging? beginToevoeging,
   bool kopieerAlsNieuw = false,
   bool alleenKeuzeInvullen = false,
+  List<OpmetingRaamTechnischeGroep> technischeGroepen =
+      const <OpmetingRaamTechnischeGroep>[],
 }) {
-  const groen = Color(0xFF0B7A3B);
+  const accent = ThimacoKleuren.oranje;
 
   return showDialog<OpmetingRaamTechnischMenuResultaat>(
     context: context,
@@ -151,24 +158,24 @@ toonOpmetingRaamTechnischMenuDialoog({
       return Theme(
         data: basisTheme.copyWith(
           colorScheme: basisTheme.colorScheme.copyWith(
-            primary: groen,
-            secondary: groen,
+            primary: accent,
+            secondary: accent,
           ),
           textSelectionTheme: const TextSelectionThemeData(
-            cursorColor: groen,
-            selectionHandleColor: groen,
+            cursorColor: accent,
+            selectionHandleColor: accent,
           ),
           inputDecorationTheme: basisTheme.inputDecorationTheme.copyWith(
             floatingLabelStyle: const TextStyle(
-              color: groen,
+              color: accent,
               fontWeight: FontWeight.w700,
             ),
             focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: groen, width: 2),
+              borderSide: BorderSide(color: accent, width: 1.5),
             ),
           ),
           progressIndicatorTheme: const ProgressIndicatorThemeData(
-            color: groen,
+            color: accent,
           ),
         ),
         child: OpmetingRaamTechnischMenuDialoog(
@@ -179,6 +186,7 @@ toonOpmetingRaamTechnischMenuDialoog({
           beginToevoeging: beginToevoeging,
           kopieerAlsNieuw: kopieerAlsNieuw,
           alleenKeuzeInvullen: alleenKeuzeInvullen,
+          technischeGroepen: technischeGroepen,
         ),
       );
     },
@@ -195,6 +203,7 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
     this.beginToevoeging,
     this.kopieerAlsNieuw = false,
     this.alleenKeuzeInvullen = false,
+    this.technischeGroepen = const <OpmetingRaamTechnischeGroep>[],
   });
 
   final OpmetingRaamTechnischMenuResultaat? bestaandMenu;
@@ -204,6 +213,7 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
   final OpmetingRaamTechnischMenuBeginToevoeging? beginToevoeging;
   final bool kopieerAlsNieuw;
   final bool alleenKeuzeInvullen;
+  final List<OpmetingRaamTechnischeGroep> technischeGroepen;
 
   @override
   State<OpmetingRaamTechnischMenuDialoog> createState() {
@@ -213,14 +223,15 @@ class OpmetingRaamTechnischMenuDialoog extends StatefulWidget {
 
 class _OpmetingRaamTechnischMenuDialoogState
     extends State<OpmetingRaamTechnischMenuDialoog> {
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color lichtGroen = Color(0xFFE7F6EC);
-  static const Color rand = Color(0xFFE5E7EB);
+  static const Color groen = ThimacoKleuren.antraciet;
+  static const Color lichtGroen = Colors.white;
+  static const Color rand = ThimacoKleuren.rand;
 
   late final TextEditingController _titelController;
   late final FocusNode _titelFocusNode;
   late final ScrollController _boomScrollController;
   String? _geselecteerdeTitelKeuzeSleutel;
+  String _geselecteerdeGroepId = '';
   bool _titelBevestigd = false;
 
   final List<_TechnischMenuItemConcept> _items = <_TechnischMenuItemConcept>[];
@@ -238,6 +249,7 @@ class _OpmetingRaamTechnischMenuDialoogState
     );
     _titelFocusNode = FocusNode();
     _boomScrollController = ScrollController();
+    _geselecteerdeGroepId = widget.bestaandMenu?.groepId ?? '';
     _titelBevestigd = widget.bestaandMenu != null;
 
     final bestaandeItems = widget.bestaandMenu?.items;
@@ -924,6 +936,7 @@ class _OpmetingRaamTechnischMenuDialoogState
         soorten: _maakSoortenResultaat(),
         items: items,
         actief: true,
+        groepId: _geselecteerdeGroepId,
       ),
     );
   }
@@ -1032,47 +1045,56 @@ class _OpmetingRaamTechnischMenuDialoogState
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+      children: <Widget>[
         Container(
           padding: const EdgeInsets.fromLTRB(8, 8, 10, 8),
           decoration: BoxDecoration(
-            color: lichtGroen,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: groen),
+            border: Border.all(color: ThimacoKleuren.rand),
           ),
           child: Row(
-            children: [
-              IconButton(
+            children: <Widget>[
+              ThimacoIcoonActie(
+                icoon: Icons.arrow_back_rounded,
                 tooltip: widget.alleenKeuzeInvullen
                     ? 'Annuleren'
                     : 'Terug naar de boom',
-                visualDensity: VisualDensity.compact,
                 onPressed: widget.alleenKeuzeInvullen
                     ? () => Navigator.pop(context)
                     : _sluitKeuzeInvulscherm,
-                icon: const Icon(Icons.arrow_back, color: groen, size: 20),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+                  children: <Widget>[
                     const Text(
                       'Keuze invullen',
                       style: TextStyle(
-                        color: groen,
+                        color: ThimacoKleuren.antraciet,
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       naam.isEmpty ? 'Nieuwe keuze' : naam,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF374151),
+                        color: ThimacoKleuren.tekstGrijs,
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      width: 34,
+                      height: 1.5,
+                      decoration: BoxDecoration(
+                        color: ThimacoKleuren.oranje,
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
                   ],
@@ -1084,8 +1106,10 @@ class _OpmetingRaamTechnischMenuDialoogState
                     : 'Deze keuze is nog niet volledig ingevuld',
                 child: Icon(
                   volledig ? Icons.check_circle : Icons.warning_amber_rounded,
-                  color: volledig ? groen : const Color(0xFFF59E0B),
-                  size: 22,
+                  color: volledig
+                      ? ThimacoKleuren.antraciet
+                      : ThimacoKleuren.oranje,
+                  size: 21,
                 ),
               ),
             ],
@@ -1097,7 +1121,7 @@ class _OpmetingRaamTechnischMenuDialoogState
           beschikbareNietCombineerbareKeuzes:
               beschikbareNietCombineerbareKeuzes,
         ),
-        if (_foutmelding != null) ...[
+        if (_foutmelding != null) ...<Widget>[
           const SizedBox(height: 8),
           _bouwFoutmelding(),
         ],
@@ -1183,16 +1207,70 @@ class _OpmetingRaamTechnischMenuDialoogState
               suffixIcon: IconButton(
                 tooltip: 'Titel bevestigen',
                 onPressed: _bevestigNieuweTitel,
-                icon: const Icon(Icons.check_circle_outline, color: groen),
+                icon: const Icon(
+                  Icons.check_circle_outline,
+                  color: ThimacoKleuren.antraciet,
+                ),
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          _bouwGroepKeuze(),
           if (_foutmelding != null) ...[
             const SizedBox(height: 12),
             _bouwFoutmelding(),
           ],
         ],
       ),
+    );
+  }
+
+  Widget _bouwGroepKeuze() {
+    final groepen = List<OpmetingRaamTechnischeGroep>.from(
+      widget.technischeGroepen,
+    )..sort((eerste, tweede) {
+        final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+        if (volgorde != 0) return volgorde;
+        return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+      });
+
+    final geldigeIds = groepen.map((groep) => groep.id).toSet();
+    final huidigeWaarde = geldigeIds.contains(_geselecteerdeGroepId)
+        ? _geselecteerdeGroepId
+        : '';
+
+    return DropdownButtonFormField<String>(
+      key: ValueKey<String>('technische-groep-$huidigeWaarde'),
+      initialValue: huidigeWaarde,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Groep',
+        hintText: 'Kies de groep voor deze technische titel',
+        border: OutlineInputBorder(),
+        isDense: true,
+      ),
+      items: <DropdownMenuItem<String>>[
+        const DropdownMenuItem<String>(
+          value: '',
+          child: Text('Niet ingedeeld'),
+        ),
+        ...groepen.map(
+          (groep) => DropdownMenuItem<String>(
+            value: groep.id,
+            child: Text(
+              groep.naam,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      ],
+      onChanged: (waarde) {
+        setState(() {
+          _geselecteerdeGroepId = waarde ?? '';
+          _foutmelding = null;
+        });
+      },
     );
   }
 
@@ -1207,6 +1285,8 @@ class _OpmetingRaamTechnischMenuDialoogState
         controller: _boomScrollController,
         padding: const EdgeInsets.all(14),
         children: [
+          _bouwGroepKeuze(),
+          const SizedBox(height: 10),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -1312,38 +1392,50 @@ class _OpmetingRaamTechnischMenuDialoogState
         : 'Stamboom technische keuzes';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 6, 9),
       decoration: const BoxDecoration(
-        color: lichtGroen,
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(bottom: BorderSide(color: ThimacoKleuren.rand)),
       ),
       child: Row(
-        children: [
+        children: <Widget>[
           Icon(
             inKeuzeInvulscherm
                 ? Icons.edit_note_outlined
                 : Icons.account_tree_outlined,
-            color: groen,
+            color: ThimacoKleuren.antraciet,
             size: 20,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 9),
           Expanded(
-            child: Text(
-              titel,
-              style: const TextStyle(
-                color: groen,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  titel,
+                  style: const TextStyle(
+                    color: ThimacoKleuren.antraciet,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 38,
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    color: ThimacoKleuren.oranje,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ],
             ),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.close_rounded,
             tooltip: 'Sluiten',
-            visualDensity: VisualDensity.compact,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: groen),
           ),
         ],
       ),
@@ -1356,13 +1448,12 @@ class _OpmetingRaamTechnischMenuDialoogState
     if (!_titelBevestigd && !inKeuzeInvulscherm) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Row(
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuleren'),
-            ),
-          ],
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: ThimacoTekstActie(
+            tekst: 'Annuleren',
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
       );
     }
@@ -1370,35 +1461,25 @@ class _OpmetingRaamTechnischMenuDialoogState
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
-        children: [
-          TextButton(
+        children: <Widget>[
+          ThimacoTekstActie(
+            tekst: inKeuzeInvulscherm && !widget.alleenKeuzeInvullen
+                ? 'Terug naar boom'
+                : 'Annuleren',
             onPressed: inKeuzeInvulscherm
                 ? widget.alleenKeuzeInvullen
                       ? () => Navigator.pop(context)
                       : _sluitKeuzeInvulscherm
                 : () => Navigator.pop(context),
-            child: Text(
-              inKeuzeInvulscherm && !widget.alleenKeuzeInvullen
-                  ? 'Terug naar boom'
-                  : 'Annuleren',
-            ),
           ),
           const Spacer(),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: groen,
-              foregroundColor: Colors.white,
-            ),
+          ThimacoTekstActie(
+            tekst: inKeuzeInvulscherm ? 'Keuze bewaren' : 'Bewaren',
             onPressed: inKeuzeInvulscherm
                 ? widget.alleenKeuzeInvullen
                       ? _bewaar
                       : _sluitKeuzeInvulscherm
                 : _bewaar,
-            icon: Icon(
-              inKeuzeInvulscherm ? Icons.save_outlined : Icons.check,
-              size: 18,
-            ),
-            label: Text(inKeuzeInvulscherm ? 'Keuze bewaren' : 'Bewaren'),
           ),
         ],
       ),
@@ -1875,8 +1956,8 @@ class _StructuurToevoegingDialoog extends StatefulWidget {
 
 class _StructuurToevoegingDialoogState
     extends State<_StructuurToevoegingDialoog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _groen = ThimacoKleuren.antraciet;
+  static const Color _lichtGroen = Colors.white;
 
   final TextEditingController _naamController = TextEditingController();
   bool? _isSubmenu;
@@ -2086,7 +2167,7 @@ class _StructuurTypeTegel extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icoon, color: const Color(0xFF0B7A3B), size: 21),
+              Icon(icoon, color: ThimacoKleuren.antraciet, size: 21),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -2110,7 +2191,7 @@ class _StructuurTypeTegel extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded, color: Color(0xFF0B7A3B)),
+              const Icon(Icons.chevron_right_rounded, color: ThimacoKleuren.antraciet),
             ],
           ),
         ),
@@ -2131,7 +2212,7 @@ class _NaamStructuurItemDialoog extends StatefulWidget {
 }
 
 class _NaamStructuurItemDialoogState extends State<_NaamStructuurItemDialoog> {
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _groen = ThimacoKleuren.antraciet;
 
   final TextEditingController _controller = TextEditingController();
   String? _foutmelding;
@@ -2216,8 +2297,10 @@ toonOpmetingRaamTechnischeMenusBeheerDialoog({
       const <OpmetingRaamBeschikbareNietCombineerbareKeuze>[],
   List<OpmetingRaamTechnischeOplaadbareKeuze> oplaadbareKeuzes =
       const <OpmetingRaamTechnischeOplaadbareKeuze>[],
+  List<OpmetingRaamTechnischeGroep> technischeGroepen =
+      const <OpmetingRaamTechnischeGroep>[],
 }) {
-  const groen = Color(0xFF0B7A3B);
+  const accent = ThimacoKleuren.oranje;
 
   return showDialog<List<OpmetingRaamKeuzeMenu>>(
     context: context,
@@ -2228,20 +2311,20 @@ toonOpmetingRaamTechnischeMenusBeheerDialoog({
       return Theme(
         data: basisTheme.copyWith(
           colorScheme: basisTheme.colorScheme.copyWith(
-            primary: groen,
-            secondary: groen,
+            primary: accent,
+            secondary: accent,
           ),
           textSelectionTheme: const TextSelectionThemeData(
-            cursorColor: groen,
-            selectionHandleColor: groen,
+            cursorColor: accent,
+            selectionHandleColor: accent,
           ),
           inputDecorationTheme: basisTheme.inputDecorationTheme.copyWith(
             floatingLabelStyle: const TextStyle(
-              color: groen,
+              color: accent,
               fontWeight: FontWeight.w700,
             ),
             focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: groen, width: 2),
+              borderSide: BorderSide(color: accent, width: 1.5),
             ),
           ),
         ),
@@ -2250,6 +2333,7 @@ toonOpmetingRaamTechnischeMenusBeheerDialoog({
           beschikbareNietCombineerbareKeuzes:
               beschikbareNietCombineerbareKeuzes,
           oplaadbareKeuzes: oplaadbareKeuzes,
+          technischeGroepen: technischeGroepen,
         ),
       );
     },
@@ -2281,8 +2365,8 @@ class _BeheerStructuurActieDialoog extends StatelessWidget {
   final String doelNaam;
   final bool isTitel;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _groen = ThimacoKleuren.antraciet;
+  static const Color _lichtGroen = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -2410,8 +2494,8 @@ class _NaamWijzigenDialoog extends StatefulWidget {
 }
 
 class _NaamWijzigenDialoogState extends State<_NaamWijzigenDialoog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
+  static const Color _groen = ThimacoKleuren.antraciet;
+  static const Color _lichtGroen = Colors.white;
 
   late final TextEditingController _controller;
   String? _foutmelding;
@@ -2517,12 +2601,14 @@ class OpmetingRaamTechnischeMenusBeheerDialoog extends StatefulWidget {
     this.beschikbareNietCombineerbareKeuzes =
         const <OpmetingRaamBeschikbareNietCombineerbareKeuze>[],
     this.oplaadbareKeuzes = const <OpmetingRaamTechnischeOplaadbareKeuze>[],
+    this.technischeGroepen = const <OpmetingRaamTechnischeGroep>[],
   });
 
   final List<OpmetingRaamKeuzeMenu> bestaandeMenus;
   final List<OpmetingRaamBeschikbareNietCombineerbareKeuze>
   beschikbareNietCombineerbareKeuzes;
   final List<OpmetingRaamTechnischeOplaadbareKeuze> oplaadbareKeuzes;
+  final List<OpmetingRaamTechnischeGroep> technischeGroepen;
 
   @override
   State<OpmetingRaamTechnischeMenusBeheerDialoog> createState() {
@@ -2532,11 +2618,11 @@ class OpmetingRaamTechnischeMenusBeheerDialoog extends StatefulWidget {
 
 class _OpmetingRaamTechnischeMenusBeheerDialoogState
     extends State<OpmetingRaamTechnischeMenusBeheerDialoog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
-  static const Color _oranje = Color(0xFFF59E0B);
+  static const Color _groen = ThimacoKleuren.antraciet;
+  static const Color _lichtGroen = Colors.white;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
+  static const Color _oranje = ThimacoKleuren.oranje;
 
   static int _idTeller = 0;
 
@@ -3197,7 +3283,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
       id: nieuwMenuId,
       titel: '${bronMenu.titel.trim()} kopie',
       volgorde: invoegIndex,
-    ).copyWith(actief: bronMenu.actief);
+    ).copyWith(actief: bronMenu.actief, groepId: bronMenu.groepId);
     final gekopieerdMenu = _menuMetItems(basisMenu, gekopieerdeItems);
 
     setState(() {
@@ -3856,6 +3942,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
         soorten: _soortenVanItems(items),
         items: items,
         actief: menu.actief,
+        groepId: menu.groepId,
       ),
       beschikbareNietCombineerbareKeuzes:
           widget.beschikbareNietCombineerbareKeuzes,
@@ -3865,6 +3952,7 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
         bronItemId: keuzeItem.id,
       ),
       alleenKeuzeInvullen: true,
+      technischeGroepen: widget.technischeGroepen,
     );
 
     if (!mounted || resultaat == null) {
@@ -3873,7 +3961,11 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
 
     _vervangMenu(
       _menuMetItems(
-        menu.copyWith(titel: resultaat.titel, actief: resultaat.actief),
+        menu.copyWith(
+          titel: resultaat.titel,
+          actief: resultaat.actief,
+          groepId: resultaat.groepId,
+        ),
         resultaat.items,
       ),
     );
@@ -3972,30 +4064,48 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
 
   Widget _bouwKop() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      padding: const EdgeInsets.fromLTRB(16, 10, 6, 9),
       decoration: const BoxDecoration(
-        color: _lichtGroen,
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        border: Border(bottom: BorderSide(color: ThimacoKleuren.rand)),
       ),
       child: Row(
-        children: [
-          const Icon(Icons.account_tree_outlined, color: _groen, size: 21),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              'Technische titels en stambomen',
-              style: TextStyle(
-                color: _groen,
-                fontSize: 17,
-                fontWeight: FontWeight.w900,
-              ),
+        children: <Widget>[
+          const Icon(
+            Icons.account_tree_outlined,
+            color: ThimacoKleuren.antraciet,
+            size: 20,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text(
+                  'Technische titels en stambomen',
+                  style: TextStyle(
+                    color: ThimacoKleuren.antraciet,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  width: 42,
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    color: ThimacoKleuren.oranje,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ],
             ),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.close_rounded,
             tooltip: 'Sluiten',
-            visualDensity: VisualDensity.compact,
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: _groen),
           ),
         ],
       ),
@@ -4108,6 +4218,63 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
     );
   }
 
+  Widget _bouwGroepDropdownVoorMenu(OpmetingRaamKeuzeMenu menu) {
+    final groepen = List<OpmetingRaamTechnischeGroep>.from(
+      widget.technischeGroepen,
+    )..sort((eerste, tweede) {
+        final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+        if (volgorde != 0) return volgorde;
+        return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+      });
+    final geldigeIds = groepen.map((groep) => groep.id).toSet();
+    final huidigeWaarde = geldigeIds.contains(menu.groepId) ? menu.groepId : '';
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 190),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: ThimacoKleuren.achtergrond,
+        borderRadius: BorderRadius.circular(7),
+        border: Border.all(color: ThimacoKleuren.rand),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: huidigeWaarde,
+          isExpanded: true,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 17,
+            color: ThimacoKleuren.tekstGrijs,
+          ),
+          style: const TextStyle(
+            color: ThimacoKleuren.antraciet,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+          ),
+          items: <DropdownMenuItem<String>>[
+            const DropdownMenuItem<String>(
+              value: '',
+              child: Text('Niet ingedeeld'),
+            ),
+            ...groepen.map(
+              (groep) => DropdownMenuItem<String>(
+                value: groep.id,
+                child: Text(
+                  groep.naam,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+          onChanged: (waarde) {
+            _vervangMenu(menu.copyWith(groepId: waarde ?? ''));
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _bouwMenuKaart(OpmetingRaamKeuzeMenu menu) {
     final items = _bewerkbareItems(menu);
     final aantalKeuzes = _aantalKeuzes(items);
@@ -4185,6 +4352,9 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  _bouwGroepDropdownVoorMenu(menu),
+                  const SizedBox(width: 4),
                   IconButton(
                     tooltip: 'Toevoegen, naam wijzigen of kopiëren',
                     visualDensity: VisualDensity.compact,
@@ -4481,20 +4651,15 @@ class _OpmetingRaamTechnischeMenusBeheerDialoogState
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
-        children: [
-          TextButton(
+        children: <Widget>[
+          ThimacoTekstActie(
+            tekst: 'Annuleren',
             onPressed: () => Navigator.pop(context),
-            child: const Text('Annuleren'),
           ),
           const Spacer(),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: _groen,
-              foregroundColor: Colors.white,
-            ),
+          ThimacoTekstActie(
+            tekst: 'Bewaren',
             onPressed: _bewaar,
-            icon: const Icon(Icons.check, size: 18),
-            label: const Text('Bewaren'),
           ),
         ],
       ),

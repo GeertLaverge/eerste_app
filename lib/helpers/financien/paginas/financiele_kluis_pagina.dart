@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-20260807
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-REDDINGSSCAN-20260916
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -208,6 +208,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           icon: const Icon(Icons.settings_backup_restore_rounded),
           label: const Text('Herstel bestaande kluis'),
         ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitTijdelijkeNoodbackup,
+          icon: const Icon(Icons.manage_search_rounded),
+          label: const Text('Zoek oude noodback-up op deze iPad'),
+        ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
           _bouwFoutKaart(_controller.foutBericht),
@@ -242,10 +251,20 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           label: const Text('Herstel met noodback-up'),
         ),
         const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitTijdelijkeNoodbackup,
+          icon: const Icon(Icons.manage_search_rounded),
+          label: const Text('Zoek oude noodback-up op deze iPad'),
+        ),
+        const SizedBox(height: 10),
         _bouwWaarschuwing(
           'Gebruik noodherstel alleen wanneer biometrisch ontgrendelen niet '
           'meer lukt, bijvoorbeeld nadat Face ID of Touch ID op deze iPad '
-          'werd gewijzigd. De gekozen back-up vervangt dan de lokale kluis.',
+          'werd gewijzigd. De reddingsscan leest uitsluitend lokale appmappen '
+          'en stelt een gevonden back-up eerst veilig voordat herstel start.',
         ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
@@ -273,6 +292,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           onPressed: _controller.bewerkingBezig ? null : _herstelNoodbackup,
           icon: const Icon(Icons.settings_backup_restore_rounded),
           label: const Text('Noodback-up herstellen'),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _herstelUitTijdelijkeNoodbackup,
+          icon: const Icon(Icons.manage_search_rounded),
+          label: const Text('Zoek oude noodback-up op deze iPad'),
         ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
@@ -398,6 +426,136 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
       if (!mounted) return;
       _toonMelding(fout.toString(), fout: true);
     }
+  }
+
+  Future<void> _herstelUitTijdelijkeNoodbackup() async {
+    final bevestigd = await _bevestigReddingsscan();
+    if (bevestigd != true || !mounted) {
+      return;
+    }
+
+    final herstelcode = await _vraagHerstelcode();
+    if (herstelcode == null || !mounted) {
+      return;
+    }
+
+    try {
+      final resultaat = await _controller.herstelVanTijdelijkeNoodbackup(
+        herstelcode: herstelcode,
+      );
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: _rand),
+            ),
+            title: const Row(
+              children: <Widget>[
+                Icon(Icons.check_circle_outline_rounded, color: _groen),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'Noodback-up teruggevonden',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              child: Text(
+                'De reddingsscan vond ${resultaat.gevondenAantal} mogelijke '
+                'noodback-up${resultaat.gevondenAantal == 1 ? '' : 's'}. '
+                'Een geldige back-up is met de papieren herstelcode geopend en '
+                'de financiële kluis is hersteld.\n\n'
+                'Er is eerst een blijvende veilige kopie gemaakt als:\n'
+                '${resultaat.veiligeBestandsnaam}',
+                style: const TextStyle(color: _tekstDonker, height: 1.45),
+              ),
+            ),
+            actions: <Widget>[
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _groen,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (fout) {
+      if (!mounted) return;
+      _toonMelding(fout.toString(), fout: true);
+    }
+  }
+
+  Future<bool?> _bevestigReddingsscan() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
+          ),
+          title: const Row(
+            children: <Widget>[
+              Icon(Icons.manage_search_rounded, color: _groen),
+              SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Reddingsscan uitvoeren?',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          content: const SizedBox(
+            width: 500,
+            child: Text(
+              'De app zoekt uitsluitend in haar eigen lokale iPad-mappen naar '
+              'oude tijdelijke bestanden die herkenbaar zijn als een Thimaco '
+              'financiële noodback-up. Een gevonden bestand wordt eerst naar '
+              'een blijvende herstelmap gekopieerd.\n\n'
+              'Pas als de papieren herstelcode de back-up correct kan openen, '
+              'wordt na biometrische bevestiging de financiële sleutel opnieuw '
+              'geregistreerd. Bij een geldige back-up wordt de huidige lokale '
+              'kluis vervangen; wanneer de scan niets vindt of de herstelcode '
+              'niet past, blijft de bestaande kluis ongewijzigd.',
+              style: TextStyle(color: _tekstDonker, height: 1.45),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: _groen,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.manage_search_rounded),
+              label: const Text('Scan uitvoeren'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<bool?> _bevestigVervangenVergrendeldeKluis() {

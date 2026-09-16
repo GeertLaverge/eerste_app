@@ -1,17 +1,25 @@
+// THIMACO-CONTROLE: TITELHOOFD-ZONDER-OUDE-OFFERTEVARIANTKOPPELING-20260912
+// THIMACO-CONTROLE: PROJECTBESTAND-AANMAAKDATUM-REEKS-VERSIENUMMER-FASE4-20260912
+// THIMACO-CONTROLE: PROJECTBESTAND-VERWIJDERMARKERING-FASE2-20260912
+// THIMACO-CONTROLE: PROJECTBESTAND-MET-NAAM-FASE1-20260912
 // THIMACO-CONTROLE: TITELHOOFD-ZONDER-OUDE-PRIJSINSTELLINGENMOMENTOPNAMES-20260815
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PROJECTOPSLAG-20260815
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP5D3A-TITELHOOFD-ZONDER-TIJDELIJKE-PROJECTPRIJS-20260814
-// THIMACO-CONTROLE: OFFERTEVARIANT-ACTIEF-KOPPELING-VERSIENUMMER-20260811
 // THIMACO-CONTROLE: OFFERTE-OMSCHRIJVING-VERSIE-EN-VERBORGEN-NIET-REKENEN-20260809-2030
 // THIMACO-CONTROLE: BINNEN-BUITENKLEUR-GELIJK-BEWAREN-20260808-1902
 // THIMACO-CONTROLE: TOEBEHOREN-KLEURBRON-BEWAREN-20260808-1433
-// THIMACO-CONTROLE: OFFERTE-WERKBRON-VERSIE-20260806
 import '../../offerte/prijzen/offerte_prijs_voor_alle_posities_regel_model.dart';
 
 class OpmetingProjectTitelhoofd {
   const OpmetingProjectTitelhoofd({
     this.aanspreking = '',
     this.klantNaam = '',
+    this.projectBestandId = '',
+    this.bestandsNaam = '',
+    this.projectReeksId = '',
+    this.bestandVersieNummer = 1,
+    this.aangemaaktOp = '',
+    this.projectBestandVerwijderd = false,
     this.contactpersoon = '',
     this.adres = '',
     this.huisnummer = '',
@@ -44,11 +52,10 @@ class OpmetingProjectTitelhoofd {
     this.berekenPrijzen = false,
     this.prijsVoorAllePositiesRegels =
         const <OffertePrijsVoorAllePositiesRegelModel>[],
-    this.offerteBronVersieId = '',
-    this.offerteBronVersieNummer = 0,
     this.gewijzigdOp = '',
   });
 
+  static const String standaardBestaandBestandsNaam = 'Bestaande offerte';
   static const String standaardBtwTarief = '21 %';
   static const String standaardOfferteJaar = '26';
   static const String standaardOfferteVolgnummer = '01';
@@ -83,6 +90,12 @@ class OpmetingProjectTitelhoofd {
 
   final String aanspreking;
   final String klantNaam;
+  final String projectBestandId;
+  final String bestandsNaam;
+  final String projectReeksId;
+  final int bestandVersieNummer;
+  final String aangemaaktOp;
+  final bool projectBestandVerwijderd;
   final String contactpersoon;
   final String adres;
   final String huisnummer;
@@ -115,8 +128,6 @@ class OpmetingProjectTitelhoofd {
   final bool berekenPrijzen;
   final List<OffertePrijsVoorAllePositiesRegelModel>
   prijsVoorAllePositiesRegels;
-  final String offerteBronVersieId;
-  final int offerteBronVersieNummer;
   final String gewijzigdOp;
 
   String get klantNaamMetAanspreking {
@@ -173,6 +184,23 @@ class OpmetingProjectTitelhoofd {
         'V$versie';
   }
 
+  int get veiligeBestandVersieNummer =>
+      bestandVersieNummer < 1 ? 1 : bestandVersieNummer;
+
+  String get bestandsNaamMetVersie {
+    final naam = bestandsNaam.trim().isEmpty
+        ? standaardBestaandBestandsNaam
+        : bestandsNaam.trim();
+    return '$naam V$veiligeBestandVersieNummer';
+  }
+
+  String get effectieveProjectReeksId {
+    final reeks = projectReeksId.trim();
+    if (reeks.isNotEmpty) return reeks;
+    final project = projectBestandId.trim();
+    return project.isNotEmpty ? project : opmetingLegacyProjectBestandId(klantNaam);
+  }
+
   bool get heeftKlantGegevens {
     return aanspreking.trim().isNotEmpty ||
         klantNaam.trim().isNotEmpty ||
@@ -211,6 +239,12 @@ class OpmetingProjectTitelhoofd {
   OpmetingProjectTitelhoofd copyWith({
     String? aanspreking,
     String? klantNaam,
+    String? projectBestandId,
+    String? bestandsNaam,
+    String? projectReeksId,
+    int? bestandVersieNummer,
+    String? aangemaaktOp,
+    bool? projectBestandVerwijderd,
     String? contactpersoon,
     String? adres,
     String? huisnummer,
@@ -242,8 +276,6 @@ class OpmetingProjectTitelhoofd {
     String? kortingOmschrijving,
     bool? berekenPrijzen,
     List<OffertePrijsVoorAllePositiesRegelModel>? prijsVoorAllePositiesRegels,
-    String? offerteBronVersieId,
-    int? offerteBronVersieNummer,
     String? gewijzigdOp,
   }) {
     return OpmetingProjectTitelhoofd(
@@ -251,6 +283,13 @@ class OpmetingProjectTitelhoofd {
         aanspreking ?? this.aanspreking,
       ),
       klantNaam: klantNaam ?? this.klantNaam,
+      projectBestandId: projectBestandId ?? this.projectBestandId,
+      bestandsNaam: bestandsNaam ?? this.bestandsNaam,
+      projectReeksId: projectReeksId ?? this.projectReeksId,
+      bestandVersieNummer: bestandVersieNummer ?? this.bestandVersieNummer,
+      aangemaaktOp: aangemaaktOp ?? this.aangemaaktOp,
+      projectBestandVerwijderd:
+          projectBestandVerwijderd ?? this.projectBestandVerwijderd,
       contactpersoon: contactpersoon ?? this.contactpersoon,
       adres: adres ?? this.adres,
       huisnummer: huisnummer ?? this.huisnummer,
@@ -289,9 +328,6 @@ class OpmetingProjectTitelhoofd {
       berekenPrijzen: berekenPrijzen ?? this.berekenPrijzen,
       prijsVoorAllePositiesRegels:
           prijsVoorAllePositiesRegels ?? this.prijsVoorAllePositiesRegels,
-      offerteBronVersieId: offerteBronVersieId ?? this.offerteBronVersieId,
-      offerteBronVersieNummer:
-          offerteBronVersieNummer ?? this.offerteBronVersieNummer,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
     );
   }
@@ -300,28 +336,22 @@ class OpmetingProjectTitelhoofd {
     return copyWith(gewijzigdOp: DateTime.now().toUtc().toIso8601String());
   }
 
-  static String offerteVersieVoorVariantNummer(int nummer) {
+  static String offerteVersieVoorBestandVersieNummer(int nummer) {
     final veilig = nummer < 1 ? 1 : nummer;
     return veilig.toString().padLeft(2, '0');
   }
 
-  /// Koppelt het geopende werkbestand aan één bewerkbare offertevariant.
-  /// Het PDF-offertenummer volgt daarbij hetzelfde variantnummer (V01, V02, ...).
-  OpmetingProjectTitelhoofd metActieveOfferteVariant({
-    required String versieId,
-    required int versieNummer,
-  }) {
-    return copyWith(
-      offerteBronVersieId: versieId.trim(),
-      offerteBronVersieNummer: versieNummer,
-      offerteVersie: offerteVersieVoorVariantNummer(versieNummer),
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
       'aanspreking': normaliseerOpmetingAanspreking(aanspreking),
       'klantNaam': klantNaam,
+      'projectBestandId': projectBestandId,
+      'bestandsNaam': bestandsNaam,
+      'projectReeksId': projectReeksId,
+      'bestandVersieNummer': veiligeBestandVersieNummer,
+      'aangemaaktOp': aangemaaktOp,
+      'projectBestandVerwijderd': projectBestandVerwijderd,
       'contactpersoon': contactpersoon,
       'adres': adres,
       'huisnummer': huisnummer,
@@ -357,8 +387,6 @@ class OpmetingProjectTitelhoofd {
       'prijsVoorAllePositiesRegels': prijsVoorAllePositiesRegels
           .map((regel) => regel.toJson())
           .toList(growable: false),
-      'offerteBronVersieId': offerteBronVersieId,
-      'offerteBronVersieNummer': offerteBronVersieNummer,
       'gewijzigdOp': gewijzigdOp,
     };
   }
@@ -377,6 +405,33 @@ class OpmetingProjectTitelhoofd {
       klantNaam: aanspreking.isEmpty
           ? ruweKlantNaam
           : opmetingKlantNaamZonderAanspreking(ruweKlantNaam),
+      projectBestandId:
+          json['projectBestandId']?.toString() ??
+          json['projectId']?.toString() ??
+          '',
+      bestandsNaam:
+          json['bestandsNaam']?.toString() ??
+          json['offerteNaam']?.toString() ??
+          '',
+      projectReeksId:
+          json['projectReeksId']?.toString() ??
+          json['projectBestandId']?.toString() ??
+          json['projectId']?.toString() ??
+          '',
+      bestandVersieNummer: (() {
+        final expliciet = _leesIntVeilig(json['bestandVersieNummer']);
+        if (expliciet > 0) return expliciet;
+        final bestaand = _leesIntVeilig(json['offerteVersie']);
+        return bestaand > 0 ? bestaand : 1;
+      })(),
+      aangemaaktOp:
+          json['aangemaaktOp']?.toString() ??
+          json['gewijzigdOp']?.toString() ??
+          '',
+      projectBestandVerwijderd: _leesBool(
+        json['projectBestandVerwijderd'],
+        standaardWaarde: false,
+      ),
       contactpersoon: json['contactpersoon']?.toString() ?? '',
       adres: json['adres']?.toString() ?? '',
       huisnummer: json['huisnummer']?.toString() ?? '',
@@ -441,8 +496,6 @@ class OpmetingProjectTitelhoofd {
       prijsVoorAllePositiesRegels: _leesPrijsVoorAllePositiesRegels(
         json['prijsVoorAllePositiesRegels'],
       ),
-      offerteBronVersieId: json['offerteBronVersieId']?.toString() ?? '',
-      offerteBronVersieNummer: _leesIntVeilig(json['offerteBronVersieNummer']),
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
     );
   }
@@ -749,6 +802,27 @@ String opmetingKlantNaamSleutel(String klantNaam) {
 String opmetingProjectTitelhoofdSleutel(String klantNaam) {
   final sleutel = opmetingKlantNaamSleutel(klantNaam);
   return sleutel.isEmpty ? 'zonder_klantnaam' : sleutel;
+}
+
+
+String opmetingLegacyProjectBestandId(String klantNaam) {
+  final sleutel = opmetingProjectTitelhoofdSleutel(klantNaam);
+  return 'legacy:$sleutel';
+}
+
+String maakNieuwOpmetingProjectBestandId() {
+  return 'project_${DateTime.now().microsecondsSinceEpoch}';
+}
+
+String opmetingProjectBestandOpslagSleutel({
+  required String projectBestandId,
+  required String klantNaam,
+}) {
+  final id = projectBestandId.trim();
+  if (id.isNotEmpty && !id.startsWith('legacy:')) {
+    return id;
+  }
+  return opmetingProjectTitelhoofdSleutel(klantNaam);
 }
 
 List<OffertePrijsVoorAllePositiesRegelModel> _leesPrijsVoorAllePositiesRegels(

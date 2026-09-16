@@ -1,7 +1,11 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-PRIJS-SUBMENU-FIJNOPMAAK-20260914
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-NIEUWE-HUISSTIJL-20260914
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-ANALYZERFIX-ONGEBRUIKTE-VOEGBLOKKENTOE-WEG-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-RECHTERKOLOM-ZONDER-OUDE-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AANKOOP-VERKOOP-EN-VRIJE-PRIJS-20260802
 import 'package:flutter/material.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import 'opmeting_algemene_opmeting_blok_model.dart';
 import 'opmeting_algemene_opmeting_model.dart';
@@ -23,9 +27,8 @@ class OpmetingAlgemeneOpmetingRechterkolom extends StatefulWidget {
 
 class _OpmetingAlgemeneOpmetingRechterkolomState
     extends State<OpmetingAlgemeneOpmetingRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
 
   late final TextEditingController _titelController;
 
@@ -178,35 +181,51 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
+            ),
+          ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
             child: TextField(
               controller: _titelController,
               onChanged: _wijzigTitel,
               textCapitalization: TextCapitalization.sentences,
               style: const TextStyle(
                 color: _tekstDonker,
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
               decoration: InputDecoration(
                 labelText: 'Titel',
                 hintText: 'Bijvoorbeeld: Vervanging gebroken glas',
-                prefixIcon: const Icon(Icons.title_rounded, color: _groen),
+                prefixIcon: const Icon(
+                  Icons.title_rounded,
+                  color: ThimacoKleuren.oranje,
+                ),
                 filled: true,
                 fillColor: Colors.white,
+                isDense: true,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(9),
                   borderSide: const BorderSide(color: _rand),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(9),
                   borderSide: const BorderSide(color: _rand),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(11),
-                  borderSide: const BorderSide(color: _groen, width: 1.5),
+                  borderRadius: BorderRadius.circular(9),
+                  borderSide: const BorderSide(
+                    color: ThimacoKleuren.oranje,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -214,7 +233,20 @@ class _OpmetingAlgemeneOpmetingRechterkolomState
           const Divider(height: 1, color: _rand),
           Expanded(
             child: widget.model.blokken.isEmpty
-                ? const SizedBox.expand()
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(22),
+                      child: Text(
+                        'Voeg onderaan een tekstvlak of prijsregel toe.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: ThimacoKleuren.tekstGrijs,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  )
                 : ReorderableListView.builder(
                     padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
                     buildDefaultDragHandles: false,
@@ -297,16 +329,15 @@ class _Actieknop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const groen = Color(0xFF0B7A3B);
     if (gevuld) {
       return FilledButton.icon(
         style: FilledButton.styleFrom(
-          backgroundColor: groen,
+          backgroundColor: ThimacoKleuren.oranje,
           foregroundColor: Colors.white,
           minimumSize: const Size(0, 34),
           padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
           ),
         ),
         onPressed: onPressed,
@@ -322,15 +353,15 @@ class _Actieknop extends StatelessWidget {
 
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
-        foregroundColor: groen,
+        foregroundColor: ThimacoKleuren.antraciet,
         backgroundColor: Colors.white,
-        side: const BorderSide(color: groen),
+        side: const BorderSide(color: ThimacoKleuren.rand),
         minimumSize: const Size(0, 34),
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       onPressed: onPressed,
-      icon: Icon(icoon, size: 16),
+      icon: Icon(icoon, size: 16, color: ThimacoKleuren.oranje),
       label: Text(
         tekst,
         maxLines: 1,
@@ -354,11 +385,11 @@ class _ResultaatBlokKaart extends StatelessWidget {
   final VoidCallback onBewerken;
   final VoidCallback onVerwijderen;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _lichtGroen = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +399,7 @@ class _ResultaatBlokKaart extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: blok.isPrijs ? const Color(0xFFB9E1C6) : _rand,
+          color: blok.isPrijs ? ThimacoKleuren.oranjeRand : _rand,
         ),
       ),
       child: Row(
@@ -396,21 +427,18 @@ class _ResultaatBlokKaart extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(child: _bouwInhoud()),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.edit_outlined,
             tooltip: 'Aanpassen',
-            visualDensity: VisualDensity.compact,
+            grootte: 18,
             onPressed: onBewerken,
-            icon: const Icon(Icons.edit_outlined, color: _groen, size: 19),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.delete_outline,
             tooltip: 'Verwijderen',
-            visualDensity: VisualDensity.compact,
+            grootte: 18,
+            destructief: true,
             onPressed: onVerwijderen,
-            icon: const Icon(
-              Icons.delete_outline,
-              color: Color(0xFFDC2626),
-              size: 19,
-            ),
           ),
         ],
       ),
@@ -557,8 +585,8 @@ class _AlgemeneTekstvlakDialog extends StatefulWidget {
 }
 
 class _AlgemeneTekstvlakDialogState extends State<_AlgemeneTekstvlakDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _rand = ThimacoKleuren.rand;
 
   late final TextEditingController _tekstController;
   String? _foutmelding;
@@ -661,10 +689,11 @@ class _AlgemenePrijsblokDialog extends StatefulWidget {
 }
 
 class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _oranjeLicht = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   late final TextEditingController _omschrijvingController;
   late final TextEditingController _hoeveelheidController;
@@ -752,86 +781,77 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      insetPadding: const EdgeInsets.all(20),
+      titlePadding: const EdgeInsets.fromLTRB(18, 16, 10, 0),
+      contentPadding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: _rand),
+      ),
       title: Row(
         children: <Widget>[
           Container(
-            width: 38,
-            height: 38,
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.circular(10),
+              color: _oranjeLicht,
+              borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: ThimacoKleuren.oranjeRand),
             ),
-            child: const Icon(Icons.euro_rounded, color: _groen),
+            child: const Icon(
+              Icons.euro_rounded,
+              color: _oranje,
+              size: 20,
+            ),
           ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Text(
-              'Tekstvlak met prijs',
-              style: const TextStyle(fontWeight: FontWeight.w900),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Tekstvlak met prijs',
+                  style: TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Omschrijving, hoeveelheid en prijs',
+                  style: TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 10.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Sluiten',
+            visualDensity: VisualDensity.compact,
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(
+              Icons.close_rounded,
+              color: _tekstGrijs,
+              size: 19,
             ),
           ),
         ],
       ),
       content: SizedBox(
-        width: 620,
+        width: 570,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              SegmentedButton<OpmetingAlgemenePrijsSoort>(
-                segments: const <ButtonSegment<OpmetingAlgemenePrijsSoort>>[
-                  ButtonSegment<OpmetingAlgemenePrijsSoort>(
-                    value: OpmetingAlgemenePrijsSoort.aankoop,
-                    label: Text('Aankoopprijs'),
-                    icon: Text('A'),
-                  ),
-                  ButtonSegment<OpmetingAlgemenePrijsSoort>(
-                    value: OpmetingAlgemenePrijsSoort.verkoop,
-                    label: Text('Verkoopprijs'),
-                    icon: Text('V'),
-                  ),
-                ],
-                selected: <OpmetingAlgemenePrijsSoort>{_prijsSoort},
-                showSelectedIcon: false,
-                onSelectionChanged: (selectie) {
-                  if (selectie.isEmpty) return;
-                  setState(() => _prijsSoort = selectie.first);
-                },
-                style: ButtonStyle(
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    return states.contains(WidgetState.selected)
-                        ? Colors.white
-                        : _groen;
-                  }),
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    return states.contains(WidgetState.selected)
-                        ? _groen
-                        : Colors.white;
-                  }),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                activeThumbColor: _groen,
-                title: const Text(
-                  'Prijs tonen op offerte',
-                  style: TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(
-                  _toonPrijsOpOfferte
-                      ? 'Omschrijving en bedrag worden op de offerte getoond.'
-                      : 'De omschrijving blijft zichtbaar, het bedrag wordt verborgen.',
-                  style: const TextStyle(color: _tekstGrijs, fontSize: 11.5),
-                ),
-                value: _toonPrijsOpOfferte,
-                onChanged: (waarde) {
-                  setState(() => _toonPrijsOpOfferte = waarde);
-                },
-              ),
-              const SizedBox(height: 8),
+              _bouwPrijsSoortKeuze(),
+              const SizedBox(height: 14),
               TextField(
                 controller: _omschrijvingController,
                 autofocus: true,
@@ -841,10 +861,10 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                   hint: 'Bijvoorbeeld: Helder glas',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final smal = constraints.maxWidth < 520;
+                  final smal = constraints.maxWidth < 500;
                   final hoeveelheidVeld = TextField(
                     controller: _hoeveelheidController,
                     enabled:
@@ -864,7 +884,10 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                               (eenheid) =>
                                   DropdownMenuItem<
                                     OpmetingAlgemenePrijsEenheid
-                                  >(value: eenheid, child: Text(eenheid.label)),
+                                  >(
+                                    value: eenheid,
+                                    child: Text(eenheid.label),
+                                  ),
                             )
                             .toList(growable: false),
                         onChanged: (waarde) {
@@ -893,9 +916,9 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                     return Column(
                       children: <Widget>[
                         hoeveelheidVeld,
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         eenheidVeld,
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         prijsVeld,
                       ],
                     );
@@ -904,55 +927,188 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                   return Row(
                     children: <Widget>[
                       Expanded(child: hoeveelheidVeld),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(child: eenheidVeld),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(child: prijsVeld),
                     ],
                   );
                 },
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
+              _bouwOfferteZichtbaarheid(),
+              const SizedBox(height: 10),
               _bouwLiveResultaat(),
               if (_foutmelding != null) ...<Widget>[
-                const SizedBox(height: 10),
-                Text(
-                  _foutmelding!,
-                  style: const TextStyle(
-                    color: Color(0xFFDC2626),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+                const SizedBox(height: 9),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7F7),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: ThimacoKleuren.rood.withValues(alpha: 0.22),
+                    ),
+                  ),
+                  child: Text(
+                    _foutmelding!,
+                    style: const TextStyle(
+                      color: ThimacoKleuren.rood,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 8),
-              Text(
-                'Na toevoegen verschijnt alleen het nette resultaat in de rechterkolom.',
-                style: const TextStyle(
-                  color: _tekstGrijs,
-                  fontSize: 11.5,
-                  height: 1.35,
-                ),
-              ),
             ],
           ),
         ),
       ),
       actions: <Widget>[
-        TextButton(
-          style: TextButton.styleFrom(foregroundColor: _groen),
+        ThimacoTekstActie(
+          tekst: 'Annuleren',
           onPressed: () => Navigator.pop(context),
-          child: const Text('Annuleren'),
+          compact: false,
         ),
+        const SizedBox(width: 4),
         FilledButton.icon(
-          style: FilledButton.styleFrom(backgroundColor: _groen),
+          style: FilledButton.styleFrom(
+            backgroundColor: _oranje,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            minimumSize: const Size(0, 36),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(9),
+            ),
+          ),
           onPressed: _toevoegen,
-          icon: const Icon(Icons.add_rounded, size: 18),
+          icon: const Icon(Icons.add_rounded, size: 17),
           label: Text(
             widget.blok.titel.trim().isEmpty ? 'Toevoegen' : 'Aanpassen',
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _bouwPrijsSoortKeuze() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFB),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: _rand),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Center(
+              child: ThimacoTekstKeuze(
+                tekst: 'Aankoopprijs',
+                geselecteerd:
+                    _prijsSoort == OpmetingAlgemenePrijsSoort.aankoop,
+                onPressed: () {
+                  setState(() {
+                    _prijsSoort = OpmetingAlgemenePrijsSoort.aankoop;
+                  });
+                },
+                compact: false,
+              ),
+            ),
+          ),
+          Container(width: 1, height: 28, color: _rand),
+          Expanded(
+            child: Center(
+              child: ThimacoTekstKeuze(
+                tekst: 'Verkoopprijs',
+                geselecteerd:
+                    _prijsSoort == OpmetingAlgemenePrijsSoort.verkoop,
+                onPressed: () {
+                  setState(() {
+                    _prijsSoort = OpmetingAlgemenePrijsSoort.verkoop;
+                  });
+                },
+                compact: false,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _bouwOfferteZichtbaarheid() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(11, 7, 7, 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: _rand),
+      ),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: 30,
+            height: 30,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: _toonPrijsOpOfferte
+                  ? _oranjeLicht
+                  : const Color(0xFFF4F5F6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _toonPrijsOpOfferte
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              color: _toonPrijsOpOfferte ? _oranje : _tekstGrijs,
+              size: 17,
+            ),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text(
+                  'Prijs tonen op offerte',
+                  style: TextStyle(
+                    color: _tekstDonker,
+                    fontSize: 11.8,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  _toonPrijsOpOfferte
+                      ? 'Omschrijving en bedrag zijn zichtbaar.'
+                      : 'Omschrijving zichtbaar, bedrag verborgen.',
+                  style: const TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 10.2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: _toonPrijsOpOfferte,
+            onChanged: (waarde) {
+              setState(() => _toonPrijsOpOfferte = waarde);
+            },
+            activeThumbColor: _oranje,
+            activeTrackColor: ThimacoKleuren.oranjeRand,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: const Color(0xFFD5D8DC),
+          ),
+        ],
+      ),
     );
   }
 
@@ -964,32 +1120,32 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
     final totaal = hoeveelheid > 0 && prijs > 0 ? hoeveelheid * prijs : 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       decoration: BoxDecoration(
-        color: _lichtGroen,
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: const Color(0xFFB9E1C6)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: ThimacoKleuren.oranjeRand),
       ),
       child: Row(
         children: <Widget>[
           Container(
-            width: 30,
-            height: 30,
+            width: 28,
+            height: 28,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
+            decoration: BoxDecoration(
+              color: _oranjeLicht,
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _prijsSoort.korteCode,
               style: const TextStyle(
-                color: _groen,
-                fontSize: 13,
+                color: _oranje,
+                fontSize: 11.5,
                 fontWeight: FontWeight.w900,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 9),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -997,12 +1153,12 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                 Text(
                   _prijsSoort.label,
                   style: const TextStyle(
-                    color: _groen,
-                    fontSize: 12,
+                    color: _tekstDonker,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   _eenheid == OpmetingAlgemenePrijsEenheid.vastBedrag
                       ? 'Vast bedrag'
@@ -1010,18 +1166,19 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
                             '€ ${prijs.toStringAsFixed(2).replaceAll('.', ',')}',
                   style: const TextStyle(
                     color: _tekstGrijs,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 10),
           Text(
             '€ ${totaal.toStringAsFixed(2).replaceAll('.', ',')}',
             style: const TextStyle(
-              color: _groen,
-              fontSize: 16,
+              color: _oranje,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1042,17 +1199,39 @@ class _AlgemenePrijsblokDialogState extends State<_AlgemenePrijsblokDialog> {
       isDense: true,
       filled: true,
       fillColor: Colors.white,
+      floatingLabelStyle: const TextStyle(
+        color: _oranje,
+        fontWeight: FontWeight.w700,
+      ),
+      labelStyle: const TextStyle(
+        color: _tekstGrijs,
+        fontSize: 11.5,
+        fontWeight: FontWeight.w600,
+      ),
+      hintStyle: TextStyle(
+        color: _tekstGrijs.withValues(alpha: 0.72),
+        fontSize: 11.5,
+      ),
+      prefixStyle: const TextStyle(
+        color: _tekstDonker,
+        fontWeight: FontWeight.w700,
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _rand),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: _rand),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _groen, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _oranje, width: 1.4),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: _rand),
       ),
     );
   }

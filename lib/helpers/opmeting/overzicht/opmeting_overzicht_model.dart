@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PROJECTBESTAND-ID-IN-POSITIES-FASE1-20260912
 // THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-JSON-OPSLAG-20260812
 // THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-LABEL-FASE-4-20260803
 // THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-MODEL-FASE-3A-20260803
@@ -359,6 +360,7 @@ class OpmetingOverzichtRaamItem {
     required this.id,
     required this.titel,
     required this.klantNaam,
+    this.projectBestandId = '',
     required this.dagmaatBreedteMm,
     required this.dagmaatHoogteMm,
     required this.raammaatBreedteMm,
@@ -399,6 +401,7 @@ class OpmetingOverzichtRaamItem {
   final String id;
   final String titel;
   final String klantNaam;
+  final String projectBestandId;
   final String formulierType;
   final String gewijzigdOp;
   final bool isVerwijderd;
@@ -641,6 +644,7 @@ class OpmetingOverzichtRaamItem {
     String? id,
     String? titel,
     String? klantNaam,
+    String? projectBestandId,
     String? formulierType,
     String? gewijzigdOp,
     bool? isVerwijderd,
@@ -680,6 +684,7 @@ class OpmetingOverzichtRaamItem {
       id: id ?? this.id,
       titel: titel ?? this.titel,
       klantNaam: klantNaam ?? this.klantNaam,
+      projectBestandId: projectBestandId ?? this.projectBestandId,
       formulierType: formulierType ?? this.formulierType,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
       isVerwijderd: isVerwijderd ?? this.isVerwijderd,
@@ -735,6 +740,7 @@ class OpmetingOverzichtRaamItem {
       'id': id,
       'titel': titel,
       'klantNaam': klantNaam,
+      'projectBestandId': projectBestandId,
       'formulierType': formulierType,
       'gewijzigdOp': gewijzigdOp,
       'isVerwijderd': isVerwijderd,
@@ -817,6 +823,10 @@ class OpmetingOverzichtRaamItem {
       id: json['id']?.toString() ?? '',
       titel: json['titel']?.toString() ?? 'Raam',
       klantNaam: json['klantNaam']?.toString() ?? '',
+      projectBestandId:
+          json['projectBestandId']?.toString() ??
+          json['projectId']?.toString() ??
+          '',
       formulierType: json['formulierType']?.toString() ?? 'pvcRaam',
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
+
 import 'opmeting_schuifvliegendeur_model.dart';
 import 'opmeting_schuifvliegendeur_profiel_catalogus.dart';
 import 'opmeting_schuifvliegendeur_profiel_painter.dart';
@@ -26,11 +28,8 @@ class OpmetingSchuifvliegendeurRechterkolom extends StatefulWidget {
 
 class _OpmetingSchuifvliegendeurRechterkolomState
     extends State<OpmetingSchuifvliegendeurRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekst = ThimacoKleuren.antraciet;
 
   late final TextEditingController _stukReferentieController;
   late final TextEditingController _aantalController;
@@ -258,29 +257,14 @@ class _OpmetingSchuifvliegendeurRechterkolomState
       ),
       child: Column(
         children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: const BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
-              border: Border(bottom: BorderSide(color: Color(0xFFCDEBD6))),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.door_sliding_outlined, size: 19, color: _groen),
-                SizedBox(width: 8),
-                Text(
-                  'Schuifvliegendeur',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
             ),
           ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
@@ -672,24 +656,15 @@ class _SectieKaart extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(
-          color: _OpmetingSchuifvliegendeurRechterkolomState._rand,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            titel,
-            style: const TextStyle(
-              color: _OpmetingSchuifvliegendeurRechterkolomState._tekst,
-              fontSize: 11.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 7),
+          ThimacoSectieTitel(tekst: titel),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -715,33 +690,18 @@ class _KeuzeSectie extends StatelessWidget {
     return _SectieKaart(
       titel: titel,
       children: <Widget>[
-        RadioGroup<String>(
-          groupValue: waarde,
-          onChanged: (nieuw) {
-            if (nieuw != null) onChanged(nieuw);
-          },
-          child: Column(
-            children: <Widget>[
-              for (final keuze in keuzes)
-                RadioListTile<String>(
-                  value: keuze,
-                  dense: true,
-                  visualDensity: const VisualDensity(
-                    horizontal: -4,
-                    vertical: -4,
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  activeColor:
-                      _OpmetingSchuifvliegendeurRechterkolomState._groen,
-                  title: Text(
-                    keuze,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: _OpmetingSchuifvliegendeurRechterkolomState._tekst,
-                    ),
-                  ),
-                ),
-            ],
+        Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: keuzes.map((keuze) {
+              return ThimacoTekstKeuze(
+                tekst: keuze,
+                geselecteerd: keuze == waarde,
+                onPressed: () => onChanged(keuze),
+              );
+            }).toList(growable: false),
           ),
         ),
       ],
@@ -767,70 +727,53 @@ class _ProfielKeuzeSectie extends StatelessWidget {
     return _SectieKaart(
       titel: titel,
       children: <Widget>[
-        RadioGroup<String>(
-          groupValue: waarde,
-          onChanged: (nieuw) {
-            if (nieuw != null) onChanged(nieuw);
-          },
-          child: Column(
-            children: <Widget>[
-              for (final profiel in profielen)
-                InkWell(
-                  borderRadius: BorderRadius.circular(9),
-                  onTap: () => onChanged(profiel.code),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
+        ...profielen.map((profiel) {
+          final geselecteerd = profiel.code == waarde;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 7),
+            child: ThimacoSelectieTegel(
+              geselecteerd: geselecteerd,
+              onTap: () => onChanged(profiel.code),
+              padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Radio<String>(
-                          value: profiel.code,
-                          activeColor:
-                              _OpmetingSchuifvliegendeurRechterkolomState
-                                  ._groen,
-                          visualDensity: const VisualDensity(
-                            horizontal: -4,
-                            vertical: -4,
+                        Text(
+                          profiel.code,
+                          style: const TextStyle(
+                            color: ThimacoKleuren.antraciet,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                profiel.code,
-                                style: const TextStyle(
-                                  color:
-                                      _OpmetingSchuifvliegendeurRechterkolomState
-                                          ._tekst,
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              if (profiel.omschrijving.trim().isNotEmpty)
-                                Text(
-                                  profiel.omschrijving,
-                                  style: const TextStyle(
-                                    color:
-                                        _OpmetingSchuifvliegendeurRechterkolomState
-                                            ._tekstGrijs,
-                                    fontSize: 9.5,
-                                  ),
-                                ),
-                            ],
+                        if (profiel.omschrijving.trim().isNotEmpty) ...<Widget>[
+                          const SizedBox(height: 2),
+                          Text(
+                            profiel.omschrijving,
+                            style: const TextStyle(
+                              color: ThimacoKleuren.tekstGrijs,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        OpmetingSchuifvliegendeurProfielSchetsWidget(
-                          profiel: profiel,
-                          geselecteerd: profiel.code == waarde,
-                        ),
+                        ],
                       ],
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
+                  const SizedBox(width: 8),
+                  OpmetingSchuifvliegendeurProfielSchetsWidget(
+                    profiel: profiel,
+                    geselecteerd: false,
+                  ),
+                  if (geselecteerd) const SizedBox(width: 18),
+                ],
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -848,30 +791,24 @@ class _InformatieKaart extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF8),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: const Color(0xFFCDEBD6)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            titel,
-            style: const TextStyle(
-              color: _OpmetingSchuifvliegendeurRechterkolomState._groen,
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 3),
+          ThimacoSectieTitel(tekst: titel),
+          const SizedBox(height: 7),
           Text(
             waarde,
             style: const TextStyle(
-              color: _OpmetingSchuifvliegendeurRechterkolomState._tekst,
+              color: ThimacoKleuren.antraciet,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
+          const SizedBox(height: 2),
         ],
       ),
     );
@@ -913,6 +850,7 @@ class _CompactTekstVeld extends StatelessWidget {
             controller: controller,
             maxLines: maxRegels,
             onChanged: onChanged,
+            cursorColor: ThimacoKleuren.oranje,
             style: const TextStyle(fontSize: 12),
             decoration: _veldDecoratie(helperText: hulptekst),
           ),
@@ -965,6 +903,7 @@ class _CompactGetalVeld extends StatelessWidget {
               FilteringTextInputFormatter.digitsOnly,
             ],
             onChanged: onChanged,
+            cursorColor: ThimacoKleuren.oranje,
             style: const TextStyle(fontSize: 12),
             decoration: _veldDecoratie(
               suffixText: eenheid,
@@ -985,21 +924,25 @@ InputDecoration _veldDecoratie({String? suffixText, String? helperText}) {
     contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
     suffixText: suffixText,
     helperText: helperText,
-    helperStyle: const TextStyle(fontSize: 9, height: 1),
+    helperStyle: const TextStyle(
+      color: ThimacoKleuren.tekstGrijs,
+      fontSize: 9,
+      height: 1,
+    ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(
-        color: _OpmetingSchuifvliegendeurRechterkolomState._rand,
-      ),
+      borderSide: const BorderSide(color: ThimacoKleuren.rand),
     ),
     disabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
+      borderSide: BorderSide(
+        color: ThimacoKleuren.rand.withValues(alpha: 0.72),
+      ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: const BorderSide(
-        color: _OpmetingSchuifvliegendeurRechterkolomState._groen,
+        color: ThimacoKleuren.oranje,
         width: 1.4,
       ),
     ),

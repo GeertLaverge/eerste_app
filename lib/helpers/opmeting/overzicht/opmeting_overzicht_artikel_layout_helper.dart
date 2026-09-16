@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PROGRAMMASTIJL-MAATTITEL-ANTRACIET-ORANJE-FASE12-CURRENT-20260913
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-DYNAMISCHE-REGELHOOGTE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-CONTAINER-EXACT-PER-REGEL-20260815
 // THIMACO-CONTROLE: TECHNISCHE-LEEGTE-1-REGEL-20260814
@@ -24,7 +25,7 @@ class OpmetingOverzichtTechnischeRegelPrijs {
 class OpmetingOverzichtArtikelLayoutHelper {
   const OpmetingOverzichtArtikelLayoutHelper._();
 
-  static const Color groen = Color(0xFF0B7A3B);
+  static const Color oranje = Color(0xFFF15A24);
   static const Color tekstDonker = Color(0xFF111827);
   static const Color tekstGrijs = Color(0xFF6B7280);
   static const Color rand = Color(0xFFE5E7EB);
@@ -263,9 +264,12 @@ class OpmetingOverzichtArtikelLayoutHelper {
                   TextSpan(
                     text: '${maatTitel.trim()} ',
                     style: const TextStyle(
-                      color: groen,
+                      color: tekstDonker,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w900,
+                      decoration: TextDecoration.underline,
+                      decorationColor: oranje,
+                      decorationThickness: 1.35,
                     ),
                   ),
                   TextSpan(

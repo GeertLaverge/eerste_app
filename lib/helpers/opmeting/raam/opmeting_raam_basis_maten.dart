@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
+
 class OpmetingRaamBasisMaten extends StatelessWidget {
   const OpmetingRaamBasisMaten({
     super.key,
@@ -29,11 +31,11 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     this.dagmatenVergrendeld = false,
   });
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _oranjeLicht = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final TextEditingController dagmaatHoogteController;
   final TextEditingController dagmaatBreedteController;
@@ -63,203 +65,168 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.fromLTRB(11, 10, 11, 11),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: _rand),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Container(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 7),
-            decoration: const BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.straighten_rounded, color: _groen, size: 17),
-                SizedBox(width: 7),
+        children: <Widget>[
+          const ThimacoSectieTitel(tekst: 'Afmetingen'),
+          const SizedBox(height: 10),
+          _bouwResultaatKaart(),
+          const SizedBox(height: 9),
+          if (dagmatenVergrendeld) ...<Widget>[
+            _bouwInfoMelding(),
+            const SizedBox(height: 9),
+          ],
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Raammaat B',
+                  controller: raammaatBreedteController,
+                  enabled: !dagmatenVergrendeld,
+                  lichtgroenVeld: true,
+                  minTekensVoorWijziging: 3,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Raammaat H',
+                  controller: raammaatHoogteController,
+                  enabled: !dagmatenVergrendeld,
+                  lichtgroenVeld: true,
+                  minTekensVoorWijziging: 3,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Dagmaat B',
+                  controller: dagmaatBreedteController,
+                  enabled: !dagmatenVergrendeld,
+                  minTekensVoorWijziging: 3,
+                  onChanged: onDagmaatGewijzigd,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Dagmaat H',
+                  controller: dagmaatHoogteController,
+                  enabled: !dagmatenVergrendeld,
+                  minTekensVoorWijziging: 3,
+                  onChanged: onDagmaatGewijzigd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Slag L',
+                  controller: slagLinksController,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Slag R',
+                  controller: slagRechtsController,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Slag B',
+                  controller: slagBovenController,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: _bouwGetalVeld(
+                  label: 'Slag O',
+                  controller: slagOnderController,
+                  onChanged: onRaammaatGewijzigd,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          if (isSchuifraam)
+            _bouwPositieOnderkantSchuifraamVeld()
+          else ...<Widget>[
+            if (isDeur) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _bouwGetalVeld(
+                      label: 'Uitzagen tand',
+                      controller: uitzagenTandController,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: _bouwGetalVeld(
+                      label: 'Buitenste lip',
+                      controller: buitensteLipController,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+            Row(
+              children: <Widget>[
                 Expanded(
-                  child: Text(
-                    'Afmetingen',
-                    style: TextStyle(
-                      color: Color(0xFF064E3B),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w900,
-                    ),
+                  child: _bouwGetalVeld(
+                    label: 'Tablet binnen',
+                    controller: binnenTabletController,
+                    onChanged: onChanged,
+                  ),
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: _bouwGetalVeld(
+                    label: 'Tablet buiten',
+                    controller: buitenTabletController,
+                    onChanged: onChanged,
                   ),
                 ),
               ],
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _bouwResultaatKaart(),
-                const SizedBox(height: 8),
-                if (dagmatenVergrendeld) ...[
-                  _bouwInfoMelding(),
-                  const SizedBox(height: 8),
-                ],
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Raammaat B',
-                        controller: raammaatBreedteController,
-                        enabled: !dagmatenVergrendeld,
-                        lichtgroenVeld: true,
-                        minTekensVoorWijziging: 3,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Raammaat H',
-                        controller: raammaatHoogteController,
-                        enabled: !dagmatenVergrendeld,
-                        lichtgroenVeld: true,
-                        minTekensVoorWijziging: 3,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Dagmaat B',
-                        controller: dagmaatBreedteController,
-                        enabled: !dagmatenVergrendeld,
-                        minTekensVoorWijziging: 3,
-                        onChanged: onDagmaatGewijzigd,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Dagmaat H',
-                        controller: dagmaatHoogteController,
-                        enabled: !dagmatenVergrendeld,
-                        minTekensVoorWijziging: 3,
-                        onChanged: onDagmaatGewijzigd,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Slag L',
-                        controller: slagLinksController,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Slag R',
-                        controller: slagRechtsController,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Slag B',
-                        controller: slagBovenController,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _bouwGetalVeld(
-                        label: 'Slag O',
-                        controller: slagOnderController,
-                        onChanged: onRaammaatGewijzigd,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 9),
-                if (isSchuifraam)
-                  _bouwPositieOnderkantSchuifraamVeld()
-                else ...[
-                  if (isDeur) ...[
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _bouwGetalVeld(
-                            label: 'Uitzagen tand',
-                            controller: uitzagenTandController,
-                            onChanged: onChanged,
-                          ),
-                        ),
-                        const SizedBox(width: 7),
-                        Expanded(
-                          child: _bouwGetalVeld(
-                            label: 'Buitenste lip',
-                            controller: buitensteLipController,
-                            onChanged: onChanged,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _bouwGetalVeld(
-                          label: 'Tablet binnen',
-                          controller: binnenTabletController,
-                          onChanged: onChanged,
-                        ),
-                      ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: _bouwGetalVeld(
-                          label: 'Tablet buiten',
-                          controller: buitenTabletController,
-                          onChanged: onChanged,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Verschil tablet: $verschilTablet mm',
-                    textAlign: TextAlign.right,
-                    style: const TextStyle(
-                      color: _tekstGrijs,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
+            const SizedBox(height: 6),
+            Text(
+              'Verschil tablet: $verschilTablet mm',
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: _tekstGrijs,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -273,7 +240,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
 
         return TextField(
           controller: onderkantSchuifraamController,
-          cursorColor: _groen,
+          cursorColor: _oranje,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: (_) {
@@ -295,7 +262,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
             floatingLabelStyle: const TextStyle(
-              color: _groen,
+              color: _oranje,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),
@@ -314,7 +281,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
               borderSide: BorderSide(color: _rand),
             ),
             focusedBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: _groen, width: 1.4),
+              borderSide: BorderSide(color: _oranje, width: 1.4),
             ),
           ),
           style: const TextStyle(
@@ -337,7 +304,11 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.aspect_ratio_rounded, size: 17, color: _groen),
+          const Icon(
+            Icons.aspect_ratio_rounded,
+            size: 17,
+            color: ThimacoKleuren.antraciet,
+          ),
           const SizedBox(width: 7),
           Expanded(
             child: Column(
@@ -371,20 +342,24 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
-        color: _lichtGroen,
+        color: _oranjeLicht,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: _groen.withValues(alpha: 0.35)),
+        border: Border.all(color: _oranje.withValues(alpha: 0.35)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline_rounded, color: _groen, size: 16),
+          Icon(
+            Icons.lock_outline_rounded,
+            color: ThimacoKleuren.antraciet,
+            size: 16,
+          ),
           SizedBox(width: 7),
           Expanded(
             child: Text(
               'Meerdere kaders: dagmaten en raammaten worden automatisch berekend op basis van de totale kaderopbouw.',
               style: TextStyle(
-                color: Color(0xFF064E3B),
+                color: _tekstDonker,
                 fontSize: 10.5,
                 height: 1.2,
                 fontWeight: FontWeight.w700,
@@ -407,7 +382,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
     return TextField(
       controller: controller,
       enabled: enabled,
-      cursorColor: _groen,
+      cursorColor: _oranje,
       keyboardType: const TextInputType.numberWithOptions(
         signed: false,
         decimal: false,
@@ -438,7 +413,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
         fillColor: !enabled
             ? const Color(0xFFF3F4F6)
             : lichtgroenVeld
-            ? _lichtGroen
+            ? _oranjeLicht
             : Colors.white,
         labelStyle: const TextStyle(
           color: _tekstGrijs,
@@ -446,7 +421,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
         floatingLabelStyle: const TextStyle(
-          color: _groen,
+          color: _oranje,
           fontSize: 11,
           fontWeight: FontWeight.w900,
         ),
@@ -460,7 +435,7 @@ class OpmetingRaamBasisMaten extends StatelessWidget {
           borderSide: BorderSide(color: _rand),
         ),
         focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: _groen, width: 1.4),
+          borderSide: BorderSide(color: _oranje, width: 1.4),
         ),
         disabledBorder: const OutlineInputBorder(
           borderSide: BorderSide(color: Color(0xFFD1D5DB)),

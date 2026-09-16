@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
 import 'opmeting_vaste_inzethor_model.dart';
 
 class OpmetingVasteInzethorRechterkolom extends StatefulWidget {
@@ -22,12 +23,6 @@ class OpmetingVasteInzethorRechterkolom extends StatefulWidget {
 
 class _OpmetingVasteInzethorRechterkolomState
     extends State<OpmetingVasteInzethorRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
-
   late final TextEditingController _stukReferentieController;
   late final TextEditingController _aantalController;
   late final TextEditingController _breedteController;
@@ -163,7 +158,7 @@ class _OpmetingVasteInzethorRechterkolomState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _rand),
+        border: Border.all(color: ThimacoKleuren.rand),
         boxShadow: const <BoxShadow>[
           BoxShadow(
             color: Color(0x0F111827),
@@ -174,29 +169,14 @@ class _OpmetingVasteInzethorRechterkolomState
       ),
       child: Column(
         children: <Widget>[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: const BoxDecoration(
-              color: _lichtGroen,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
-              border: Border(bottom: BorderSide(color: Color(0xFFCDEBD6))),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.grid_view_rounded, size: 19, color: _groen),
-                SizedBox(width: 8),
-                Text(
-                  'Vaste inzethor',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
             ),
           ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
@@ -644,14 +624,14 @@ class _CompactInfoRegel extends StatelessWidget {
           Icon(
             icoon,
             size: 17,
-            color: _OpmetingVasteInzethorRechterkolomState._groen,
+            color: ThimacoKleuren.oranje,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               tekst,
               style: const TextStyle(
-                color: _OpmetingVasteInzethorRechterkolomState._tekst,
+                color: ThimacoKleuren.antraciet,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
               ),
@@ -675,24 +655,15 @@ class _SectieKaart extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.fromLTRB(10, 9, 10, 2),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(
-          color: _OpmetingVasteInzethorRechterkolomState._rand,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            titel,
-            style: const TextStyle(
-              color: _OpmetingVasteInzethorRechterkolomState._groen,
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 7),
+          ThimacoSectieTitel(tekst: titel),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -723,38 +694,24 @@ class _KeuzeSectie extends StatelessWidget {
       ...keuzes,
     ];
 
-    return RadioGroup<String>(
-      groupValue: waarde,
-      onChanged: (nieuw) {
-        if (nieuw != null) {
-          onChanged(nieuw);
-        }
-      },
-      child: _SectieKaart(
-        titel: titel,
-        children: zichtbareKeuzes
-            .map((keuze) {
-              return RadioListTile<String>(
-                value: keuze,
-                activeColor: _OpmetingVasteInzethorRechterkolomState._groen,
-                dense: true,
-                visualDensity: const VisualDensity(
-                  horizontal: -4,
-                  vertical: -4,
-                ),
-                contentPadding: EdgeInsets.zero,
-                title: Text(
-                  labelBouwer(keuze),
-                  style: const TextStyle(
-                    color: _OpmetingVasteInzethorRechterkolomState._tekst,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+    return _SectieKaart(
+      titel: titel,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 2,
+            children: zichtbareKeuzes.map((keuze) {
+              return ThimacoTekstKeuze(
+                tekst: labelBouwer(keuze),
+                geselecteerd: keuze == waarde,
+                onPressed: () => onChanged(keuze),
               );
-            })
-            .toList(growable: false),
-      ),
+            }).toList(growable: false),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -782,7 +739,7 @@ class _CompactTekstVeld extends StatelessWidget {
           Text(
             titel,
             style: const TextStyle(
-              color: _OpmetingVasteInzethorRechterkolomState._tekst,
+              color: ThimacoKleuren.antraciet,
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
             ),
@@ -791,6 +748,7 @@ class _CompactTekstVeld extends StatelessWidget {
           TextField(
             controller: controller,
             onChanged: onChanged,
+            cursorColor: ThimacoKleuren.oranje,
             style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
             decoration: _veldDecoratie(),
           ),
@@ -799,7 +757,7 @@ class _CompactTekstVeld extends StatelessWidget {
             Text(
               hulptekst!,
               style: const TextStyle(
-                color: _OpmetingVasteInzethorRechterkolomState._tekstGrijs,
+                color: ThimacoKleuren.tekstGrijs,
                 fontSize: 9.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -845,7 +803,7 @@ class _CompactGetalVeld extends StatelessWidget {
           Text(
             titel,
             style: const TextStyle(
-              color: _OpmetingVasteInzethorRechterkolomState._tekst,
+              color: ThimacoKleuren.antraciet,
               fontSize: 11.5,
               fontWeight: FontWeight.w800,
             ),
@@ -858,6 +816,7 @@ class _CompactGetalVeld extends StatelessWidget {
               FilteringTextInputFormatter.digitsOnly,
             ],
             onChanged: onChanged,
+            cursorColor: ThimacoKleuren.oranje,
             style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
             decoration: _veldDecoratie(
               suffixText: eenheid,
@@ -882,15 +841,15 @@ class _MaatSamenvatting extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: const Color(0xFFE7F6EC),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFCDEBD6)),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Row(
         children: <Widget>[
           const Icon(
             Icons.straighten_rounded,
-            color: Color(0xFF0B7A3B),
+            color: ThimacoKleuren.oranje,
             size: 18,
           ),
           const SizedBox(width: 8),
@@ -901,16 +860,16 @@ class _MaatSamenvatting extends StatelessWidget {
                 Text(
                   model.maatSamenvattingTitel,
                   style: const TextStyle(
-                    color: Color(0xFF0B7A3B),
+                    color: ThimacoKleuren.tekstGrijs,
                     fontSize: 11.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 1),
                 Text(
                   model.maatSamenvatting,
                   style: const TextStyle(
-                    color: Color(0xFF111827),
+                    color: ThimacoKleuren.antraciet,
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -938,32 +897,26 @@ class _ProjectkleurSamenvatting extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAF8),
-        borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: const Color(0xFFCDEBD6)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const Text(
-            'Projectkleur',
-            style: TextStyle(
-              color: Color(0xFF0B7A3B),
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 3),
+          const ThimacoSectieTitel(tekst: 'Projectkleur'),
+          const SizedBox(height: 7),
           Text(
             waarde.isEmpty
                 ? 'Nog geen projectkleur ingevuld in het project.'
                 : waarde,
             style: const TextStyle(
-              color: Color(0xFF111827),
+              color: ThimacoKleuren.antraciet,
               fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
+          const SizedBox(height: 2),
         ],
       ),
     );
@@ -987,7 +940,7 @@ class _StandaardTraverseSamenvatting extends StatelessWidget {
               child: Text(
                 'Aantal traversen',
                 style: TextStyle(
-                  color: Color(0xFF6B7280),
+                  color: ThimacoKleuren.tekstGrijs,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w700,
                 ),
@@ -996,7 +949,7 @@ class _StandaardTraverseSamenvatting extends StatelessWidget {
             Text(
               '${model.standaardAantalTraversen}',
               style: const TextStyle(
-                color: Color(0xFF0B7A3B),
+                color: ThimacoKleuren.oranje,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
@@ -1021,7 +974,7 @@ class _StandaardTraverseSamenvatting extends StatelessWidget {
                   child: Text(
                     'Traverse ${index + 1}',
                     style: const TextStyle(
-                      color: Color(0xFF6B7280),
+                      color: ThimacoKleuren.tekstGrijs,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1030,7 +983,7 @@ class _StandaardTraverseSamenvatting extends StatelessWidget {
                 Text(
                   tekst,
                   style: const TextStyle(
-                    color: Color(0xFF111827),
+                    color: ThimacoKleuren.antraciet,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
@@ -1052,17 +1005,19 @@ InputDecoration _veldDecoratie({String? suffixText, String? helperText}) {
     contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
     suffixText: suffixText,
     helperText: helperText,
-    helperStyle: const TextStyle(fontSize: 9, height: 1),
+    helperStyle: const TextStyle(
+      color: ThimacoKleuren.tekstGrijs,
+      fontSize: 9,
+      height: 1,
+    ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(
-        color: _OpmetingVasteInzethorRechterkolomState._rand,
-      ),
+      borderSide: const BorderSide(color: ThimacoKleuren.rand),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: const BorderSide(
-        color: _OpmetingVasteInzethorRechterkolomState._groen,
+        color: ThimacoKleuren.oranje,
         width: 1.4,
       ),
     ),

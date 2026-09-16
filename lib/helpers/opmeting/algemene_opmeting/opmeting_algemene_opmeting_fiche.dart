@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-NIEUWE-HUISSTIJL-20260914
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-GEEN-LOKALE-PRIJS-PER-POSITIE-20260817
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-STAP5D4B1-ALGEMENE-OPMETING-ZONDER-OUDE-VRIJE-PRIJSROUTE-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ANALYZERFIX-ALGEMENE-OPMETING-20260814
@@ -10,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../app_storage.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../sync/onedrive_afbeelding_kiezer_dialog.dart';
+import '../../ui/thimaco_huisstijl.dart';
 import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
@@ -36,8 +38,7 @@ class OpmetingAlgemeneOpmetingFiche extends StatefulWidget {
 
 class _OpmetingAlgemeneOpmetingFicheState
     extends State<OpmetingAlgemeneOpmetingFiche> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _rand = ThimacoKleuren.rand;
   static const int _maximumFotos = 4;
 
   final ImagePicker _imagePicker = ImagePicker();
@@ -264,8 +265,38 @@ class _OpmetingAlgemeneOpmetingFicheState
 
   void _toonFout(String tekst) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(backgroundColor: const Color(0xFFDC2626), content: Text(tekst)),
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        elevation: 8,
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: ThimacoKleuren.rand),
+        ),
+        content: Row(
+          children: <Widget>[
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 18,
+              color: ThimacoKleuren.rood,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                tekst,
+                style: const TextStyle(
+                  color: ThimacoKleuren.antraciet,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -285,55 +316,95 @@ class _OpmetingAlgemeneOpmetingFicheState
         if (!didPop) await _sluitFiche();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        backgroundColor: ThimacoKleuren.achtergrond,
         appBar: AppBar(
-          backgroundColor: _groen,
-          foregroundColor: Colors.white,
-          centerTitle: true,
-          leading: IconButton(
-            onPressed: _sluitFiche,
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          toolbarHeight: 47,
+          backgroundColor: Colors.white,
+          foregroundColor: ThimacoKleuren.antraciet,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          leadingWidth: 46,
+          leading: Center(
+            child: ThimacoIcoonActie(
+              icoon: Icons.arrow_back_rounded,
+              tooltip: 'Terug',
+              onPressed: _sluitFiche,
+            ),
           ),
+          titleSpacing: 0,
           title: Text(
             klantNaam.isEmpty
                 ? 'Algemene opmeting'
                 : 'Algemene opmeting · $klantNaam',
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ThimacoKleuren.antraciet,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           actions: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ElevatedButton.icon(
-                onPressed: _bewarenBezig ? null : _bewaarFiche,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: _bewarenBezig
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_rounded, size: 18),
-                label: Text(
-                  widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: ElevatedButton.icon(
+            Center(
+              child: ThimacoTekstActie(
+                tekst: 'Annuleren',
                 onPressed: _sluitFiche,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: const Icon(Icons.close_rounded, size: 18),
-                label: const Text('Annuleren'),
               ),
             ),
+            const SizedBox(width: 6),
+            Center(
+              child: SizedBox(
+                height: 32,
+                child: ElevatedButton.icon(
+                  onPressed: _bewarenBezig ? null : _bewaarFiche,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: ThimacoKleuren.oranje,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        ThimacoKleuren.oranje.withValues(alpha: 0.45),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _bewarenBezig
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          widget.bestaandeOpmeting == null
+                              ? Icons.add_rounded
+                              : Icons.check_rounded,
+                          size: 17,
+                        ),
+                  label: Text(
+                    widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
           ],
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: ThimacoKleuren.rand,
+            ),
+          ),
         ),
         body: LayoutBuilder(
           builder: (context, constraints) {

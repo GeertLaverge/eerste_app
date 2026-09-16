@@ -1,9 +1,11 @@
+// THIMACO-CONTROLE: VELUX-HUISSTIJL-20260914
 // THIMACO-CONTROLE: VELUX-STANDAARDMAAT-SK06-20260730-0531
 // THIMACO-CONTROLE: VELUX-DAKRAAM-FICHE-FASE-1-2-20260729-2030
 import 'package:flutter/material.dart';
 
 import '../../../app_storage.dart';
 import '../../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
+import '../../../ui/thimaco_huisstijl.dart';
 import '../../fotos/opmeting_foto_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
@@ -32,8 +34,7 @@ class OpmetingVeluxDakraamFiche extends StatefulWidget {
 }
 
 class _OpmetingVeluxDakraamFicheState extends State<OpmetingVeluxDakraamFiche> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _rand = ThimacoKleuren.rand;
 
   final TextEditingController _notitiesController = TextEditingController();
 
@@ -188,64 +189,102 @@ class _OpmetingVeluxDakraamFicheState extends State<OpmetingVeluxDakraamFiche> {
         if (!didPop) _sluitFiche();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        backgroundColor: ThimacoKleuren.achtergrond,
         appBar: AppBar(
-          backgroundColor: _groen,
-          foregroundColor: Colors.white,
+          toolbarHeight: 47,
+          backgroundColor: Colors.white,
+          foregroundColor: ThimacoKleuren.antraciet,
           elevation: 0,
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-            onPressed: _sluitFiche,
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          leadingWidth: 46,
+          leading: Center(
+            child: ThimacoIcoonActie(
+              icoon: Icons.arrow_back_rounded,
+              tooltip: 'Terug',
+              onPressed: _sluitFiche,
+            ),
           ),
+          titleSpacing: 0,
           title: Text(
             klantNaam.isEmpty
                 ? 'Opmeting Velux dakramen'
                 : 'Opmeting Velux dakramen · $klantNaam',
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ThimacoKleuren.antraciet,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           actions: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ElevatedButton.icon(
-                onPressed: _laden || _bewarenBezig
-                    ? null
-                    : _voegToeAanOverzicht,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: _bewarenBezig
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: _groen,
-                        ),
-                      )
-                    : const Icon(Icons.add_rounded, size: 18),
-                label: Text(
-                  widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: ElevatedButton.icon(
+            Center(
+              child: ThimacoTekstActie(
+                tekst: 'Annuleren',
                 onPressed: _sluitFiche,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: const Icon(Icons.close_rounded, size: 18),
-                label: const Text('Annuleren'),
               ),
             ),
+            const SizedBox(width: 6),
+            Center(
+              child: SizedBox(
+                height: 32,
+                child: ElevatedButton.icon(
+                  onPressed: _laden || _bewarenBezig
+                      ? null
+                      : _voegToeAanOverzicht,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: ThimacoKleuren.oranje,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        ThimacoKleuren.oranje.withValues(alpha: 0.45),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _bewarenBezig
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          widget.bestaandeOpmeting == null
+                              ? Icons.add_rounded
+                              : Icons.check_rounded,
+                          size: 17,
+                        ),
+                  label: Text(
+                    widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
           ],
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: ThimacoKleuren.rand,
+            ),
+          ),
         ),
         body: _laden || _instellingen == null
-            ? const Center(child: CircularProgressIndicator(color: _groen))
+            ? const Center(
+                child: CircularProgressIndicator(color: ThimacoKleuren.oranje),
+              )
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final liggend = constraints.maxWidth >= 900;

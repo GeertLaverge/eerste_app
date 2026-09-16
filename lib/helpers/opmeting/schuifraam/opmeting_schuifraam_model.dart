@@ -40,6 +40,7 @@ enum OpmetingSchuifraamSysteem {
   xmovePvcLi82,
   hefSchuifVgVleugelBinnenzijde,
   hefSchuifUgVleugelBinnenzijde,
+  un1114HefSchuifUgVlakkeDorpelVleugelBinnenzijde,
 }
 
 extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
@@ -55,12 +56,18 @@ extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
         return 'Hefschuif VG vleugel binnenzijde';
       case OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde:
         return 'Hefschuif UG vleugel binnenzijde';
+      case OpmetingSchuifraamSysteem
+          .un1114HefSchuifUgVlakkeDorpelVleugelBinnenzijde:
+        return 'Hefschuif UG met vlakke dorpel vleugel binnenzijde';
     }
   }
 
   bool get isAluminiumSysteem {
     return this == OpmetingSchuifraamSysteem.hefSchuifVgVleugelBinnenzijde ||
-        this == OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde;
+        this == OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde ||
+        this ==
+            OpmetingSchuifraamSysteem
+                .un1114HefSchuifUgVlakkeDorpelVleugelBinnenzijde;
   }
 
   OpmetingSchuifraamType get verplichtType {
@@ -72,6 +79,9 @@ extension OpmetingSchuifraamSysteemInfo on OpmetingSchuifraamSysteem {
       case OpmetingSchuifraamSysteem.hefSchuifVgVleugelBinnenzijde:
       case OpmetingSchuifraamSysteem.hefSchuifUgVleugelBinnenzijde:
         return OpmetingSchuifraamType.mono;
+      case OpmetingSchuifraamSysteem
+          .un1114HefSchuifUgVlakkeDorpelVleugelBinnenzijde:
+        return OpmetingSchuifraamType.duo;
     }
   }
 

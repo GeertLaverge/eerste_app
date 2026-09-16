@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
+
 import 'opmeting_buitenjaloezie_instellingen_model.dart';
 import 'opmeting_buitenjaloezie_kasthoogte_helper.dart';
 import 'opmeting_buitenjaloezie_model.dart';
@@ -29,11 +31,10 @@ class OpmetingBuitenjaloezieRechterkolom extends StatefulWidget {
 
 class _OpmetingBuitenjaloezieRechterkolomState
     extends State<OpmetingBuitenjaloezieRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF1F2937);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekst = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   late final TextEditingController _referentieController;
   late final TextEditingController _aantalController;
@@ -197,9 +198,35 @@ class _OpmetingBuitenjaloezieRechterkolomState
             hoogteInclusiefKast: widget.model.hoogteInclusiefKast,
           );
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 28),
-      children: <Widget>[
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: ThimacoKleuren.rand),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x0F111827),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
+            ),
+          ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 18),
+              children: <Widget>[
         _sectie(
           titel: 'Referentie en maten',
           kinderen: <Widget>[
@@ -494,7 +521,11 @@ class _OpmetingBuitenjaloezieRechterkolomState
             ),
           ],
         ),
-      ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -530,9 +561,9 @@ class _OpmetingBuitenjaloezieRechterkolomState
         title: const Text(
           'Kleur lamellen',
           style: TextStyle(
-            color: _tekst,
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
+            color: ThimacoKleuren.antraciet,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
           ),
         ),
         subtitle: Row(
@@ -650,19 +681,19 @@ class _OpmetingBuitenjaloezieRechterkolomState
     required bool waarde,
     required ValueChanged<bool> onChanged,
   }) {
-    return Column(
+    return Wrap(
+      spacing: 9,
+      runSpacing: 3,
       children: <Widget>[
-        _radio<bool>(
-          waarde: true,
-          groepWaarde: waarde,
-          titel: 'Ja',
-          onChanged: onChanged,
+        ThimacoTekstKeuze(
+          tekst: 'Ja',
+          geselecteerd: waarde,
+          onPressed: () => onChanged(true),
         ),
-        _radio<bool>(
-          waarde: false,
-          groepWaarde: waarde,
-          titel: 'Neen',
-          onChanged: onChanged,
+        ThimacoTekstKeuze(
+          tekst: 'Neen',
+          geselecteerd: !waarde,
+          onPressed: () => onChanged(false),
         ),
       ],
     );
@@ -691,15 +722,11 @@ class _OpmetingBuitenjaloezieRechterkolomState
       child: Container(
         padding: const EdgeInsets.all(9),
         decoration: BoxDecoration(
-          color: geselecteerd
-              ? const Color(0xFFEFF6FF)
-              : optie.combinatieGeldig
-              ? const Color(0xFFF9FAFB)
-              : const Color(0xFFFFF1F2),
+          color: optie.combinatieGeldig ? Colors.white : const Color(0xFFFFF1F2),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: geselecteerd
-                ? const Color(0xFF60A5FA)
+                ? ThimacoKleuren.oranje
                 : optie.combinatieGeldig
                 ? _rand
                 : const Color(0xFFFDA4AF),
@@ -713,10 +740,10 @@ class _OpmetingBuitenjaloezieRechterkolomState
               children: <Widget>[
                 Icon(
                   geselecteerd
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_off,
+                      ? Icons.check_circle_rounded
+                      : Icons.circle_outlined,
                   color: geselecteerd
-                      ? const Color(0xFF2563EB)
+                      ? ThimacoKleuren.oranje
                       : optie.combinatieGeldig
                       ? _tekstGrijs
                       : const Color(0xFFBE123C),
@@ -742,7 +769,7 @@ class _OpmetingBuitenjaloezieRechterkolomState
               optie.combinatieGeldig ? uitsteekTekst : 'Niet mogelijk',
               style: TextStyle(
                 color: optie.combinatieGeldig
-                    ? const Color(0xFF1D4ED8)
+                    ? (geselecteerd ? ThimacoKleuren.oranje : _tekstGrijs)
                     : const Color(0xFFBE123C),
                 fontSize: 10.8,
                 fontWeight: FontWeight.w800,
@@ -777,7 +804,7 @@ class _OpmetingBuitenjaloezieRechterkolomState
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(11),
-          border: Border.all(color: const Color(0xFFCDEBD6)),
+          border: Border.all(color: ThimacoKleuren.rand),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -841,14 +868,14 @@ class _OpmetingBuitenjaloezieRechterkolomState
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
+                border: Border.all(color: ThimacoKleuren.oranjeRand),
               ),
               child: Text(
                 "Gekozen: ${widget.model.kastHoogteMm} mm kast · ${widget.model.lamellenpakketUitsteekMm == 0 ? 'geen uitsteek' : '${widget.model.lamellenpakketUitsteekMm} mm uitsteek'}",
                 style: const TextStyle(
-                  color: Color(0xFF1D4ED8),
+                  color: ThimacoKleuren.antraciet,
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
                 ),
@@ -862,10 +889,10 @@ class _OpmetingBuitenjaloezieRechterkolomState
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: fout ? const Color(0xFFFFF1F2) : _lichtGroen,
+        color: fout ? const Color(0xFFFFF1F2) : Colors.white,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(
-          color: fout ? const Color(0xFFFDA4AF) : const Color(0xFFCDEBD6),
+          color: fout ? const Color(0xFFFDA4AF) : ThimacoKleuren.oranjeRand,
         ),
       ),
       child: Column(
@@ -874,7 +901,7 @@ class _OpmetingBuitenjaloezieRechterkolomState
           Text(
             'Automatisch berekende kast',
             style: TextStyle(
-              color: fout ? const Color(0xFFBE123C) : _groen,
+              color: fout ? const Color(0xFFBE123C) : ThimacoKleuren.antraciet,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -935,15 +962,8 @@ class _OpmetingBuitenjaloezieRechterkolomState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            titel,
-            style: const TextStyle(
-              color: _tekst,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 10),
+          ThimacoSectieTitel(tekst: titel),
+          const SizedBox(height: 8),
           ...kinderen,
         ],
       ),
@@ -973,33 +993,14 @@ class _OpmetingBuitenjaloezieRechterkolomState
     bool ingeschakeld = true,
   }) {
     final geselecteerd = waarde == groepWaarde;
-    return ListTile(
-      onTap: ingeschakeld ? () => onChanged(waarde) : null,
-      leading: Icon(
-        geselecteerd ? Icons.radio_button_checked : Icons.radio_button_off,
-        color: ingeschakeld
-            ? (geselecteerd ? _groen : _tekstGrijs)
-            : const Color(0xFF9CA3AF),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: ThimacoTekstKeuze(
+        tekst: titel,
+        subtekst: subtitel,
+        geselecteerd: geselecteerd,
+        onPressed: ingeschakeld ? () => onChanged(waarde) : null,
       ),
-      contentPadding: EdgeInsets.zero,
-      dense: true,
-      title: Text(
-        titel,
-        style: TextStyle(
-          color: ingeschakeld ? _tekst : const Color(0xFF9CA3AF),
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      subtitle: subtitel == null
-          ? null
-          : Text(
-              subtitel,
-              style: TextStyle(
-                color: ingeschakeld ? _tekstGrijs : const Color(0xFF9CA3AF),
-                fontSize: 10.5,
-              ),
-            ),
     );
   }
 

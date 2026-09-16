@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PROGRAMMASTIJL-DIALOGEN-VELDEN-FASE11-20260913
+// THIMACO-CONTROLE: PROGRAMMASTIJL-ORANJE-PRIJSZONE-FASE9-CURRENT-20260913
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-ZONDER-PRIJS-PER-POSITIE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-NIET-DUBBEL-IN-PRIJSBEREKENING-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-GEEN-RUIMTE-PER-ARTIKEL-20260816
@@ -21,6 +23,8 @@
 // THIMACO-CONTROLE: GROEPSGEWIJZE-WINST-KORTING-UI-VERWIJDERD-20260813
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import '../../app_storage.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
@@ -205,7 +209,6 @@ class _PrijsBerekeningKaart extends StatelessWidget {
   final double? algemeneVerkoopPrijsTotaalExclBtw;
   final double? algemeneAankoopPrijsTotaalExclBtw;
 
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
 
   @override
@@ -247,14 +250,7 @@ class _PrijsBerekeningKaart extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const Text(
-                'Prijsberekening',
-                style: TextStyle(
-                  color: _groen,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              const ThimacoSectieTitel(tekst: 'Prijsberekening'),
               const SizedBox(height: 8),
               if (toonPrijsPerStukVeld) ...<Widget>[
                 _CompactPrijsRij(
@@ -398,7 +394,7 @@ class _CompactPrijsRij extends StatelessWidget {
 
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _groen = ThimacoKleuren.oranje;
 
   @override
   Widget build(BuildContext context) {
@@ -446,7 +442,6 @@ class _PrijsPerPositieRegelsBlok extends StatelessWidget {
   final List<OffertePrijsPerPositieRegelModel> regels;
   final ValueChanged<List<OffertePrijsPerPositieRegelModel>> onGewijzigd;
 
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
@@ -580,20 +575,32 @@ class _PrijsPerPositieRegelsBlok extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Prijsregel verwijderen?'),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
+          ),
+          title: const ThimacoSectieTitel(
+            tekst: 'Prijsregel verwijderen?',
+            compact: false,
+          ),
           content: Text(
             regel.omschrijving.trim().isEmpty
                 ? 'Deze prijsregel wordt uit deze positie verwijderd.'
                 : '“${regel.omschrijving.trim()}” wordt uit deze positie verwijderd.',
+            style: const TextStyle(color: ThimacoKleuren.antraciet),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
           actions: <Widget>[
-            TextButton(
+            ThimacoTekstActie(
+              tekst: 'Annuleren',
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuleren'),
             ),
-            FilledButton(
+            ThimacoTekstActie(
+              tekst: 'Verwijderen',
+              destructief: true,
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Verwijderen'),
             ),
           ],
         );
@@ -621,36 +628,16 @@ class _PrijsPerPositieRegelsBlok extends StatelessWidget {
           Row(
             children: <Widget>[
               const Expanded(
-                child: Text(
-                  'Prijs per positie',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                child: ThimacoSectieTitel(tekst: 'Prijs per positie'),
               ),
-              TextButton.icon(
+              ThimacoTekstActie(
+                tekst: '+ Regel',
                 onPressed: _voegHandmatigeRegelToe,
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('Regel'),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                ),
               ),
-              IconButton(
+              const SizedBox(width: 4),
+              ThimacoTekstActie(
+                tekst: 'Plakken',
                 onPressed: () => _plakGekopieerdeRegelToe(context),
-                tooltip: 'Gekopieerde prijsregel plakken',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(
-                  Icons.content_paste_rounded,
-                  size: 17,
-                  color: _groen,
-                ),
               ),
             ],
           ),
@@ -709,7 +696,6 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
   final VoidCallback onKopieren;
   final VoidCallback onVerwijderen;
 
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _achtergrond = Color(0xFFF9FAFB);
 
@@ -775,6 +761,14 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
                   initialValue: regel.offerteWeergave,
                   isDense: false,
                   isExpanded: true,
+                  dropdownColor: Colors.white,
+                  iconEnabledColor: ThimacoKleuren.tekstGrijs,
+                  iconDisabledColor: ThimacoKleuren.tekstGrijs.withValues(alpha: 0.35),
+                  style: const TextStyle(
+                    color: ThimacoKleuren.antraciet,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                   decoration: _regelDropdownDecoratie(),
                   items: OffertePrijsPerPositieWeergave.values
                       .map(
@@ -803,27 +797,22 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
               SizedBox(
                 width: 40,
                 height: 40,
-                child: IconButton(
-                  onPressed: onKopieren,
+                child: ThimacoIcoonActie(
+                  icoon: Icons.copy_rounded,
                   tooltip: 'Prijsregel kopiëren',
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.copy_rounded, size: 17, color: _groen),
+                  grootte: 17,
+                  onPressed: onKopieren,
                 ),
               ),
               SizedBox(
                 width: 40,
                 height: 40,
-                child: IconButton(
-                  onPressed: onVerwijderen,
+                child: ThimacoIcoonActie(
+                  icoon: Icons.delete_outline_rounded,
                   tooltip: 'Prijsregel verwijderen',
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: Color(0xFFB91C1C),
-                  ),
+                  destructief: true,
+                  grootte: 18,
+                  onPressed: onVerwijderen,
                 ),
               ),
             ],
@@ -980,8 +969,8 @@ class _PrijsPerPositieRegelKaart extends StatelessWidget {
                           : 'Eindtotaal',
                       vet: eindtotaalHeeftWaarde,
                       hint: !eindtotaalHeeftWaarde,
-                      achtergrond: const Color(0xFFE7F6EC),
-                      randKleur: const Color(0xFFCDE9D5),
+                      achtergrond: ThimacoKleuren.oranjeLicht,
+                      randKleur: ThimacoKleuren.oranjeRand,
                     ),
                   ),
                 ],
@@ -1019,6 +1008,14 @@ class _PrijsRegelCompactKeuzeMenu<T> extends StatelessWidget {
 
     return PopupMenuButton<T>(
       tooltip: hintText,
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 10,
+      shadowColor: const Color(0x26000000),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: ThimacoKleuren.rand),
+      ),
       position: PopupMenuPosition.under,
       padding: EdgeInsets.zero,
       onSelected: onGekozen,
@@ -1137,7 +1134,6 @@ class _PrijsPerArtikelOmschrijvingMenu extends StatefulWidget {
 
 class _PrijsPerArtikelOmschrijvingMenuState
     extends State<_PrijsPerArtikelOmschrijvingMenu> {
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   List<OffertePrijsPerArtikelTemplateModel> _templates =
@@ -1180,6 +1176,14 @@ class _PrijsPerArtikelOmschrijvingMenuState
       height: 40,
       child: PopupMenuButton<OffertePrijsPerArtikelTemplateModel>(
         tooltip: 'Omschrijving kiezen uit Instellingen',
+        color: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 10,
+        shadowColor: const Color(0x26000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: ThimacoKleuren.rand),
+        ),
         position: PopupMenuPosition.under,
         padding: EdgeInsets.zero,
         onOpened: _laadTemplates,
@@ -1187,7 +1191,7 @@ class _PrijsPerArtikelOmschrijvingMenuState
         icon: const Icon(
           Icons.arrow_drop_down_circle_outlined,
           size: 19,
-          color: _groen,
+          color: ThimacoKleuren.antraciet,
         ),
         itemBuilder: (context) {
           if (_laden) {
@@ -1225,13 +1229,14 @@ class _PrijsPerArtikelOmschrijvingMenuState
                           height: 30,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE7F6EC),
+                            color: ThimacoKleuren.oranjeLicht,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: ThimacoKleuren.oranjeRand),
                           ),
                           child: Text(
                             template.type.label,
                             style: const TextStyle(
-                              color: _groen,
+                              color: ThimacoKleuren.antraciet,
                               fontSize: 10.5,
                               fontWeight: FontWeight.w900,
                             ),
@@ -1361,6 +1366,7 @@ class _PrijsRegelInvoerVeldState extends State<_PrijsRegelInvoerVeld> {
       key: ValueKey<String>(widget.sleutel),
       controller: _controller,
       focusNode: _focusNode,
+      cursorColor: ThimacoKleuren.oranje,
       expands: true,
       maxLines: null,
       minLines: null,
@@ -1455,7 +1461,7 @@ InputDecoration _regelDecoratie({
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: Color(0xFF0B7A3B), width: 1.3),
+      borderSide: const BorderSide(color: ThimacoKleuren.oranje, width: 1.3),
     ),
   );
 }
@@ -1596,6 +1602,7 @@ class _PrijsPerStukVeldState extends State<_PrijsPerStukVeld> {
     return TextField(
       controller: _controller,
       focusNode: _focusNode,
+      cursorColor: ThimacoKleuren.oranje,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: <TextInputFormatter>[
         TextInputFormatter.withFunction((oudeWaarde, nieuweWaarde) {
@@ -1692,6 +1699,7 @@ class _PercentageVeldState extends State<_PercentageVeld> {
     return TextField(
       controller: _controller,
       focusNode: _focusNode,
+      cursorColor: ThimacoKleuren.oranje,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: <TextInputFormatter>[
         TextInputFormatter.withFunction((oudeWaarde, nieuweWaarde) {
@@ -1731,7 +1739,7 @@ InputDecoration _veldDecoratie({
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFF0B7A3B), width: 1.4),
+      borderSide: const BorderSide(color: ThimacoKleuren.oranje, width: 1.4),
     ),
   );
 }

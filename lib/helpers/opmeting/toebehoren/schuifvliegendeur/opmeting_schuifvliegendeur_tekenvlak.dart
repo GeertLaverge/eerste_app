@@ -1,6 +1,7 @@
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-TEKENVLAK-MET-PAINTER-20260728
 import 'package:flutter/material.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
 import 'opmeting_schuifvliegendeur_model.dart';
 import 'opmeting_schuifvliegendeur_painter.dart';
 
@@ -18,9 +19,9 @@ class OpmetingSchuifvliegendeurTekenvlak extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFCFCFD),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       clipBehavior: Clip.antiAlias,
       child: CustomPaint(

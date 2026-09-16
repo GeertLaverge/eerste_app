@@ -1,135 +1,157 @@
+// THIMACO-CONTROLE: NOTITIES-BUREAU-GEEN-VOLLEDIGE-REBUILD-PER-TOETS-20260914
+// THIMACO-CONTROLE: NOTITIES-BUREAU-DEBOUNCE-VEILIG-BEWAREN-20260914
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../helpers/notities/notitie_actie_model.dart';
-import '../helpers/notities/notitie_dag_container.dart';
-import '../helpers/notities/notitie_helper.dart';
-import '../helpers/notities/notitie_model.dart';
-import '../helpers/notities/notitie_repository.dart';
-import '../helpers/sync/sync_navigatie_helper.dart';
+import '/helpers/notities/notitie_actie_model.dart';
+import '/helpers/notities/notitie_dag_container.dart';
+import '/helpers/notities/notitie_helper.dart';
+import '/helpers/notities/notitie_model.dart';
+import '/helpers/notities/notitie_repository.dart';
+import '/helpers/sync/sync_navigatie_helper.dart';
 
 class NotitiesBureauPagina extends StatefulWidget {
   const NotitiesBureauPagina({super.key});
 
   @override
-  State<NotitiesBureauPagina> createState() {
-    return _NotitiesBureauPaginaState();
-  }
+  State<NotitiesBureauPagina> createState() => _NotitiesBureauPaginaState();
 }
 
-class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
+class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina>
+    with WidgetsBindingObserver {
   final NotitieRepository _repository = NotitieRepository();
+
+  static const Duration _bewaarVertraging = Duration(milliseconds: 1000);
 
   List<NotitieModel> _notities = [];
   List<NotitieActieModel> _acties = [];
 
-  int _laatsteVerwerkteDownloadVersie = 0;
-
-  bool _laden = false;
-  bool _opnieuwLadenGevraagd = false;
+  Timer? _bewaarTimer;
+  bool _heeftOnopgeslagenWijzigingen = false;
+  Future<void>? _lopendeBewaring;
 
   @override
   void initState() {
     super.initState();
-
-    _laatsteVerwerkteDownloadVersie = SyncNavigatieHelper.downloadVersie.value;
-
-    SyncNavigatieHelper.downloadVersie.addListener(_verwerkAchtergrondDownload);
-
-    unawaited(_laad());
+    WidgetsBinding.instance.addObserver(this);
+    _laad();
   }
 
   @override
   void dispose() {
-    SyncNavigatieHelper.downloadVersie.removeListener(
-      _verwerkAchtergrondDownload,
-    );
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
 
+    if (_heeftOnopgeslagenWijzigingen) {
+      /*
+       * Dispose kan niet awaiten. NotitieRepository maakt onmiddellijk
+       * een snapshot en zet deze in de seriële bewaarrij, zodat de laatste
+       * wijziging toch nog veilig kan worden weggeschreven.
+       */
+      unawaited(_repository.bewaarNotities(_notities));
+    }
+
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
-  void _verwerkAchtergrondDownload() {
-    final nieuweVersie = SyncNavigatieHelper.downloadVersie.value;
-
-    if (nieuweVersie <= _laatsteVerwerkteDownloadVersie) {
-      return;
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_bewaarNu());
     }
-
-    _laatsteVerwerkteDownloadVersie = nieuweVersie;
-
-    unawaited(_laad());
   }
 
   Future<void> _laad() async {
-    if (_laden) {
-      /*
-       * Wanneer een download klaar is terwijl er reeds
-       * geladen wordt, laden we onmiddellijk daarna
-       * nog één keer opnieuw.
-       */
-      _opnieuwLadenGevraagd = true;
+    final notities = await _repository.laadNotities();
+    final acties = await _repository.laadActies();
+
+    if (!mounted) return;
+
+    setState(() {
+      _notities = notities;
+      _acties = acties;
+    });
+  }
+
+  void _planBewaren({
+    bool direct = false,
+  }) {
+    _heeftOnopgeslagenWijzigingen = true;
+
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    if (direct) {
+      unawaited(_bewaarNu());
       return;
     }
 
-    _laden = true;
+    /*
+     * Tijdens typen niet langer na iedere letter een volledige opslag starten.
+     * Pas na 1 seconde zonder nieuwe wijziging wordt de actuele toestand bewaard.
+     */
+    _bewaarTimer = Timer(_bewaarVertraging, () {
+      _bewaarTimer = null;
+      unawaited(_bewaarNu());
+    });
+  }
+
+  Future<void> _bewaarNu() async {
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    final reedsBezig = _lopendeBewaring;
+    if (reedsBezig != null) {
+      await reedsBezig;
+
+      if (_heeftOnopgeslagenWijzigingen) {
+        await _bewaarNu();
+      }
+      return;
+    }
+
+    if (!_heeftOnopgeslagenWijzigingen) {
+      return;
+    }
+
+    _heeftOnopgeslagenWijzigingen = false;
+
+    late final Future<void> bewaring;
+
+    bewaring = _repository.bewaarNotities(_notities).whenComplete(() {
+      if (identical(_lopendeBewaring, bewaring)) {
+        _lopendeBewaring = null;
+      }
+    });
+
+    _lopendeBewaring = bewaring;
 
     try {
-      do {
-        _opnieuwLadenGevraagd = false;
-
-        final notities = await _repository.laadNotities();
-
-        final acties = await _repository.laadActies();
-
-        if (!mounted) {
-          return;
-        }
-
-        setState(() {
-          _notities = notities;
-          _acties = acties;
-
-          if (_acties.isEmpty) {
-            _acties = _standaardActies();
-          }
-        });
-      } while (_opnieuwLadenGevraagd && mounted);
-    } finally {
-      _laden = false;
-
+      await bewaring;
+    } catch (fout, stackTrace) {
       /*
-       * Extra beveiliging wanneer net tussen de laatste
-       * controle en finally opnieuw laden gevraagd werd.
+       * Bij een opslagfout blijft de wijziging gemarkeerd als niet veilig
+       * bewaard. Een volgende wijziging, lifecycle-flush of Home-knop probeert
+       * opnieuw.
        */
-      if (_opnieuwLadenGevraagd && mounted) {
-        _opnieuwLadenGevraagd = false;
-
-        unawaited(_laad());
-      }
+      _heeftOnopgeslagenWijzigingen = true;
+      debugPrint('Notities Bureau bewaren mislukt: $fout');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
     }
-  }
 
-  List<NotitieActieModel> _standaardActies() {
-    return [
-      NotitieActieModel(
-        id: 'offerte',
-        naam: 'Offerte',
-        kleurWaarde: 0xFFF97316,
-      ),
-      NotitieActieModel(id: 'order', naam: 'Order', kleurWaarde: 0xFF2563EB),
-      NotitieActieModel(id: 'bellen', naam: 'Bellen', kleurWaarde: 0xFFEAB308),
-      NotitieActieModel(
-        id: 'afhalen',
-        naam: 'Afhalen',
-        kleurWaarde: 0xFF0B7A3B,
-      ),
-      NotitieActieModel(id: 'bureau', naam: 'Bureau', kleurWaarde: 0xFF9333EA),
-    ];
-  }
-
-  Future<void> _bewaar() async {
-    await _repository.bewaarNotities(_notities);
+    /*
+     * Als tijdens het bewaren verder werd getypt, is de flag intussen opnieuw
+     * true geworden. Schrijf dan meteen nog één actuele snapshot weg.
+     */
+    if (_heeftOnopgeslagenWijzigingen) {
+      await _bewaarNu();
+    }
   }
 
   Future<void> _notitieToevoegen() async {
@@ -145,25 +167,24 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
       );
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
-  Future<void> _notitieGewijzigd(NotitieModel notitie) async {
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {});
-
-    await _bewaar();
+  void _notitieGewijzigd(NotitieModel notitie) {
+    /*
+     * Geen setState van de volledige pagina bij iedere letter, checkbox,
+     * actie- of detailwijziging. De betrokken regel/dag vernieuwt zichzelf.
+     * Deze callback plant uitsluitend de opslag.
+     */
+    _planBewaren();
   }
 
   Future<void> _notitieVerwijderd(NotitieModel notitie) async {
     setState(() {
-      _notities.removeWhere((item) => item.id == notitie.id);
+      _notities.removeWhere((n) => n.id == notitie.id);
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
   Future<void> _notitieVerplaatst(
@@ -175,19 +196,17 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
       notitie.gewijzigdOp = DateTime.now();
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
   List<String> get _datumKeys {
     final keys = _notities
-        .map((notitie) => notitie.datumKey)
+        .map((n) => n.datumKey)
         .where((key) => key.isNotEmpty)
         .toSet()
         .toList();
 
-    keys.sort((eerste, tweede) {
-      return tweede.compareTo(eerste);
-    });
+    keys.sort((a, b) => b.compareTo(a));
 
     final vandaag = NotitieHelper.datumKey(DateTime.now());
 
@@ -199,111 +218,132 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
   }
 
   List<NotitieModel> _notitiesVoorDag(String datumKey) {
-    return _notities.where((notitie) => notitie.datumKey == datumKey).toList();
+    return _notities.where((n) => n.datumKey == datumKey).toList();
   }
 
   String _titelVoorLegeDag(String datumKey) {
     final vandaag = NotitieHelper.datumKey(DateTime.now());
 
-    if (datumKey == vandaag) {
-      return 'Vandaag';
-    }
+    if (datumKey == vandaag) return 'Vandaag';
 
     final delen = datumKey.split('-');
-
-    if (delen.length != 3) {
-      return datumKey;
-    }
+    if (delen.length != 3) return datumKey;
 
     return '${delen[2]}/${delen[1]}/${delen[0]}';
   }
 
-  PreferredSizeWidget _bovenBalk() {
-    return AppBar(
-      backgroundColor: const Color(0xFF0B7A3B),
-      foregroundColor: Colors.white,
-      elevation: 0,
-      centerTitle: true,
-      leading: IconButton(
-        icon: const Icon(Icons.home, size: 24),
-        onPressed: () {
-          /*
-           * Home wordt onmiddellijk geopend.
-           * De download start pas achterliggend.
-           */
-          unawaited(
-            SyncNavigatieHelper.terugNaarHomeMetDownload(context: context),
-          );
-        },
-      ),
-      title: GestureDetector(
-        onTap: () async {
-          /*
-           * Dit blijft een handmatige upload.
-           * Hierbij mag de gebruiker de melding afwachten.
-           */
-          await SyncNavigatieHelper.uploadVanafPagina(context: context);
-        },
-        child: const Text(
-          'Notities Bureau',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-      ),
-      actions: [
-        IconButton(
-          onPressed: _notitieToevoegen,
-          icon: const Icon(Icons.add, size: 28),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final datumKeys = _datumKeys;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF9),
-      appBar: _bovenBalk(),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0B7A3B),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.home, size: 24),
+          onPressed: () async {
+            /*
+             * De laatste getypte tekst moet lokaal opgeslagen zijn vóór de
+             * pagina wordt verlaten.
+             */
+            await _bewaarNu();
+
+            if (!context.mounted) return;
+
+            if (_heeftOnopgeslagenWijzigingen) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'De laatste notitiewijziging kon niet veilig worden bewaard.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            await SyncNavigatieHelper.terugNaarHomeMetDownload(
+              context: context,
+            );
+          },
+        ),
+        title: GestureDetector(
+          onTap: () async {
+            /*
+             * Ook vóór een handmatige upload eerst de laatste lokale tekst
+             * veilig wegschrijven.
+             */
+            await _bewaarNu();
+
+            if (!context.mounted || _heeftOnopgeslagenWijzigingen) return;
+
+            await SyncNavigatieHelper.uploadVanafPagina(context: context);
+          },
+          child: const Text(
+            'Notities Bureau',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed: _notitieToevoegen,
+            icon: const Icon(Icons.add, size: 28),
+          ),
+        ],
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.only(top: 8, bottom: 18),
-        itemCount: datumKeys.length,
+        itemCount: _datumKeys.length,
         itemBuilder: (context, index) {
-          final datumKey = datumKeys[index];
-
+          final datumKey = _datumKeys[index];
           final lijst = _notitiesVoorDag(datumKey);
 
           if (lijst.isEmpty) {
             return DragTarget<NotitieModel>(
-              onWillAcceptWithDetails: (_) {
-                return true;
-              },
+              onWillAcceptWithDetails: (_) => true,
               onAcceptWithDetails: (details) {
-                unawaited(_notitieVerplaatst(details.data, datumKey));
+                _notitieVerplaatst(details.data, datumKey);
               },
               builder: (context, candidateData, rejectedData) {
+                final isHover = candidateData.isNotEmpty;
+
                 return Padding(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  child: Row(
-                    children: [
-                      Text(
-                        _titelVoorLegeDag(datumKey),
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF111827),
-                        ),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 2,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isHover
+                            ? const Color(0xFF0B7A3B)
+                            : Colors.transparent,
                       ),
-                      const Spacer(),
-                      const Text(
-                        '0 open · 0 afgewerkt',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          _titelVoorLegeDag(datumKey),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF111827),
+                          ),
                         ),
-                      ),
-                    ],
+                        const Spacer(),
+                        const Text(
+                          '0 open · 0 afgewerkt',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },

@@ -1,12 +1,14 @@
-﻿// THIMACO-CONTROLE: FINANCIELE-KLUIS-HOME-KOPPELING-20260806
+﻿// THIMACO-CONTROLE: HOME-MELDT-ACTIEVE-ROUTE-AAN-SYNC-20260914
+// THIMACO-CONTROLE: HOME-WINDOWS-DESKTOP-DASHBOARD-FASE-1-20260914
+// THIMACO-CONTROLE: HOME-WITTE-BOVENBALK-EN-TEKSTMENU-20260914
+// THIMACO-CONTROLE: HOME-CENTRALE-ACHTERGROND-SYNC-20260914
+// THIMACO-CONTROLE: HOME-NIEUW-TOESTEL-VOLLEDIGE-EERSTE-SYNC-20260913
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-HOME-KOPPELING-20260806
 // THIMACO-CONTROLE: HOME-SNEL-AFSLUITEN-ZONDER-FOTO-BLOKKERING-20260805
 // THIMACO-CONTROLE: HOME-ACTUELE-PAGINA-MET-IPHONE-MENU-20260805
 // THIMACO-CONTROLE: HOME-OPSLAAN-EN-SLUITEN-ZONDER-MICROSOFT-AFMELDING-20260805
-// THIMACO-CONTROLE: HOME-GROENE-STATUSBALK-20260805
 // THIMACO-CONTROLE: HOME-CENTRAAL-DOWNLOADSIGNAAL-FASE7-20260805
 // THIMACO-CONTROLE: HOME-PERIODIEKE-SYNC-FASE6-20260805
-
-import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +16,12 @@ import 'package:flutter/services.dart';
 
 import '../helpers/homepagina/home_boven_balk.dart';
 import '../helpers/homepagina/home_dashboard.dart';
+import '../helpers/homepagina/home_desktop_dashboard.dart';
 import '../helpers/homepagina/home_planning_helper.dart';
 import '../helpers/homepagina/home_zij_menu.dart';
 import '../helpers/financien/beveiliging/financiele_kluis_sessie_controller.dart';
 import '../helpers/financien/paginas/financiele_kluis_pagina.dart';
+import '../helpers/sync/app_sync_controller.dart';
 import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
 
@@ -34,15 +38,12 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     with WidgetsBindingObserver {
   static const Color achtergrond = Color(0xFFF7F8FA);
   static const Color _groen = Color(0xFF0B7A3B);
-  static const Duration _syncInterval = Duration(minutes: 3);
-
   late Future<List<List<dynamic>>> _dashboardGegevens;
 
-  Timer? _syncTimer;
-  bool _syncBezig = false;
   bool _opslaanEnSluitenBezig = false;
   bool _programmaAfgesloten = false;
   int _laatsteVerwerkteDownloadVersie = 0;
+  bool? _laatsteHomeRouteActief;
 
   final FinancieleKluisSessieController _financieleKluisController =
       FinancieleKluisSessieController.instance;
@@ -60,19 +61,26 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
 
     _dashboardGegevens = _laadDashboardGegevens();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _voerAutomatischeSyncUit();
-    });
+    // De synchronisatie leeft app-breed en onafhankelijk van Home.
+    // Deze start is idempotent: terugnavigeren naar Home start geen nieuwe sync.
+    AppSyncController.instance.start();
+  }
 
-    _syncTimer = Timer.periodic(_syncInterval, (_) {
-      _voerAutomatischeSyncUit();
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final homeActief = ModalRoute.of(context)?.isCurrent ?? true;
+    if (_laatsteHomeRouteActief == homeActief) {
+      return;
+    }
+
+    _laatsteHomeRouteActief = homeActief;
+    AppSyncController.instance.zetHomeActief(homeActief);
   }
 
   @override
   void dispose() {
-    _syncTimer?.cancel();
-
     SyncNavigatieHelper.downloadVersie.removeListener(
       _verwerkAchtergrondDownload,
     );
@@ -90,17 +98,11 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
       return;
     }
 
-    if (state == AppLifecycleState.resumed) {
-      _voerAutomatischeSyncUit();
-      return;
-    }
-
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
       _financieleKluisController.vergrendel();
-      OneDriveSyncService().uploadBackupOpAchtergrond();
     }
   }
 
@@ -117,32 +119,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
       klantTakenVandaag,
       kraanReservatiesVandaag,
     ]);
-  }
-
-  Future<void> _voerAutomatischeSyncUit() async {
-    if (_programmaAfgesloten || _syncBezig) {
-      return;
-    }
-
-    _syncBezig = true;
-
-    try {
-      final resultaat = await OneDriveSyncService().slimmeSync();
-
-      if (!mounted) {
-        return;
-      }
-
-      if (_isDownloadResultaat(resultaat)) {
-        SyncNavigatieHelper.meldDownloadVoltooid();
-      }
-    } finally {
-      _syncBezig = false;
-    }
-  }
-
-  bool _isDownloadResultaat(String resultaat) {
-    return resultaat.startsWith('IMPORT_OK');
   }
 
   void _verwerkAchtergrondDownload() {
@@ -212,7 +188,7 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
       return;
     }
 
-    _syncTimer?.cancel();
+    AppSyncController.instance.pauzeerVoorAfsluiten();
 
     setState(() {
       _opslaanEnSluitenBezig = true;
@@ -235,15 +211,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
               'Het programma blijft open en het Microsoft-account blijft aangemeld.\n\n'
               '$uploadResultaat',
         );
-        _startSyncTimerOpnieuw();
+        AppSyncController.instance.hervatNaMisluktAfsluiten();
         return;
       }
-
-      if (!mounted) {
-        return;
-      }
-
-      _syncTimer?.cancel();
 
       if (!mounted) {
         return;
@@ -295,13 +265,6 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     );
   }
 
-  void _startSyncTimerOpnieuw() {
-    _syncTimer?.cancel();
-    _syncTimer = Timer.periodic(_syncInterval, (_) {
-      _voerAutomatischeSyncUit();
-    });
-  }
-
   void _verwerkFinancieleKluisWijziging() {
     if (!mounted) {
       return;
@@ -316,7 +279,9 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     }
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(builder: (_) => const FinancieleKluisPagina()),
+      MaterialPageRoute<void>(
+        builder: (_) => const FinancieleKluisPagina(),
+      ),
     );
 
     _financieleKluisController.vergrendel();
@@ -376,27 +341,25 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
     }
 
     final compactZijMenu = MediaQuery.of(context).size.width < 700;
+    final toonDesktopDashboard =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: _groen,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: _groen,
+        backgroundColor: achtergrond,
         body: SafeArea(
           child: ColoredBox(
             color: achtergrond,
             child: Column(
               children: <Widget>[
                 const HomeBovenBalk(),
-                const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: SizedBox.shrink(),
-                ),
                 Expanded(
                   child: Row(
                     children: <Widget>[
@@ -409,59 +372,71 @@ class _HomePaginaNieuwState extends State<HomePaginaNieuw>
                         onFinancieleKluis: _openFinancieleKluis,
                       ),
                       Expanded(
-                        child: ListView(
-                          padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
-                          children: <Widget>[
-                            FutureBuilder<List<List<dynamic>>>(
-                              future: _dashboardGegevens,
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState ==
-                                    ConnectionState.waiting) {
-                                  return const SizedBox(
-                                    height: 80,
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
+                        child: FutureBuilder<List<List<dynamic>>>(
+                          future: _dashboardGegevens,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              );
+                            }
+
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Container(
+                                  margin: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: const Color(0xFFE5E7EB),
                                     ),
-                                  );
-                                }
-
-                                if (snapshot.hasError) {
-                                  return Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFFE5E7EB),
-                                      ),
+                                  ),
+                                  child: const Text(
+                                    'De gegevens op Home konden niet geladen worden.',
+                                    style: TextStyle(
+                                      color: Color(0xFF6B7280),
+                                      fontSize: 12,
                                     ),
-                                    child: const Text(
-                                      'De gegevens op Home konden niet geladen worden.',
-                                      style: TextStyle(
-                                        color: Color(0xFF6B7280),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  );
-                                }
+                                  ),
+                                ),
+                              );
+                            }
 
-                                final gegevens = snapshot.data;
+                            final gegevens = snapshot.data;
 
-                                if (gegevens == null || gegevens.length < 4) {
-                                  return const SizedBox.shrink();
-                                }
+                            if (gegevens == null || gegevens.length < 4) {
+                              return const SizedBox.shrink();
+                            }
 
-                                return HomeDashboard(
+                            if (toonDesktopDashboard) {
+                              return Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: HomeDesktopDashboard(
                                   planningVandaag: gegevens[0],
                                   dagTakenVandaag: gegevens[1],
                                   klantTakenVandaag: gegevens[2],
                                   kraanReservatiesVandaag: gegevens[3],
-                                );
-                              },
-                            ),
-                          ],
+                                ),
+                              );
+                            }
+
+                            return ListView(
+                              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                              children: <Widget>[
+                                HomeDashboard(
+                                  planningVandaag: gegevens[0],
+                                  dagTakenVandaag: gegevens[1],
+                                  klantTakenVandaag: gegevens[2],
+                                  kraanReservatiesVandaag: gegevens[3],
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                     ],

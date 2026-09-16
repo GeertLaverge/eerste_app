@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: VELUX-HUISSTIJL-20260914
 // THIMACO-CONTROLE: VELUX-TEKENVLAK-FASE-1-2-20260729-2030
 import 'package:flutter/material.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
 import 'opmeting_velux_dakraam_model.dart';
 import 'opmeting_velux_dakraam_painter.dart';
 
@@ -19,25 +21,41 @@ class OpmetingVeluxDakraamTekenvlak extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: <Widget>[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
-              color: Color(0xFFF8FAFC),
-              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
-            ),
-            child: Text(
-              titel,
-              style: const TextStyle(
-                color: Color(0xFF0B7A3B),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: ThimacoKleuren.rand),
               ),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.roofing_outlined,
+                  size: 16,
+                  color: ThimacoKleuren.oranje,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    titel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ThimacoKleuren.antraciet,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

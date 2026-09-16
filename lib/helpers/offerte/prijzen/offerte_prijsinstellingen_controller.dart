@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJZEN-PER-PROJECTBESTAND-FASE2-20260912
 // THIMACO-CONTROLE: PRIJS-CONTROLLER-ZONDER-OFFERTE-PRIJS-PROFIELMODEL-20260815
 // THIMACO-CONTROLE: VASTE-INZETHOR-STANDAARDPRIJS-LOADER-BEHOUDEN-20260815
 // THIMACO-CONTROLE: OUDE-PRIJSPROFIEL-MOMENTOPNAMEFLOW-VERWIJDERD-20260815
@@ -31,6 +32,7 @@ class OffertePrijsinstellingenController {
     required this.leesIsLaden,
     required this.leesHeeftOpenBestand,
     required this.leesKlantNaam,
+    required this.leesProjectBestandId,
     required this.leesTitelhoofd,
     required this.herlaadOpmetingen,
     required this.toonMelding,
@@ -43,6 +45,7 @@ class OffertePrijsinstellingenController {
   final bool Function() leesIsLaden;
   final bool Function() leesHeeftOpenBestand;
   final String Function() leesKlantNaam;
+  final String Function() leesProjectBestandId;
   final OpmetingProjectTitelhoofd Function() leesTitelhoofd;
   final Future<void> Function(String klantNaam, bool forceerPrijsinstellingen)
   herlaadOpmetingen;
@@ -175,6 +178,7 @@ class OffertePrijsinstellingenController {
   werkTechnischePrijsMomentopnamesBij({
     required List<OpmetingOverzichtRaamItem> alleOpmetingen,
     required String klantNaam,
+    String projectBestandId = '',
     required bool berekenPrijzen,
     bool forceerPrijsinstellingen = false,
   }) async {
@@ -199,12 +203,23 @@ class OffertePrijsinstellingenController {
         );
 
     final klantSleutel = klantNaam.trim().toLowerCase();
+    final projectId = projectBestandId.trim().isNotEmpty
+        ? projectBestandId.trim()
+        : leesProjectBestandId().trim();
     var gewijzigd = false;
 
     final bijgewerkteOpmetingen = alleOpmetingen
         .map((opmeting) {
-          if (opmeting.isVerwijderd ||
-              opmeting.klantNaam.trim().toLowerCase() != klantSleutel) {
+          if (opmeting.isVerwijderd) {
+            return opmeting;
+          }
+          final opmetingProjectId = opmeting.projectBestandId.trim().isNotEmpty
+              ? opmeting.projectBestandId.trim()
+              : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+          final hoortBijBestand = projectId.isNotEmpty
+              ? opmetingProjectId == projectId
+              : opmeting.klantNaam.trim().toLowerCase() == klantSleutel;
+          if (!hoortBijBestand) {
             return opmeting;
           }
 

@@ -1,5 +1,7 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_raam_model.dart';
 import 'opmeting_raam_vleugel_helper.dart';
 
@@ -32,7 +34,7 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.98),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFD1D5DB)),
+        border: Border.all(color: ThimacoKleuren.rand),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
@@ -56,41 +58,51 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
                         horizontal: 2,
                         vertical: 2,
                       ),
-                      child: const Row(
+                      child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.drag_indicator,
                             size: 18,
-                            color: Color(0xFF6B7280),
+                            color: ThimacoKleuren.tekstGrijs,
                           ),
-                          SizedBox(width: 3),
+                          const SizedBox(width: 5),
+                          const Icon(
+                            Icons.crop_square_rounded,
+                            size: 17,
+                            color: ThimacoKleuren.antraciet,
+                          ),
+                          const SizedBox(width: 7),
                           Expanded(
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
+                                const Text(
                                   'Vleugeltype',
                                   style: TextStyle(
-                                    color: Color(0xFF0B7A3B),
+                                    color: ThimacoKleuren.antraciet,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                                Text(
-                                  'Versleep via deze balk',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    color: Color(0xFF6B7280),
+                                const SizedBox(height: 2),
+                                Container(
+                                  width: 28,
+                                  height: 1.5,
+                                  decoration: BoxDecoration(
+                                    color: ThimacoKleuren.oranje.withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(99),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          SizedBox(width: 3),
-                          Icon(
-                            Icons.open_with,
-                            size: 17,
-                            color: Color(0xFF6B7280),
+                          const Text(
+                            'Versleep',
+                            style: TextStyle(
+                              fontSize: 9,
+                              color: ThimacoKleuren.tekstGrijs,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -99,17 +111,11 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 2),
-              IconButton(
+              ThimacoIcoonActie(
+                icoon: Icons.close_rounded,
                 tooltip: 'Vleugelmenu sluiten',
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.all(4),
-                constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
                 onPressed: onSluiten,
-                icon: const Icon(
-                  Icons.close,
-                  size: 20,
-                  color: Color(0xFF6B7280),
-                ),
+                grootte: 18,
               ),
             ],
           ),
@@ -124,9 +130,12 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
             decoration: BoxDecoration(
-              color: const Color(0xFFE7F6EC),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(7),
-              border: Border.all(color: const Color(0xFF0B7A3B)),
+              border: Border.all(
+                color: ThimacoKleuren.oranje,
+                width: 1.4,
+              ),
             ),
             child: Row(
               children: [
@@ -146,7 +155,7 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF0B7A3B),
+                      color: ThimacoKleuren.antraciet,
                       fontSize: 10,
                       height: 1.1,
                       fontWeight: FontWeight.w900,
@@ -155,7 +164,7 @@ class OpmetingRaamVleugelMenu extends StatelessWidget {
                 ),
                 const Icon(
                   Icons.check_circle,
-                  color: Color(0xFF0B7A3B),
+                  color: ThimacoKleuren.oranje,
                   size: 17,
                 ),
               ],
@@ -236,10 +245,9 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
   final VoidCallback? onVerplaatsen;
   final VoidCallback onWissen;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   static const List<String> _positieKeuzes = [
     'mm',
@@ -283,8 +291,11 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: const BoxDecoration(
-                  color: _lichtGroen,
+                  color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                  border: Border(
+                    bottom: BorderSide(color: ThimacoKleuren.rand),
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -297,33 +308,38 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
                     const Icon(
                       Icons.view_column_outlined,
                       size: 18,
-                      color: _groen,
+                      color: ThimacoKleuren.antraciet,
                     ),
                     const SizedBox(width: 8),
-                    const Expanded(
-                      child: Text(
-                        'T-stijl',
-                        style: TextStyle(
-                          color: Color(0xFF064E3B),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                        ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'T-stijl',
+                            style: TextStyle(
+                              color: ThimacoKleuren.antraciet,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Container(
+                            width: 28,
+                            height: 1.5,
+                            decoration: BoxDecoration(
+                              color: ThimacoKleuren.oranje.withValues(alpha: 0.75),
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    IconButton(
+                    ThimacoIcoonActie(
+                      icoon: Icons.close_rounded,
                       tooltip: 'T-stijlmenu sluiten',
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 30,
-                        minHeight: 30,
-                      ),
                       onPressed: onSluiten,
-                      icon: const Icon(
-                        Icons.close,
-                        size: 20,
-                        color: _tekstGrijs,
-                      ),
+                      grootte: 18,
                     ),
                   ],
                 ),
@@ -339,25 +355,12 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
                   children: [
                     Wrap(
                       spacing: 6,
-                      runSpacing: 6,
+                      runSpacing: 2,
                       children: _positieKeuzes.map((waarde) {
-                        return ChoiceChip(
-                          label: Text(waarde),
-                          selected: positieType == waarde,
-                          selectedColor: _lichtGroen,
-                          checkmarkColor: _groen,
-                          side: BorderSide(
-                            color: positieType == waarde
-                                ? _groen
-                                : const Color(0xFFD1D5DB),
-                          ),
-                          labelStyle: TextStyle(
-                            color: positieType == waarde
-                                ? _groen
-                                : const Color(0xFF111827),
-                            fontWeight: FontWeight.w700,
-                          ),
-                          onSelected: (_) {
+                        return ThimacoTekstKeuze(
+                          tekst: waarde,
+                          geselecteerd: positieType == waarde,
+                          onPressed: () {
                             onPositieTypeGewijzigd(waarde);
                           },
                         );
@@ -390,46 +393,32 @@ class OpmetingRaamTStijlMenu extends StatelessWidget {
                     ),
                     if (toonToevoegKnop) ...[
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ThimacoTekstActie(
+                          tekst: 'T-stijl toevoegen',
                           onPressed: onToevoegen,
-                          icon: const Icon(Icons.add, size: 18),
-                          label: const Text('T-stijl toevoegen'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _groen,
-                            foregroundColor: Colors.white,
-                          ),
                         ),
                       ),
                     ],
                     if (toonVerplaatsKnop) ...[
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ThimacoTekstActie(
+                          tekst: 'T-stijl verplaatsen',
                           onPressed: onVerplaatsen,
-                          icon: const Icon(Icons.open_with, size: 18),
-                          label: const Text('T-stijl verplaatsen'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _groen,
-                            foregroundColor: Colors.white,
-                          ),
                         ),
                       ),
                     ],
                     if (toonWisKnop) ...[
                       const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: ThimacoTekstActie(
+                          tekst: 'T-stijl wissen',
                           onPressed: onWissen,
-                          icon: const Icon(Icons.delete_outline, size: 18),
-                          label: const Text('T-stijl wissen'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFDC2626),
-                            foregroundColor: Colors.white,
-                          ),
+                          destructief: true,
                         ),
                       ),
                     ],
@@ -461,93 +450,58 @@ class _OpmetingRaamVleugelKeuzeTegel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final achtergrond = geselecteerd
-        ? const Color(0xFFE7F6EC)
-        : const Color(0xFFF9FAFB);
+    const tekstKleur = ThimacoKleuren.antraciet;
 
-    final randKleur = geselecteerd
-        ? const Color(0xFF0B7A3B)
-        : const Color(0xFFD1D5DB);
-
-    final tekstKleur = geselecteerd
-        ? const Color(0xFF0B7A3B)
-        : const Color(0xFF111827);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(7),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 3),
-          decoration: BoxDecoration(
-            color: achtergrond,
-            borderRadius: BorderRadius.circular(7),
-            border: Border.all(color: randKleur, width: geselecteerd ? 1.6 : 1),
-          ),
-          child: Stack(
-            children: [
-              Column(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 3, right: 3, top: 1),
-                      child: _isDubbel
-                          ? CustomPaint(
-                              painter: OpmetingRaamVleugelVoorbeeldPainter(
-                                type: type,
-                              ),
-                              child: const SizedBox.expand(),
-                            )
-                          : Center(
-                              child: AspectRatio(
-                                aspectRatio: 1,
-                                child: CustomPaint(
-                                  painter: OpmetingRaamVleugelVoorbeeldPainter(
-                                    type: type,
-                                  ),
-                                  child: const SizedBox.expand(),
-                                ),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  SizedBox(
-                    height: 23,
-                    child: Center(
-                      child: Text(
-                        type.naam,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: tekstKleur,
-                          fontSize: 8.5,
-                          height: 1,
-                          fontWeight: geselecteerd
-                              ? FontWeight.w900
-                              : FontWeight.w700,
+    return ThimacoSelectieTegel(
+      geselecteerd: geselecteerd,
+      onTap: onTap,
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 3),
+      radius: 7,
+      toonVinkje: true,
+      child: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(left: 3, right: 3, top: 1),
+              child: _isDubbel
+                  ? CustomPaint(
+                      painter: OpmetingRaamVleugelVoorbeeldPainter(type: type),
+                      child: const SizedBox.expand(),
+                    )
+                  : Center(
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: CustomPaint(
+                          painter: OpmetingRaamVleugelVoorbeeldPainter(
+                            type: type,
+                          ),
+                          child: const SizedBox.expand(),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              if (geselecteerd)
-                const Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Icon(
-                    Icons.check_circle,
-                    size: 13,
-                    color: Color(0xFF0B7A3B),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 2),
+          SizedBox(
+            height: 23,
+            child: Center(
+              child: Text(
+                type.naam,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: tekstKleur,
+                  fontSize: 8.5,
+                  height: 1,
+                  fontWeight: geselecteerd
+                      ? FontWeight.w900
+                      : FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

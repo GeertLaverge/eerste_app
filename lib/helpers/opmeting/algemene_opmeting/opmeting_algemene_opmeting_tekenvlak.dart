@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: ALGEMENE-OPMETING-NIEUWE-HUISSTIJL-20260914
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-AFBEELDINGVLAK-20260801
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import '../fotos/opmeting_foto_model.dart';
 
 class OpmetingAlgemeneOpmetingTekenvlak extends StatelessWidget {
@@ -21,17 +23,16 @@ class OpmetingAlgemeneOpmetingTekenvlak extends StatelessWidget {
   final void Function(int index, int richting)? onVerplaatsen;
   final bool actiesZichtbaar;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   @override
   Widget build(BuildContext context) {
     final geldigeFotos = fotos.where((foto) => foto.heeftAfbeelding).toList();
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFA),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: _rand),
       ),
       clipBehavior: Clip.antiAlias,
@@ -95,13 +96,20 @@ class _ActieKnop extends StatelessWidget {
   Widget build(BuildContext context) {
     return OutlinedButton.icon(
       onPressed: onPressed,
-      icon: Icon(icoon, size: 18),
+      icon: Icon(icoon, size: 17, color: ThimacoKleuren.oranje),
       label: Text(tekst),
       style: OutlinedButton.styleFrom(
-        foregroundColor: OpmetingAlgemeneOpmetingTekenvlak._groen,
-        side: const BorderSide(color: OpmetingAlgemeneOpmetingTekenvlak._rand),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        foregroundColor: ThimacoKleuren.antraciet,
+        backgroundColor: Colors.white,
+        disabledForegroundColor:
+            ThimacoKleuren.tekstGrijs.withValues(alpha: 0.45),
+        side: const BorderSide(color: ThimacoKleuren.rand),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        textStyle: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -120,27 +128,27 @@ class _LeegAfbeeldingVlak extends StatelessWidget {
           children: <Widget>[
             Icon(
               Icons.image_search_outlined,
-              size: 54,
-              color: Color(0xFF9CA3AF),
+              size: 48,
+              color: ThimacoKleuren.tekstGrijs,
             ),
             SizedBox(height: 12),
             Text(
               'Voeg een foto of afbeelding toe',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Color(0xFF374151),
-                fontSize: 15,
+                color: ThimacoKleuren.antraciet,
+                fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            SizedBox(height: 5),
+            SizedBox(height: 4),
             Text(
               'De eerste afbeelding wordt de hoofdafbeelding '
               'in het overzicht en de PDF.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: OpmetingAlgemeneOpmetingTekenvlak._tekstGrijs,
-                fontSize: 12,
+                fontSize: 11.5,
                 height: 1.35,
               ),
             ),
@@ -236,7 +244,7 @@ class _FotoTegel extends StatelessWidget {
       fit: StackFit.expand,
       children: <Widget>[
         ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
           child: Image.memory(
             foto.bytes,
             fit: BoxFit.contain,
@@ -252,7 +260,7 @@ class _FotoTegel extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xCC0B7A3B),
+                color: ThimacoKleuren.oranje.withValues(alpha: 0.92),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: const Text(
@@ -271,35 +279,32 @@ class _FotoTegel extends StatelessWidget {
             top: 5,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.94),
-                borderRadius: BorderRadius.circular(9),
+                color: Colors.white.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: ThimacoKleuren.rand),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
+                  ThimacoIcoonActie(
+                    icoon: Icons.arrow_back_rounded,
                     tooltip: 'Naar links',
-                    onPressed: index <= 0
-                        ? null
-                        : () => onVerplaatsen?.call(index, -1),
-                    icon: const Icon(Icons.arrow_back_rounded, size: 17),
+                    grootte: 17,
+                    onPressed:
+                        index <= 0 ? null : () => onVerplaatsen?.call(index, -1),
                   ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
+                  ThimacoIcoonActie(
+                    icoon: Icons.arrow_forward_rounded,
                     tooltip: 'Naar rechts',
+                    grootte: 17,
                     onPressed: () => onVerplaatsen?.call(index, 1),
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 17),
                   ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
+                  ThimacoIcoonActie(
+                    icoon: Icons.delete_outline,
                     tooltip: 'Verwijderen',
+                    grootte: 17,
+                    destructief: true,
                     onPressed: () => onVerwijderen?.call(index),
-                    icon: const Icon(
-                      Icons.delete_outline,
-                      size: 17,
-                      color: Color(0xFFDC2626),
-                    ),
                   ),
                 ],
               ),

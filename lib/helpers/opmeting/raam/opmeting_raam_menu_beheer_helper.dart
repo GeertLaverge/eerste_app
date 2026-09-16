@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
 // THIMACO-CONTROLE: ALLE-TITELS-OP-EEN-BLAD-BEHEREN-20260727
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
@@ -9,6 +10,7 @@ import 'package:flutter/material.dart';
 import '../../app_storage.dart';
 import 'opmeting_raam_keuze_menu_helper.dart';
 import 'opmeting_raam_keuzemenu_model.dart';
+import 'opmeting_raam_technische_groep_model.dart';
 import 'opmeting_raam_technisch_menu_dialoog.dart';
 
 class OpmetingRaamMenuBeheerHelper {
@@ -106,6 +108,8 @@ class OpmetingRaamMenuBeheerHelper {
   static Future<List<OpmetingRaamKeuzeMenu>?> voegMenuToe({
     required BuildContext context,
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) async {
     final beschikbareKeuzes =
         OpmetingRaamKeuzeMenuHelper.beschikbareNietCombineerbareKeuzes(
@@ -124,6 +128,7 @@ class OpmetingRaamMenuBeheerHelper {
       bestaandeMenus: keuzemenus,
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
       oplaadbareKeuzes: oplaadbareKeuzes,
+      technischeGroepen: technischeGroepen,
     );
   }
 
@@ -307,6 +312,8 @@ class OpmetingRaamMenuBeheerHelper {
     required BuildContext context,
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required OpmetingRaamKeuzeMenu menu,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) async {
     final bestaandeItems = menu.boomItems.where((item) {
       return !_isGeenItem(item);
@@ -330,10 +337,12 @@ class OpmetingRaamMenuBeheerHelper {
         soorten: _soortenVanItems(bestaandeItems),
         items: bestaandeItems,
         actief: menu.actief,
+        groepId: menu.groepId,
       ),
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
       oplaadbareKeuzes: oplaadbareKeuzes,
       kopieerAlsNieuw: true,
+      technischeGroepen: technischeGroepen,
     );
 
     if (resultaat == null) {
@@ -360,6 +369,7 @@ class OpmetingRaamMenuBeheerHelper {
     );
     final gekopieerdMenu = basisMenu.copyWith(
       actief: resultaat.actief,
+      groepId: resultaat.groepId,
       opties: nieuweOpties,
       items: nieuweItems,
     );
@@ -377,6 +387,8 @@ class OpmetingRaamMenuBeheerHelper {
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required OpmetingRaamKeuzeMenu menu,
     OpmetingRaamTechnischMenuBeginToevoeging? beginToevoeging,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) async {
     final bestaandeItems = menu.boomItems.where((item) {
       return !_isGeenItem(item);
@@ -403,10 +415,12 @@ class OpmetingRaamMenuBeheerHelper {
         soorten: _soortenVanItems(bestaandeItems),
         items: bestaandeItems,
         actief: menu.actief,
+        groepId: menu.groepId,
       ),
       beschikbareNietCombineerbareKeuzes: beschikbareKeuzes,
       oplaadbareKeuzes: oplaadbareKeuzes,
       beginToevoeging: beginToevoeging,
+      technischeGroepen: technischeGroepen,
     );
 
     if (resultaat == null) {
@@ -428,6 +442,7 @@ class OpmetingRaamMenuBeheerHelper {
       return huidigMenu.copyWith(
         titel: resultaat.titel,
         actief: resultaat.actief,
+        groepId: resultaat.groepId,
         opties: nieuweOpties,
         items: nieuweItems,
       );
@@ -439,11 +454,14 @@ class OpmetingRaamMenuBeheerHelper {
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required OpmetingRaamKeuzeMenu menu,
     String? ouderSubmenuId,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) {
     return bewerkTechnischMenu(
       context: context,
       keuzemenus: keuzemenus,
       menu: menu,
+      technischeGroepen: technischeGroepen,
       beginToevoeging: OpmetingRaamTechnischMenuBeginToevoeging(
         actie: OpmetingRaamTechnischMenuBeginActie.nieuweKeuze,
         ouderSubmenuId: ouderSubmenuId,
@@ -456,11 +474,14 @@ class OpmetingRaamMenuBeheerHelper {
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required OpmetingRaamKeuzeMenu menu,
     String? ouderSubmenuId,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) {
     return bewerkTechnischMenu(
       context: context,
       keuzemenus: keuzemenus,
       menu: menu,
+      technischeGroepen: technischeGroepen,
       beginToevoeging: OpmetingRaamTechnischMenuBeginToevoeging(
         actie: OpmetingRaamTechnischMenuBeginActie.nieuwSubmenu,
         ouderSubmenuId: ouderSubmenuId,
@@ -473,11 +494,14 @@ class OpmetingRaamMenuBeheerHelper {
     required List<OpmetingRaamKeuzeMenu> keuzemenus,
     required OpmetingRaamKeuzeMenu menu,
     required OpmetingRaamKeuzeMenuItem item,
+    List<OpmetingRaamTechnischeGroep> technischeGroepen =
+        const <OpmetingRaamTechnischeGroep>[],
   }) {
     return bewerkTechnischMenu(
       context: context,
       keuzemenus: keuzemenus,
       menu: menu,
+      technischeGroepen: technischeGroepen,
       beginToevoeging: OpmetingRaamTechnischMenuBeginToevoeging(
         actie: OpmetingRaamTechnischMenuBeginActie.kopieerItem,
         bronItemId: item.id,
@@ -570,6 +594,67 @@ class OpmetingRaamMenuBeheerHelper {
     }
 
     return keuzemenus.where((huidigMenu) => huidigMenu.id != menu.id).toList();
+  }
+
+  static List<OpmetingRaamKeuzeMenu>? herordenMenus({
+    required List<OpmetingRaamKeuzeMenu> keuzemenus,
+    required List<String> menuIdsInVolgorde,
+  }) {
+    if (menuIdsInVolgorde.isEmpty) {
+      return null;
+    }
+
+    final gesorteerdeMenus = List<OpmetingRaamKeuzeMenu>.from(keuzemenus)
+      ..sort((eerste, tweede) => eerste.volgorde.compareTo(tweede.volgorde));
+
+    final bestaandePerId = <String, OpmetingRaamKeuzeMenu>{
+      for (final menu in gesorteerdeMenus) menu.id: menu,
+    };
+
+    final gevraagdeIds = <String>[];
+    final gebruikteIds = <String>{};
+
+    for (final id in menuIdsInVolgorde) {
+      final netteId = id.trim();
+      if (netteId.isEmpty ||
+          !bestaandePerId.containsKey(netteId) ||
+          !gebruikteIds.add(netteId)) {
+        continue;
+      }
+      gevraagdeIds.add(netteId);
+    }
+
+    if (gevraagdeIds.isEmpty) {
+      return null;
+    }
+
+    final betrokkenIds = gevraagdeIds.toSet();
+    final betrokkenPosities = <int>[];
+
+    for (var index = 0; index < gesorteerdeMenus.length; index++) {
+      if (betrokkenIds.contains(gesorteerdeMenus[index].id)) {
+        betrokkenPosities.add(index);
+      }
+    }
+
+    if (betrokkenPosities.length != gevraagdeIds.length) {
+      return null;
+    }
+
+    final nieuweVolgorde = List<OpmetingRaamKeuzeMenu>.from(gesorteerdeMenus);
+
+    for (var index = 0; index < betrokkenPosities.length; index++) {
+      final menu = bestaandePerId[gevraagdeIds[index]];
+      if (menu == null) {
+        return null;
+      }
+      nieuweVolgorde[betrokkenPosities[index]] = menu;
+    }
+
+    return List<OpmetingRaamKeuzeMenu>.generate(
+      nieuweVolgorde.length,
+      (index) => nieuweVolgorde[index].copyWith(volgorde: index),
+    );
   }
 
   static List<OpmetingRaamKeuzeMenu>? verplaatsMenu({

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NIEUWE-POSITIES-AAN-ACTIEF-PROJECTBESTAND-FASE2-20260912
 // THIMACO-CONTROLE: NAVIGATIE-ZONDER-OFFERTE-PRIJS-PROFIELMODEL-20260815
 // THIMACO-CONTROLE: GEEN-DUBBELE-SNAPSHOT-SAVE-NA-FICHE-20260810
 // THIMACO-CONTROLE: SPECIALISTISCHE-FICHE-RESULTAAT-BEHOUD-NA-SYNC-20260806
@@ -11,6 +12,7 @@
 // THIMACO-CONTROLE: PLOOIWERKEN-PROJECTKLEUR-HOOFDPAGINA-20260728-2110
 import 'package:flutter/material.dart';
 
+import '../../app_storage.dart';
 import '../algemene_opmeting/opmeting_algemene_opmeting_fiche.dart';
 import '../overzicht/opmeting_overzicht_model.dart' as overzicht;
 import '../project/opmeting_project_titelhoofd_model.dart';
@@ -91,6 +93,9 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
+
       await herlaadOpmetingen(klantNaam.trim());
     } finally {
       _formulierOpenenBezig = false;
@@ -152,6 +157,9 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
+
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -198,6 +206,9 @@ class OpmetingFormulierNavigatieController {
       if (resultaat == null || !isMounted()) {
         return;
       }
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       await herlaadOpmetingen(klantNaam);
     } finally {
@@ -246,6 +257,9 @@ class OpmetingFormulierNavigatieController {
       if (resultaat == null || !isMounted()) {
         return;
       }
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       await herlaadOpmetingen(klantNaam);
     } finally {
@@ -310,6 +324,9 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
+
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -346,6 +363,9 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       // De fiche heeft zichzelf reeds veilig opgeslagen. Alleen herladen;
       // het teruggegeven volledige object niet nogmaals als snapshot bewaren.
@@ -384,6 +404,8 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -420,6 +442,9 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       // De fiche heeft zichzelf reeds veilig opgeslagen. Alleen herladen;
       // het teruggegeven volledige object niet nogmaals als snapshot bewaren.
@@ -460,6 +485,9 @@ class OpmetingFormulierNavigatieController {
 
       if (resultaat == null || !isMounted()) return;
 
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
+
       // De fiche heeft zichzelf reeds veilig opgeslagen. Alleen herladen;
       // het teruggegeven volledige object niet nogmaals als snapshot bewaren.
       await herlaadOpmetingen(klantNaam);
@@ -497,6 +525,9 @@ class OpmetingFormulierNavigatieController {
           );
 
       if (resultaat == null || !isMounted()) return;
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       // De fiche heeft zichzelf reeds veilig opgeslagen. Alleen herladen;
       // het teruggegeven volledige object niet nogmaals als snapshot bewaren.
@@ -547,6 +578,9 @@ class OpmetingFormulierNavigatieController {
         return;
       }
 
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
+
       await herlaadOpmetingen(klantNaam);
     } finally {
       _formulierOpenenBezig = false;
@@ -592,6 +626,9 @@ class OpmetingFormulierNavigatieController {
       if (resultaat == null || !isMounted()) {
         return;
       }
+
+      await _koppelResultaatAanActiefBestand(resultaat);
+      if (!isMounted()) return;
 
       await herlaadOpmetingen(klantNaam);
     } finally {
@@ -672,8 +709,32 @@ class OpmetingFormulierNavigatieController {
       return;
     }
 
+    await _koppelResultaatAanActiefBestand(resultaat);
+    if (!isMounted()) return;
+
     final actieveKlantNaam = leesKlantNaam().trim();
     await herlaadOpmetingen(actieveKlantNaam.isEmpty ? null : actieveKlantNaam);
+  }
+
+  Future<void> _koppelResultaatAanActiefBestand(
+    overzicht.OpmetingOverzichtRaamItem resultaat,
+  ) async {
+    final projectBestandId = leesTitelhoofd().projectBestandId.trim();
+    final klantNaam = leesKlantNaam().trim();
+    if (projectBestandId.isEmpty || resultaat.id.trim().isEmpty) return;
+
+    final huidigProjectId = resultaat.projectBestandId.trim();
+    final klantKomtOvereen =
+        klantNaam.isEmpty ||
+        resultaat.klantNaam.trim().toLowerCase() == klantNaam.toLowerCase();
+    if (huidigProjectId == projectBestandId && klantKomtOvereen) return;
+
+    await AppStorage.werkOpmetingBij(
+      resultaat.copyWith(
+        projectBestandId: projectBestandId,
+        klantNaam: klantNaam.isEmpty ? resultaat.klantNaam : klantNaam,
+      ),
+    );
   }
 
   Future<void> _wachtTotPopupEnDialogGeslotenZijn() async {

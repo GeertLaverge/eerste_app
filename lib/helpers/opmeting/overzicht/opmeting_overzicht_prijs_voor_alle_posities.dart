@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PROGRAMMASTIJL-DIALOGEN-VELDEN-FASE11-20260913
+// THIMACO-CONTROLE: PROGRAMMASTIJL-ORANJE-PRIJSZONE-FASE9-CURRENT-20260913
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-DOELEN-OPGERUIMD-EN-GROEN-MENU-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-EEN-KEER-ONDERAAN-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-TOTAAL-OVER-GEKOZEN-FICHES-20260816
@@ -6,6 +8,8 @@
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-FASE2-UI-EN-DOELSELECTIE-20260815
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import '../../app_storage.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
@@ -72,7 +76,7 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
   /// op welke doelpositie ze van toepassing zijn.
   final bool toonAlleRegels;
 
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _groen = ThimacoKleuren.oranje;
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
@@ -240,20 +244,32 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Prijsregel verwijderen?'),
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
+          ),
+          title: const ThimacoSectieTitel(
+            tekst: 'Prijsregel verwijderen?',
+            compact: false,
+          ),
           content: Text(
             regel.omschrijving.trim().isEmpty
                 ? 'Deze prijsregel wordt uit de volledige offerte verwijderd.'
                 : '“${regel.omschrijving.trim()}” wordt uit de volledige offerte verwijderd.',
+            style: const TextStyle(color: ThimacoKleuren.antraciet),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
           actions: <Widget>[
-            TextButton(
+            ThimacoTekstActie(
+              tekst: 'Annuleren',
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Annuleren'),
             ),
-            FilledButton(
+            ThimacoTekstActie(
+              tekst: 'Verwijderen',
+              destructief: true,
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Verwijderen'),
             ),
           ],
         );
@@ -292,9 +308,9 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              title: const Text(
-                'Prijs toepassen op',
-                style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+              title: const ThimacoSectieTitel(
+                tekst: 'Prijs toepassen op',
+                compact: false,
               ),
               content: SizedBox(
                 width: 520,
@@ -361,17 +377,14 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
                   ),
                 ),
               ),
+              actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
               actions: <Widget>[
-                TextButton(
-                  style: TextButton.styleFrom(foregroundColor: _groen),
+                ThimacoTekstActie(
+                  tekst: 'Annuleren',
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Annuleren'),
                 ),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _groen,
-                    foregroundColor: Colors.white,
-                  ),
+                ThimacoTekstActie(
+                  tekst: 'Toepassen',
                   onPressed: alles || gekozen.isNotEmpty
                       ? () {
                           Navigator.of(dialogContext).pop(
@@ -384,7 +397,6 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
                           );
                         }
                       : null,
-                  child: const Text('Toepassen'),
                 ),
               ],
             );
@@ -441,36 +453,16 @@ class OpmetingOverzichtPrijsVoorAllePositiesBlok extends StatelessWidget {
           Row(
             children: <Widget>[
               const Expanded(
-                child: Text(
-                  'Prijs voor alle posities',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
+                child: ThimacoSectieTitel(tekst: 'Prijs voor alle posities'),
               ),
-              TextButton.icon(
+              ThimacoTekstActie(
+                tekst: '+ Regel',
                 onPressed: _voegHandmatigeRegelToe,
-                icon: const Icon(Icons.add_rounded, size: 16),
-                label: const Text('Regel'),
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                ),
               ),
-              IconButton(
+              const SizedBox(width: 4),
+              ThimacoTekstActie(
+                tekst: 'Plakken',
                 onPressed: () => _plakGekopieerdeRegelToe(context),
-                tooltip: 'Gekopieerde regel plakken',
-                visualDensity: VisualDensity.compact,
-                icon: const Icon(
-                  Icons.content_paste_rounded,
-                  size: 17,
-                  color: _groen,
-                ),
               ),
             ],
           ),
@@ -554,7 +546,6 @@ class _PrijsVoorAllePositiesRegelKaart extends StatelessWidget {
   final VoidCallback onKopieren;
   final VoidCallback onVerwijderen;
 
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _achtergrond = Color(0xFFF9FAFB);
 
@@ -674,6 +665,14 @@ class _PrijsVoorAllePositiesRegelKaart extends StatelessWidget {
                   initialValue: prijsregel.offerteWeergave,
                   isDense: false,
                   isExpanded: true,
+                  dropdownColor: Colors.white,
+                  iconEnabledColor: ThimacoKleuren.tekstGrijs,
+                  iconDisabledColor: ThimacoKleuren.tekstGrijs.withValues(alpha: 0.35),
+                  style: const TextStyle(
+                    color: ThimacoKleuren.antraciet,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                  ),
                   decoration: _regelDropdownDecoratie(),
                   items: OffertePrijsPerPositieWeergave.values
                       .map(
@@ -702,27 +701,22 @@ class _PrijsVoorAllePositiesRegelKaart extends StatelessWidget {
               SizedBox(
                 width: 38,
                 height: 40,
-                child: IconButton(
-                  onPressed: onKopieren,
+                child: ThimacoIcoonActie(
+                  icoon: Icons.copy_rounded,
                   tooltip: 'Prijsregel kopiëren',
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.copy_rounded, size: 17, color: _groen),
+                  grootte: 17,
+                  onPressed: onKopieren,
                 ),
               ),
               SizedBox(
                 width: 38,
                 height: 40,
-                child: IconButton(
-                  onPressed: onVerwijderen,
+                child: ThimacoIcoonActie(
+                  icoon: Icons.delete_outline_rounded,
                   tooltip: 'Prijsregel verwijderen',
-                  padding: EdgeInsets.zero,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: Color(0xFFB91C1C),
-                  ),
+                  destructief: true,
+                  grootte: 18,
+                  onPressed: onVerwijderen,
                 ),
               ),
             ],
@@ -864,8 +858,8 @@ class _PrijsVoorAllePositiesRegelKaart extends StatelessWidget {
                           : 'Eindtotaal',
                       vet: eindTotaal > 0,
                       hint: eindTotaal <= 0,
-                      achtergrond: const Color(0xFFE7F6EC),
-                      randKleur: const Color(0xFFCDE9D5),
+                      achtergrond: ThimacoKleuren.oranjeLicht,
+                      randKleur: ThimacoKleuren.oranjeRand,
                     ),
                   ),
                 ],
@@ -875,23 +869,9 @@ class _PrijsVoorAllePositiesRegelKaart extends StatelessWidget {
           const SizedBox(height: 7),
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: ThimacoTekstActie(
+              tekst: doelSamenvatting,
               onPressed: onDoelenKiezen,
-              icon: const Icon(Icons.checklist_rounded, size: 16),
-              label: Text(doelSamenvatting),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _groen,
-                side: const BorderSide(color: Color(0xFFCDE9D5)),
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                textStyle: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
             ),
           ),
         ],
@@ -912,7 +892,6 @@ class _PrijsVoorAllePositiesOmschrijvingMenu extends StatefulWidget {
 
 class _PrijsVoorAllePositiesOmschrijvingMenuState
     extends State<_PrijsVoorAllePositiesOmschrijvingMenu> {
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
   List<OffertePrijsVoorAllePositiesTemplateModel> _templates =
@@ -960,6 +939,14 @@ class _PrijsVoorAllePositiesOmschrijvingMenuState
       height: 40,
       child: PopupMenuButton<OffertePrijsVoorAllePositiesTemplateModel>(
         tooltip: 'Omschrijving kiezen uit Instellingen',
+        color: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 10,
+        shadowColor: const Color(0x26000000),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: ThimacoKleuren.rand),
+        ),
         position: PopupMenuPosition.under,
         padding: EdgeInsets.zero,
         onOpened: _laadTemplates,
@@ -967,7 +954,7 @@ class _PrijsVoorAllePositiesOmschrijvingMenuState
         icon: const Icon(
           Icons.arrow_drop_down_circle_outlined,
           size: 19,
-          color: _groen,
+          color: ThimacoKleuren.antraciet,
         ),
         itemBuilder: (context) {
           if (_laden) {
@@ -1010,13 +997,14 @@ class _PrijsVoorAllePositiesOmschrijvingMenuState
                           height: 30,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE7F6EC),
+                            color: ThimacoKleuren.oranjeLicht,
                             borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: ThimacoKleuren.oranjeRand),
                           ),
                           child: Text(
                             template.type.label,
                             style: const TextStyle(
-                              color: _groen,
+                              color: ThimacoKleuren.antraciet,
                               fontSize: 10.5,
                               fontWeight: FontWeight.w900,
                             ),
@@ -1087,6 +1075,14 @@ class _PrijsRegelCompactKeuzeMenu<T> extends StatelessWidget {
     final huidigeTekst = waarde == null ? '' : tekstVoor(waarde as T).trim();
     return PopupMenuButton<T>(
       tooltip: hintText,
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
+      elevation: 10,
+      shadowColor: const Color(0x26000000),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: ThimacoKleuren.rand),
+      ),
       position: PopupMenuPosition.under,
       padding: EdgeInsets.zero,
       onSelected: onGekozen,
@@ -1278,6 +1274,7 @@ class _PrijsRegelInvoerVeldState extends State<_PrijsRegelInvoerVeld> {
       key: ValueKey<String>(widget.sleutel),
       controller: _controller,
       focusNode: _focusNode,
+      cursorColor: ThimacoKleuren.oranje,
       expands: true,
       maxLines: null,
       minLines: null,
@@ -1371,7 +1368,7 @@ InputDecoration _regelDecoratie({
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(7),
-      borderSide: const BorderSide(color: Color(0xFF0B7A3B), width: 1.25),
+      borderSide: const BorderSide(color: ThimacoKleuren.oranje, width: 1.25),
     ),
   );
 }

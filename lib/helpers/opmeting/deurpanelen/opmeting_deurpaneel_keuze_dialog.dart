@@ -1,5 +1,7 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_deurpaneel_bibliotheek.dart' as panelen_bibliotheek;
 import 'opmeting_deurpaneel_filter_helper.dart';
 import 'opmeting_deurpaneel_model.dart';
@@ -20,11 +22,10 @@ class OpmetingDeurpaneelKeuzeDialog extends StatefulWidget {
 
 class _OpmetingDeurpaneelKeuzeDialogState
     extends State<OpmetingDeurpaneelKeuzeDialog> {
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color lichtGroen = Color(0xFFE7F6EC);
-  static const Color rand = Color(0xFFE5E7EB);
-  static const Color tekstDonker = Color(0xFF111827);
-  static const Color tekstGrijs = Color(0xFF6B7280);
+  static const Color groen = ThimacoKleuren.oranje;
+  static const Color rand = ThimacoKleuren.rand;
+  static const Color tekstDonker = ThimacoKleuren.antraciet;
+  static const Color tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final TextEditingController _zoekController = TextEditingController();
 
@@ -65,24 +66,30 @@ class _OpmetingDeurpaneelKeuzeDialogState
   Widget build(BuildContext context) {
     return AlertDialog(
       insetPadding: const EdgeInsets.all(18),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: ThimacoKleuren.rand),
+      ),
       titlePadding: const EdgeInsets.fromLTRB(18, 16, 12, 0),
       contentPadding: const EdgeInsets.fromLTRB(18, 12, 18, 8),
       actionsPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
       title: Row(
         children: [
           const Expanded(
-            child: Text(
-              'Deurpaneel kiezen',
-              style: TextStyle(color: groen, fontWeight: FontWeight.w900),
+            child: ThimacoSectieTitel(
+              tekst: 'Deurpaneel kiezen',
+              compact: false,
             ),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.close_rounded,
             tooltip: 'Sluiten',
             onPressed: () {
               Navigator.pop(context);
             },
-            icon: const Icon(Icons.close_rounded),
+            grootte: 19,
           ),
         ],
       ),
@@ -131,9 +138,9 @@ class _OpmetingDeurpaneelKeuzeDialogState
     return Container(
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: lichtGroen,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFCDEBD6)),
+        color: ThimacoKleuren.achtergrond,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: rand),
       ),
       child: const Text(
         'Kies eerst de uitvoering. De lijst toont daarna alleen panelen die volgens de centrale panelenlijst toegelaten zijn. Beheer gebeurt via Home > Instellingen > Deurpanelen.',
@@ -176,58 +183,17 @@ class _OpmetingDeurpaneelKeuzeDialogState
   }) {
     final actief = _uitvoering == uitvoering;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () {
+    return ThimacoTekstKeuze(
+      tekst: titel,
+      subtekst: uitleg,
+      geselecteerd: actief,
+      uitvullen: true,
+      compact: false,
+      onPressed: () {
         setState(() {
           _uitvoering = uitvoering;
         });
       },
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: actief ? lichtGroen : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: actief ? groen : rand,
-            width: actief ? 1.4 : 1.0,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              actief ? Icons.radio_button_checked : Icons.radio_button_off,
-              size: 17,
-              color: actief ? groen : tekstGrijs,
-            ),
-            const SizedBox(width: 7),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    titel,
-                    style: TextStyle(
-                      color: actief ? groen : tekstDonker,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    uitleg,
-                    style: const TextStyle(
-                      color: tekstGrijs,
-                      fontSize: 11,
-                      height: 1.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -239,6 +205,9 @@ class _OpmetingDeurpaneelKeuzeDialogState
         prefixIcon: Icon(Icons.search_rounded),
         labelText: 'Zoeken op ID, naam of DXF',
         border: OutlineInputBorder(),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: groen, width: 1.5),
+        ),
       ),
       onChanged: (waarde) {
         setState(() {
@@ -293,9 +262,9 @@ class _OpmetingDeurpaneelKeuzeDialogState
           height: 54,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: lichtGroen,
+            color: ThimacoKleuren.achtergrond,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0xFFCDEBD6)),
+            border: Border.all(color: rand),
           ),
           child: Text(
             paneel.id,

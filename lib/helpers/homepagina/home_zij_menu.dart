@@ -1,6 +1,6 @@
+// THIMACO-CONTROLE: HOME-ZIJMENU-ALLEEN-KLIKBARE-TEKST-20260914
 // THIMACO-CONTROLE: MAGAZIJN-BESTELMELDING-HOME-20260808
 // THIMACO-CONTROLE: FINANCIELE-KLUIS-HOME-MENU-20260806
-// THIMACO-CONTROLE: HOME-IPHONE-CAPSULEKNOPPEN-MET-BESTAANDE-ROUTES-20260805
 // THIMACO-CONTROLE: MAGAZIJN-HOME-ROUTE-20260804
 import 'package:flutter/material.dart';
 
@@ -35,8 +35,11 @@ class HomeZijMenu extends StatefulWidget {
 }
 
 class _HomeZijMenuState extends State<HomeZijMenu> {
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color rand = Color(0xFFE5E7EB);
+  static const Color _oranje = Color(0xFFF15A24);
+  static const Color _antraciet = Color(0xFF22272D);
+  static const Color _tekstGrijs = Color(0xFF616973);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _oranjeLicht = Color(0xFFFFF4ED);
   static const Color _meldingRood = Color(0xFFDC2626);
 
   bool _magazijnHeeftBestellingNodig = false;
@@ -97,77 +100,65 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: compact ? 78 : 205,
+      width: compact ? 126 : 178,
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(right: BorderSide(color: rand)),
+        border: Border(
+          right: BorderSide(color: _rand),
+        ),
       ),
       child: Column(
         children: <Widget>[
-          SizedBox(height: compact ? 10 : 16),
+          SizedBox(height: compact ? 10 : 18),
           Expanded(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 8 : 12,
+              ),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  _menuKnop(
+                  _menuTekst(
                     context,
                     'Agenda',
-                    Icons.calendar_month_outlined,
                     actief: true,
                   ),
-                  _menuKnop(context, 'Klanten', Icons.groups_outlined),
-                  _menuKnop(
-                    context,
-                    'Notitie\'s\nplaatsers',
-                    Icons.description_outlined,
-                  ),
-                  _menuKnop(
-                    context,
-                    'Notitie\'s\nbureau',
-                    Icons.edit_note_outlined,
-                  ),
-                  _menuKnop(context, 'Opmeting', Icons.straighten_outlined),
-                  _menuKnop(context, 'Puinzak', Icons.delete_outline),
-                  _menuKnop(
+                  _menuTekst(context, 'Klanten'),
+                  _menuTekst(context, 'Notitie\'s\nplaatsers'),
+                  _menuTekst(context, 'Notitie\'s\nbureau'),
+                  _menuTekst(context, 'Opmeting'),
+                  _menuTekst(context, 'Puinzak'),
+                  _menuTekst(
                     context,
                     'Magazijn',
-                    Icons.inventory_2_outlined,
                     toonMeldingsBol: _magazijnHeeftBestellingNodig,
                   ),
                   if (toonFinancieleKluis)
-                    _menuKnop(
+                    _menuTekst(
                       context,
                       'Financiële\nkluis',
-                      Icons.security_outlined,
                       onTap: onFinancieleKluis,
                     ),
-                  _menuKnop(
-                    context,
-                    'Bibliotheek',
-                    Icons.local_library_outlined,
-                  ),
-                  _menuKnop(
-                    context,
-                    'Website &\nshowroom',
-                    Icons.language_outlined,
-                  ),
+                  _menuTekst(context, 'Bibliotheek'),
+                  _menuTekst(context, 'Website &\nshowroom'),
                 ],
               ),
             ),
           ),
-          const Divider(height: 1, color: rand),
+          const Divider(
+            height: 1,
+            color: _rand,
+          ),
           Padding(
             padding: EdgeInsets.fromLTRB(
-              compact ? 7 : 14,
-              compact ? 10 : 14,
-              compact ? 7 : 14,
-              compact ? 10 : 14,
+              compact ? 8 : 12,
+              compact ? 8 : 12,
+              compact ? 8 : 12,
+              compact ? 10 : 16,
             ),
-            child: _menuKnop(
+            child: _menuTekst(
               context,
               afsluitenBezig ? 'Bewaren…' : 'Afsluiten',
-              Icons.power_settings_new_rounded,
               onTap: afsluitenBezig ? null : onAfsluiten,
               bezig: afsluitenBezig,
               onderMarge: 0,
@@ -178,27 +169,26 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
     );
   }
 
-  Widget _menuKnop(
+  Widget _menuTekst(
     BuildContext context,
-    String titel,
-    IconData icoon, {
+    String titel, {
     bool actief = false,
     Future<void> Function()? onTap,
     bool bezig = false,
     bool toonMeldingsBol = false,
-    double onderMarge = 10,
+    double onderMarge = 4,
   }) {
-    final Color achtergrondKleur = actief
-        ? const Color(0xFFEAF6EE)
-        : Colors.white;
-    final Color voorgrondKleur = actief ? groen : const Color(0xFF27302B);
+    final label = titel.replaceAll('\n', ' ');
 
     return Padding(
       padding: EdgeInsets.only(bottom: onderMarge),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(6),
+          hoverColor: _oranjeLicht,
+          highlightColor: _oranjeLicht,
+          splashColor: _oranjeLicht,
           onTap: bezig
               ? null
               : () async {
@@ -206,14 +196,6 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                     await onTap();
                     return;
                   }
-
-                  // TIJDELIJK UITGESCHAKELD VOOR SYNC DEBUG
-                  /*
-                  await SyncNavigatieHelper.openMetDownload(
-                    context: context,
-                    pagina: pagina,
-                  );
-                  */
 
                   if (titel == 'Agenda') {
                     Navigator.push(
@@ -228,7 +210,9 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                   if (titel == 'Klanten') {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const KlantenPagina()),
+                      MaterialPageRoute(
+                        builder: (_) => const KlantenPagina(),
+                      ),
                     );
                     return;
                   }
@@ -246,7 +230,9 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                   if (titel == 'Magazijn') {
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const MagazijnPagina()),
+                      MaterialPageRoute(
+                        builder: (_) => const MagazijnPagina(),
+                      ),
                     );
                     if (mounted) {
                       await _herlaadMagazijnMelding();
@@ -284,133 +270,64 @@ class _HomeZijMenuState extends State<HomeZijMenu> {
                     return;
                   }
                 },
-          child: Ink(
-            height: compact ? 66 : 58,
-            decoration: BoxDecoration(
-              color: achtergrondKleur,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: actief
-                    ? const Color(0xFFCDE8D5)
-                    : const Color(0xFFEDF0EE),
+          child: SizedBox(
+            height: compact ? 42 : 40,
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 8 : 10,
               ),
-              boxShadow: const <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x14000000),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: compact
-                ? Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      _bouwIcoon(
-                        icoon: icoon,
-                        kleur: voorgrondKleur,
-                        bezig: bezig,
-                        grootte: 21,
-                        toonMeldingsBol: toonMeldingsBol,
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: bezig
+                            ? _tekstGrijs
+                            : actief
+                                ? _oranje
+                                : _antraciet,
+                        fontSize: compact ? 11.5 : 13,
+                        height: 1.1,
+                        fontWeight:
+                            actief ? FontWeight.w700 : FontWeight.w500,
+                        decoration:
+                            actief ? TextDecoration.underline : null,
+                        decorationColor: _oranje,
+                        decorationThickness: 2,
+                        decorationStyle: TextDecorationStyle.solid,
                       ),
-                      const SizedBox(height: 4),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: Text(
-                          titel,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: voorgrondKleur,
-                            fontSize: 9.5,
-                            height: 1,
-                            fontWeight: actief
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    child: Row(
-                      children: <Widget>[
-                        _bouwIcoon(
-                          icoon: icoon,
-                          kleur: voorgrondKleur,
-                          bezig: bezig,
-                          grootte: 21,
-                          toonMeldingsBol: toonMeldingsBol,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            titel.replaceAll('\n', ' '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: voorgrondKleur,
-                              fontSize: 13,
-                              height: 1.1,
-                              fontWeight: actief
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bouwIcoon({
-    required IconData icoon,
-    required Color kleur,
-    required bool bezig,
-    required double grootte,
-    bool toonMeldingsBol = false,
-  }) {
-    if (bezig) {
-      return SizedBox(
-        width: grootte,
-        height: grootte,
-        child: const CircularProgressIndicator(strokeWidth: 2.2, color: groen),
-      );
-    }
-
-    final icoonWidget = Icon(icoon, size: grootte, color: kleur);
-
-    if (!toonMeldingsBol) {
-      return icoonWidget;
-    }
-
-    return SizedBox(
-      width: grootte + 6,
-      height: grootte + 6,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Align(alignment: Alignment.center, child: icoonWidget),
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: _meldingRood,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 1.5),
+                  if (toonMeldingsBol) ...<Widget>[
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: _meldingRood,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                  if (bezig) ...<Widget>[
+                    const SizedBox(width: 8),
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.8,
+                        color: _oranje,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

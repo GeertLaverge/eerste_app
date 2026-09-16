@@ -1,3 +1,10 @@
+// THIMACO-CONTROLE: PROGRAMMASTIJL-VALIDATIEDIALOOG-FASE14-20260913
+// THIMACO-CONTROLE: ZWEVENDE-PANELEN-RUSTIGE-PROGRAMMASTIJL-FASE13-20260913
+// THIMACO-CONTROLE: PROGRAMMAWERKGEBIED-ZWEVENDE-PANELEN-FASE7-20260913
+// THIMACO-CONTROLE: OFFERTE-PDF-ALLEEN-AFDRUKKEN-EN-ONEDRIVE-20260912
+// THIMACO-CONTROLE: PROJECTTITEL-MET-BESTANDSVERSIE-FASE4-20260912
+// THIMACO-CONTROLE: ACTIEF-OFFERTEBESTAND-FASE2-20260912
+// THIMACO-CONTROLE: CENTRAAL-BESTANDMENU-PROJECT-VARIANT-TITEL-FASE3-20260912
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP2-LEGACY-BEREKENING-UIT-20260814
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP1-LEGACY-UI-20260814
 // THIMACO-CONTROLE: PRIJS-PER-POSITIE-TABEL-OPSLAAN-20260813
@@ -21,9 +28,14 @@
 // THIMACO-CONTROLE: PLOOIWERKEN-CENTRALE-PAGINA-KOPPELING-20260728
 // THIMACO-CONTROLE: SCHUIFVLIEGENDEUR-CENTRALE-PAGINA-KOPPELING-20260728
 // THIMACO-CONTROLE: BESTAANDE-PROJECTPRIJSREGEL-ROUTE-20260725
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../helpers/app_storage.dart';
+import '../helpers/ui/thimaco_huisstijl.dart';
 import '../helpers/offerte/offerte_controller.dart';
 import '../helpers/offerte/offerte_validatie_service.dart';
 import '../helpers/offerte/offerte_pdf_preview_pagina.dart';
@@ -42,8 +54,9 @@ import '../helpers/offerte/artikelen/offerte_positie_beheer_controller.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_bovenbalk.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_lijst.dart';
 import '../helpers/opmeting/project/opmeting_project_kleur_model.dart';
+import '../helpers/opmeting/project/opmeting_project_titelhoofd_kaart.dart';
 import '../helpers/opmeting/project/opmeting_project_titelhoofd_model.dart'
-    show OpmetingProjectTitelhoofd;
+    show OpmetingProjectTitelhoofd, opmetingLegacyProjectBestandId;
 import '../helpers/opmeting/project/opmeting_project_titelhoofd_controller.dart';
 import '../helpers/opmeting/project/opmeting_project_bestand_controller.dart';
 import '../helpers/opmeting/navigatie/opmeting_formulier_navigatie_controller.dart';
@@ -58,9 +71,11 @@ class OpmetingPagina extends StatefulWidget {
 }
 
 class _OpmetingPaginaState extends State<OpmetingPagina> {
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _accent = ThimacoKleuren.oranje;
   static const Color _achtergrond = Color(0xFFF7F8FA);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   String _klantNaam = '';
   bool _laden = false;
@@ -84,6 +99,10 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Set<String> _verborgenFormulierTypes = <String>{};
   Set<String> _verborgenNietRekenenPositieIds = <String>{};
 
+  OpmetingProjectPaneel? _actiefProjectPaneel;
+  final Map<OpmetingProjectPaneel, Offset> _projectPaneelPosities =
+      <OpmetingProjectPaneel, Offset>{};
+
   final OfferteController _offerteController = OfferteController.standaard();
 
   late final OffertePrijsinstellingenController _prijsinstellingenController;
@@ -100,7 +119,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   late final OpmetingFormulierNavigatieController _formulierNavigatieController;
 
   bool get _heeftOpenBestand {
-    return _klantNaam.trim().isNotEmpty;
+    return _klantNaam.trim().isNotEmpty &&
+        _projectTitelhoofd.projectBestandId.trim().isNotEmpty;
   }
 
   @override
@@ -113,6 +133,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       leesIsLaden: () => _laden,
       leesHeeftOpenBestand: () => _heeftOpenBestand,
       leesKlantNaam: () => _klantNaam,
+      leesProjectBestandId: () => _projectTitelhoofd.projectBestandId,
       leesTitelhoofd: () => _projectTitelhoofd,
       herlaadOpmetingen: (klantNaam, forceerPrijsinstellingen) {
         return _projectBestandController.laadOpmetingenVanOpslag(
@@ -168,6 +189,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       isMounted: () => mounted,
       leesArtikelen: () => _raamOpmetingen,
       leesKlantNaam: () => _klantNaam,
+      leesProjectBestandId: () => _projectTitelhoofd.projectBestandId,
       herlaadOpmetingen: (klantNaam) {
         return _projectBestandController.laadOpmetingenVanOpslag(
           klantNaam: klantNaam,
@@ -402,17 +424,20 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Future<void> _herberekenPrijsMomentopnamesNaPrijswijziging({
     required String klantNaam,
   }) async {
-    if (!_projectTitelhoofd.berekenPrijzen || klantNaam.trim().isEmpty) {
+    final projectBestandId = _projectTitelhoofd.projectBestandId.trim();
+    if (!_projectTitelhoofd.berekenPrijzen ||
+        klantNaam.trim().isEmpty ||
+        projectBestandId.isEmpty) {
       return;
     }
 
-    // Bewaar exact de toestand waarop deze berekening gestart is.
     final basisOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
     final resultaat = await _prijsinstellingenController
         .werkTechnischePrijsMomentopnamesBij(
           alleOpmetingen: basisOpmetingen,
           klantNaam: klantNaam,
+          projectBestandId: projectBestandId,
           berekenPrijzen: true,
         );
 
@@ -420,8 +445,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    // Nooit meer de volledige oude berekeningslijst blind terugschrijven.
-    // Alleen echte berekeningsverschillen worden op de nieuwste opslag gezet.
     final veiligResultaat =
         await OpmetingVeiligeMutatieService.bewaarBerekendeWijzigingen(
           basis: basisOpmetingen,
@@ -429,18 +452,17 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         );
 
     if (!mounted ||
-        _klantNaam.trim().toLowerCase() != klantNaam.trim().toLowerCase()) {
+        _projectTitelhoofd.projectBestandId.trim() != projectBestandId) {
       return;
     }
 
-    final klantSleutel = klantNaam.trim().toLowerCase();
-
-    final zichtbareOpmetingen = veiligResultaat.opmetingen
-        .where((opmeting) {
-          return !opmeting.isVerwijderd &&
-              opmeting.klantNaam.trim().toLowerCase() == klantSleutel;
-        })
-        .toList(growable: false);
+    final zichtbareOpmetingen = veiligResultaat.opmetingen.where((opmeting) {
+      if (opmeting.isVerwijderd) return false;
+      final id = opmeting.projectBestandId.trim().isNotEmpty
+          ? opmeting.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+      return id == projectBestandId;
+    }).toList(growable: false);
 
     setState(() {
       _raamOpmetingen
@@ -783,13 +805,41 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: _rand),
           ),
-          title: const Row(
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Icon(Icons.warning_amber_rounded, color: Color(0xFFEA580C)),
-              SizedBox(width: 10),
-              Expanded(child: Text('Prijsgegevens ontbreken')),
+              const Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: _accent,
+                    size: 20,
+                  ),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Prijsgegevens ontbreken',
+                      style: TextStyle(
+                        color: _tekstDonker,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  width: 42,
+                  height: 1.5,
+                  color: _accent.withValues(alpha: 0.72),
+                ),
+              ),
             ],
           ),
           content: SizedBox(
@@ -834,19 +884,19 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
           actions: <Widget>[
-            TextButton(
+            ThimacoTekstActie(
+              tekst: 'Terug naar overzicht',
               onPressed: () {
                 Navigator.pop(dialogContext, false);
               },
-              child: const Text('Terug naar overzicht'),
             ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _groen),
+            ThimacoTekstActie(
+              tekst: 'Toch offerte openen',
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              child: const Text('Toch offerte openen'),
             ),
           ],
         );
@@ -974,33 +1024,19 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
     if (!mounted) return;
 
-    final previewResultaat = await Navigator.of(context)
-        .push<OffertePdfPreviewResultaat>(
-          MaterialPageRoute<OffertePdfPreviewResultaat>(
+    final oneDriveResultaat = await Navigator.of(context)
+        .push<OneDriveKlantdocumentResultaat>(
+          MaterialPageRoute<OneDriveKlantdocumentResultaat>(
             builder: (context) {
               return OffertePdfPreviewPagina(
                 titelhoofd: titelhoofd,
                 posities: offertePosities,
-                werkPosities: List<OpmetingOverzichtRaamItem>.unmodifiable(
-                  _raamOpmetingen.where((positie) => !positie.isVerwijderd),
-                ),
-                onOpenVersieAlsWerkversie:
-                    _projectBestandController.openOfferteVersieAlsWerkversie,
-                onVersieBewaard:
-                    _projectBestandController.markeerOfferteVersieAlsWerkBron,
               );
             },
           ),
         );
 
-    if (!mounted || previewResultaat == null) return;
-
-    if (previewResultaat.werkversieGeopend) {
-      return;
-    }
-
-    final oneDriveResultaat = previewResultaat.oneDriveResultaat;
-    if (oneDriveResultaat == null) return;
+    if (!mounted || oneDriveResultaat == null) return;
 
     _toonMelding(
       '${oneDriveResultaat.documentType} opgeslagen in OneDrive: '
@@ -1078,32 +1114,272 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(tekst),
-        backgroundColor: fout ? const Color(0xFFDC2626) : _groen,
+        backgroundColor: fout ? ThimacoKleuren.rood : ThimacoKleuren.antraciet,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _achtergrond,
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            _bouwBovenbalk(),
-            Expanded(
-              child: _laden
-                  ? const Center(
-                      child: CircularProgressIndicator(color: _groen),
-                    )
-                  : !_heeftOpenBestand
-                  ? _bouwGeenBestandGeopend()
-                  : _bouwOverzichtslijst(),
-            ),
-          ],
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.escape &&
+            _actiefProjectPaneel != null) {
+          setState(() {
+            _actiefProjectPaneel = null;
+          });
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        backgroundColor: _achtergrond,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  Column(
+                    children: <Widget>[
+                      _bouwBovenbalk(),
+                      Expanded(
+                        child: _laden
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: _accent,
+                                ),
+                              )
+                            : !_heeftOpenBestand
+                            ? _bouwGeenBestandGeopend()
+                            : _bouwOverzichtslijst(),
+                      ),
+                    ],
+                  ),
+                  if (_heeftOpenBestand && _actiefProjectPaneel != null)
+                    _bouwZwevendProjectPaneel(constraints),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
+  }
+
+  void _wisselProjectPaneel(OpmetingProjectPaneel paneel) {
+    setState(() {
+      _actiefProjectPaneel = _actiefProjectPaneel == paneel ? null : paneel;
+    });
+  }
+
+  Widget _bouwZwevendProjectPaneel(BoxConstraints constraints) {
+    final paneel = _actiefProjectPaneel!;
+    final gewensteGrootte = _gewenstePaneelGrootte(paneel);
+    final maxBreedte = math.max(300.0, constraints.maxWidth - 24).toDouble();
+    final maxHoogte = math.max(280.0, constraints.maxHeight - 86).toDouble();
+    final breedte = math.min(gewensteGrootte.width, maxBreedte).toDouble();
+    final hoogte = math.min(gewensteGrootte.height, maxHoogte).toDouble();
+
+    final standaardPositie = Offset(
+      math.max(12.0, (constraints.maxWidth - breedte) / 2).toDouble(),
+      math
+          .max(70.0, 70 + (constraints.maxHeight - 70 - hoogte) / 2)
+          .toDouble(),
+    );
+    final positie = _begrensPaneelPositie(
+      _projectPaneelPosities[paneel] ?? standaardPositie,
+      constraints: constraints,
+      breedte: breedte,
+      hoogte: hoogte,
+    );
+
+    final paneelTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty &&
+            _klantNaam.trim().isNotEmpty
+        ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
+        : _projectTitelhoofd;
+
+    return Positioned(
+      left: positie.dx,
+      top: positie.dy,
+      width: breedte,
+      height: hoogte,
+      child: Material(
+        color: Colors.transparent,
+        elevation: 18,
+        shadowColor: const Color(0x33000000),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _rand),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: <Widget>[
+              MouseRegion(
+                cursor: SystemMouseCursors.move,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanUpdate: (details) {
+                    final huidige =
+                        _projectPaneelPosities[paneel] ?? standaardPositie;
+                    final nieuwe = _begrensPaneelPositie(
+                      huidige + details.delta,
+                      constraints: constraints,
+                      breedte: breedte,
+                      hoogte: hoogte,
+                    );
+                    setState(() {
+                      _projectPaneelPosities[paneel] = nieuwe;
+                    });
+                  },
+                  child: Container(
+                    height: 46,
+                    padding: const EdgeInsets.only(left: 14, right: 7),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: _rand)),
+                    ),
+                    child: Row(
+                      children: <Widget>[
+                        Icon(
+                          _paneelIcoon(paneel),
+                          color: _tekstDonker,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                _paneelTitel(paneel),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _tekstDonker,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Container(
+                                width: 34,
+                                height: 1.5,
+                                decoration: BoxDecoration(
+                                  color: _accent.withValues(alpha: 0.72),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 30,
+                          height: 30,
+                          child: ThimacoIcoonActie(
+                            icoon: Icons.close_rounded,
+                            tooltip: 'Sluiten',
+                            grootte: 19,
+                            onPressed: () {
+                              setState(() {
+                                _actiefProjectPaneel = null;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: OpmetingProjectTitelhoofdKaart(
+                  key: ValueKey<String>(
+                    '${_projectTitelhoofd.projectBestandId}-${paneel.name}',
+                  ),
+                  titelhoofd: paneelTitelhoofd,
+                  opmetingen: _raamOpmetingen,
+                  verborgenFormulierTypes: _verborgenFormulierTypes,
+                  verborgenNietRekenenPositieIds:
+                      _verborgenNietRekenenPositieIds,
+                  kleurMenus: _projectKleurMenus,
+                  onTitelhoofdGewijzigd:
+                      _projectTitelhoofdController.verwerkWijziging,
+                  onKlantLaden: () {
+                    unawaited(
+                      _projectTitelhoofdController.laadKlantUitBlauweAgenda(),
+                    );
+                  },
+                  onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
+                  onToggleNietRekenenPositie:
+                      _toggleNietRekenenPositieZichtbaarheid,
+                  paneel: paneel,
+                  zwevendeWeergave: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Offset _begrensPaneelPositie(
+    Offset positie, {
+    required BoxConstraints constraints,
+    required double breedte,
+    required double hoogte,
+  }) {
+    const marge = 12.0;
+    const bovenbalkOndergrens = 70.0;
+    final maxX = math
+        .max(marge, constraints.maxWidth - breedte - marge)
+        .toDouble();
+    final maxY = math
+        .max(
+          bovenbalkOndergrens,
+          constraints.maxHeight - hoogte - marge,
+        )
+        .toDouble();
+
+    return Offset(
+      positie.dx.clamp(marge, maxX).toDouble(),
+      positie.dy.clamp(bovenbalkOndergrens, maxY).toDouble(),
+    );
+  }
+
+  Size _gewenstePaneelGrootte(OpmetingProjectPaneel paneel) {
+    return switch (paneel) {
+      OpmetingProjectPaneel.klantgegevens => const Size(650, 470),
+      OpmetingProjectPaneel.projectkleur => const Size(560, 430),
+      OpmetingProjectPaneel.inhoudFiche => const Size(560, 440),
+      OpmetingProjectPaneel.offerteInstellingen => const Size(580, 500),
+    };
+  }
+
+  String _paneelTitel(OpmetingProjectPaneel paneel) {
+    return switch (paneel) {
+      OpmetingProjectPaneel.klantgegevens => 'Klantgegevens',
+      OpmetingProjectPaneel.projectkleur => 'Projectkleur',
+      OpmetingProjectPaneel.inhoudFiche => 'Inhoud fiche',
+      OpmetingProjectPaneel.offerteInstellingen => 'Offerte-instellingen',
+    };
+  }
+
+  IconData _paneelIcoon(OpmetingProjectPaneel paneel) {
+    return switch (paneel) {
+      OpmetingProjectPaneel.klantgegevens => Icons.person_outline_rounded,
+      OpmetingProjectPaneel.projectkleur => Icons.palette_outlined,
+      OpmetingProjectPaneel.inhoudFiche => Icons.format_list_bulleted_rounded,
+      OpmetingProjectPaneel.offerteInstellingen =>
+        Icons.receipt_long_outlined,
+    };
   }
 
   Widget _bouwBovenbalk() {
@@ -1116,9 +1392,13 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       berekenPrijzen: _projectTitelhoofd.berekenPrijzen,
       prijsHerberekeningBezig:
           _prijsinstellingenController.isHerberekeningBezig,
-      onNieuwBestand: _projectBestandController.nieuwBestand,
-      onOpenBestand: _projectBestandController.openBestand,
+      onNieuwProject: _projectBestandController.nieuwProject,
+      onOpenProject: _projectBestandController.openProject,
+      onNieuweVariant: _projectBestandController.nieuweVariant,
+      onOpenHuidigProjectBestand:
+          _projectBestandController.openHuidigProjectBestand,
       onOpslaanBestand: _projectBestandController.opslaanBestand,
+      onOpslaanAlsBestand: _projectBestandController.opslaanAlsBestand,
       onWisBestand: _projectBestandController.wisBestand,
       onEindeOpmeting: _projectBestandController.eindeOpmeting,
       onHerberekenOfferte:
@@ -1127,6 +1407,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       onOpenOffertePreview: _openOffertePreview,
       onOpenOpmetingPreview: _openOpmetingPreview,
       onFormulierGekozen: _openGeregistreerdFormulier,
+      actiefPaneel: _actiefProjectPaneel,
+      onPaneelGekozen: _wisselProjectPaneel,
     );
   }
 
@@ -1185,11 +1467,31 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   }
 
   String _titelBovenbalk() {
-    if (_klantNaam.trim().isNotEmpty) {
-      return _klantNaam.trim();
+    final klant = _naamWeergave(_klantNaam.trim());
+    final bestand = _zinWeergave(_projectTitelhoofd.bestandsNaam.trim());
+    final versie = _projectTitelhoofd.veiligeBestandVersieNummer;
+    if (klant.isNotEmpty && bestand.isNotEmpty) {
+      return '$klant · $bestand V$versie';
     }
-
+    if (klant.isNotEmpty) return klant;
     return 'Opmetingen';
+  }
+
+  String _naamWeergave(String waarde) {
+    if (waarde.isEmpty) return '';
+    return waarde
+        .split(RegExp(r'\s+'))
+        .where((deel) => deel.isNotEmpty)
+        .map((deel) {
+          if (deel.length <= 4 && deel == deel.toUpperCase()) return deel;
+          return '${deel[0].toUpperCase()}${deel.substring(1)}';
+        })
+        .join(' ');
+  }
+
+  String _zinWeergave(String waarde) {
+    if (waarde.isEmpty) return '';
+    return '${waarde[0].toUpperCase()}${waarde.substring(1)}';
   }
 
   Widget _bouwGeenBestandGeopend() {
@@ -1200,19 +1502,14 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     return OpmetingOverzichtLijst(
       scrollController: _overzichtScrollController,
       scrollStorageKey: PageStorageKey<String>(
-        'opmeting-overzicht-${_klantNaam.trim().toLowerCase()}',
+        'opmeting-overzicht-${_projectTitelhoofd.projectBestandId.trim()}',
       ),
-      klantNaam: _klantNaam,
       projectTitelhoofd: _projectTitelhoofd,
       opmetingen: _raamOpmetingen,
       verborgenFormulierTypes: _verborgenFormulierTypes,
       verborgenNietRekenenPositieIds: _verborgenNietRekenenPositieIds,
-      projectKleurMenus: _projectKleurMenus,
       offerteController: _offerteController,
       onTitelhoofdGewijzigd: _projectTitelhoofdController.verwerkWijziging,
-      onKlantLaden: _projectTitelhoofdController.laadKlantUitBlauweAgenda,
-      onToggleFormulierType: _toggleFormulierTypeZichtbaarheid,
-      onToggleNietRekenenPositie: _toggleNietRekenenPositieZichtbaarheid,
       onArtikelOpenen: _bewerkRaamopmeting,
       onArtikelVerwijderen: _verwijderRaamopmeting,
       onArtikelKopieren: _kopieerRaamopmeting,

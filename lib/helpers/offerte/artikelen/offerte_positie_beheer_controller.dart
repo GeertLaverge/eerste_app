@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: POSITIEBEHEER-PER-PROJECTBESTAND-FASE2-20260912
 // THIMACO-CONTROLE: PRIJSARCHITECTUUR-OPRUIMEN-STAP3-ANALYZERFIX-POSITIEBEHEER-20260814
 // THIMACO-CONTROLE: POSITIEBEHEER-ATOMAIR-20260810
 // THIMACO-CONTROLE: NIET-REKENEN-TERUG-ACTIVEREN-HUIDIGE-PAGINA-20260810_0942
@@ -8,6 +9,7 @@ import '../../app_storage.dart';
 import '../offerte_controller.dart';
 import '../prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
+import '../../opmeting/project/opmeting_project_titelhoofd_model.dart';
 import '../../opmeting/opslag/opmeting_veilige_mutatie_service.dart';
 
 class OffertePositieBeheerController {
@@ -17,6 +19,7 @@ class OffertePositieBeheerController {
     required this.isMounted,
     required this.leesArtikelen,
     required this.leesKlantNaam,
+    required this.leesProjectBestandId,
     required this.herlaadOpmetingen,
     required this.herberekenPrijsMomentopnames,
     required this.verplaatsArtikelLokaal,
@@ -30,6 +33,7 @@ class OffertePositieBeheerController {
   final bool Function() isMounted;
   final List<OpmetingOverzichtRaamItem> Function() leesArtikelen;
   final String Function() leesKlantNaam;
+  final String Function() leesProjectBestandId;
   final Future<void> Function(String? klantNaam) herlaadOpmetingen;
   final Future<void> Function(String klantNaam) herberekenPrijsMomentopnames;
   final void Function(int huidigeIndex, int nieuweIndex) verplaatsArtikelLokaal;
@@ -198,12 +202,16 @@ class OffertePositieBeheerController {
           if (plaats == _PositieKopiePlaats.boven) {
             invoegIndex = bronIndex;
           } else if (plaats == _PositieKopiePlaats.laatste) {
-            final klantSleutel = bron.klantNaam.trim().toLowerCase();
+            final bronProjectId = bron.projectBestandId.trim().isNotEmpty
+                ? bron.projectBestandId.trim()
+                : opmetingLegacyProjectBestandId(bron.klantNaam);
             var laatsteIndex = bronIndex;
             for (var index = 0; index < actueleOpmetingen.length; index++) {
               final huidig = actueleOpmetingen[index];
-              if (!huidig.isVerwijderd &&
-                  huidig.klantNaam.trim().toLowerCase() == klantSleutel) {
+              final huidigProjectId = huidig.projectBestandId.trim().isNotEmpty
+                  ? huidig.projectBestandId.trim()
+                  : opmetingLegacyProjectBestandId(huidig.klantNaam);
+              if (!huidig.isVerwijderd && huidigProjectId == bronProjectId) {
                 laatsteIndex = index;
               }
             }
@@ -353,13 +361,17 @@ class OffertePositieBeheerController {
       }
 
       final actueel = actueleOpmetingen[index];
-      final klantSleutel = actueel.klantNaam.trim().toLowerCase();
+      final actueelProjectId = actueel.projectBestandId.trim().isNotEmpty
+          ? actueel.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(actueel.klantNaam);
       final actueleKlantPosities = actueleOpmetingen
-          .where(
-            (positie) =>
-                !positie.isVerwijderd &&
-                positie.klantNaam.trim().toLowerCase() == klantSleutel,
-          )
+          .where((positie) {
+            if (positie.isVerwijderd) return false;
+            final positieProjectId = positie.projectBestandId.trim().isNotEmpty
+                ? positie.projectBestandId.trim()
+                : opmetingLegacyProjectBestandId(positie.klantNaam);
+            return positieProjectId == actueelProjectId;
+          })
           .toList(growable: false);
 
       final plaatsing = switch (actie) {
@@ -552,18 +564,59 @@ class OffertePositieBeheerController {
       return;
     }
 
-    final verplaatst = await AppStorage.verplaatsOpmetingBinnenKlant(
-      klantNaam: leesKlantNaam(),
-      opmetingId: item.id,
-      richting: richting,
-    );
+    final andereId = artikelen[nieuweIndex].id;
+    final projectId = leesProjectBestandId().trim();
+    final verplaatst = await AppStorage.muteerOpmetingenAtomair<bool>((actueel) {
+      final eersteIndex = actueel.indexWhere(
+        (positie) => positie.id == item.id && !positie.isVerwijderd,
+      );
+      final tweedeIndex = actueel.indexWhere(
+        (positie) => positie.id == andereId && !positie.isVerwijderd,
+      );
+      if (eersteIndex < 0 || tweedeIndex < 0) {
+        return AppStorageOpmetingMutatieResultaat<bool>(
+          resultaat: false,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
+      }
 
-    if (!verplaatst || !isMounted()) {
-      return;
-    }
+      final eerste = actueel[eersteIndex];
+      final tweede = actueel[tweedeIndex];
+      String projectVoor(OpmetingOverzichtRaamItem positie) {
+        return positie.projectBestandId.trim().isNotEmpty
+            ? positie.projectBestandId.trim()
+            : opmetingLegacyProjectBestandId(positie.klantNaam);
+      }
 
+      final verwachtProjectId = projectId.isNotEmpty
+          ? projectId
+          : projectVoor(eerste);
+      if (projectVoor(eerste) != verwachtProjectId ||
+          projectVoor(tweede) != verwachtProjectId) {
+        return AppStorageOpmetingMutatieResultaat<bool>(
+          resultaat: false,
+          opmetingen: actueel,
+          gewijzigd: false,
+        );
+      }
+
+      final nu = DateTime.now().toUtc().toIso8601String();
+      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(actueel);
+      nieuweLijst[eersteIndex] = tweede.copyWith(gewijzigdOp: nu);
+      nieuweLijst[tweedeIndex] = eerste.copyWith(gewijzigdOp: nu);
+
+      return AppStorageOpmetingMutatieResultaat<bool>(
+        resultaat: true,
+        opmetingen: nieuweLijst,
+        gewijzigd: true,
+      );
+    });
+
+    if (!verplaatst || !isMounted()) return;
     verplaatsArtikelLokaal(huidigeIndex, nieuweIndex);
   }
+
 }
 
 enum _PositieKopiePlaats { boven, onder, laatste }

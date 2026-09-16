@@ -1,3 +1,8 @@
+// THIMACO-CONTROLE: MODULE-DELTA-SYNC-LOCAL-FIRST-20260914
+// THIMACO-CONTROLE: SYNC-PERFORMANCE-WORKER-ISOLATES-FASE2-20260914
+// THIMACO-CONTROLE: SYNC-PERFORMANCE-ETAG-DEBOUNCE-20260914
+// THIMACO-CONTROLE: MULTI-DEVICE-EERSTE-VOLLEDIGE-SYNC-20260913
+// THIMACO-CONTROLE: ONEDRIVE-ZONDER-OUDE-OFFERTEVERSIES-20260912
 // THIMACO-CONTROLE: ONEDRIVE-UPLOAD-DOWNLOAD-GESERIALISEERD-20260901
 // THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-BIBLIOTHEEK-ONEDRIVE-SYNC-20260815
 // THIMACO-CONTROLE: LEGACY-PRIJS-PROFIELEN-NIET-MEER-SYNCEN-20260815
@@ -5,7 +10,6 @@
 // THIMACO-CONTROLE: CENTRALE-TECHNISCHE-KEUZEPRIJZEN-ONEDRIVE-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-BIBLIOTHEEK-ONEDRIVE-SYNC-20260815
 // THIMACO-CONTROLE: PRIJS-PER-ARTIKEL-BIBLIOTHEEK-ONEDRIVE-SYNC-20260814
-// THIMACO-CONTROLE: OFFERTE-ONDERTEKENDE-VERSIES-ONEDRIVE-SYNC-20260806
 // THIMACO-CONTROLE: ONEDRIVE-NOOIT-INTERACTIEF-TIJDENS-AUTOMATISCHE-SYNC-20260805
 // THIMACO-CONTROLE: ALGEMENE-PRIJSREGELS-ONEDRIVE-SYNC-FASE5-20260805
 // THIMACO-CONTROLE: BIBLIOTHEEK-MAILTEKSTEN-ONEDRIVE-SYNC-FASE4-20260805
@@ -17,6 +21,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,7 +35,207 @@ import 'sync_merge_service.dart';
 import '../app_storage.dart';
 
 class OneDriveSyncService {
+  // JSON en modelconversies zijn CPU-werk. `unawaited` maakt zulke berekeningen
+  // niet automatisch achtergrondwerk; zonder worker-isolate blijven ze de
+  // Flutter UI-isolate blokkeren. De zwaarste stappen lopen daarom via compute.
+  static Map<String, dynamic> _decodeJsonObjectWorker(String jsonTekst) {
+    final decoded = jsonDecode(jsonTekst);
+    if (decoded is! Map) {
+      return <String, dynamic>{};
+    }
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  static String _encodeJsonWorker(Map<String, dynamic> data) {
+    return jsonEncode(data);
+  }
+
+  static Map<String, List<AgendaItem>> _decodeAgendaWorker(String jsonString) {
+    if (jsonString.isEmpty) {
+      return <String, List<AgendaItem>>{};
+    }
+
+    final data = jsonDecode(jsonString) as Map<String, dynamic>;
+    return data.map((datumKey, lijst) {
+      final items = (lijst as List<dynamic>)
+          .map(
+            (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList();
+      return MapEntry(datumKey, items);
+    });
+  }
+
+  static String _encodeAgendaWorker(Map<String, List<AgendaItem>> data) {
+    final jsonMap = data.map((datumKey, items) {
+      return MapEntry(
+        datumKey,
+        items.map((item) => item.toJson()).toList(),
+      );
+    });
+    return jsonEncode(jsonMap);
+  }
+
+  static List<KlantenficheModel> _decodeKlantenWorker(String jsonString) {
+    if (jsonString.isEmpty) {
+      return <KlantenficheModel>[];
+    }
+
+    final lijst = jsonDecode(jsonString) as List<dynamic>;
+    return lijst
+        .map(
+          (item) => KlantenficheModel.fromJson(Map<String, dynamic>.from(item)),
+        )
+        .toList();
+  }
+
+  static String _encodeKlantenWorker(List<KlantenficheModel> fiches) {
+    return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
+  }
+
+  static List<OpmetingOverzichtRaamItem> _decodeOpmetingenWorker(
+    String jsonString,
+  ) {
+    if (jsonString.isEmpty) {
+      return <OpmetingOverzichtRaamItem>[];
+    }
+
+    final lijst = jsonDecode(jsonString) as List<dynamic>;
+    return lijst
+        .whereType<Map>()
+        .map(
+          (item) => OpmetingOverzichtRaamItem.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  static String _encodeOpmetingenWorker(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    return jsonEncode(
+      opmetingen.map((opmeting) => opmeting.toJson()).toList(),
+    );
+  }
+
+  static Map<String, List<AgendaItem>> _mergeAgendaWorker(
+    List<Map<String, List<AgendaItem>>> bronnen,
+  ) {
+    return SyncMergeService.mergeAgendaMap(bronnen[0], bronnen[1]);
+  }
+
+  static List<KlantenficheModel> _mergeKlantenWorker(
+    List<List<KlantenficheModel>> bronnen,
+  ) {
+    return SyncMergeService.mergeKlantenFiches(bronnen[0], bronnen[1]);
+  }
+
+  static List<OpmetingOverzichtRaamItem> _mergeOpmetingenWorker(
+    List<List<OpmetingOverzichtRaamItem>> bronnen,
+  ) {
+    return SyncMergeService.mergeOpmetingen(bronnen[0], bronnen[1]);
+  }
+
+  static Future<Map<String, dynamic>> _decodeJsonObjectAchtergrond(
+    String jsonTekst,
+  ) {
+    return compute(_decodeJsonObjectWorker, jsonTekst);
+  }
+
+  static Future<String> _encodeJsonAchtergrond(Map<String, dynamic> data) {
+    return compute(_encodeJsonWorker, Map<String, dynamic>.from(data));
+  }
+
+  static Future<Map<String, List<AgendaItem>>> _decodeAgendaAchtergrond(
+    String? jsonString,
+  ) {
+    return compute(_decodeAgendaWorker, jsonString ?? '');
+  }
+
+  static Future<String> _encodeAgendaAchtergrond(
+    Map<String, List<AgendaItem>> data,
+  ) {
+    return compute(
+      _encodeAgendaWorker,
+      <String, List<AgendaItem>>{
+        for (final entry in data.entries)
+          entry.key: List<AgendaItem>.from(entry.value),
+      },
+    );
+  }
+
+  static Future<List<KlantenficheModel>> _decodeKlantenAchtergrond(
+    String? jsonString,
+  ) {
+    return compute(_decodeKlantenWorker, jsonString ?? '');
+  }
+
+  static Future<String> _encodeKlantenAchtergrond(
+    List<KlantenficheModel> fiches,
+  ) {
+    return compute(_encodeKlantenWorker, List<KlantenficheModel>.from(fiches));
+  }
+
+  static Future<List<OpmetingOverzichtRaamItem>>
+  _decodeOpmetingenAchtergrond(String? jsonString) {
+    return compute(_decodeOpmetingenWorker, jsonString ?? '');
+  }
+
+  static Future<String> _encodeOpmetingenAchtergrond(
+    List<OpmetingOverzichtRaamItem> opmetingen,
+  ) {
+    return compute(
+      _encodeOpmetingenWorker,
+      List<OpmetingOverzichtRaamItem>.from(opmetingen),
+    );
+  }
+
+  static Future<Map<String, List<AgendaItem>>> _mergeAgendaAchtergrond(
+    Map<String, List<AgendaItem>> lokaal,
+    Map<String, List<AgendaItem>> cloud,
+  ) {
+    return compute(
+      _mergeAgendaWorker,
+      <Map<String, List<AgendaItem>>>[lokaal, cloud],
+    );
+  }
+
+  static Future<List<KlantenficheModel>> _mergeKlantenAchtergrond(
+    List<KlantenficheModel> lokaal,
+    List<KlantenficheModel> cloud,
+  ) {
+    return compute(
+      _mergeKlantenWorker,
+      <List<KlantenficheModel>>[lokaal, cloud],
+    );
+  }
+
+  static Future<List<OpmetingOverzichtRaamItem>> _mergeOpmetingenAchtergrond(
+    List<OpmetingOverzichtRaamItem> lokaal,
+    List<OpmetingOverzichtRaamItem> cloud,
+  ) {
+    return compute(
+      _mergeOpmetingenWorker,
+      <List<OpmetingOverzichtRaamItem>>[lokaal, cloud],
+    );
+  }
+
+  /// Geeft Flutter tussen grotere syncfasen expliciet een framekans.
+  /// Dit is aanvullend op de worker-isolates en voorkomt lange aaneengesloten
+  /// reeksen kleine merges op de UI-isolate.
+  static Future<void> _geefUiTijd() => Future<void>.delayed(Duration.zero);
+
   static const String _backupDatumKey = 'laatste_backup_datum';
+  static const String _oneDriveBackupEtagKey =
+      'thimaco_onedrive_backup_etag_v1';
+
+  // Alleen lokaal op dit toestel. Deze sleutels worden bewust niet naar
+  // OneDrive gesynchroniseerd.
+  static const String _eersteVolledigeSyncGestartKey =
+      'thimaco_eerste_volledige_sync_gestart_v1';
+  static const String _eersteVolledigeSyncVoltooidKey =
+      'thimaco_eerste_volledige_sync_voltooid_v1';
 
   static const String _lokaleWijzigingOpenstaandKey =
       'lokale_wijziging_openstaand';
@@ -77,10 +282,6 @@ class OneDriveSyncService {
   static const String
   _offerteVasteInzethorStandaardPrijsinstellingenSyncMetaKey =
       'thimaco_offerte_vaste_inzethor_standaard_prijsinstellingen_sync_meta';
-
-  static const String _offerteVersiesKey = 'thimaco_offerte_versies';
-  static const String _offerteVersiesSyncMetaKey =
-      'thimaco_offerte_versies_sync_meta';
 
   static const String _notitiesKey = 'thimaco_notities';
   static const String _notitiesSyncMetaKey = 'thimaco_notities_sync_meta';
@@ -152,6 +353,24 @@ class OneDriveSyncService {
 
   static const String _magazijnDataKey = 'thimaco_magazijn_data';
 
+
+  // --------------------------------------------------------------------------
+  // LOCAL-FIRST MODULE-DELTA SYNC
+  // --------------------------------------------------------------------------
+  // Deze bestanden leven naast de bestaande thimaco_backup.json. Oude clients
+  // blijven daardoor compatibel. De volledige backup blijft het herstelvangnet;
+  // dagelijks werken synchroniseert alleen de operationele module die wijzigde.
+  static const List<String> _deltaModules = <String>[
+    'agenda',
+    'klanten',
+    'notities',
+    'opmetingen',
+    'magazijn',
+  ];
+
+  static const String _moduleHashPrefix = 'thimaco_sync_module_hash_v1_';
+  static const String _moduleEtagPrefix = 'thimaco_sync_module_etag_v1_';
+
   static bool _backupBezig = false;
   static bool _backupOpnieuwNodig = false;
   static bool _backupOpnieuwMetFotosNodig = false;
@@ -159,6 +378,8 @@ class OneDriveSyncService {
 
   static bool _downloadBezig = false;
   static bool _fotoDownloadBezig = false;
+
+  static Timer? _achtergrondUploadTimer;
 
   // Upload en download mogen nooit tegelijk dezelfde lokale/cloudgegevens
   // lezen, mergen en terugschrijven. Alle gewone OneDrive-syncbewerkingen
@@ -267,7 +488,7 @@ class OneDriveSyncService {
       );
 
       if (cloudResponse.statusCode == 200) {
-        cloudBackup = jsonDecode(cloudResponse.body) as Map<String, dynamic>;
+        cloudBackup = await _decodeJsonObjectAchtergrond(cloudResponse.body);
       } else if (cloudResponse.statusCode != 404) {
         laatsteSyncActie =
             'Upload gestopt: bestaande OneDrive-back-up kon niet veilig worden gelezen';
@@ -281,115 +502,48 @@ class OneDriveSyncService {
           ? cloudBackup['backupDatum'] as String
           : '';
 
-      Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <String, List<AgendaItem>>{};
-        }
-
-        final data = jsonDecode(jsonString) as Map<String, dynamic>;
-
-        return data.map((datumKey, lijst) {
-          final items = (lijst as List<dynamic>)
-              .map(
-                (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
-              )
-              .toList();
-
-          return MapEntry(datumKey, items);
-        });
-      }
-
-      String encodeAgenda(Map<String, List<AgendaItem>> data) {
-        final jsonMap = data.map((datumKey, items) {
-          return MapEntry(
-            datumKey,
-            items.map((item) => item.toJson()).toList(),
-          );
-        });
-
-        return jsonEncode(jsonMap);
-      }
-
-      List<KlantenficheModel> decodeKlanten(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <KlantenficheModel>[];
-        }
-
-        final lijst = jsonDecode(jsonString) as List<dynamic>;
-
-        return lijst
-            .map(
-              (item) =>
-                  KlantenficheModel.fromJson(Map<String, dynamic>.from(item)),
-            )
-            .toList();
-      }
-
-      String encodeKlanten(List<KlantenficheModel> fiches) {
-        return jsonEncode(fiches.map((fiche) => fiche.toJson()).toList());
-      }
-
-      List<OpmetingOverzichtRaamItem> decodeOpmetingen(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <OpmetingOverzichtRaamItem>[];
-        }
-
-        final lijst = jsonDecode(jsonString) as List<dynamic>;
-
-        return lijst
-            .whereType<Map>()
-            .map(
-              (item) => OpmetingOverzichtRaamItem.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList();
-      }
-
-      String encodeOpmetingen(List<OpmetingOverzichtRaamItem> opmetingen) {
-        return jsonEncode(
-          opmetingen.map((opmeting) => opmeting.toJson()).toList(),
-        );
-      }
-
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
-      final cloudAgenda = decodeAgenda(
+      final cloudAgenda = await _decodeAgendaAchtergrond(
         cloudBackup['agendaItems'] is String
             ? cloudBackup['agendaItems'] as String
             : null,
       );
 
-      final mergedAgenda = SyncMergeService.mergeAgendaMap(
+      final mergedAgenda = await _mergeAgendaAchtergrond(
         lokaleAgenda,
         cloudAgenda,
       );
 
-      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
+      final lokaleKlanten = await _decodeKlantenAchtergrond(
+        prefs.getString('klanten_fiches'),
+      );
 
-      final cloudKlanten = decodeKlanten(
+      final cloudKlanten = await _decodeKlantenAchtergrond(
         cloudBackup['klantenFiches'] is String
             ? cloudBackup['klantenFiches'] as String
             : null,
       );
 
-      final mergedKlanten = SyncMergeService.mergeKlantenFiches(
+      final mergedKlanten = await _mergeKlantenAchtergrond(
         lokaleKlanten,
         cloudKlanten,
       );
 
       final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
-      final cloudOpmetingen = decodeOpmetingen(
+      final cloudOpmetingen = await _decodeOpmetingenAchtergrond(
         cloudBackup['opmetingen'] is String
             ? cloudBackup['opmetingen'] as String
             : null,
       );
 
-      final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
+      final mergedOpmetingen = await _mergeOpmetingenAchtergrond(
         lokaleOpmetingen,
         cloudOpmetingen,
       );
+
+      await _geefUiTijd();
 
       final lokaleTitelhoofden =
           await AppStorage.laadOpmetingProjectTitelhoofdenVoorSync();
@@ -466,16 +620,6 @@ class OneDriveSyncService {
         lokaleMetadataKey: _opmetingProjectKleurenSyncMetaKey,
         cloudDataVeld: 'opmetingProjectKleuren',
         cloudMetadataVeld: 'opmetingProjectKleurenSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: cloudBackupDatum,
-      );
-      final mergedOfferteVersies = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: cloudBackup,
-        lokaleDataKey: _offerteVersiesKey,
-        lokaleMetadataKey: _offerteVersiesSyncMetaKey,
-        cloudDataVeld: 'offerteVersies',
-        cloudMetadataVeld: 'offerteVersiesSyncMeta',
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: cloudBackupDatum,
       );
@@ -796,9 +940,16 @@ class OneDriveSyncService {
             cloudFallbackDatum: cloudBackupDatum,
           );
 
+      await _geefUiTijd();
+
+      final agendaJson = await _encodeAgendaAchtergrond(mergedAgenda);
+      final klantenJson = await _encodeKlantenAchtergrond(mergedKlanten);
+      final opmetingenJson = await _encodeOpmetingenAchtergrond(mergedOpmetingen);
+      await _geefUiTijd();
+
       final backup = <String, dynamic>{
         'backupDatum': backupDatum,
-        'agendaItems': encodeAgenda(mergedAgenda),
+        'agendaItems': agendaJson,
         'dagtaakTemplates': AppStorage.encodeJsonMapLijstVoorSync(
           mergedDagtaakTemplates.records,
         ),
@@ -816,7 +967,7 @@ class OneDriveSyncService {
         'offerteMailTeksten': offerteMailTeksten.waarde,
         'offerteMailTekstenGewijzigdOp': offerteMailTeksten.gewijzigdOp,
         'offerteAlgemenePrijsregels': mergedOfferteAlgemenePrijsregels,
-        'klantenFiches': encodeKlanten(mergedKlanten),
+        'klantenFiches': klantenJson,
         'notities': AppStorage.encodeJsonMapLijstVoorSync(
           mergedNotities.records,
         ),
@@ -891,7 +1042,7 @@ class OneDriveSyncService {
         'opmetingSektionalePoortInstellingen':
             mergedSektionalePoortInstellingen,
         'opmetingVeluxDakraamInstellingen': mergedVeluxDakraamInstellingen,
-        'opmetingen': encodeOpmetingen(mergedOpmetingen),
+        'opmetingen': opmetingenJson,
         'magazijnData': mergedMagazijnData,
         'opmetingProjectTitelhoofden':
             AppStorage.encodeOpmetingProjectTitelhoofdenVoorSync(
@@ -904,12 +1055,6 @@ class OneDriveSyncService {
             SyncMergeService.encodeJsonRecordMetadata(
               mergedProjectKleuren.metadata,
             ),
-        'offerteVersies': AppStorage.encodeJsonMapLijstVoorSync(
-          mergedOfferteVersies.records,
-        ),
-        'offerteVersiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
-          mergedOfferteVersies.metadata,
-        ),
         'offertePrijsPerArtikelTemplates':
             AppStorage.encodeJsonMapLijstVoorSync(
               mergedOffertePrijsPerArtikelTemplates.records,
@@ -959,13 +1104,15 @@ class OneDriveSyncService {
             mergedDeurpaneelToewijzingen.gewijzigdOp,
       };
 
+      final backupJson = await _encodeJsonAchtergrond(backup);
+
       final response = await http.put(
         Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(backup),
+        body: backupJson,
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
@@ -1007,6 +1154,7 @@ class OneDriveSyncService {
       );
 
       await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
+      await _geefUiTijd();
 
       await prefs.setString(_magazijnDataKey, mergedMagazijnData);
       await _bewaarOptioneleString(
@@ -1072,12 +1220,6 @@ class OneDriveSyncService {
         dataKey: _opmetingProjectKleurenKey,
         metadataKey: _opmetingProjectKleurenSyncMetaKey,
         resultaat: mergedProjectKleuren,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _offerteVersiesKey,
-        metadataKey: _offerteVersiesSyncMetaKey,
-        resultaat: mergedOfferteVersies,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
@@ -1150,6 +1292,8 @@ class OneDriveSyncService {
         resultaat: mergedSchuifraamKeuzemenusAlu,
       );
 
+      await _geefUiTijd();
+
       await _bewaarOptioneleString(
         prefs: prefs,
         key: _deurpanelenBibliotheekKey,
@@ -1189,6 +1333,15 @@ class OneDriveSyncService {
       await prefs.setString(_backupDatumKey, backupDatum);
 
       await prefs.setBool(_lokaleWijzigingOpenstaandKey, false);
+
+      // Leg de cloudversie pas vast nadat de volledige lokale merge succesvol
+      // is weggeschreven. Zo kan een gedeeltelijk mislukte lokale opslag nooit
+      // ten onrechte als volledig gesynchroniseerd worden beschouwd.
+      await _bewaarOneDriveEtagNaUpload(
+        prefs: prefs,
+        token: token,
+        response: response,
+      );
 
       laatsteSyncActie = uploadFotos
           ? 'Merge upload met foto’s en deurpanelen uitgevoerd'
@@ -1552,15 +1705,33 @@ class OneDriveSyncService {
     );
   }
 
-  /// Automatische upload verzendt alleen de lichte
-  /// gegevensbackup. Foto's gebeuren bij een handmatige upload.
-  Future<void> uploadBackupOpAchtergrond() async {
-    try {
-      await uploadBackup(uploadFotos: false);
-    } catch (_) {
-      // Geen crash veroorzaken bij achtergrondsync.
-    }
+  /// Automatische upload verzendt alleen de lichte gegevensbackup.
+  ///
+  /// Gewone lokale opslagacties worden 15 seconden gebundeld. Daardoor zorgt
+  /// bijvoorbeeld het bewaren van meerdere agenda- of opmetingsvelden niet
+  /// meer voor meerdere zware merge-uploads vlak na elkaar.
+  ///
+  /// Met [direct] wordt de debounce overgeslagen, bijvoorbeeld wanneer de app
+  /// echt naar de achtergrond gaat of expliciet wordt afgesloten.
+  Future<void> uploadBackupOpAchtergrond({bool direct = false}) async {
+    /*
+     * LOCAL-FIRST COMPATIBILITEITSLAAG
+     *
+     * Oudere pagina's roepen deze methode nog rechtstreeks aan na een lokale
+     * wijziging. Vroeger startte dat na 15 seconden alsnog een volledige
+     * merge-upload. Dat is precies wat tijdens typen/opmeten voor haperingen kon
+     * zorgen.
+     *
+     * Vanaf nu start deze methode bewust GEEN netwerkverkeer meer. Ze markeert
+     * alleen dat er lokaal iets wijzigde. De echte sync gebeurt op Home via
+     * [syncModulesVoorHome], of als volledige veiligheidsbackup bij afsluiten.
+     * [direct] blijft alleen voor broncompatibiliteit bestaan.
+     */
+    _achtergrondUploadTimer?.cancel();
+    _achtergrondUploadTimer = null;
+    await registreerLokaleWijziging();
   }
+
 
   Future<String> downloadBackup({bool downloadFotos = true}) async {
     final token = await OneDriveAuthService().loginInteractief();
@@ -1622,94 +1793,46 @@ class OneDriveSyncService {
             '${response.body}';
       }
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final data = await _decodeJsonObjectAchtergrond(response.body);
 
       final prefs = await SharedPreferences.getInstance();
       final backupDatum = data['backupDatum'] is String
           ? data['backupDatum'] as String
           : DateTime.now().toIso8601String();
 
-      Map<String, List<AgendaItem>> decodeAgenda(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <String, List<AgendaItem>>{};
-        }
-
-        final data = jsonDecode(jsonString) as Map<String, dynamic>;
-
-        return data.map((datumKey, lijst) {
-          final items = (lijst as List<dynamic>)
-              .map(
-                (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
-              )
-              .toList();
-
-          return MapEntry(datumKey, items);
-        });
-      }
-
-      List<KlantenficheModel> decodeKlanten(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <KlantenficheModel>[];
-        }
-
-        final lijst = jsonDecode(jsonString) as List<dynamic>;
-
-        return lijst
-            .map(
-              (item) =>
-                  KlantenficheModel.fromJson(Map<String, dynamic>.from(item)),
-            )
-            .toList();
-      }
-
-      List<OpmetingOverzichtRaamItem> decodeOpmetingen(String? jsonString) {
-        if (jsonString == null || jsonString.isEmpty) {
-          return <OpmetingOverzichtRaamItem>[];
-        }
-
-        final lijst = jsonDecode(jsonString) as List<dynamic>;
-
-        return lijst
-            .whereType<Map>()
-            .map(
-              (item) => OpmetingOverzichtRaamItem.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .toList();
-      }
-
-      final cloudAgenda = decodeAgenda(
+      final cloudAgenda = await _decodeAgendaAchtergrond(
         data['agendaItems'] is String ? data['agendaItems'] as String : null,
       );
 
       final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
 
-      final mergedAgenda = SyncMergeService.mergeAgendaMap(
+      final mergedAgenda = await _mergeAgendaAchtergrond(
         lokaleAgenda,
         cloudAgenda,
       );
 
-      final cloudKlanten = decodeKlanten(
+      final cloudKlanten = await _decodeKlantenAchtergrond(
         data['klantenFiches'] is String
             ? data['klantenFiches'] as String
             : null,
       );
 
-      final lokaleKlanten = decodeKlanten(prefs.getString('klanten_fiches'));
+      final lokaleKlanten = await _decodeKlantenAchtergrond(
+        prefs.getString('klanten_fiches'),
+      );
 
-      final mergedKlanten = SyncMergeService.mergeKlantenFiches(
+      final mergedKlanten = await _mergeKlantenAchtergrond(
         lokaleKlanten,
         cloudKlanten,
       );
 
-      final cloudOpmetingen = decodeOpmetingen(
+      final cloudOpmetingen = await _decodeOpmetingenAchtergrond(
         data['opmetingen'] is String ? data['opmetingen'] as String : null,
       );
 
       final lokaleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
 
-      final mergedOpmetingen = SyncMergeService.mergeOpmetingen(
+      final mergedOpmetingen = await _mergeOpmetingenAchtergrond(
         lokaleOpmetingen,
         cloudOpmetingen,
       );
@@ -1891,16 +2014,6 @@ class OneDriveSyncService {
         lokaleMetadataKey: _opmetingProjectKleurenSyncMetaKey,
         cloudDataVeld: 'opmetingProjectKleuren',
         cloudMetadataVeld: 'opmetingProjectKleurenSyncMeta',
-        lokaleFallbackDatum: lokaleCollectieFallbackDatum,
-        cloudFallbackDatum: backupDatum,
-      );
-      final mergedOfferteVersies = _mergeJsonLijstCollectie(
-        prefs: prefs,
-        cloudData: data,
-        lokaleDataKey: _offerteVersiesKey,
-        lokaleMetadataKey: _offerteVersiesSyncMetaKey,
-        cloudDataVeld: 'offerteVersies',
-        cloudMetadataVeld: 'offerteVersiesSyncMeta',
         lokaleFallbackDatum: lokaleCollectieFallbackDatum,
         cloudFallbackDatum: backupDatum,
       );
@@ -2107,6 +2220,8 @@ class OneDriveSyncService {
             cloudFallbackDatum: backupDatum,
           );
 
+      await _geefUiTijd();
+
       await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
 
       await _bewaarOptioneleString(
@@ -2140,6 +2255,7 @@ class OneDriveSyncService {
       );
 
       await AppStorage.bewaarOpmetingenVoorSync(mergedOpmetingen);
+      await _geefUiTijd();
       await prefs.setString(_magazijnDataKey, mergedMagazijnData);
       await _bewaarOptioneleString(
         prefs: prefs,
@@ -2203,12 +2319,6 @@ class OneDriveSyncService {
         dataKey: _opmetingProjectKleurenKey,
         metadataKey: _opmetingProjectKleurenSyncMetaKey,
         resultaat: mergedProjectKleuren,
-      );
-      await _bewaarJsonLijstCollectie(
-        prefs: prefs,
-        dataKey: _offerteVersiesKey,
-        metadataKey: _offerteVersiesSyncMetaKey,
-        resultaat: mergedOfferteVersies,
       );
       await _bewaarJsonLijstCollectie(
         prefs: prefs,
@@ -2336,6 +2446,8 @@ class OneDriveSyncService {
         await prefs.setString(_backupDatumKey, data['backupDatum']);
       }
 
+      await _verversOneDriveEtagMetToken(prefs: prefs, token: token);
+
       String fotoResultaat = 'FOTOS_OVERGESLAGEN';
 
       if (downloadFotos) {
@@ -2357,27 +2469,661 @@ class OneDriveSyncService {
     }
   }
 
-  Future<String> eersteStartSync() async {
-    final lokaal = await lokaleBackupDatum();
 
-    if (lokaal != null) {
-      return slimmeSync();
+  String _moduleBestandsnaam(String module) {
+    return 'thimaco_sync_${module.trim().toLowerCase()}.json';
+  }
+
+  String _moduleHashKey(String module) => '$_moduleHashPrefix$module';
+
+  String _moduleEtagKey(String module) => '$_moduleEtagPrefix$module';
+
+  String _stabieleHash(String tekst) {
+    // FNV-1a 64-bit: klein, deterministisch en voldoende als wijzigingsvingerafdruk.
+    var hash = 0xcbf29ce484222325;
+    const prime = 0x100000001b3;
+    const mask = 0xffffffffffffffff;
+
+    for (final codeUnit in tekst.codeUnits) {
+      hash ^= codeUnit;
+      hash = (hash * prime) & mask;
     }
 
-    // Ook bij de eerste automatische synchronisatie uitsluitend silent.
-    // Alleen een expliciete handmatige Microsoft-aanmelding mag
-    // loginInteractief() gebruiken.
+    return hash.toRadixString(16).padLeft(16, '0');
+  }
+
+  String _moduleBronString({
+    required String module,
+    required SharedPreferences prefs,
+  }) {
+    String waarde(String key) => prefs.getString(key) ?? '';
+
+    switch (module) {
+      case 'agenda':
+        return <String>[
+          waarde('agenda_items_nieuw'),
+          waarde(_dagtaakTemplatesKey),
+          waarde(_dagtaakTemplatesSyncMetaKey),
+        ].join('\u001f');
+      case 'klanten':
+        return waarde('klanten_fiches');
+      case 'notities':
+        return <String>[
+          waarde(_notitiesKey),
+          waarde(_notitiesSyncMetaKey),
+          waarde(_notitieActiesKey),
+          waarde(_notitieActiesSyncMetaKey),
+        ].join('\u001f');
+      case 'opmetingen':
+        return <String>[
+          waarde('thimaco_opmetingen'),
+          waarde('thimaco_opmeting_project_titelhoofden'),
+        ].join('\u001f');
+      case 'magazijn':
+        return waarde(_magazijnDataKey);
+      default:
+        return '';
+    }
+  }
+
+  String _lokaleModuleHash({
+    required String module,
+    required SharedPreferences prefs,
+  }) {
+    return _stabieleHash(_moduleBronString(module: module, prefs: prefs));
+  }
+
+  Future<_OneDriveModuleInfo> _moduleInfoMetToken({
+    required String token,
+    required String module,
+  }) async {
+    final bestand = Uri.encodeComponent(_moduleBestandsnaam(module));
+    final url =
+        'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$bestand?%24select=eTag,lastModifiedDateTime,size';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 404) {
+        return const _OneDriveModuleInfo(
+          gevonden: false,
+          fout: false,
+          etag: '',
+        );
+      }
+
+      if (response.statusCode != 200) {
+        return _OneDriveModuleInfo(
+          gevonden: false,
+          fout: true,
+          etag: '',
+          foutmelding: 'MODULE_INFO_${response.statusCode}',
+        );
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        return const _OneDriveModuleInfo(
+          gevonden: false,
+          fout: true,
+          etag: '',
+          foutmelding: 'MODULE_INFO_ONGELDIG',
+        );
+      }
+
+      return _OneDriveModuleInfo(
+        gevonden: true,
+        fout: false,
+        etag: decoded['eTag']?.toString().trim() ?? '',
+      );
+    } catch (e) {
+      return _OneDriveModuleInfo(
+        gevonden: false,
+        fout: true,
+        etag: '',
+        foutmelding: 'MODULE_INFO_EXCEPTION: $e',
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> _downloadModuleData({
+    required String token,
+    required String module,
+  }) async {
+    final bestand = Uri.encodeComponent(_moduleBestandsnaam(module));
+    final url =
+        'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$bestand:/content';
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 404) {
+      return <String, dynamic>{};
+    }
+
+    if (response.statusCode != 200) {
+      throw StateError(
+        'MODULE_DOWNLOAD_${module}_${response.statusCode}: ${response.body}',
+      );
+    }
+
+    return _decodeJsonObjectAchtergrond(response.body);
+  }
+
+  Future<String> _uploadModuleData({
+    required String token,
+    required String module,
+    required Map<String, dynamic> data,
+  }) async {
+    final bestand = Uri.encodeComponent(_moduleBestandsnaam(module));
+    final url =
+        'https://graph.microsoft.com/v1.0/me/drive/special/approot:/$bestand:/content';
+
+    final inhoud = await _encodeJsonAchtergrond(data);
+    final response = await http.put(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: inhoud,
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw StateError(
+        'MODULE_UPLOAD_${module}_${response.statusCode}: ${response.body}',
+      );
+    }
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        return decoded['eTag']?.toString().trim() ?? '';
+      }
+    } catch (_) {
+      // Als Graph geen DriveItem-body teruggeeft halen we de ETag nadien op.
+    }
+
+    return '';
+  }
+
+  Future<_ModuleSyncUitkomst> _syncEenModule({
+    required String token,
+    required SharedPreferences prefs,
+    required String module,
+  }) async {
+    final huidigeHash = _lokaleModuleHash(module: module, prefs: prefs);
+    final bewaardeHash = prefs.getString(_moduleHashKey(module)) ?? '';
+    final lokaalGewijzigd =
+        bewaardeHash.isEmpty || bewaardeHash != huidigeHash;
+
+    final remoteInfo = await _moduleInfoMetToken(token: token, module: module);
+    if (remoteInfo.fout) {
+      return _ModuleSyncUitkomst(
+        gelukt: false,
+        remoteToegepast: false,
+        melding: remoteInfo.foutmelding,
+      );
+    }
+
+    final bewaardeEtag = prefs.getString(_moduleEtagKey(module)) ?? '';
+    final remoteGewijzigd = remoteInfo.gevonden &&
+        (bewaardeEtag.isEmpty || remoteInfo.etag != bewaardeEtag);
+
+    if (!lokaalGewijzigd && !remoteGewijzigd && remoteInfo.gevonden) {
+      return const _ModuleSyncUitkomst(
+        gelukt: true,
+        remoteToegepast: false,
+        melding: 'ongewijzigd',
+      );
+    }
+
+    Map<String, dynamic> cloudData = <String, dynamic>{};
+    if (remoteInfo.gevonden && (lokaalGewijzigd || remoteGewijzigd)) {
+      cloudData = await _downloadModuleData(token: token, module: module);
+    }
+
+    final remoteToegepast = remoteInfo.gevonden && remoteGewijzigd;
+    final nu = DateTime.now().toUtc().toIso8601String();
+    late final Map<String, dynamic> mergedData;
+
+    switch (module) {
+      case 'agenda':
+        mergedData = await _mergeAgendaModule(
+          prefs: prefs,
+          cloudData: cloudData,
+          moduleDatum: nu,
+        );
+        break;
+      case 'klanten':
+        mergedData = await _mergeKlantenModule(
+          prefs: prefs,
+          cloudData: cloudData,
+          moduleDatum: nu,
+        );
+        break;
+      case 'notities':
+        mergedData = await _mergeNotitiesModule(
+          prefs: prefs,
+          cloudData: cloudData,
+          moduleDatum: nu,
+        );
+        break;
+      case 'opmetingen':
+        mergedData = await _mergeOpmetingenModule(
+          cloudData: cloudData,
+          moduleDatum: nu,
+        );
+        break;
+      case 'magazijn':
+        mergedData = await _mergeMagazijnModule(
+          prefs: prefs,
+          cloudData: cloudData,
+          moduleDatum: nu,
+          lokaalWintBijConflict: lokaalGewijzigd,
+        );
+        break;
+      default:
+        return const _ModuleSyncUitkomst(
+          gelukt: true,
+          remoteToegepast: false,
+          melding: 'module overgeslagen',
+        );
+    }
+
+    String nieuweEtag = remoteInfo.etag;
+
+    // Alleen wanneer lokaal iets veranderde of het modulebestand nog niet
+    // bestaat, schrijven we naar OneDrive. Een puur remote wijziging wordt
+    // alleen lokaal toegepast.
+    if (lokaalGewijzigd || !remoteInfo.gevonden) {
+      nieuweEtag = await _uploadModuleData(
+        token: token,
+        module: module,
+        data: mergedData,
+      );
+
+      if (nieuweEtag.isEmpty) {
+        final naUpload = await _moduleInfoMetToken(token: token, module: module);
+        if (!naUpload.fout && naUpload.gevonden) {
+          nieuweEtag = naUpload.etag;
+        }
+      }
+    }
+
+    final nieuweHash = _lokaleModuleHash(module: module, prefs: prefs);
+    await prefs.setString(_moduleHashKey(module), nieuweHash);
+
+    if (nieuweEtag.isNotEmpty) {
+      await prefs.setString(_moduleEtagKey(module), nieuweEtag);
+    }
+
+    return _ModuleSyncUitkomst(
+      gelukt: true,
+      remoteToegepast: remoteToegepast,
+      melding: lokaalGewijzigd
+          ? 'lokale wijziging gesynchroniseerd'
+          : 'remote wijziging toegepast',
+    );
+  }
+
+  Future<Map<String, dynamic>> _mergeAgendaModule({
+    required SharedPreferences prefs,
+    required Map<String, dynamic> cloudData,
+    required String moduleDatum,
+  }) async {
+    final lokaleAgenda = await AppStorage.laadAgendaItemsNieuwVoorSync();
+    final cloudAgenda = await _decodeAgendaAchtergrond(
+      cloudData['agendaItems'] is String
+          ? cloudData['agendaItems'] as String
+          : null,
+    );
+    final mergedAgenda = await _mergeAgendaAchtergrond(
+      lokaleAgenda,
+      cloudAgenda,
+    );
+    await AppStorage.bewaarAgendaItemsNieuwVoorSync(mergedAgenda);
+
+    final cloudDatum = cloudData['moduleDatum']?.toString() ?? moduleDatum;
+    final lokaleFallback = prefs.getString(_backupDatumKey) ?? moduleDatum;
+    final mergedTemplates = _mergeJsonLijstCollectie(
+      prefs: prefs,
+      cloudData: cloudData,
+      lokaleDataKey: _dagtaakTemplatesKey,
+      lokaleMetadataKey: _dagtaakTemplatesSyncMetaKey,
+      cloudDataVeld: 'dagtaakTemplates',
+      cloudMetadataVeld: 'dagtaakTemplatesSyncMeta',
+      lokaleFallbackDatum: lokaleFallback,
+      cloudFallbackDatum: cloudDatum,
+    );
+    await _bewaarJsonLijstCollectie(
+      prefs: prefs,
+      dataKey: _dagtaakTemplatesKey,
+      metadataKey: _dagtaakTemplatesSyncMetaKey,
+      resultaat: mergedTemplates,
+    );
+
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'agenda',
+      'moduleDatum': moduleDatum,
+      'agendaItems': await _encodeAgendaAchtergrond(mergedAgenda),
+      'dagtaakTemplates': AppStorage.encodeJsonMapLijstVoorSync(
+        mergedTemplates.records,
+      ),
+      'dagtaakTemplatesSyncMeta':
+          SyncMergeService.encodeJsonRecordMetadata(mergedTemplates.metadata),
+    };
+  }
+
+  Future<Map<String, dynamic>> _mergeKlantenModule({
+    required SharedPreferences prefs,
+    required Map<String, dynamic> cloudData,
+    required String moduleDatum,
+  }) async {
+    final lokaal = await _decodeKlantenAchtergrond(
+      prefs.getString('klanten_fiches'),
+    );
+    final cloud = await _decodeKlantenAchtergrond(
+      cloudData['klantenFiches'] is String
+          ? cloudData['klantenFiches'] as String
+          : null,
+    );
+    final merged = await _mergeKlantenAchtergrond(lokaal, cloud);
+
+    await AppStorage.bewaarKlantenFichesVoorSync(
+      merged.map((fiche) => fiche.toJson()).toList(growable: false),
+    );
+
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'klanten',
+      'moduleDatum': moduleDatum,
+      'klantenFiches': await _encodeKlantenAchtergrond(merged),
+    };
+  }
+
+  Future<Map<String, dynamic>> _mergeNotitiesModule({
+    required SharedPreferences prefs,
+    required Map<String, dynamic> cloudData,
+    required String moduleDatum,
+  }) async {
+    final cloudDatum = cloudData['moduleDatum']?.toString() ?? moduleDatum;
+    final lokaleFallback = prefs.getString(_backupDatumKey) ?? moduleDatum;
+
+    final mergedNotities = _mergeJsonLijstCollectie(
+      prefs: prefs,
+      cloudData: cloudData,
+      lokaleDataKey: _notitiesKey,
+      lokaleMetadataKey: _notitiesSyncMetaKey,
+      cloudDataVeld: 'notities',
+      cloudMetadataVeld: 'notitiesSyncMeta',
+      lokaleFallbackDatum: lokaleFallback,
+      cloudFallbackDatum: cloudDatum,
+    );
+
+    final mergedActies = _mergeJsonLijstCollectie(
+      prefs: prefs,
+      cloudData: cloudData,
+      lokaleDataKey: _notitieActiesKey,
+      lokaleMetadataKey: _notitieActiesSyncMetaKey,
+      cloudDataVeld: 'notitieActies',
+      cloudMetadataVeld: 'notitieActiesSyncMeta',
+      lokaleFallbackDatum: lokaleFallback,
+      cloudFallbackDatum: cloudDatum,
+    );
+
+    await _bewaarJsonLijstCollectie(
+      prefs: prefs,
+      dataKey: _notitiesKey,
+      metadataKey: _notitiesSyncMetaKey,
+      resultaat: mergedNotities,
+    );
+    await _bewaarJsonLijstCollectie(
+      prefs: prefs,
+      dataKey: _notitieActiesKey,
+      metadataKey: _notitieActiesSyncMetaKey,
+      resultaat: mergedActies,
+    );
+
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'notities',
+      'moduleDatum': moduleDatum,
+      'notities': AppStorage.encodeJsonMapLijstVoorSync(mergedNotities.records),
+      'notitiesSyncMeta':
+          SyncMergeService.encodeJsonRecordMetadata(mergedNotities.metadata),
+      'notitieActies':
+          AppStorage.encodeJsonMapLijstVoorSync(mergedActies.records),
+      'notitieActiesSyncMeta':
+          SyncMergeService.encodeJsonRecordMetadata(mergedActies.metadata),
+    };
+  }
+
+  Future<Map<String, dynamic>> _mergeOpmetingenModule({
+    required Map<String, dynamic> cloudData,
+    required String moduleDatum,
+  }) async {
+    final lokaal = await AppStorage.laadOpmetingenVoorSync();
+    final cloud = await _decodeOpmetingenAchtergrond(
+      cloudData['opmetingen'] is String
+          ? cloudData['opmetingen'] as String
+          : null,
+    );
+    final merged = await _mergeOpmetingenAchtergrond(lokaal, cloud);
+    await AppStorage.bewaarOpmetingenVoorSync(merged);
+
+    final lokaleTitelhoofden =
+        await AppStorage.laadOpmetingProjectTitelhoofdenVoorSync();
+    final cloudTitelhoofden =
+        AppStorage.decodeOpmetingProjectTitelhoofdenVoorSync(
+          cloudData['opmetingProjectTitelhoofden'] is String
+              ? cloudData['opmetingProjectTitelhoofden'] as String
+              : null,
+        );
+    final mergedTitelhoofden = SyncMergeService.mergeProjectTitelhoofden(
+      lokaleTitelhoofden,
+      cloudTitelhoofden,
+    );
+    await AppStorage.bewaarOpmetingProjectTitelhoofdenVoorSync(
+      mergedTitelhoofden,
+    );
+
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'opmetingen',
+      'moduleDatum': moduleDatum,
+      'opmetingen': await _encodeOpmetingenAchtergrond(merged),
+      'opmetingProjectTitelhoofden':
+          AppStorage.encodeOpmetingProjectTitelhoofdenVoorSync(
+            mergedTitelhoofden,
+          ),
+    };
+  }
+
+  Future<Map<String, dynamic>> _mergeMagazijnModule({
+    required SharedPreferences prefs,
+    required Map<String, dynamic> cloudData,
+    required String moduleDatum,
+    required bool lokaalWintBijConflict,
+  }) async {
+    final merged = _mergeMagazijnJson(
+      lokaalJson: prefs.getString(_magazijnDataKey),
+      cloudJson: cloudData['magazijnData'] is String
+          ? cloudData['magazijnData'] as String
+          : null,
+      lokaalWintBijConflict: lokaalWintBijConflict,
+    );
+
+    await prefs.setString(_magazijnDataKey, merged);
+
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'magazijn',
+      'moduleDatum': moduleDatum,
+      'magazijnData': merged,
+    };
+  }
+
+  Future<bool> _pasLegacyBackupToeIndienGewijzigd({
+    required String token,
+    required SharedPreferences prefs,
+  }) async {
+    final remoteInfo = await _oneDriveBackupInfoMetToken(token);
+    if (remoteInfo == null) {
+      return false;
+    }
+
+    final remoteEtag = remoteInfo.etag.trim();
+    final lokaleEtag = prefs.getString(_oneDriveBackupEtagKey)?.trim() ?? '';
+
+    if (remoteEtag.isNotEmpty &&
+        lokaleEtag.isNotEmpty &&
+        remoteEtag == lokaleEtag) {
+      return false;
+    }
+
+    final resultaat = await _downloadBackupMetTokenZonderVergrendeling(
+      token,
+      downloadFotos: false,
+    );
+
+    return resultaat.startsWith('IMPORT_OK');
+  }
+
+  /// Synchroniseert alleen de operationele modules die lokaal of in OneDrive
+  /// veranderd zijn. Dit is de standaard sync op Home.
+  ///
+  /// De bestaande volledige thimaco_backup.json blijft bestaan voor:
+  /// - oude clients tijdens de overgang;
+  /// - eerste installatie / herstel;
+  /// - handmatige volledige upload;
+  /// - expliciet afsluiten via Home.
+  Future<String> syncModulesVoorHome() {
+    return _voerSyncGeserialiseerdUit(() async {
+      final token = await OneDriveAuthService().tokenSilent();
+      if (token.startsWith('FOUT')) {
+        laatsteSyncActie = 'Module-sync overgeslagen: geen silent token';
+        return 'SYNC_GEEN_ONEDRIVE_LOGIN';
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      var remoteToegepast = false;
+      final fouten = <String>[];
+
+      // Overgangsbeveiliging: zolang een oudere iPad/pc nog alleen de volledige
+      // backup schrijft, halen we die uitsluitend binnen wanneer de ETag echt
+      // veranderd is. Daarna worden de operationele modules weer bijgewerkt.
+      try {
+        remoteToegepast = await _pasLegacyBackupToeIndienGewijzigd(
+          token: token,
+          prefs: prefs,
+        );
+      } catch (e) {
+        fouten.add('legacy: $e');
+      }
+
+      for (final module in _deltaModules) {
+        try {
+          final uitkomst = await _syncEenModule(
+            token: token,
+            prefs: prefs,
+            module: module,
+          );
+
+          if (!uitkomst.gelukt) {
+            fouten.add('$module: ${uitkomst.melding}');
+          }
+
+          remoteToegepast =
+              remoteToegepast || uitkomst.remoteToegepast;
+
+          // Tussen modules krijgt Flutter steeds een framekans.
+          await _geefUiTijd();
+        } catch (e) {
+          fouten.add('$module: $e');
+        }
+      }
+
+      if (fouten.isNotEmpty) {
+        laatsteSyncActie =
+            'Module-sync gedeeltelijk gelukt: ${fouten.join(' | ')}';
+        return remoteToegepast
+            ? 'IMPORT_OK_MODULES_MET_WAARSCHUWING'
+            : 'SYNC_MODULES_MET_WAARSCHUWING';
+      }
+
+      laatsteSyncActie = remoteToegepast
+          ? 'Module-sync uitgevoerd; remote wijzigingen lokaal toegepast'
+          : 'Module-sync uitgevoerd; alleen gewijzigde modules verwerkt';
+
+      return remoteToegepast ? 'IMPORT_OK_MODULES' : 'SYNC_MODULES_OK';
+    });
+  }
+
+  Future<String> eersteStartSync() async {
+    final prefs = await SharedPreferences.getInstance();
+    final eersteVolledigeSyncVoltooid =
+        prefs.getBool(_eersteVolledigeSyncVoltooidKey) ?? false;
+
+    if (eersteVolledigeSyncVoltooid) {
+      return syncModulesVoorHome();
+    }
+
+    final eersteVolledigeSyncGestart =
+        prefs.getBool(_eersteVolledigeSyncGestartKey) ?? false;
+    final lokaal = await lokaleBackupDatum();
+
+    // Migratie voor bestaande installaties, zoals de huidige iPad:
+    // wanneer er al een lokale backupdatum bestaat en deze nieuwe
+    // initialisatieprocedure nog nooit gestart is, beschouwen we het toestel
+    // als bestaand. Zo dwingen we geen volledige cloud-download af op een
+    // toestel waarop de gegevens al correct staan.
+    if (lokaal != null && !eersteVolledigeSyncGestart) {
+      await prefs.setBool(_eersteVolledigeSyncVoltooidKey, true);
+      laatsteSyncActie =
+          'Bestaand toestel herkend; module-synchronisatie actief';
+      return syncModulesVoorHome();
+    }
+
+    // Vanaf dit punt is dit een echt nieuw toestel, of een eerdere volledige
+    // eerste synchronisatie die nog niet helemaal gelukt is.
+    await prefs.setBool(_eersteVolledigeSyncGestartKey, true);
+
+    // Automatisch wordt nooit een Microsoft-aanmeldvenster geopend.
+    // Zonder stille token blijft de initialisatie openstaan en proberen we
+    // bij een volgende sync opnieuw.
     final token = await OneDriveAuthService().tokenSilent();
 
     if (token.startsWith('FOUT')) {
       laatsteSyncActie =
-          'Eerste synchronisatie overgeslagen: geen stille Microsoft-token';
+          'Eerste volledige synchronisatie wacht op Microsoft-aanmelding';
       return 'SYNC_GEEN_ONEDRIVE_LOGIN';
     }
 
     final resultaat = await downloadBackupMetToken(token, downloadFotos: true);
 
-    laatsteSyncActie = 'Eerste start sync uitgevoerd: $resultaat';
+    if (resultaat == 'IMPORT_OK') {
+      await prefs.setBool(_eersteVolledigeSyncVoltooidKey, true);
+      laatsteSyncActie = 'Eerste volledige synchronisatie uitgevoerd';
+
+      // Een nieuw toestel haalt daarna ook meteen de nieuwere modulebestanden
+      // binnen. Zo blijft de migratie veilig wanneer andere toestellen al met
+      // module-delta-sync werken terwijl de volledige backup iets ouder is.
+      await syncModulesVoorHome();
+    } else {
+      // Bij een tijdelijke fout, bijvoorbeeld tijdens de fotodownload, blijft
+      // "gestart" waar en "voltooid" onwaar. Daardoor wordt de volledige
+      // initialisatie later opnieuw geprobeerd, ook als de backupdatum tijdens
+      // de gegevensdownload al lokaal werd bijgewerkt.
+      laatsteSyncActie =
+          'Eerste volledige synchronisatie nog niet voltooid: $resultaat';
+    }
 
     return resultaat;
   }
@@ -2542,6 +3288,82 @@ class OneDriveSyncService {
     return prefs.getString(_backupDatumKey);
   }
 
+  Future<_OneDriveBackupInfo?> _oneDriveBackupInfoMetToken(
+    String token,
+  ) async {
+    if (token.startsWith('FOUT')) {
+      return null;
+    }
+
+    const url =
+        'https://graph.microsoft.com/v1.0/me/drive/special/approot:/thimaco_backup.json?%24select=eTag,lastModifiedDateTime,size';
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      return null;
+    }
+
+    final data = Map<String, dynamic>.from(decoded);
+    final etag = data['eTag']?.toString().trim() ?? '';
+    final gewijzigdOp = DateTime.tryParse(
+      data['lastModifiedDateTime']?.toString() ?? '',
+    );
+
+    return _OneDriveBackupInfo(
+      etag: etag,
+      gewijzigdOp: gewijzigdOp,
+    );
+  }
+
+  Future<void> _bewaarOneDriveEtagNaUpload({
+    required SharedPreferences prefs,
+    required String token,
+    required http.Response response,
+  }) async {
+    String etag = '';
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        etag = decoded['eTag']?.toString().trim() ?? '';
+      }
+    } catch (_) {
+      // Sommige Graph-antwoorden bevatten geen bruikbare DriveItem-body.
+    }
+
+    if (etag.isNotEmpty) {
+      await prefs.setString(_oneDriveBackupEtagKey, etag);
+      return;
+    }
+
+    await _verversOneDriveEtagMetToken(prefs: prefs, token: token);
+  }
+
+  Future<void> _verversOneDriveEtagMetToken({
+    required SharedPreferences prefs,
+    required String token,
+  }) async {
+    try {
+      final info = await _oneDriveBackupInfoMetToken(token);
+      final etag = info?.etag.trim() ?? '';
+
+      if (etag.isNotEmpty) {
+        await prefs.setString(_oneDriveBackupEtagKey, etag);
+      }
+    } catch (_) {
+      // ETag is een optimalisatie. Een fout mag de echte sync nooit blokkeren.
+    }
+  }
+
   Future<String?> oneDriveBackupDatum({bool magLoginVragen = false}) async {
     try {
       // Automatische synchronisatie mag nooit zelf een interactief
@@ -2585,6 +3407,11 @@ class OneDriveSyncService {
     final oneDrive = await oneDriveBackupDatum();
 
     final openstaand = prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
+    final lokaleEtag = prefs.getString(_oneDriveBackupEtagKey) ?? '-';
+    final eersteVolledigeSyncGestart =
+        prefs.getBool(_eersteVolledigeSyncGestartKey) ?? false;
+    final eersteVolledigeSyncVoltooid =
+        prefs.getBool(_eersteVolledigeSyncVoltooidKey) ?? false;
 
     return '''
 LOKAAL:
@@ -2595,6 +3422,15 @@ $oneDrive
 
 LOKALE WIJZIGING OPENSTAAND:
 $openstaand
+
+LOKALE ONEDRIVE ETAG:
+$lokaleEtag
+
+EERSTE VOLLEDIGE SYNC GESTART:
+$eersteVolledigeSyncGestart
+
+EERSTE VOLLEDIGE SYNC VOLTOOID:
+$eersteVolledigeSyncVoltooid
 
 BACKUP BEZIG:
 $_backupBezig
@@ -2611,92 +3447,11 @@ $laatsteSyncActie
   }
 
   Future<String> slimmeSync({bool magLoginVragen = false}) async {
-    final prefs = await SharedPreferences.getInstance();
-
-    if (_backupBezig) {
-      _backupOpnieuwNodig = true;
-
-      laatsteSyncActie = 'Upload bezig, geen download uitgevoerd';
-
-      return 'SYNC_UPLOAD_BEZIG';
-    }
-
-    final lokaleWijzigingOpenstaand =
-        prefs.getBool(_lokaleWijzigingOpenstaandKey) ?? false;
-
-    final lokaleDatumString = await lokaleBackupDatum();
-
-    final oneDriveDatumString = await oneDriveBackupDatum(
-      magLoginVragen: magLoginVragen,
-    );
-
-    if (oneDriveDatumString == null) {
-      laatsteSyncActie = 'Geen OneDrive backup gevonden of geen login';
-
-      if (lokaleWijzigingOpenstaand) {
-        laatsteSyncActie =
-            'Lokale wijziging openstaand, eerste snelle upload uitgevoerd';
-
-        return uploadBackup(uploadFotos: false);
-      }
-
-      return 'SYNC_GEEN_ONEDRIVE_LOGIN';
-    }
-
-    if (lokaleWijzigingOpenstaand) {
-      laatsteSyncActie =
-          'Lokale wijziging openstaand, snelle upload uitgevoerd';
-
-      return uploadBackup(uploadFotos: false);
-    }
-
-    if (lokaleDatumString == null) {
-      laatsteSyncActie = 'Geen lokale datum, snelle download uitgevoerd';
-
-      final token = await OneDriveAuthService().tokenSilent();
-
-      if (token.startsWith('FOUT')) {
-        laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
-
-        return token;
-      }
-
-      return downloadBackupMetToken(token, downloadFotos: false);
-    }
-
-    final lokaleDatum = DateTime.tryParse(lokaleDatumString);
-
-    final oneDriveDatum = DateTime.tryParse(oneDriveDatumString);
-
-    if (lokaleDatum == null || oneDriveDatum == null) {
-      laatsteSyncActie = 'Datumfout, geen sync uitgevoerd';
-
-      return 'SYNC_DATUM_FOUT';
-    }
-
-    if (oneDriveDatum.isAfter(lokaleDatum)) {
-      laatsteSyncActie = 'OneDrive nieuwer, snelle download uitgevoerd';
-
-      final token = await OneDriveAuthService().tokenSilent();
-
-      if (token.startsWith('FOUT')) {
-        laatsteSyncActie = 'Download niet uitgevoerd: geen silent token';
-
-        return token;
-      }
-
-      return downloadBackupMetToken(token, downloadFotos: false);
-    }
-
-    if (lokaleDatum.isAfter(oneDriveDatum)) {
-      laatsteSyncActie = 'Lokaal nieuwer, snelle upload uitgevoerd';
-
-      return uploadBackup(uploadFotos: false);
-    }
-
-    laatsteSyncActie = 'Geen wijziging, niets uitgevoerd';
-
-    return 'SYNC_OK_GEEN_WIJZIGING';
+    // Broncompatibiliteit voor bestaande knoppen/aanroepen.
+    // De normale slimme sync is vanaf nu dezelfde local-first module-sync die
+    // Home gebruikt. [magLoginVragen] blijft bewust genegeerd: automatische
+    // synchronisatie opent nooit zelf een Microsoft-loginvenster.
+    return syncModulesVoorHome();
   }
 
   _SyncStringWaarde _kiesRecenteStringWaarde({
@@ -2915,9 +3670,42 @@ $laatsteSyncActie
   }
 }
 
+class _OneDriveModuleInfo {
+  const _OneDriveModuleInfo({
+    required this.gevonden,
+    required this.fout,
+    required this.etag,
+    this.foutmelding = '',
+  });
+
+  final bool gevonden;
+  final bool fout;
+  final String etag;
+  final String foutmelding;
+}
+
+class _ModuleSyncUitkomst {
+  const _ModuleSyncUitkomst({
+    required this.gelukt,
+    required this.remoteToegepast,
+    required this.melding,
+  });
+
+  final bool gelukt;
+  final bool remoteToegepast;
+  final String melding;
+}
+
 class _SyncStringWaarde {
   const _SyncStringWaarde(this.waarde, this.gewijzigdOp);
 
   final String? waarde;
   final String? gewijzigdOp;
+}
+
+class _OneDriveBackupInfo {
+  const _OneDriveBackupInfo({required this.etag, required this.gewijzigdOp});
+
+  final String etag;
+  final DateTime? gewijzigdOp;
 }

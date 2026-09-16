@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
 import 'opmeting_vaste_inzethor_model.dart';
 import 'opmeting_vaste_inzethor_painter.dart';
 
@@ -23,41 +24,55 @@ class OpmetingVasteInzethorTekenvlak extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFFCFCFD),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+        children: <Widget>[
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
-              color: Color(0xFFF8FAF9),
-              border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
-            ),
-            child: RichText(
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: '$maatTitel ',
-                    style: const TextStyle(
-                      color: Color(0xFF0B7A3B),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  TextSpan(
-                    text: model.maatSamenvatting,
-                    style: const TextStyle(
-                      color: Color(0xFF111827),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(color: ThimacoKleuren.rand),
               ),
+            ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.straighten_rounded,
+                  size: 16,
+                  color: ThimacoKleuren.oranje,
+                ),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      children: <InlineSpan>[
+                        TextSpan(
+                          text: '$maatTitel ',
+                          style: const TextStyle(
+                            color: ThimacoKleuren.tekstGrijs,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        TextSpan(
+                          text: model.maatSamenvatting,
+                          style: const TextStyle(
+                            color: ThimacoKleuren.antraciet,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

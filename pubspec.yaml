@@ -18,7 +18,10 @@ dependencies:
   intl: ^0.20.2
   google_fonts: ^6.2.1
 
-  # OneDrive login + API (MSAL)
+  # OneDrive login + API.
+  # iOS/macOS: msal_auth.
+  # Windows: OAuth 2.0 Authorization Code + PKCE met bestaande dependencies
+  # (http, url_launcher, flutter_secure_storage en cryptography).
   msal_auth: ^3.5.1
   http: ^1.3.0
 
@@ -34,7 +37,7 @@ dependencies:
   # PDF openen
   open_filex: ^4.5.0
 
-  # Routeplanner openen
+  # Routeplanner / externe browser openen
   url_launcher: ^6.3.0
 
   flutter_local_notifications: ^17.2.2
@@ -42,7 +45,7 @@ dependencies:
   printing: ^5.14.3
   mobile_scanner: ^7.4.0
 
-  # Beveiligde financiële kluis
+  # Beveiligde financiële kluis + beveiligde Windows Microsoft-sessie
   local_auth: ^3.0.2
   flutter_secure_storage: ^10.3.1
   cryptography: ^2.9.0

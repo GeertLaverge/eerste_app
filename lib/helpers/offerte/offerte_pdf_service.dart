@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PDF-NIEUW-WEBSITELOGO-EN-ICOON-VOET-20260912
 // THIMACO-BESTAND-VERSIE: 2026-08-18 14:46
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-TITEL-ORANJE-20260818-1446
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-PDF-ONDERAAN-ALLE-REGELS-20260818
@@ -48,6 +49,7 @@ class OffertePdfService {
   const OffertePdfService._();
 
   static const String logoAsset = 'assets/offerte/thimaco_logo.png';
+  static const String footerLogoAsset = 'assets/offerte/thimaco_logo_icoon.png';
   static const String toonzaalAsset = 'assets/offerte/thimaco_toonzaal.jpg';
 
   static const PdfColor oranje = PdfColor.fromInt(0xFFF15A24);
@@ -79,12 +81,19 @@ class OffertePdfService {
     OfferteGoedkeuring? goedkeuring,
   }) async {
     final logoData = await rootBundle.load(logoAsset);
+    final footerLogoData = await rootBundle.load(footerLogoAsset);
     final toonzaalData = await rootBundle.load(toonzaalAsset);
 
     final logo = pw.MemoryImage(
       logoData.buffer.asUint8List(
         logoData.offsetInBytes,
         logoData.lengthInBytes,
+      ),
+    );
+    final footerLogo = pw.MemoryImage(
+      footerLogoData.buffer.asUint8List(
+        footerLogoData.offsetInBytes,
+        footerLogoData.lengthInBytes,
       ),
     );
     final toonzaal = pw.MemoryImage(
@@ -117,6 +126,7 @@ class OffertePdfService {
         build: (context) => _bouwVoorblad(
           data: data,
           logo: logo,
+          footerLogo: footerLogo,
           toonzaal: toonzaal,
           totaalPaginaAantal: totaalPaginaAantal,
         ),
@@ -140,6 +150,7 @@ class OffertePdfService {
           build: (context) => _bouwDetailPagina(
             data: data,
             logo: logo,
+            footerLogo: footerLogo,
             pagina: pagina,
             paginaNummer: huidigPaginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
@@ -164,6 +175,7 @@ class OffertePdfService {
           build: (context) => _bouwOptiePagina(
             data: data,
             logo: logo,
+            footerLogo: footerLogo,
             pagina: optiePagina,
             paginaNummer: huidigPaginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
@@ -182,6 +194,7 @@ class OffertePdfService {
         build: (context) => _bouwGoedkeuringsPagina(
           data: data,
           logo: logo,
+          footerLogo: footerLogo,
           goedkeuring: goedkeuring,
           paginaNummer: goedkeuringsPaginaNummer,
           totaalPaginaAantal: totaalPaginaAantal,
@@ -196,10 +209,17 @@ class OffertePdfService {
     return OffertePdfArtikelLayoutHelper.zonderPrijsblokken<Future<Uint8List>>(
       () async {
         final logoData = await rootBundle.load(logoAsset);
+        final footerLogoData = await rootBundle.load(footerLogoAsset);
         final logo = pw.MemoryImage(
           logoData.buffer.asUint8List(
             logoData.offsetInBytes,
             logoData.lengthInBytes,
+          ),
+        );
+        final footerLogo = pw.MemoryImage(
+          footerLogoData.buffer.asUint8List(
+            footerLogoData.offsetInBytes,
+            footerLogoData.lengthInBytes,
           ),
         );
 
@@ -229,6 +249,7 @@ class OffertePdfService {
               build: (context) => _bouwOpmetingPagina(
                 data: data,
                 logo: logo,
+                footerLogo: footerLogo,
                 pagina: pagina,
                 paginaNummer: huidigPaginaNummer,
                 totaalPaginaAantal: totaalPaginaAantal,
@@ -246,6 +267,7 @@ class OffertePdfService {
   static pw.Widget _bouwVoorblad({
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required pw.ImageProvider toonzaal,
     required int totaalPaginaAantal,
   }) {
@@ -332,7 +354,7 @@ class OffertePdfService {
                             children: <pw.Widget>[
                               _bouwWelkomBlok(),
                               pw.SizedBox(height: 18),
-                              _bouwVoetregel(),
+                              _bouwVoetregel(footerLogo),
                               pw.SizedBox(height: 6),
                               pw.Text(
                                 'Pagina 1 van $totaalPaginaAantal',
@@ -610,6 +632,7 @@ class OffertePdfService {
   static pw.Widget _bouwOpmetingPagina({
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required _OfferteDetailPagina pagina,
     required int paginaNummer,
     required int totaalPaginaAantal,
@@ -664,7 +687,7 @@ class OffertePdfService {
             ],
           pw.Spacer(),
           _bouwPaginaVoet(
-            logo: logo,
+            footerLogo: footerLogo,
             paginaNummer: paginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
           ),
@@ -762,6 +785,7 @@ class OffertePdfService {
   static pw.Widget _bouwDetailPagina({
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required _OfferteDetailPagina pagina,
     required int paginaNummer,
     required int totaalPaginaAantal,
@@ -802,7 +826,7 @@ class OffertePdfService {
               pw.SizedBox(height: 4),
           ],
           _bouwPaginaVoet(
-            logo: logo,
+            footerLogo: footerLogo,
             paginaNummer: paginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
           ),
@@ -814,6 +838,7 @@ class OffertePdfService {
   static pw.Widget _bouwOptiePagina({
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required _OfferteDetailPagina pagina,
     required int paginaNummer,
     required int totaalPaginaAantal,
@@ -845,7 +870,7 @@ class OffertePdfService {
           ],
           pw.Spacer(),
           _bouwPaginaVoet(
-            logo: logo,
+            footerLogo: footerLogo,
             paginaNummer: paginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
           ),
@@ -1600,6 +1625,7 @@ class OffertePdfService {
   static pw.Widget _bouwGoedkeuringsPagina({
     required OfferteDocumentData data,
     required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required OfferteGoedkeuring? goedkeuring,
     required int paginaNummer,
     required int totaalPaginaAantal,
@@ -1696,7 +1722,7 @@ class OffertePdfService {
           ),
           pw.SizedBox(height: 10),
           _bouwPaginaVoet(
-            logo: logo,
+            footerLogo: footerLogo,
             paginaNummer: paginaNummer,
             totaalPaginaAantal: totaalPaginaAantal,
           ),
@@ -2085,27 +2111,20 @@ class OffertePdfService {
     return '€ ${negatief ? '-' : ''}${buffer.toString()},$decimalen';
   }
 
-  static pw.Widget _bouwVoetregel() {
+  static pw.Widget _bouwVoetregel(pw.ImageProvider footerLogo) {
     return pw.Row(
       children: <pw.Widget>[
         pw.Expanded(child: pw.Container(height: 1, color: oranje)),
-        pw.SizedBox(width: 14),
-        pw.Container(
-          width: 8,
-          height: 8,
-          decoration: const pw.BoxDecoration(
-            color: oranje,
-            shape: pw.BoxShape.circle,
-          ),
-        ),
-        pw.SizedBox(width: 14),
+        pw.SizedBox(width: 12),
+        pw.Image(footerLogo, width: 22, height: 22, fit: pw.BoxFit.contain),
+        pw.SizedBox(width: 12),
         pw.Expanded(child: pw.Container(height: 1, color: oranje)),
       ],
     );
   }
 
   static pw.Widget _bouwPaginaVoet({
-    required pw.ImageProvider logo,
+    required pw.ImageProvider footerLogo,
     required int paginaNummer,
     required int totaalPaginaAantal,
   }) {
@@ -2115,7 +2134,7 @@ class OffertePdfService {
           children: <pw.Widget>[
             pw.Expanded(child: pw.Container(height: 0.9, color: oranje)),
             pw.SizedBox(width: 12),
-            pw.Image(logo, width: 42, height: 18, fit: pw.BoxFit.contain),
+            pw.Image(footerLogo, width: 22, height: 22, fit: pw.BoxFit.contain),
             pw.SizedBox(width: 12),
             pw.Expanded(child: pw.Container(height: 0.9, color: oranje)),
           ],

@@ -1,6 +1,7 @@
 // THIMACO-CONTROLE: SEKTIONALE-POORTEN-TEKENVLAK-UNIFORM-20260729
 import 'package:flutter/material.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
 import 'opmeting_sektionale_poort_model.dart';
 import 'opmeting_sektionale_poort_painter.dart';
 
@@ -37,43 +38,56 @@ class OpmetingSektionalePoortTekenvlak extends StatelessWidget {
           ? BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              border: Border.all(color: ThimacoKleuren.rand),
             )
           : null,
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (toonKop)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: Colors.white,
                 borderRadius: toonKader
                     ? const BorderRadius.vertical(top: Radius.circular(11))
                     : BorderRadius.zero,
                 border: const Border(
-                  bottom: BorderSide(color: Color(0xFFE5E7EB)),
+                  bottom: BorderSide(color: ThimacoKleuren.rand),
                 ),
               ),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 3,
-                crossAxisAlignment: WrapCrossAlignment.center,
+              child: Row(
                 children: <Widget>[
-                  Text(
-                    'Poortafmetingen ${model.breedteMm} × ${model.hoogteMm} mm',
-                    style: const TextStyle(
-                      color: Color(0xFF0B7A3B),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  const Icon(
+                    Icons.straighten_rounded,
+                    size: 16,
+                    color: ThimacoKleuren.oranje,
                   ),
-                  Text(
-                    'Type ${model.modelType.label} · ${model.serie.label}',
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 7),
+                  Flexible(
+                    child: Wrap(
+                      spacing: 10,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: <Widget>[
+                        Text(
+                          'Poortafmetingen ${model.breedteMm} × ${model.hoogteMm} mm',
+                          style: const TextStyle(
+                            color: ThimacoKleuren.antraciet,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        Text(
+                          'Type ${model.modelType.label} · ${model.serie.label}',
+                          style: const TextStyle(
+                            color: ThimacoKleuren.tekstGrijs,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

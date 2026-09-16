@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_raam_kleinhout_model.dart';
 
 class OpmetingRaamKleinhoutMenu extends StatelessWidget {
@@ -28,11 +30,10 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
     this.onVerslepen,
   });
 
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color lichtGroen = Color(0xFFE7F6EC);
-  static const Color rand = Color(0xFFE5E7EB);
-  static const Color tekstDonker = Color(0xFF111827);
-  static const Color tekstGrijs = Color(0xFF6B7280);
+  static const Color groen = ThimacoKleuren.oranje;
+  static const Color rand = ThimacoKleuren.rand;
+  static const Color tekstDonker = ThimacoKleuren.antraciet;
+  static const Color tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final double breedte;
   final double? maxHoogte;
@@ -136,35 +137,35 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onPanUpdate: onVerslepen,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 10, 9),
+        padding: const EdgeInsets.fromLTRB(10, 8, 8, 7),
         decoration: const BoxDecoration(
-          color: lichtGroen,
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+          border: Border(bottom: BorderSide(color: ThimacoKleuren.rand)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.grid_on_rounded, size: 18, color: groen),
+            const Icon(
+              Icons.drag_indicator,
+              size: 18,
+              color: ThimacoKleuren.tekstGrijs,
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              Icons.grid_on_rounded,
+              size: 18,
+              color: ThimacoKleuren.antraciet,
+            ),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text(
-                'Kleinhout',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Color(0xFF064E3B),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              child: ThimacoSectieTitel(tekst: 'Kleinhout'),
             ),
             if (onSluiten != null)
-              InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: onSluiten,
-                child: const Padding(
-                  padding: EdgeInsets.all(3),
-                  child: Icon(Icons.close_rounded, size: 18, color: groen),
-                ),
+              ThimacoIcoonActie(
+                icoon: Icons.close_rounded,
+                tooltip: 'Kleinhoutmenu sluiten',
+                onPressed: onSluiten,
+                grootte: 18,
               ),
           ],
         ),
@@ -176,12 +177,11 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: aantalGeselecteerdeVlakken > 0
-            ? const Color(0xFFE7F6EC)
-            : const Color(0xFFF3F4F6),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: aantalGeselecteerdeVlakken > 0 ? groen : rand,
+          width: aantalGeselecteerdeVlakken > 0 ? 1.4 : 1,
         ),
       ),
       child: Row(
@@ -206,7 +206,7 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
                     ? FontWeight.w800
                     : FontWeight.w500,
                 color: aantalGeselecteerdeVlakken > 0
-                    ? const Color(0xFF064E3B)
+                    ? tekstDonker
                     : tekstGrijs,
               ),
             ),
@@ -219,31 +219,16 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
   Widget _selectieKnoppen() {
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: totaalAantalGevuldeVlakken > 0
-                ? onAlleGevuldeVlakkenSelecteren
-                : null,
-            icon: const Icon(Icons.select_all, size: 17),
-            label: const Text('Alles', style: TextStyle(fontSize: 11)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: groen,
-              side: const BorderSide(color: groen),
-              padding: const EdgeInsets.symmetric(vertical: 9),
-            ),
-          ),
+        ThimacoTekstActie(
+          tekst: 'Alles selecteren',
+          onPressed: totaalAantalGevuldeVlakken > 0
+              ? onAlleGevuldeVlakkenSelecteren
+              : null,
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: aantalGeselecteerdeVlakken > 0 ? onSelectieWissen : null,
-            icon: const Icon(Icons.deselect, size: 17),
-            label: const Text('Geen', style: TextStyle(fontSize: 11)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: tekstGrijs,
-              padding: const EdgeInsets.symmetric(vertical: 9),
-            ),
-          ),
+        ThimacoTekstActie(
+          tekst: 'Selectie wissen',
+          onPressed: aantalGeselecteerdeVlakken > 0 ? onSelectieWissen : null,
         ),
       ],
     );
@@ -263,23 +248,12 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
   Widget _typeKeuzes() {
     return Wrap(
       spacing: 6,
-      runSpacing: 6,
+      runSpacing: 2,
       children: OpmetingRaamKleinhoutType.values.map((type) {
-        final geselecteerd = type == geselecteerdType;
-
-        return ChoiceChip(
-          label: Text(
-            _labelVoorKleinhoutType(type),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: geselecteerd ? FontWeight.w900 : FontWeight.w600,
-            ),
-          ),
-          selected: geselecteerd,
-          selectedColor: lichtGroen,
-          checkmarkColor: groen,
-          side: BorderSide(color: geselecteerd ? groen : rand),
-          onSelected: (_) {
+        return ThimacoTekstKeuze(
+          tekst: _labelVoorKleinhoutType(type),
+          geselecteerd: type == geselecteerdType,
+          onPressed: () {
             onTypeGewijzigd(type);
           },
         );
@@ -290,23 +264,12 @@ class OpmetingRaamKleinhoutMenu extends StatelessWidget {
   Widget _patroonKeuzes() {
     return Wrap(
       spacing: 6,
-      runSpacing: 6,
+      runSpacing: 2,
       children: OpmetingRaamKleinhoutPatroon.values.map((patroon) {
-        final geselecteerd = patroon == geselecteerdPatroon;
-
-        return ChoiceChip(
-          label: Text(
-            _labelVoorPatroon(patroon),
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: geselecteerd ? FontWeight.w900 : FontWeight.w600,
-            ),
-          ),
-          selected: geselecteerd,
-          selectedColor: lichtGroen,
-          checkmarkColor: groen,
-          side: BorderSide(color: geselecteerd ? groen : rand),
-          onSelected: (_) {
+        return ThimacoTekstKeuze(
+          tekst: _labelVoorPatroon(patroon),
+          geselecteerd: patroon == geselecteerdPatroon,
+          onPressed: () {
             onPatroonGewijzigd(patroon);
           },
         );

@@ -1,9 +1,12 @@
+// THIMACO-CONTROLE: RAAM-TEKENPROGRAMMA-FASE5-TECHNIEK-SAMENVATTING-20260913
 // THIMACO-CONTROLE: EEN-KNOP-NAAR-ALLE-TECHNISCHE-TITELS-20260727
 // THIMACO-CONTROLE: OVERZICHT-ZONDER-OVERBODIGE-STRUCTUURKNOPPEN-20260727
 // THIMACO-CONTROLE: ONTBREKENDE-TITELS-ANDERE-ARTIKELTYPES-FASE-4-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-KOPIEREN-VANUIT-BOOM-FASE-3-20260727
 // THIMACO-CONTROLE: COMPACTE-BOOM-AANMAKEN-VANUIT-BOOM-FASE-2-20260727
 import 'package:flutter/material.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import 'opmeting_raam_keuzemenu_model.dart';
 import 'opmeting_raam_kleinhout_helper.dart';
@@ -12,6 +15,7 @@ import 'opmeting_raam_vulling_helper.dart';
 class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   const OpmetingRaamTechnischeKeuzesPaneel({
     super.key,
+    this.raamVleugelSamenvatting = '',
     this.deurVleugelSamenvatting = '',
     this.schuifraamSamenvatting = '',
     this.profielSamenvatting = '',
@@ -38,8 +42,13 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
     required this.onMenuOmhoog,
     required this.onMenuOmlaag,
     required this.onMenuVerwijderen,
+    this.focusMenuId,
+    this.selectieDialoog = false,
+    this.samenvattingAlleen = false,
+    this.samenvattingPerMenu = const <String, String>{},
   });
 
+  final String raamVleugelSamenvatting;
   final String deurVleugelSamenvatting;
   final String schuifraamSamenvatting;
   final String profielSamenvatting;
@@ -86,6 +95,11 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
   final ValueChanged<OpmetingRaamKeuzeMenu> onMenuOmlaag;
   final ValueChanged<OpmetingRaamKeuzeMenu> onMenuVerwijderen;
 
+  final String? focusMenuId;
+  final bool selectieDialoog;
+  final bool samenvattingAlleen;
+  final Map<String, String> samenvattingPerMenu;
+
   @override
   State<OpmetingRaamTechnischeKeuzesPaneel> createState() {
     return _OpmetingRaamTechnischeKeuzesPaneelState();
@@ -94,14 +108,47 @@ class OpmetingRaamTechnischeKeuzesPaneel extends StatefulWidget {
 
 class _OpmetingRaamTechnischeKeuzesPaneelState
     extends State<OpmetingRaamTechnischeKeuzesPaneel> {
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color lichtGroen = Color(0xFFE7F6EC);
-  static const Color rand = Color(0xFFE5E7EB);
-  static const Color tekstDonker = Color(0xFF111827);
-  static const Color tekstGrijs = Color(0xFF6B7280);
+  static const Color groen = ThimacoKleuren.oranje;
+  static const Color lichtGroen = ThimacoKleuren.oranjeLicht;
+  static const Color rand = ThimacoKleuren.rand;
+  static const Color tekstDonker = ThimacoKleuren.antraciet;
+  static const Color tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final Set<String> _openMenuIds = <String>{};
   final Set<String> _openSubmenuIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _openFocusMenuEnPad();
+  }
+
+  void _openFocusMenuEnPad() {
+    final focusMenuId = widget.focusMenuId?.trim() ?? '';
+    if (focusMenuId.isEmpty) return;
+
+    OpmetingRaamKeuzeMenu? focusMenu;
+    for (final menu in widget.keuzemenus) {
+      if (menu.id == focusMenuId) {
+        focusMenu = menu;
+        break;
+      }
+    }
+
+    if (focusMenu == null) return;
+
+    _openMenuIds.add(focusMenu.id);
+
+    final optieId = widget.geselecteerdeOptieIdVoorMenu(focusMenu)?.trim() ?? '';
+    if (optieId.isEmpty || optieId == focusMenu.geenOptie.id) return;
+
+    final padIds = focusMenu.padIdsVoorOptie(optieId);
+    if (padIds.length <= 1) return;
+
+    for (final submenuId in padIds.take(padIds.length - 1)) {
+      _openSubmenuIds.add('${focusMenu.id}/$submenuId');
+    }
+  }
 
   @override
   void didUpdateWidget(covariant OpmetingRaamTechnischeKeuzesPaneel oldWidget) {
@@ -115,17 +162,34 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
       final menuId = submenuId.split('/').first;
       return !geldigeMenuIds.contains(menuId);
     });
+
+    if (oldWidget.focusMenuId != widget.focusMenuId) {
+      _openFocusMenuEnPad();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final zichtbareMenus = widget.keuzemenus.where((menu) {
+    if (widget.samenvattingAlleen) {
+      return _bouwSamenvatting();
+    }
+
+    var zichtbareMenus = widget.keuzemenus.where((menu) {
       return widget.menuBeheerOntgrendeld || menu.actief;
     }).toList();
+
+    final focusMenuId = widget.focusMenuId?.trim() ?? '';
+    if (focusMenuId.isNotEmpty) {
+      zichtbareMenus = zichtbareMenus
+          .where((menu) => menu.id == focusMenuId)
+          .toList();
+    }
 
     return Card(
       elevation: 0,
       margin: EdgeInsets.zero,
+      color: Colors.white,
+      surfaceTintColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: const BorderSide(color: rand),
@@ -135,15 +199,18 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _bouwKop(),
-            const SizedBox(height: 3),
-            if (widget.deurVleugelSamenvatting.trim().isNotEmpty)
-              _bouwDeurVleugelRij(),
-            if (widget.schuifraamSamenvatting.trim().isNotEmpty)
-              _bouwSchuifraamRij(),
-            _bouwCompacteOpvullingRij(),
-            _bouwCompacteKleinhoutRij(),
-            if (widget.profielSamenvatting.trim().isNotEmpty) _bouwProfielRij(),
+            if (!widget.selectieDialoog) ...[
+              _bouwKop(),
+              const SizedBox(height: 3),
+              if (widget.deurVleugelSamenvatting.trim().isNotEmpty)
+                _bouwDeurVleugelRij(),
+              if (widget.schuifraamSamenvatting.trim().isNotEmpty)
+                _bouwSchuifraamRij(),
+              _bouwCompacteOpvullingRij(),
+              _bouwCompacteKleinhoutRij(),
+              if (widget.profielSamenvatting.trim().isNotEmpty)
+                _bouwProfielRij(),
+            ],
             if (widget.keuzemenusLaden)
               const Padding(
                 padding: EdgeInsets.all(16),
@@ -160,7 +227,9 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    widget.menuBeheerOntgrendeld
+                    widget.selectieDialoog
+                        ? 'Deze technische keuze is niet beschikbaar.'
+                        : widget.menuBeheerOntgrendeld
                         ? 'Beheer de technische titels via “Keuze toevoegen..”.'
                         : 'Nog geen technische keuzes toegevoegd.',
                     style: const TextStyle(color: tekstGrijs, fontSize: 11.5),
@@ -171,6 +240,136 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               ...zichtbareMenus.map(_bouwKeuzemenuKaart),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _bouwSamenvatting() {
+    final regels = <Widget>[];
+
+    void voegRegelToe(String titel, String waarde) {
+      final netteWaarde = waarde.trim();
+      if (netteWaarde.isEmpty) return;
+
+      if (regels.isNotEmpty) {
+        regels.add(const SizedBox(height: 6));
+      }
+      regels.add(_bouwSamenvattingRij(titel: titel, waarde: netteWaarde));
+    }
+
+    if (widget.raamVleugelSamenvatting.trim().isNotEmpty) {
+      voegRegelToe('Raamvleugel', widget.raamVleugelSamenvatting);
+    }
+
+    if (widget.deurVleugelSamenvatting.trim().isNotEmpty) {
+      voegRegelToe('Deurvleugel', widget.deurVleugelSamenvatting);
+    }
+
+    if (widget.schuifraamSamenvatting.trim().isNotEmpty) {
+      voegRegelToe('Schuifraam', widget.schuifraamSamenvatting);
+    }
+
+    if (widget.gekozenOpvullingen.isNotEmpty) {
+      voegRegelToe('Opvulling', _opvullingSamenvatting());
+    }
+
+    if (widget.gekozenKleinhouten.isNotEmpty) {
+      voegRegelToe('Kleinhouten', _kleinhoutSamenvatting());
+    }
+
+    if (widget.profielSamenvatting.trim().isNotEmpty) {
+      voegRegelToe('Profiel', widget.profielSamenvatting);
+    }
+
+    final menus = widget.keuzemenus
+        .where((menu) => widget.menuBeheerOntgrendeld || menu.actief)
+        .toList()
+      ..sort((eerste, tweede) {
+        final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+        if (volgorde != 0) return volgorde;
+        return eerste.titel.toLowerCase().compareTo(tweede.titel.toLowerCase());
+      });
+
+    for (final menu in menus) {
+      final samenvatting = widget.samenvattingPerMenu[menu.id]?.trim() ?? '';
+      if (samenvatting.isNotEmpty) {
+        voegRegelToe(menu.titel, samenvatting);
+        continue;
+      }
+
+      // Als de samenvatting van alle kaders deze titel niet bevat,
+      // val terug op de actieve kaderselectie. Zo verschijnt een net gekozen
+      // keuze onmiddellijk rechts bij Techniek.
+      final optieId = widget.geselecteerdeOptieIdVoorMenu(menu)?.trim() ?? '';
+      if (optieId.isEmpty || optieId == menu.geenOptie.id) continue;
+
+      final optie = menu.zoekOptie(optieId);
+      if (optie == null || optie.isGeenKeuze) continue;
+
+      voegRegelToe(menu.titel, _waardeVoorMenu(menu, optieId));
+    }
+
+    if (regels.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          'Nog geen technische keuzes geselecteerd.',
+          style: TextStyle(
+            color: ThimacoKleuren.tekstGrijs,
+            fontSize: 11.5,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: regels,
+    );
+  }
+
+  Widget _bouwSamenvattingRij({
+    required String titel,
+    required String waarde,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(9, 7, 9, 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: const Border(
+          top: BorderSide(color: ThimacoKleuren.rand),
+          left: BorderSide(color: ThimacoKleuren.rand),
+          right: BorderSide(color: ThimacoKleuren.rand),
+          bottom: BorderSide(color: ThimacoKleuren.oranje, width: 1.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            titel.trim().isEmpty ? 'Technische keuze' : titel.trim(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ThimacoKleuren.tekstGrijs,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            waarde,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ThimacoKleuren.antraciet,
+              fontSize: 11.5,
+              height: 1.15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -243,58 +442,36 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
 
   Widget _bouwKop() {
     return Row(
-      children: [
+      children: <Widget>[
         const Expanded(
-          child: Text(
-            'Technische keuzes',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: tekstDonker,
-            ),
-          ),
+          child: ThimacoSectieTitel(tekst: 'Technische keuzes'),
         ),
         if (widget.keuzemenusBewaren)
           const Padding(
-            padding: EdgeInsets.only(right: 5),
+            padding: EdgeInsets.only(right: 7),
             child: SizedBox(
               width: 15,
               height: 15,
-              child: CircularProgressIndicator(strokeWidth: 2, color: groen),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: ThimacoKleuren.oranje,
+              ),
             ),
           ),
-        TextButton.icon(
+        ThimacoTekstActie(
+          tekst: 'Keuze toevoegen',
           onPressed: widget.onMenuToevoegen,
-          style: TextButton.styleFrom(
-            foregroundColor: groen,
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
-            minimumSize: const Size(0, 30),
-          ),
-          icon: const Icon(Icons.add_circle_outline, size: 18),
-          label: const Text(
-            'Keuze toevoegen..',
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800),
-          ),
         ),
-        SizedBox(
-          width: 30,
-          height: 30,
-          child: IconButton(
-            tooltip: widget.menuBeheerOntgrendeld
-                ? 'Menu-beheer vergrendelen'
-                : 'Menu-beheer ontgrendelen',
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            onPressed: widget.onBeheerSlotWisselen,
-            icon: Icon(
-              widget.menuBeheerOntgrendeld
-                  ? Icons.lock_open
-                  : Icons.lock_outline,
-              size: 18,
-              color: groen,
-            ),
-          ),
+        const SizedBox(width: 2),
+        ThimacoIcoonActie(
+          icoon: widget.menuBeheerOntgrendeld
+              ? Icons.lock_open
+              : Icons.lock_outline,
+          tooltip: widget.menuBeheerOntgrendeld
+              ? 'Menu-beheer vergrendelen'
+              : 'Menu-beheer ontgrendelen',
+          onPressed: widget.onBeheerSlotWisselen,
+          grootte: 18,
         ),
       ],
     );
@@ -348,7 +525,8 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
         });
       },
       inhoud: _bouwMenuInhoud(menu),
-      beheerKnop: widget.menuBeheerOntgrendeld
+      beheerKnop:
+          widget.menuBeheerOntgrendeld && !widget.selectieDialoog
           ? _bouwKeuzemenuBeheerKnop(menu)
           : null,
     );
@@ -824,7 +1002,10 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: Icon(Icons.edit_outlined, color: groen),
+                leading: Icon(
+                  Icons.edit_outlined,
+                  color: ThimacoKleuren.antraciet,
+                ),
                 title: Text('Technische keuze aanpassen'),
               ),
             ),
@@ -833,7 +1014,10 @@ class _OpmetingRaamTechnischeKeuzesPaneelState
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: Icon(Icons.copy_outlined, color: groen),
+                leading: Icon(
+                  Icons.copy_outlined,
+                  color: ThimacoKleuren.antraciet,
+                ),
                 title: Text('Titel kopiëren'),
               ),
             ),

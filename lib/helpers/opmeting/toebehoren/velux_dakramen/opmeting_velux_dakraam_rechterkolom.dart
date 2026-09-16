@@ -1,7 +1,10 @@
+// THIMACO-CONTROLE: VELUX-HUISSTIJL-20260914
 // THIMACO-CONTROLE: VELUX-ALLEEN-TOEBEHOREN-GOOTSTUKINFO-ZONDER-PRIJZEN-20260730-0531
 // THIMACO-CONTROLE: VELUX-RECHTERKOLOM-FASE-1-2-20260729-2030
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../ui/thimaco_huisstijl.dart';
 
 import 'opmeting_velux_dakraam_instellingen_model.dart';
 import 'opmeting_velux_dakraam_model.dart';
@@ -27,11 +30,9 @@ class OpmetingVeluxDakraamRechterkolom extends StatefulWidget {
 
 class _OpmetingVeluxDakraamRechterkolomState
     extends State<OpmetingVeluxDakraamRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF111827);
-  static const Color _grijs = Color(0xFF6B7280);
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekst = ThimacoKleuren.antraciet;
+  static const Color _grijs = ThimacoKleuren.tekstGrijs;
 
   final TextEditingController _aantalController = TextEditingController();
   final TextEditingController _rolluikAantalController =
@@ -153,64 +154,67 @@ class _OpmetingVeluxDakraamRechterkolomState
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _rand),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x0F111827),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Container(
-            width: double.infinity,
-            color: _lichtGroen,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.roofing_outlined, color: _groen, size: 19),
-                SizedBox(width: 8),
-                Text(
-                  'Velux dakramen',
-                  style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
             ),
           ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(10),
-              children: <Widget>[
-                _sectie(
-                  titel: 'Uitvoering',
-                  children: <Widget>[
-                    _keuzeRij(
-                      label: 'Alleen toebehoren',
-                      geselecteerd: widget.model.alleenToebehoren,
-                      onTap: () {
-                        _stuur(
-                          widget.model.copyWith(
-                            alleenToebehoren: !widget.model.alleenToebehoren,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                _bouwDakvensterSectie(),
-                if (!widget.model.alleenToebehoren) ...<Widget>[
+            child: Scrollbar(
+              child: ListView(
+                padding: const EdgeInsets.all(10),
+                children: <Widget>[
+                  _sectie(
+                    titel: 'Uitvoering',
+                    children: <Widget>[
+                      _keuzeRij(
+                        label: 'Alleen toebehoren',
+                        geselecteerd: widget.model.alleenToebehoren,
+                        onTap: () {
+                          _stuur(
+                            widget.model.copyWith(
+                              alleenToebehoren: !widget.model.alleenToebehoren,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
-                  _bouwGootstukkenSectie(),
+                  _bouwDakvensterSectie(),
+                  if (!widget.model.alleenToebehoren) ...<Widget>[
+                    const SizedBox(height: 8),
+                    _bouwGootstukkenSectie(),
+                  ],
+                  const SizedBox(height: 8),
+                  _bouwRolluikenSectie(),
+                  const SizedBox(height: 8),
+                  _bouwScreensSectie(),
+                  const SizedBox(height: 8),
+                  _bouwDklSectie(),
+                  const SizedBox(height: 8),
+                  _bouwMuggengaasSectie(),
+                  const SizedBox(height: 8),
+                  _bouwStroomSectie(),
+                  const SizedBox(height: 8),
+                  _bouwAfwerkingSectie(),
                 ],
-                const SizedBox(height: 8),
-                _bouwRolluikenSectie(),
-                const SizedBox(height: 8),
-                _bouwScreensSectie(),
-                const SizedBox(height: 8),
-                _bouwDklSectie(),
-                const SizedBox(height: 8),
-                _bouwMuggengaasSectie(),
-                const SizedBox(height: 8),
-                _bouwStroomSectie(),
-                const SizedBox(height: 8),
-                _bouwAfwerkingSectie(),
-              ],
+              ),
             ),
           ),
         ],
@@ -286,8 +290,8 @@ class _OpmetingVeluxDakraamRechterkolomState
         onPressed: _toonGootstukkenInfo,
         visualDensity: VisualDensity.compact,
         style: IconButton.styleFrom(
-          foregroundColor: _groen,
-          backgroundColor: _lichtGroen,
+          foregroundColor: ThimacoKleuren.oranje,
+          backgroundColor: ThimacoKleuren.oranjeLicht,
           minimumSize: const Size(34, 34),
         ),
         icon: const Icon(Icons.info_outline_rounded, size: 20),
@@ -333,7 +337,7 @@ class _OpmetingVeluxDakraamRechterkolomState
                     children: <Widget>[
                       const Icon(
                         Icons.info_outline_rounded,
-                        color: _groen,
+                        color: ThimacoKleuren.oranje,
                         size: 22,
                       ),
                       const SizedBox(width: 9),
@@ -365,7 +369,7 @@ class _OpmetingVeluxDakraamRechterkolomState
                     ],
                   ),
                 ),
-                const Divider(height: 1),
+                const Divider(height: 1, color: ThimacoKleuren.rand),
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
@@ -527,7 +531,7 @@ class _OpmetingVeluxDakraamRechterkolomState
           const Text(
             'Kleur',
             style: TextStyle(
-              color: _groen,
+              color: ThimacoKleuren.antraciet,
               fontSize: 12,
               fontWeight: FontWeight.w900,
             ),
@@ -689,9 +693,10 @@ class _OpmetingVeluxDakraamRechterkolomState
     Widget? actie,
     required List<Widget> children,
   }) {
+    final netteSubtitel = subtitel?.trim() ?? '';
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFD),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(11),
         border: Border.all(color: _rand),
       ),
@@ -706,19 +711,16 @@ class _OpmetingVeluxDakraamRechterkolomState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
-                      titel,
-                      style: const TextStyle(
-                        color: _groen,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    if (subtitel != null) ...<Widget>[
+                    ThimacoSectieTitel(tekst: titel),
+                    if (netteSubtitel.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 2),
                       Text(
-                        subtitel,
-                        style: const TextStyle(color: _grijs, fontSize: 10.5),
+                        netteSubtitel,
+                        style: const TextStyle(
+                          color: ThimacoKleuren.tekstGrijs,
+                          fontSize: 10.5,
+                          height: 1.25,
+                        ),
                       ),
                     ],
                   ],
@@ -727,7 +729,7 @@ class _OpmetingVeluxDakraamRechterkolomState
               if (actie != null) ...<Widget>[const SizedBox(width: 8), actie],
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           ...children,
         ],
       ),
@@ -740,19 +742,25 @@ class _OpmetingVeluxDakraamRechterkolomState
     required VoidCallback onTap,
     String? detail,
   }) {
+    final netteDetail = detail?.trim() ?? '';
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(7),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 5),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(4, 7, 4, 6),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: geselecteerd
+                  ? ThimacoKleuren.oranje
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(top: 1),
-              child: _rondje(geselecteerd),
-            ),
-            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,49 +768,39 @@ class _OpmetingVeluxDakraamRechterkolomState
                   Text(
                     label,
                     style: TextStyle(
-                      color: geselecteerd ? _tekst : const Color(0xFF374151),
-                      fontSize: 11.5,
-                      fontWeight: geselecteerd
-                          ? FontWeight.w800
-                          : FontWeight.w600,
+                      color: ThimacoKleuren.antraciet,
+                      fontSize: 11.7,
+                      fontWeight:
+                          geselecteerd ? FontWeight.w900 : FontWeight.w600,
                     ),
                   ),
-                  if (detail != null)
-                    Text(
-                      detail,
-                      style: const TextStyle(color: _grijs, fontSize: 10),
+                  if (netteDetail.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        netteDetail,
+                        style: const TextStyle(
+                          color: ThimacoKleuren.tekstGrijs,
+                          fontSize: 10,
+                          height: 1.2,
+                        ),
+                      ),
                     ),
                 ],
               ),
             ),
+            if (geselecteerd)
+              const Padding(
+                padding: EdgeInsets.only(left: 8, top: 1),
+                child: Icon(
+                  Icons.check_rounded,
+                  size: 16,
+                  color: ThimacoKleuren.oranje,
+                ),
+              ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _rondje(bool geselecteerd) {
-    return Container(
-      width: 17,
-      height: 17,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: geselecteerd ? _groen : const Color(0xFF6B7280),
-          width: 1.5,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: geselecteerd
-          ? Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: _groen,
-                shape: BoxShape.circle,
-              ),
-            )
-          : null,
     );
   }
 
@@ -856,6 +854,8 @@ class _OpmetingVeluxDakraamRechterkolomState
             },
             decoration: InputDecoration(
               isDense: true,
+              filled: true,
+              fillColor: Colors.white,
               suffixText: eenheid,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 9,
@@ -870,7 +870,10 @@ class _OpmetingVeluxDakraamRechterkolomState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: _groen, width: 1.5),
+                borderSide: const BorderSide(
+                  color: ThimacoKleuren.oranje,
+                  width: 1.4,
+                ),
               ),
             ),
           ),
@@ -883,6 +886,8 @@ class _OpmetingVeluxDakraamRechterkolomState
     return InputDecoration(
       labelText: label,
       isDense: true,
+      filled: true,
+      fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       enabledBorder: OutlineInputBorder(
@@ -891,7 +896,10 @@ class _OpmetingVeluxDakraamRechterkolomState
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: _groen, width: 1.5),
+        borderSide: const BorderSide(
+                  color: ThimacoKleuren.oranje,
+                  width: 1.4,
+                ),
       ),
     );
   }

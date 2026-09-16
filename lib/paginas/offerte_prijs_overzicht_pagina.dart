@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: PRIJSOVERZICHT-RUSTIGE-PROGRAMMASTIJL-FASE18-20260913
 // THIMACO-CONTROLE: PRIJSOVERZICHT-PAGINA-NIEUWE-PRIJSSTRUCTUUR-20260815
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 
+import '../helpers/ui/thimaco_huisstijl.dart';
 import '../helpers/offerte/overzicht/offerte_prijs_overzicht_model.dart';
 import '../helpers/offerte/overzicht/offerte_prijs_overzicht_pdf_service.dart'
     as prijs_pdf;
@@ -32,14 +34,13 @@ class OffertePrijsOverzichtPagina extends StatefulWidget {
 
 class _OffertePrijsOverzichtPaginaState
     extends State<OffertePrijsOverzichtPagina> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _oranje = Color(0xFFF15A24);
-  static const Color _oranjeLicht = Color(0xFFFFF7ED);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _achtergrond = Color(0xFFF7F8FA);
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _oranjeLicht = ThimacoKleuren.oranjeLicht;
+  static const Color _oranjeRand = ThimacoKleuren.oranjeRand;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _achtergrond = ThimacoKleuren.achtergrond;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   late OffertePrijsOverzichtData _data;
 
@@ -100,22 +101,10 @@ class _OffertePrijsOverzichtPaginaState
           ],
         ),
         actions: <Widget>[
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: _groen,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+          ThimacoTekstActie(
+            tekst: 'PDF',
             onPressed: _openPdf,
-            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-            label: const Text(
-              'PDF',
-              style: TextStyle(fontWeight: FontWeight.w900),
-            ),
+            compact: false,
           ),
           const SizedBox(width: 14),
         ],
@@ -154,8 +143,6 @@ class _OffertePrijsOverzichtPaginaState
                   uitleg:
                       'Optionele artikelen en prijsregels worden apart getoond en tellen niet mee in het eindtotaal.',
                   icoon: Icons.bookmark_outline_rounded,
-                  accent: _oranje,
-                  achtergrond: _oranjeLicht,
                 ),
                 const SizedBox(height: 8),
                 if (_data.optieArtikelen.isNotEmpty)
@@ -181,13 +168,14 @@ class _OffertePrijsOverzichtPaginaState
             height: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: _groen,
+              color: _achtergrond,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _rand),
             ),
             child: const Text(
               'T',
               style: TextStyle(
-                color: Colors.white,
+                color: _tekstDonker,
                 fontSize: 23,
                 fontWeight: FontWeight.w900,
               ),
@@ -291,7 +279,7 @@ class _OffertePrijsOverzichtPaginaState
         waarde: '+ ${_euro(_data.totaleWinstmargeExclBtw)}',
         detail: 'op de basisprijs',
         icoon: Icons.trending_up_rounded,
-        accent: _groen,
+        accent: _tekstDonker,
       ),
       _bouwSamenvattingKaart(
         label: 'Korting',
@@ -305,7 +293,7 @@ class _OffertePrijsOverzichtPaginaState
         waarde: _euro(_data.eindtotaalExclBtw),
         detail: 'excl. btw',
         icoon: Icons.summarize_outlined,
-        accent: _groen,
+        accent: _tekstDonker,
         opvallend: true,
       ),
     ];
@@ -345,9 +333,9 @@ class _OffertePrijsOverzichtPaginaState
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: opvallend ? _lichtGroen : Colors.white,
+        color: opvallend ? _oranjeLicht.withValues(alpha: 0.52) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: opvallend ? _groen : _rand),
+        border: Border.all(color: opvallend ? _oranjeRand : _rand),
       ),
       child: Row(
         children: <Widget>[
@@ -355,10 +343,11 @@ class _OffertePrijsOverzichtPaginaState
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: accent.withAlpha(26),
+              color: _achtergrond,
               borderRadius: BorderRadius.circular(9),
+              border: Border.all(color: _rand),
             ),
-            child: Icon(icoon, color: accent, size: 18),
+            child: Icon(icoon, color: _tekstDonker, size: 18),
           ),
           const SizedBox(width: 9),
           Expanded(
@@ -406,35 +395,37 @@ class _OffertePrijsOverzichtPaginaState
     required String titel,
     required String uitleg,
     required IconData icoon,
-    Color accent = _groen,
-    Color achtergrond = _lichtGroen,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: achtergrond,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Icon(icoon, color: accent, size: 18),
+        Padding(
+          padding: const EdgeInsets.only(top: 1),
+          child: Icon(icoon, color: _tekstDonker, size: 18),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 9),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 titel,
-                style: TextStyle(
-                  color: accent,
+                style: const TextStyle(
+                  color: _tekstDonker,
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 1),
+              const SizedBox(height: 3),
+              Container(
+                width: 32,
+                height: 1.5,
+                decoration: BoxDecoration(
+                  color: _oranje.withValues(alpha: 0.72),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              const SizedBox(height: 4),
               Text(
                 uitleg,
                 style: const TextStyle(
@@ -456,11 +447,11 @@ class _OffertePrijsOverzichtPaginaState
     bool isOptie = false,
   }) {
     final totalen = _ArtikelTabelTotalen.van(artikelen);
-    final accent = isOptie ? _oranje : _groen;
-    final lichteAchtergrond = isOptie ? _oranjeLicht : _lichtGroen;
+    final accent = isOptie ? _oranje : _tekstDonker;
+    final lichteAchtergrond = isOptie ? _oranjeLicht : _achtergrond;
 
     return _basisKaart(
-      randKleur: isOptie ? _oranje : _rand,
+      randKleur: isOptie ? _oranjeRand : _rand,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final tabelBreedte = math
@@ -532,7 +523,7 @@ class _OffertePrijsOverzichtPaginaState
                             artikel.winstmargePercentage,
                           ),
                           rechts: true,
-                          kleur: _groen,
+                          kleur: _tekstDonker,
                         ),
                         _tabelCel(
                           _bedragMetPercentage(
@@ -581,7 +572,7 @@ class _OffertePrijsOverzichtPaginaState
                         '+ ${_euro(totalen.winstPerStuk)}',
                         rechts: true,
                         vet: true,
-                        kleur: _groen,
+                        kleur: _tekstDonker,
                       ),
                       _tabelCel(
                         '- ${_euro(totalen.kortingPerStuk)}',
@@ -615,8 +606,7 @@ class _OffertePrijsOverzichtPaginaState
     List<OffertePrijsOverzichtSamengevoegdeRegel> regels, {
     bool isOptie = false,
   }) {
-    final accent = isOptie ? _oranje : _groen;
-    final achtergrond = isOptie ? _oranjeLicht : _lichtGroen;
+    final accent = isOptie ? _oranje : _tekstDonker;
     final titel = isOptie
         ? 'Optionele prijsregels'
         : 'Prijsregels samengevoegd';
@@ -625,7 +615,7 @@ class _OffertePrijsOverzichtPaginaState
         : 'Technische keuzes, prijs per positie en prijs voor alle posities worden per unieke omschrijving samengevoegd. Terugkerende bedragen zijn opgeteld.';
 
     return _basisKaart(
-      randKleur: isOptie ? _oranje : _rand,
+      randKleur: isOptie ? _oranjeRand : _rand,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -633,8 +623,6 @@ class _OffertePrijsOverzichtPaginaState
             titel: titel,
             uitleg: uitleg,
             icoon: Icons.rule_folder_outlined,
-            accent: accent,
-            achtergrond: achtergrond,
           ),
           const SizedBox(height: 12),
           if (regels.isEmpty)
@@ -762,8 +750,8 @@ class _OffertePrijsOverzichtPaginaState
 
   Widget _bouwFinancieleSamenvatting() {
     return _basisKaart(
-      achtergrond: _lichtGroen,
-      randKleur: _groen,
+      achtergrond: Colors.white,
+      randKleur: _oranjeRand,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final kop = _bouwSectieKop(
@@ -791,7 +779,7 @@ class _OffertePrijsOverzichtPaginaState
                 'Winstmarge',
                 _data.totaleWinstmargeExclBtw,
                 prefix: '+ ',
-                kleur: _groen,
+                kleur: _tekstDonker,
               ),
               _bouwTotaalRij(
                 'Korting (alleen op basisprijs)',
@@ -799,11 +787,14 @@ class _OffertePrijsOverzichtPaginaState
                 prefix: '- ',
                 kleur: _oranje,
               ),
-              const Divider(height: 16, color: _groen),
+              Divider(
+                height: 16,
+                color: _oranje.withValues(alpha: 0.48),
+              ),
               _bouwTotaalRij(
                 'Eindtotaal excl. btw',
                 _data.eindtotaalExclBtw,
-                kleur: _groen,
+                kleur: _tekstDonker,
                 vet: true,
                 groot: true,
               ),
@@ -1014,7 +1005,9 @@ class _OffertePrijsOverzichtPdfPreviewPagina extends StatefulWidget {
 
 class _OffertePrijsOverzichtPdfPreviewPaginaState
     extends State<_OffertePrijsOverzichtPdfPreviewPagina> {
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
 
   late Future<Uint8List> _pdfFuture;
   int _versie = 0;
@@ -1047,19 +1040,25 @@ class _OffertePrijsOverzichtPdfPreviewPaginaState
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
-        backgroundColor: _groen,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: _tekstDonker,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        shape: const Border(bottom: BorderSide(color: _rand)),
         title: const Text(
           'PDF · prijs- en margeoverzicht',
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(
+            color: _tekstDonker,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         actions: <Widget>[
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.refresh_rounded,
             tooltip: 'PDF vernieuwen',
             onPressed: _vernieuw,
-            icon: const Icon(Icons.refresh_rounded),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
         ],
       ),
       body: LayoutBuilder(
@@ -1092,7 +1091,7 @@ class _OffertePrijsOverzichtPdfPreviewPaginaState
                 : 'Thimaco_prijsoverzicht_${nummer}_$veiligeNaam.pdf',
             build: (_) => _pdfFuture,
             loadingWidget: const Center(
-              child: CircularProgressIndicator(color: _groen),
+              child: CircularProgressIndicator(color: _oranje),
             ),
             onError: (context, fout) {
               return Center(

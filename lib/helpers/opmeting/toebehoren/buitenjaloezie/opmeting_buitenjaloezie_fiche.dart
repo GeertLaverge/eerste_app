@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app_storage.dart';
+import '../../../ui/thimaco_huisstijl.dart';
 import '../../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../../overzicht/opmeting_overzicht_model.dart';
@@ -35,8 +36,7 @@ class OpmetingBuitenjaloezieFiche extends StatefulWidget {
 
 class _OpmetingBuitenjaloezieFicheState
     extends State<OpmetingBuitenjaloezieFiche> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _rand = ThimacoKleuren.rand;
 
   final TextEditingController _notitiesController = TextEditingController();
 
@@ -213,103 +213,127 @@ class _OpmetingBuitenjaloezieFicheState
         if (!didPop) await _sluitFiche();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        backgroundColor: ThimacoKleuren.achtergrond,
         appBar: AppBar(
-          backgroundColor: _groen,
-          foregroundColor: Colors.white,
+          toolbarHeight: 47,
+          backgroundColor: Colors.white,
+          foregroundColor: ThimacoKleuren.antraciet,
           elevation: 0,
-          centerTitle: true,
-          leading: IconButton(
-            onPressed: _sluitFiche,
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+          scrolledUnderElevation: 0,
+          centerTitle: false,
+          leadingWidth: 46,
+          leading: Center(
+            child: ThimacoIcoonActie(
+              icoon: Icons.arrow_back_rounded,
+              tooltip: 'Terug',
+              onPressed: _sluitFiche,
+            ),
           ),
+          titleSpacing: 0,
           title: Text(
             titel,
-            style: const TextStyle(fontWeight: FontWeight.w800),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: ThimacoKleuren.antraciet,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           actions: <Widget>[
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ElevatedButton.icon(
-                onPressed: _bewaren ? null : _bewaar,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: _bewaren
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: _groen,
-                        ),
-                      )
-                    : const Icon(Icons.save_outlined, size: 18),
-                label: Text(
-                  widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(right: 10),
-              child: ElevatedButton.icon(
+            Center(
+              child: ThimacoTekstActie(
+                tekst: 'Annuleren',
                 onPressed: _bewaren ? null : _sluitFiche,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: _groen,
-                ),
-                icon: const Icon(Icons.close_rounded, size: 18),
-                label: const Text('Sluiten'),
               ),
             ),
+            const SizedBox(width: 6),
+            Center(
+              child: SizedBox(
+                height: 32,
+                child: ElevatedButton.icon(
+                  onPressed: _bewaren ? null : _bewaar,
+                  style: ElevatedButton.styleFrom(
+                    elevation: 0,
+                    backgroundColor: ThimacoKleuren.oranje,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor:
+                        ThimacoKleuren.oranje.withValues(alpha: 0.45),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  icon: _bewaren
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          widget.bestaandeOpmeting == null
+                              ? Icons.add_rounded
+                              : Icons.check_rounded,
+                          size: 17,
+                        ),
+                  label: Text(
+                    widget.bestaandeOpmeting == null ? 'Toevoegen' : 'Bewaren',
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
           ],
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: ThimacoKleuren.rand,
+            ),
+          ),
         ),
         body: _laden
-            ? const Center(child: CircularProgressIndicator(color: _groen))
+            ? const Center(
+                child: CircularProgressIndicator(
+                  color: ThimacoKleuren.oranje,
+                ),
+              )
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final breedScherm = constraints.maxWidth >= 900;
+                  final tekening = _tekenKaart();
+                  final rechterkolom = OpmetingBuitenjaloezieRechterkolom(
+                    model: _model,
+                    instellingen: _instellingen,
+                    onChanged: (model) => setState(() => _model = model),
+                  );
 
-                  if (!breedScherm) {
-                    return Column(
-                      children: <Widget>[
-                        SizedBox(
-                          height: constraints.maxHeight * 0.42,
-                          child: _tekenKaart(),
-                        ),
-                        Expanded(
-                          child: OpmetingBuitenjaloezieRechterkolom(
-                            model: _model,
-                            instellingen: _instellingen,
-                            onChanged: (model) {
-                              setState(() => _model = model);
-                            },
+                  return Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: breedScherm
+                        ? Row(
+                            children: <Widget>[
+                              Expanded(flex: 60, child: tekening),
+                              const SizedBox(width: 12),
+                              Expanded(flex: 40, child: rechterkolom),
+                            ],
+                          )
+                        : Column(
+                            children: <Widget>[
+                              Expanded(flex: 43, child: tekening),
+                              const SizedBox(height: 12),
+                              Expanded(flex: 57, child: rechterkolom),
+                            ],
                           ),
-                        ),
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    children: <Widget>[
-                      Expanded(
-                        flex: 6,
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: _tekenKaart(),
-                        ),
-                      ),
-                      Container(width: 1, color: _rand),
-                      Expanded(
-                        flex: 5,
-                        child: OpmetingBuitenjaloezieRechterkolom(
-                          model: _model,
-                          instellingen: _instellingen,
-                          onChanged: (model) => setState(() => _model = model),
-                        ),
-                      ),
-                    ],
                   );
                 },
               ),
@@ -336,19 +360,33 @@ class _OpmetingBuitenjaloezieFicheState
         children: <Widget>[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
-              color: Color(0xFFE7F6EC),
-              border: Border(bottom: BorderSide(color: Color(0xFFCDEBD6))),
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: ThimacoKleuren.rand)),
             ),
-            child: Text(
-              '${_model.systeem.label} · ${_model.lameltype.label} · '
-              '${_model.totaleBreedteMm} × ${_model.totaleHoogteMm} mm',
-              style: const TextStyle(
-                color: _groen,
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
+            child: Row(
+              children: <Widget>[
+                const Icon(
+                  Icons.straighten_rounded,
+                  color: ThimacoKleuren.oranje,
+                  size: 17,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    '${_model.systeem.label} · ${_model.lameltype.label} · '
+                    '${_model.totaleBreedteMm} × ${_model.totaleHoogteMm} mm',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: ThimacoKleuren.antraciet,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(child: OpmetingBuitenjaloezieTekenvlak(model: _model)),

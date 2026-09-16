@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NAVIGATIE-ZONDER-DUBBELE-AUTOSYNC-20260914
 // THIMACO-CONTROLE: CENTRAAL-DOWNLOADSIGNAAL-FASE7-20260805
 
 import 'dart:async';
@@ -16,9 +17,6 @@ class SyncNavigatieHelper {
   /// Agenda, Klanten, Notities, Home en andere luisterende
   /// pagina's laden daarna hun lokale gegevens opnieuw in.
   static final ValueNotifier<int> downloadVersie = ValueNotifier<int>(0);
-
-  /// Er kan maar één automatische download tegelijk lopen.
-  static Future<void>? _lopendeAchtergrondDownload;
 
   /// Centraal signaal voor iedere geslaagde download.
   ///
@@ -96,8 +94,8 @@ class SyncNavigatieHelper {
 
   /// Keert onmiddellijk terug naar Home.
   ///
-  /// De gewone appgegevens worden daarna zonder foto's
-  /// op de achtergrond gedownload.
+  /// De centrale app-synccontroller verzorgt de automatische synchronisatie.
+  /// Navigatie start daarom bewust geen tweede download meer.
   static Future<void> terugNaarHomeMetDownload({
     required BuildContext context,
   }) {
@@ -111,15 +109,13 @@ class SyncNavigatieHelper {
       ).pushNamedAndRemoveUntil<void>('/', (route) => false),
     );
 
-    _startAchtergrondDownloadNaNavigatie();
-
     return Future<void>.value();
   }
 
   /// Opent de gekozen pagina onmiddellijk.
   ///
-  /// De gewone appgegevens worden daarna zonder foto's
-  /// op de achtergrond gedownload.
+  /// De centrale app-synccontroller verzorgt de automatische synchronisatie.
+  /// Navigatie start daarom bewust geen tweede download meer.
   static Future<void> openMetDownload({
     required BuildContext context,
     required Widget pagina,
@@ -134,70 +130,6 @@ class SyncNavigatieHelper {
       ).push<void>(MaterialPageRoute<void>(builder: (_) => pagina)),
     );
 
-    _startAchtergrondDownloadNaNavigatie();
-
     return Future<void>.value();
-  }
-
-  /// Laat Flutter eerst de nieuwe pagina tekenen.
-  /// Daarna pas begint de achtergronddownload.
-  static void _startAchtergrondDownloadNaNavigatie() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startAchtergrondDownload();
-    });
-  }
-
-  static void _startAchtergrondDownload() {
-    if (_lopendeAchtergrondDownload != null) {
-      return;
-    }
-
-    final taak = _voerAchtergrondDownloadUit();
-
-    _lopendeAchtergrondDownload = taak;
-
-    unawaited(
-      taak.whenComplete(() {
-        if (identical(_lopendeAchtergrondDownload, taak)) {
-          _lopendeAchtergrondDownload = null;
-        }
-      }),
-    );
-  }
-
-  static Future<void> _voerAchtergrondDownloadUit() async {
-    try {
-      final token = await OneDriveAuthService().tokenSilent();
-
-      if (_isFoutmelding(token)) {
-        return;
-      }
-
-      /*
-       * Automatische navigatiesync:
-       * alleen de gewone appgegevens.
-       *
-       * Klantenfoto's worden hier bewust overgeslagen,
-       * zodat de geopende pagina soepel blijft werken.
-       */
-      final resultaat = await OneDriveSyncService().downloadBackupMetToken(
-        token,
-        downloadFotos: false,
-      );
-
-      if (_isFoutmelding(resultaat)) {
-        return;
-      }
-
-      meldDownloadVoltooid();
-    } catch (_) {
-      /*
-       * Een automatische synchronisatie mag de navigatie
-       * nooit blokkeren en toont daarom geen foutmelding.
-       *
-       * Bij een handmatige download krijgt de gebruiker
-       * wel het resultaat te zien.
-       */
-    }
   }
 }

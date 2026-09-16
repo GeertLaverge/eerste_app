@@ -5,6 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
+
 import 'opmeting_sektionale_poort_instellingen_model.dart';
 import 'opmeting_sektionale_poort_model.dart';
 
@@ -30,8 +32,7 @@ class OpmetingSektionalePoortRechterkolom extends StatefulWidget {
 
 class _OpmetingSektionalePoortRechterkolomState
     extends State<OpmetingSektionalePoortRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _rand = ThimacoKleuren.rand;
 
   late final Map<String, TextEditingController> _controllers;
 
@@ -142,32 +143,29 @@ class _OpmetingSektionalePoortRechterkolomState
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _rand),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x0F111827),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE7F6EC),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(13)),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.garage_outlined, color: _groen, size: 19),
-                SizedBox(width: 8),
-                Text(
-                  'Sektionale poorten',
-                  style: TextStyle(
-                    color: _groen,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
             ),
           ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Expanded(
-            child: ListView(
+            child: Scrollbar(
+              child: ListView(
               padding: const EdgeInsets.all(10),
               children: <Widget>[
                 _SectieKaart(
@@ -245,7 +243,7 @@ class _OpmetingSektionalePoortRechterkolomState
                       _wijzig(widget.model.copyWith(serie: waarde)),
                 ),
                 _RondeSelectieSectie<OpmetingSektionalePoortStructuur>(
-                  titel: 'Struktuur',
+                  titel: 'Structuur',
                   waarde: widget.model.structuur,
                   keuzes: OpmetingSektionalePoortStructuur.values,
                   labelVoor: (waarde) => waarde.label,
@@ -299,6 +297,7 @@ class _OpmetingSektionalePoortRechterkolomState
                 _bouwMontageProfielen(),
               ],
             ),
+          ),
           ),
         ],
       ),
@@ -526,6 +525,7 @@ class _OpmetingSektionalePoortRechterkolomState
         const SizedBox(width: 7),
         Expanded(
           child: TextField(
+            cursorColor: ThimacoKleuren.oranje,
             controller: _controller(controllerSleutel, afstandMm),
             keyboardType: TextInputType.number,
             inputFormatters: <TextInputFormatter>[
@@ -835,6 +835,7 @@ class _OpmetingSektionalePoortRechterkolomState
       return Expanded(
         flex: 2,
         child: TextField(
+          cursorColor: ThimacoKleuren.oranje,
           controller: _controller('koker-$profiel-$zijde', waarde),
           keyboardType: TextInputType.number,
           inputFormatters: <TextInputFormatter>[
@@ -904,27 +905,18 @@ class _SectieKaart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
+      margin: const EdgeInsets.only(bottom: 9),
+      padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCFCFD),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: _OpmetingSektionalePoortRechterkolomState._rand,
-        ),
+        border: Border.all(color: ThimacoKleuren.rand),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            titel,
-            style: const TextStyle(
-              color: _OpmetingSektionalePoortRechterkolomState._groen,
-              fontSize: 12.2,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 5),
+          ThimacoSectieTitel(tekst: titel),
+          const SizedBox(height: 8),
           child,
         ],
       ),
@@ -953,12 +945,18 @@ class _RondeSelectieSectie<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectieKaart(
       titel: titel,
-      child: _RondeSelectieRaster<T>(
-        waarde: waarde,
-        keuzes: keuzes,
-        labelVoor: labelVoor,
-        onChanged: onChanged,
-        kolommen: kolommen,
+      child: Wrap(
+        spacing: kolommen > 1 ? 6 : 8,
+        runSpacing: 2,
+        children: keuzes
+            .map(
+              (keuze) => ThimacoTekstKeuze(
+                tekst: labelVoor(keuze),
+                geselecteerd: waarde == keuze,
+                onPressed: () => onChanged(keuze),
+              ),
+            )
+            .toList(growable: false),
       ),
     );
   }
@@ -1078,65 +1076,60 @@ class _RondeSelectieTegel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final kleur = beschikbaar
-        ? _OpmetingSektionalePoortRechterkolomState._groen
-        : const Color(0xFF9CA3AF);
-    return Material(
-      color: beschikbaar ? Colors.white : const Color(0xFFF3F4F6),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _RondeIndicator(
-                geselecteerd: geselecteerd,
-                beschikbaar: beschikbaar,
-              ),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 11.7,
-                        fontWeight: FontWeight.w700,
-                        color: beschikbaar
-                            ? const Color(0xFF1F2937)
-                            : const Color(0xFF9CA3AF),
-                      ),
+    return ThimacoSelectieTegel(
+      geselecteerd: geselecteerd,
+      onTap: beschikbaar ? onTap : null,
+      enabled: beschikbaar,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      child: Padding(
+        padding: EdgeInsets.only(right: geselecteerd ? 17 : 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: beschikbaar
+                          ? ThimacoKleuren.antraciet
+                          : ThimacoKleuren.tekstGrijs.withValues(alpha: 0.45),
+                      fontSize: 11.7,
+                      fontWeight:
+                          geselecteerd ? FontWeight.w900 : FontWeight.w700,
                     ),
-                    if (onderschrift.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(
-                          onderschrift,
-                          style: TextStyle(
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w600,
-                            color: kleur,
-                          ),
+                  ),
+                  if (onderschrift.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Text(
+                        onderschrift,
+                        style: TextStyle(
+                          color: beschikbaar
+                              ? ThimacoKleuren.tekstGrijs
+                              : ThimacoKleuren.tekstGrijs.withValues(
+                                  alpha: 0.42,
+                                ),
+                          fontSize: 8.8,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                  ],
+                    ),
+                ],
+              ),
+            ),
+            if (!beschikbaar)
+              const Padding(
+                padding: EdgeInsets.only(left: 4),
+                child: Icon(
+                  Icons.lock_outline_rounded,
+                  size: 13,
+                  color: ThimacoKleuren.tekstGrijs,
                 ),
               ),
-              if (!beschikbaar)
-                const Padding(
-                  padding: EdgeInsets.only(left: 3),
-                  child: Icon(
-                    Icons.lock_outline_rounded,
-                    size: 13,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -1156,28 +1149,18 @@ class _RondeToggleTegel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: () => onChanged(!waarde),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-          child: Row(
-            children: <Widget>[
-              _RondeIndicator(geselecteerd: waarde),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 11.7,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+    return ThimacoSelectieTegel(
+      geselecteerd: waarde,
+      onTap: () => onChanged(!waarde),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      child: Padding(
+        padding: EdgeInsets.only(right: waarde ? 17 : 0),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: ThimacoKleuren.antraciet,
+            fontSize: 11.7,
+            fontWeight: waarde ? FontWeight.w900 : FontWeight.w700,
           ),
         ),
       ),
@@ -1198,57 +1181,11 @@ class _KleineRondeKeuze extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _RondeIndicator(geselecteerd: geselecteerd),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10.2,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _RondeIndicator extends StatelessWidget {
-  const _RondeIndicator({required this.geselecteerd, this.beschikbaar = true});
-
-  final bool geselecteerd;
-  final bool beschikbaar;
-
-  @override
-  Widget build(BuildContext context) {
-    final kleur = beschikbaar
-        ? _OpmetingSektionalePoortRechterkolomState._groen
-        : const Color(0xFF9CA3AF);
-    return Container(
-      width: 17,
-      height: 17,
-      margin: const EdgeInsets.only(top: 0.5),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: kleur, width: 1.7),
-      ),
-      alignment: Alignment.center,
-      child: geselecteerd
-          ? Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: kleur),
-            )
-          : null,
+    return ThimacoTekstKeuze(
+      tekst: label,
+      geselecteerd: geselecteerd,
+      onPressed: onTap,
+      compact: true,
     );
   }
 }
@@ -1273,33 +1210,30 @@ class _JaNeeSectie extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 2,
             children: <Widget>[
-              Expanded(
-                child: _RondeSelectieTegel(
-                  label: 'Ja',
-                  geselecteerd: waarde,
-                  onTap: () => onChanged(true),
-                ),
+              ThimacoTekstKeuze(
+                tekst: 'Ja',
+                geselecteerd: waarde,
+                onPressed: () => onChanged(true),
               ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _RondeSelectieTegel(
-                  label: 'Nee',
-                  geselecteerd: !waarde,
-                  onTap: () => onChanged(false),
-                ),
+              ThimacoTekstKeuze(
+                tekst: 'Nee',
+                geselecteerd: !waarde,
+                onPressed: () => onChanged(false),
               ),
             ],
           ),
           if (onderschrift.trim().isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 5),
+              padding: const EdgeInsets.only(top: 6),
               child: Text(
                 onderschrift,
                 style: const TextStyle(
                   fontSize: 9,
-                  color: Color(0xFF6B7280),
+                  color: ThimacoKleuren.tekstGrijs,
                   height: 1.3,
                 ),
               ),
@@ -1344,6 +1278,7 @@ class _NummerRij extends StatelessWidget {
           const SizedBox(width: 7),
           Expanded(
             child: TextField(
+              cursorColor: ThimacoKleuren.oranje,
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: false,
@@ -1471,11 +1406,11 @@ InputDecoration _invoerDecoratie({
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      borderSide: const BorderSide(color: ThimacoKleuren.rand),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFF0B7A3B), width: 1.4),
+      borderSide: const BorderSide(color: ThimacoKleuren.oranje, width: 1.4),
     ),
   );
 }

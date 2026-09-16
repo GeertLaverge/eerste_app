@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NOTITIE-DAG-LOKALE-REBUILD-BIJ-STATUS-20260914
 import 'package:flutter/material.dart';
 
 import 'notitie_actie_model.dart';
@@ -5,7 +6,7 @@ import 'notitie_helper.dart';
 import 'notitie_model.dart';
 import 'notitie_regel.dart';
 
-class NotitieDagContainer extends StatelessWidget {
+class NotitieDagContainer extends StatefulWidget {
   const NotitieDagContainer({
     super.key,
     required this.datumKey,
@@ -23,31 +24,48 @@ class NotitieDagContainer extends StatelessWidget {
   final ValueChanged<NotitieModel> onNotitieChanged;
   final ValueChanged<NotitieModel> onNotitieVerwijderd;
 
-  final void Function(NotitieModel notitie, String nieuweDatumKey)
-  onNotitieVerplaatst;
+  final void Function(
+    NotitieModel notitie,
+    String nieuweDatumKey,
+  ) onNotitieVerplaatst;
 
+  @override
+  State<NotitieDagContainer> createState() => _NotitieDagContainerState();
+}
+
+class _NotitieDagContainerState extends State<NotitieDagContainer> {
   String get _titel {
-    final delen = datumKey.split('-');
+    final delen = widget.datumKey.split('-');
     final vandaag = NotitieHelper.datumKey(DateTime.now());
 
-    if (datumKey == vandaag) return 'Vandaag';
-    if (delen.length != 3) return datumKey;
+    if (widget.datumKey == vandaag) return 'Vandaag';
+    if (delen.length != 3) return widget.datumKey;
 
     return '${delen[2]}/${delen[1]}/${delen[0]}';
   }
 
+  void _statusGewijzigd() {
+    if (!mounted) return;
+
+    /*
+     * Alleen deze dag opnieuw tekenen. Zo wijzigen telling en sortering
+     * onmiddellijk zonder de volledige Notities Bureau-pagina te herbouwen.
+     */
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
-    final gesorteerd = NotitieHelper.sorteerVoorDag(notities);
-    final openAantal = notities.where((n) => !n.afgewerkt).length;
-    final afgewerktAantal = notities.where((n) => n.afgewerkt).length;
+    final gesorteerd = NotitieHelper.sorteerVoorDag(widget.notities);
+    final openAantal = widget.notities.where((n) => !n.afgewerkt).length;
+    final afgewerktAantal = widget.notities.where((n) => n.afgewerkt).length;
 
     return DragTarget<NotitieModel>(
       onWillAcceptWithDetails: (details) {
-        return details.data.datumKey != datumKey;
+        return details.data.datumKey != widget.datumKey;
       },
       onAcceptWithDetails: (details) {
-        onNotitieVerplaatst(details.data, datumKey);
+        widget.onNotitieVerplaatst(details.data, widget.datumKey);
       },
       builder: (context, candidateData, rejectedData) {
         final isHover = candidateData.isNotEmpty;
@@ -102,10 +120,12 @@ class NotitieDagContainer extends StatelessWidget {
                   children: [
                     for (final notitie in gesorteerd)
                       NotitieRegel(
+                        key: ValueKey(notitie.id),
                         notitie: notitie,
-                        acties: acties,
-                        onChanged: onNotitieChanged,
-                        onDelete: onNotitieVerwijderd,
+                        acties: widget.acties,
+                        onChanged: widget.onNotitieChanged,
+                        onDelete: widget.onNotitieVerwijderd,
+                        onStatusChanged: _statusGewijzigd,
                       ),
                   ],
                 ),

@@ -1,11 +1,15 @@
-// THIMACO-CONTROLE: OPMETING-PDF-ONEDRIVE-MAPPEN-EN-BESTANDSNAAM-20260731
+// THIMACO-CONTROLE: PDF-PREVIEW-RUSTIGE-PROGRAMMASTIJL-FASE19-20260913
+// THIMACO-CONTROLE: OPMETING-PDF-ALLEEN-AFDRUKKEN-EN-ONEDRIVE-20260912
+// THIMACO-CONTROLE: OPMETING-PDF-ONEDRIVE-PROJECTNAAM-VERSIE-20260912
 // THIMACO-CONTROLE: OPMETING-PDF-PREVIEW-ZONDER-PRIJZEN-20260731
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+
+import '../ui/thimaco_huisstijl.dart';
 
 import '../opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../opmeting/project/opmeting_project_titelhoofd_model.dart';
@@ -32,7 +36,12 @@ class OpmetingPdfPreviewPagina extends StatefulWidget {
 }
 
 class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
-  static const Color _groen = Color(0xFF0B7A3B);
+  static const Color _oranje = ThimacoKleuren.oranje;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const MethodChannel _nativePrintKanaal = MethodChannel(
+    'be.thimaco.app/native_print',
+  );
 
   final OneDriveKlantdocumentService _oneDriveService =
       OneDriveKlantdocumentService();
@@ -40,6 +49,7 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
   late Future<Uint8List> _pdfFuture;
   int _pdfVersie = 0;
   bool _opslaanNaarOneDriveBezig = false;
+  bool _afdrukkenBezig = false;
 
   @override
   void initState() {
@@ -70,17 +80,76 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
     _pdfFuture = _bouwPdf();
   }
 
-  void _vernieuwPdf() {
-    setState(_maakNieuwePdfFuture);
+  String _maakBestandsnaam() {
+    final titel = widget.titelhoofd;
+    final projectNaam = titel.bestandsNaam.trim().isNotEmpty
+        ? titel.bestandsNaam.trim()
+        : titel.klantNaam.trim().isNotEmpty
+        ? titel.klantNaam.trim()
+        : 'Thimaco_opmeting';
+    final veiligeProjectNaam = _veiligBestandsdeel(projectNaam);
+    final versie = titel.veiligeBestandVersieNummer;
+
+    return '${veiligeProjectNaam.isEmpty ? 'Thimaco_opmeting' : veiligeProjectNaam}'
+        '_V$versie.pdf';
   }
 
-  String _maakBestandsnaam() {
-    final datumTekst = _datumVoorBestandsnaam(DateTime.now());
-    final veiligeNaam = _veiligBestandsdeel(widget.titelhoofd.klantNaam);
+  Future<void> _drukA4Af() async {
+    if (_afdrukkenBezig) return;
 
-    return veiligeNaam.isEmpty
-        ? 'Thimaco_opmeting_$datumTekst.pdf'
-        : 'Thimaco_opmeting_${datumTekst}_$veiligeNaam.pdf';
+    setState(() {
+      _afdrukkenBezig = true;
+    });
+
+    try {
+      final pdfBytes = await _pdfFuture;
+      if (!mounted) return;
+
+      if (Theme.of(context).platform == TargetPlatform.iOS) {
+        await _nativePrintKanaal.invokeMethod<String>(
+          'printPdfA4',
+          <String, Object>{
+            'bytes': pdfBytes,
+            'bestandsnaam': _maakBestandsnaam(),
+          },
+        );
+      } else {
+        await Printing.layoutPdf(
+          name: _maakBestandsnaam(),
+          format: PdfPageFormat.a4,
+          dynamicLayout: false,
+          onLayout: (_) async => pdfBytes,
+        );
+      }
+    } on PlatformException catch (fout) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            fout.message?.trim().isNotEmpty == true
+                ? 'Afdrukken kon niet worden gestart.\n${fout.message}'
+                : 'Afdrukken kon niet worden gestart.\n${fout.code}',
+          ),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } catch (fout) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Afdrukken kon niet worden gestart.\n$fout'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _afdrukkenBezig = false;
+        });
+      }
+    }
   }
 
   Future<void> _opslaanNaarOneDrive() async {
@@ -117,6 +186,7 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
       Navigator.of(context).pop(resultaat);
     } on OneDriveKlantdocumentException catch (fout) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(fout.bericht),
@@ -125,6 +195,7 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
       );
     } catch (fout) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Opslaan naar OneDrive is niet gelukt.\n$fout'),
@@ -140,50 +211,69 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
     }
   }
 
-  Widget _bouwOneDriveActie(BuildContext context) {
-    final toonTekst = MediaQuery.sizeOf(context).width >= 700;
+  Widget _bouwAfdrukActie(BuildContext context) {
+    final toonTekst = MediaQuery.sizeOf(context).width >= 900;
 
-    if (!toonTekst) {
-      return IconButton(
-        tooltip: 'Opslaan naar OneDrive klanten',
-        onPressed: _opslaanNaarOneDriveBezig ? null : _opslaanNaarOneDrive,
-        icon: _opslaanNaarOneDriveBezig
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.cloud_upload_outlined),
+    if (_afdrukkenBezig) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 9),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: _oranje,
+          ),
+        ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: TextButton.icon(
-        style: TextButton.styleFrom(
-          foregroundColor: Colors.white,
-          backgroundColor: const Color(0x26FFFFFF),
-          padding: const EdgeInsets.symmetric(horizontal: 13),
+    if (!toonTekst) {
+      return ThimacoIcoonActie(
+        icoon: Icons.print_outlined,
+        tooltip: 'Afdrukken op A4',
+        grootte: 19,
+        onPressed: _drukA4Af,
+      );
+    }
+
+    return ThimacoTekstActie(
+      tekst: 'Afdrukken',
+      compact: false,
+      onPressed: _drukA4Af,
+    );
+  }
+
+  Widget _bouwOneDriveActie(BuildContext context) {
+    final toonTekst = MediaQuery.sizeOf(context).width >= 900;
+
+    if (_opslaanNaarOneDriveBezig) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 9),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: _oranje,
+          ),
         ),
-        onPressed: _opslaanNaarOneDriveBezig ? null : _opslaanNaarOneDrive,
-        icon: _opslaanNaarOneDriveBezig
-            ? const SizedBox(
-                width: 17,
-                height: 17,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.cloud_upload_outlined, size: 19),
-        label: const Text(
-          'Opslaan naar OneDrive klanten',
-          style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-      ),
+      );
+    }
+
+    if (!toonTekst) {
+      return ThimacoIcoonActie(
+        icoon: Icons.cloud_upload_outlined,
+        tooltip: 'Opslaan naar OneDrive klanten',
+        grootte: 19,
+        onPressed: _opslaanNaarOneDrive,
+      );
+    }
+
+    return ThimacoTekstActie(
+      tekst: 'Opslaan naar OneDrive',
+      compact: false,
+      onPressed: _opslaanNaarOneDrive,
     );
   }
 
@@ -212,6 +302,14 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
     return OffertePdfService.bouwOpmetingPdf(data);
   }
 
+  String _appBarTitel() {
+    final project = widget.titelhoofd.bestandsNaam.trim();
+    if (project.isEmpty) return 'Opmetingvoorbeeld';
+
+    return 'Opmetingvoorbeeld · '
+        '${widget.titelhoofd.bestandsNaamMetVersie}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final bestandsnaam = _maakBestandsnaam();
@@ -219,22 +317,46 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
-        backgroundColor: _groen,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Opmetingvoorbeeld',
-          style: TextStyle(fontWeight: FontWeight.w800),
+        backgroundColor: Colors.white,
+        foregroundColor: _tekstDonker,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              _appBarTitel(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _tekstDonker,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Container(
+              width: 36,
+              height: 1.5,
+              decoration: BoxDecoration(
+                color: _oranje.withValues(alpha: 0.72),
+                borderRadius: BorderRadius.circular(99),
+              ),
+            ),
+          ],
         ),
         actions: <Widget>[
-          _bouwOneDriveActie(context),
-          const SizedBox(width: 6),
-          IconButton(
-            tooltip: 'PDF vernieuwen',
-            onPressed: _vernieuwPdf,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
+          _bouwAfdrukActie(context),
           const SizedBox(width: 4),
+          _bouwOneDriveActie(context),
+          const SizedBox(width: 10),
         ],
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1, color: _rand),
+        ),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -255,16 +377,20 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
           return PdfPreview(
             key: ValueKey<int>(_pdfVersie),
             initialPageFormat: PdfPageFormat.a4,
+            pageFormats: const <String, PdfPageFormat>{
+              'A4': PdfPageFormat.a4,
+            },
+            dynamicLayout: false,
             maxPageWidth: passendePaginaBreedte,
             canChangePageFormat: false,
             canChangeOrientation: false,
             canDebug: false,
-            allowPrinting: true,
-            allowSharing: true,
+            allowPrinting: false,
+            allowSharing: false,
             pdfFileName: bestandsnaam,
             build: (_) => _pdfFuture,
             loadingWidget: const Center(
-              child: CircularProgressIndicator(color: _groen),
+              child: CircularProgressIndicator(color: _oranje),
             ),
             onError: (context, fout) {
               return Center(
@@ -293,11 +419,5 @@ class _OpmetingPdfPreviewPaginaState extends State<OpmetingPdfPreviewPagina> {
         .replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_')
         .replaceAll(RegExp(r'_+'), '_')
         .replaceAll(RegExp(r'^_|_$'), '');
-  }
-
-  static String _datumVoorBestandsnaam(DateTime datum) {
-    String twee(int waarde) => waarde.toString().padLeft(2, '0');
-
-    return '${datum.year}-${twee(datum.month)}-${twee(datum.day)}';
   }
 }

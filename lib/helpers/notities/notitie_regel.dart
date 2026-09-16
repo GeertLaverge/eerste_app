@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: NOTITIE-REGEL-LOKALE-UI-ZONDER-PAGINA-REBUILD-20260914
 import 'package:flutter/material.dart';
 
 import 'notitie_actie_model.dart';
@@ -11,6 +12,7 @@ class NotitieRegel extends StatefulWidget {
     required this.acties,
     required this.onChanged,
     required this.onDelete,
+    this.onStatusChanged,
   });
 
   final NotitieModel notitie;
@@ -18,6 +20,7 @@ class NotitieRegel extends StatefulWidget {
 
   final ValueChanged<NotitieModel> onChanged;
   final ValueChanged<NotitieModel> onDelete;
+  final VoidCallback? onStatusChanged;
 
   @override
   State<NotitieRegel> createState() => _NotitieRegelState();
@@ -37,8 +40,18 @@ class _NotitieRegelState extends State<NotitieRegel> {
   void didUpdateWidget(covariant NotitieRegel oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.notitie.id != widget.notitie.id) {
-      _titelController.text = widget.notitie.titel;
+    final andereNotitie = oldWidget.notitie.id != widget.notitie.id;
+    final externeTitelGewijzigd =
+        !_titelFocusNode.hasFocus &&
+        _titelController.text != widget.notitie.titel;
+
+    if (andereNotitie || externeTitelGewijzigd) {
+      _titelController.value = TextEditingValue(
+        text: widget.notitie.titel,
+        selection: TextSelection.collapsed(
+          offset: widget.notitie.titel.length,
+        ),
+      );
     }
   }
 
@@ -47,6 +60,11 @@ class _NotitieRegelState extends State<NotitieRegel> {
     _titelController.dispose();
     _titelFocusNode.dispose();
     super.dispose();
+  }
+
+  void _meldWijziging() {
+    widget.notitie.gewijzigdOp = DateTime.now();
+    widget.onChanged(widget.notitie);
   }
 
   Future<void> _openDetail() async {
@@ -64,11 +82,13 @@ class _NotitieRegelState extends State<NotitieRegel> {
       },
     );
 
-    if (nieuweDetail == null) return;
+    if (nieuweDetail == null || !mounted) return;
 
-    widget.notitie.detail = nieuweDetail;
-    widget.notitie.gewijzigdOp = DateTime.now();
-    widget.onChanged(widget.notitie);
+    setState(() {
+      widget.notitie.detail = nieuweDetail;
+    });
+
+    _meldWijziging();
   }
 
   NotitieActieModel? _gekozenActie() {
@@ -78,9 +98,31 @@ class _NotitieRegelState extends State<NotitieRegel> {
     return null;
   }
 
-  void _bewaarWijziging() {
+  void _statusWijzigen(bool waarde) {
+    _titelFocusNode.unfocus();
+
+    widget.notitie.afgewerkt = waarde;
     widget.notitie.gewijzigdOp = DateTime.now();
+
+    /*
+     * Alleen de eigen dagcontainer herbouwt voor telling/sortering.
+     * De volledige pagina blijft buiten schot.
+     */
+    if (widget.onStatusChanged != null) {
+      widget.onStatusChanged!();
+    } else if (mounted) {
+      setState(() {});
+    }
+
     widget.onChanged(widget.notitie);
+  }
+
+  void _actieWijzigen(String waarde) {
+    setState(() {
+      widget.notitie.actieId = waarde == '_geen_' ? '' : waarde;
+    });
+
+    _meldWijziging();
   }
 
   @override
@@ -91,159 +133,153 @@ class _NotitieRegelState extends State<NotitieRegel> {
         ? const Color(0xFF9CA3AF)
         : const Color(0xFF111827);
 
-    return KeyedSubtree(
-      key: ValueKey(widget.notitie.id),
-      child: Draggable<NotitieModel>(
-        data: widget.notitie,
-        feedback: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 280,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: Text(widget.notitie.titel),
-          ),
-        ),
+    return Draggable<NotitieModel>(
+      data: widget.notitie,
+      feedback: Material(
+        color: Colors.transparent,
         child: Container(
-          height: 42,
-          padding: const EdgeInsets.only(left: 4, right: 4),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 24,
-                child: Transform.scale(
-                  scale: 0.72,
-                  child: Checkbox(
-                    key: ValueKey('check_${widget.notitie.id}'),
-                    value: widget.notitie.afgewerkt,
-                    activeColor: const Color(0xFF0B7A3B),
-                    visualDensity: VisualDensity.compact,
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    onChanged: (waarde) {
-                      _titelFocusNode.unfocus();
-                      widget.notitie.afgewerkt = waarde ?? false;
-                      _bewaarWijziging();
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: 3),
-              Expanded(
-                child: TextField(
-                  key: ValueKey('titel_${widget.notitie.id}'),
-                  focusNode: _titelFocusNode,
-                  controller: _titelController,
-                  decoration: const InputDecoration(
-                    hintText: 'Titel notitie...',
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: tekstKleur,
-                    decoration: widget.notitie.afgewerkt
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                  ),
+          width: 280,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Text(widget.notitie.titel),
+        ),
+      ),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.only(left: 4, right: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              child: Transform.scale(
+                scale: 0.72,
+                child: Checkbox(
+                  value: widget.notitie.afgewerkt,
+                  activeColor: const Color(0xFF0B7A3B),
+                  visualDensity: VisualDensity.compact,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   onChanged: (waarde) {
-                    widget.notitie.titel = waarde;
-                    _bewaarWijziging();
+                    _statusWijzigen(waarde ?? false);
                   },
                 ),
               ),
-              const SizedBox(width: 8),
-              PopupMenuButton<String>(
-                key: ValueKey('actie_${widget.notitie.id}'),
-                tooltip: 'Actie kiezen',
-                padding: EdgeInsets.zero,
-                color: Colors.white,
-                constraints: const BoxConstraints(minWidth: 160),
-                onOpened: () {
-                  _titelFocusNode.unfocus();
+            ),
+            const SizedBox(width: 3),
+            Expanded(
+              child: TextField(
+                focusNode: _titelFocusNode,
+                controller: _titelController,
+                decoration: const InputDecoration(
+                  hintText: 'Titel notitie...',
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: tekstKleur,
+                  decoration: widget.notitie.afgewerkt
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                ),
+                onChanged: (waarde) {
+                  /*
+                   * Geen setState tijdens typen.
+                   * TextField tekent de ingevoerde tekst zelf; wij passen alleen
+                   * het model aan en plannen de opslag.
+                   */
+                  widget.notitie.titel = waarde;
+                  _meldWijziging();
                 },
-                onSelected: (waarde) {
-                  widget.notitie.actieId = waarde == '_geen_' ? '' : waarde;
-                  _bewaarWijziging();
-                },
-                itemBuilder: (context) {
-                  return [
-                    const PopupMenuItem<String>(
-                      value: '_geen_',
-                      child: Text(
-                        'Geen actie',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontWeight: FontWeight.w600,
-                        ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            PopupMenuButton<String>(
+              tooltip: 'Actie kiezen',
+              padding: EdgeInsets.zero,
+              color: Colors.white,
+              constraints: const BoxConstraints(minWidth: 160),
+              onOpened: () {
+                _titelFocusNode.unfocus();
+              },
+              onSelected: _actieWijzigen,
+              itemBuilder: (context) {
+                return [
+                  const PopupMenuItem<String>(
+                    value: '_geen_',
+                    child: Text(
+                      'Geen actie',
+                      style: TextStyle(
+                        color: Color(0xFF6B7280),
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    ...widget.acties.map((actie) {
-                      return PopupMenuItem<String>(
-                        value: actie.id,
-                        child: Text(
-                          actie.naam,
-                          style: TextStyle(
-                            color: Color(actie.kleurWaarde),
-                            fontWeight: FontWeight.w700,
-                          ),
+                  ),
+                  ...widget.acties.map((actie) {
+                    return PopupMenuItem<String>(
+                      value: actie.id,
+                      child: Text(
+                        actie.naam,
+                        style: TextStyle(
+                          color: Color(actie.kleurWaarde),
+                          fontWeight: FontWeight.w700,
                         ),
-                      );
-                    }),
-                  ];
-                },
-                child: SizedBox(
-                  width: 86,
-                  child: Text(
-                    actie?.naam ?? 'Geen actie',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: actie == null
-                          ? const Color(0xFF6B7280)
-                          : Color(actie.kleurWaarde),
-                    ),
+                      ),
+                    );
+                  }),
+                ];
+              },
+              child: SizedBox(
+                width: 86,
+                child: Text(
+                  actie?.naam ?? 'Geen actie',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: actie == null
+                        ? const Color(0xFF6B7280)
+                        : Color(actie.kleurWaarde),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              InkWell(
-                onTap: _openDetail,
-                child: Padding(
-                  padding: const EdgeInsets.all(3),
-                  child: Icon(
-                    widget.notitie.detail.trim().isEmpty
-                        ? Icons.sticky_note_2_outlined
-                        : Icons.sticky_note_2,
-                    size: 17,
-                    color: const Color(0xFF0B7A3B),
-                  ),
+            ),
+            const SizedBox(width: 12),
+            InkWell(
+              onTap: _openDetail,
+              child: Padding(
+                padding: const EdgeInsets.all(3),
+                child: Icon(
+                  widget.notitie.detail.trim().isEmpty
+                      ? Icons.sticky_note_2_outlined
+                      : Icons.sticky_note_2,
+                  size: 17,
+                  color: const Color(0xFF0B7A3B),
                 ),
               ),
-              const SizedBox(width: 5),
-              InkWell(
-                onTap: () {
-                  _titelFocusNode.unfocus();
-                  widget.onDelete(widget.notitie);
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(3),
-                  child: Icon(
-                    Icons.delete_outline,
-                    size: 17,
-                    color: Color(0xFFDC2626),
-                  ),
+            ),
+            const SizedBox(width: 5),
+            InkWell(
+              onTap: () {
+                _titelFocusNode.unfocus();
+                widget.onDelete(widget.notitie);
+              },
+              child: const Padding(
+                padding: EdgeInsets.all(3),
+                child: Icon(
+                  Icons.delete_outline,
+                  size: 17,
+                  color: Color(0xFFDC2626),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,7 +1,9 @@
+// THIMACO-CONTROLE: ONEDRIVE-KIEZER-PROGRAMMASTIJL-FASE20-20260913
 // THIMACO-CONTROLE: ONEDRIVE-KIEZER-TOONT-MAPPEN-EN-BESTANDEN-20260817
 // THIMACO-CONTROLE: ONEDRIVE-MAP-KIEZER-MAPPEN-EN-BESTANDSNAAM-20260731
 import 'package:flutter/material.dart';
 
+import '../ui/thimaco_huisstijl.dart';
 import 'onedrive_klantdocument_service.dart';
 
 class OneDriveMapKiezerDialog extends StatefulWidget {
@@ -46,10 +48,12 @@ class OneDriveMapKiezerDialog extends StatefulWidget {
 }
 
 class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _achtergrond = Color(0xFFF7F8FA);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _accent = ThimacoKleuren.oranje;
+  static const Color _achtergrond = ThimacoKleuren.achtergrond;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
+  static const Color _rood = ThimacoKleuren.rood;
 
   final TextEditingController _zoekController = TextEditingController();
   late final TextEditingController _bestandsnaamController;
@@ -185,32 +189,61 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
             }
 
             return AlertDialog(
-              title: const Text('Nieuwe map aanmaken'),
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: _rand),
+              ),
+              titlePadding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
+              contentPadding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+              actionsPadding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+              title: const ThimacoSectieTitel(
+                tekst: 'Nieuwe map aanmaken',
+                compact: false,
+              ),
               content: SizedBox(
                 width: 420,
                 child: TextField(
                   controller: naamController,
                   autofocus: true,
+                  cursorColor: _accent,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => bevestig(),
                   decoration: InputDecoration(
                     labelText: 'Naam van de nieuwe map',
                     hintText: 'Bijvoorbeeld Opmeting of Offerte',
                     errorText: dialoogFout.isEmpty ? null : dialoogFout,
-                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(
+                      Icons.create_new_folder_outlined,
+                      color: _tekstDonker,
+                      size: 19,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: _rand),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: _rand),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: _accent, width: 1.4),
+                    ),
                   ),
                 ),
               ),
               actions: <Widget>[
-                TextButton(
+                ThimacoTekstActie(
+                  tekst: 'Annuleren',
                   onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Annuleren'),
                 ),
-                FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: _groen),
+                ThimacoTekstActie(
+                  tekst: 'Map aanmaken',
                   onPressed: bevestig,
-                  icon: const Icon(Icons.create_new_folder_outlined),
-                  label: const Text('Map aanmaken'),
                 ),
               ],
             );
@@ -243,7 +276,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(fout.bericht),
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: _rood,
         ),
       );
     } catch (fout) {
@@ -251,7 +284,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('De nieuwe map kon niet worden aangemaakt.\n$fout'),
-          backgroundColor: const Color(0xFFDC2626),
+          backgroundColor: _rood,
         ),
       );
     } finally {
@@ -301,7 +334,11 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
 
     return Dialog(
       insetPadding: const EdgeInsets.all(18),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: const BorderSide(color: _rand),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 860, maxHeight: 760),
         child: Column(
@@ -321,29 +358,28 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
 
   Widget _bouwKop(String klantInfo) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 12, 14),
+      padding: const EdgeInsets.fromLTRB(18, 15, 10, 13),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE7F6EC),
-              borderRadius: BorderRadius.circular(12),
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(
+              Icons.cloud_outlined,
+              color: _tekstDonker,
+              size: 21,
             ),
-            child: const Icon(Icons.cloud_outlined, color: _groen),
           ),
-          const SizedBox(width: 13),
+          const SizedBox(width: 11),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
-                  'Opslaan naar OneDrive klanten',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                const ThimacoSectieTitel(
+                  tekst: 'Opslaan naar OneDrive klanten',
+                  compact: false,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 7),
                 Text(
                   klantInfo.isEmpty ? 'Klant niet ingevuld' : klantInfo,
                   style: const TextStyle(
@@ -352,18 +388,22 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 const Text(
                   'Kies een bestaande map of maak hier een nieuwe map aan. Pas daarna eventueel de PDF-bestandsnaam aan.',
-                  style: TextStyle(color: _tekstGrijs, fontSize: 11.5),
+                  style: TextStyle(
+                    color: _tekstGrijs,
+                    fontSize: 11.5,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.close_rounded,
             tooltip: 'Annuleren',
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close_rounded),
           ),
         ],
       ),
@@ -373,18 +413,19 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
   Widget _bouwNavigatie() {
     return Container(
       color: _achtergrond,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 620;
 
           final broodkruimel = Row(
             children: <Widget>[
-              IconButton(
+              ThimacoIcoonActie(
+                icoon: Icons.arrow_back_rounded,
                 tooltip: 'Een map terug',
                 onPressed: _pad.length > 1 && !_laden ? _gaEenMapTerug : null,
-                icon: const Icon(Icons.arrow_back_rounded),
               ),
+              const SizedBox(width: 3),
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -397,26 +438,30 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                             padding: EdgeInsets.symmetric(horizontal: 3),
                             child: Icon(
                               Icons.chevron_right_rounded,
-                              size: 18,
+                              size: 17,
                               color: _tekstGrijs,
                             ),
                           ),
-                        TextButton(
-                          onPressed: index < _pad.length - 1 && !_laden
-                              ? () => _gaNaarPadIndex(index)
-                              : null,
-                          child: Text(
-                            _pad[index].naam,
-                            style: TextStyle(
-                              color: index == _pad.length - 1
-                                  ? const Color(0xFF111827)
-                                  : _groen,
-                              fontWeight: index == _pad.length - 1
-                                  ? FontWeight.w800
-                                  : FontWeight.w600,
+                        if (index < _pad.length - 1)
+                          ThimacoTekstActie(
+                            tekst: _pad[index].naam,
+                            compact: true,
+                            onPressed: !_laden
+                                ? () => _gaNaarPadIndex(index)
+                                : null,
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
+                            child: Text(
+                              _pad[index].naam,
+                              style: const TextStyle(
+                                color: _tekstDonker,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ],
                   ),
@@ -428,44 +473,64 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
           final zoekveld = TextField(
             controller: _zoekController,
             enabled: !_laden,
+            cursorColor: _accent,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
               isDense: true,
               hintText: 'Zoek in deze map',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 19,
+                color: _tekstDonker,
+              ),
               suffixIcon: _zoekController.text.isEmpty
                   ? null
-                  : IconButton(
+                  : ThimacoIcoonActie(
+                      icoon: Icons.close_rounded,
                       tooltip: 'Zoekterm wissen',
+                      grootte: 17,
                       onPressed: () {
                         _zoekController.clear();
                         setState(() {});
                       },
-                      icon: const Icon(Icons.close_rounded, size: 18),
                     ),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 borderSide: const BorderSide(color: _rand),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 borderSide: const BorderSide(color: _rand),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: _accent, width: 1.4),
               ),
             ),
           );
 
-          final nieuweMapKnop = OutlinedButton.icon(
-            onPressed: _laden || _mapAanmaken ? null : _nieuweMapAanmaken,
-            icon: _mapAanmaken
-                ? const SizedBox(
-                    width: 17,
-                    height: 17,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.create_new_folder_outlined),
-            label: const Text('Nieuwe map'),
+          final nieuweMapActie = Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (_mapAanmaken) ...<Widget>[
+                const SizedBox(
+                  width: 15,
+                  height: 15,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _accent,
+                  ),
+                ),
+                const SizedBox(width: 5),
+              ],
+              ThimacoTekstActie(
+                tekst: 'Nieuwe map',
+                onPressed:
+                    _laden || _mapAanmaken ? null : _nieuweMapAanmaken,
+              ),
+            ],
           );
 
           if (compact) {
@@ -477,7 +542,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                   children: <Widget>[
                     Expanded(child: zoekveld),
                     const SizedBox(width: 8),
-                    nieuweMapKnop,
+                    nieuweMapActie,
                   ],
                 ),
               ],
@@ -490,7 +555,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
               const SizedBox(width: 12),
               SizedBox(width: 250, child: zoekveld),
               const SizedBox(width: 8),
-              nieuweMapKnop,
+              nieuweMapActie,
             ],
           );
         },
@@ -504,9 +569,15 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            CircularProgressIndicator(color: _groen),
+            CircularProgressIndicator(color: _accent),
             SizedBox(height: 14),
-            Text('OneDrive-mappen laden…'),
+            Text(
+              'OneDrive-mappen laden…',
+              style: TextStyle(
+                color: _tekstGrijs,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       );
@@ -521,23 +592,22 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
             children: <Widget>[
               const Icon(
                 Icons.cloud_off_rounded,
-                size: 44,
-                color: Color(0xFFB91C1C),
+                size: 42,
+                color: _rood,
               ),
               const SizedBox(height: 12),
               Text(
                 _fout,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: Color(0xFFB91C1C),
+                  color: _rood,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
+              const SizedBox(height: 13),
+              ThimacoTekstActie(
+                tekst: 'Opnieuw proberen',
                 onPressed: _laadHuidigeMap,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Opnieuw proberen'),
               ),
             ],
           ),
@@ -569,18 +639,21 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
           return Material(
             color: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(11),
+              borderRadius: BorderRadius.circular(10),
               side: const BorderSide(color: _rand),
             ),
+            clipBehavior: Clip.antiAlias,
             child: ListTile(
               dense: true,
+              hoverColor: ThimacoKleuren.oranjeLicht.withValues(alpha: 0.45),
               leading: Icon(
                 _icoonVoorItem(item),
-                color: item.isMap ? _groen : _kleurVoorBestand(item),
+                color: item.isMap ? _tekstDonker : _kleurVoorBestand(item),
               ),
               title: Text(
                 item.naam,
                 style: TextStyle(
+                  color: _tekstDonker,
                   fontWeight: item.isMap ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
@@ -591,7 +664,10 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                       style: const TextStyle(color: _tekstGrijs, fontSize: 11),
                     ),
               trailing: item.isMap
-                  ? const Icon(Icons.chevron_right_rounded)
+                  ? const Icon(
+                      Icons.chevron_right_rounded,
+                      color: _tekstGrijs,
+                    )
                   : null,
               onTap: item.isMap ? () => _openMap(item) : null,
             ),
@@ -635,7 +711,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
     final mime = item.mimeType.toLowerCase();
 
     if (naam.endsWith('.pdf') || mime == 'application/pdf') {
-      return const Color(0xFFB91C1C);
+      return _rood;
     }
 
     return _tekstGrijs;
@@ -693,6 +769,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
           TextField(
             controller: _bestandsnaamController,
             enabled: !_laden && !_mapAanmaken,
+            cursorColor: _accent,
             textInputAction: TextInputAction.done,
             onChanged: (_) {
               if (_bestandsnaamFout.isNotEmpty) {
@@ -709,16 +786,24 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
               hintText: 'Geef de gewenste bestandsnaam in',
               helperText: 'De extensie .pdf wordt automatisch toegevoegd.',
               errorText: _bestandsnaamFout.isEmpty ? null : _bestandsnaamFout,
-              prefixIcon: const Icon(Icons.picture_as_pdf_outlined),
+              prefixIcon: const Icon(
+                Icons.picture_as_pdf_outlined,
+                color: _tekstDonker,
+                size: 19,
+              ),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 borderSide: const BorderSide(color: _rand),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(9),
                 borderSide: const BorderSide(color: _rand),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(9),
+                borderSide: const BorderSide(color: _accent, width: 1.4),
               ),
             ),
           ),
@@ -736,26 +821,17 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                 ),
               );
 
-              final knoppen = Row(
+              final acties = Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  TextButton(
+                  ThimacoTekstActie(
+                    tekst: 'Annuleren',
                     onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Annuleren'),
                   ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _groen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 13,
-                      ),
-                    ),
+                  const SizedBox(width: 7),
+                  ThimacoTekstActie(
+                    tekst: 'Opslaan in deze map',
                     onPressed: kanKiezen ? _kiesHuidigeMap : null,
-                    icon: const Icon(Icons.cloud_upload_outlined),
-                    label: const Text('Opslaan in deze map'),
                   ),
                 ],
               );
@@ -765,8 +841,8 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     padTekst,
-                    const SizedBox(height: 10),
-                    Align(alignment: Alignment.centerRight, child: knoppen),
+                    const SizedBox(height: 9),
+                    Align(alignment: Alignment.centerRight, child: acties),
                   ],
                 );
               }
@@ -775,7 +851,7 @@ class _OneDriveMapKiezerDialogState extends State<OneDriveMapKiezerDialog> {
                 children: <Widget>[
                   Expanded(child: padTekst),
                   const SizedBox(width: 12),
-                  knoppen,
+                  acties,
                 ],
               );
             },

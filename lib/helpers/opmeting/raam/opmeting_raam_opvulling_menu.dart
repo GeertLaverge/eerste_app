@@ -1,5 +1,7 @@
+// THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_raam_opvulling_model.dart';
 
 // THIMACO-CONTROLE: OPVULLING-MENU-VOLGORDE-UIT-INSTELLINGEN-20260805
@@ -22,11 +24,10 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
     this.onVerslepen,
   });
 
-  static const Color groen = Color(0xFF0B7A3B);
-  static const Color lichtGroen = Color(0xFFE7F6EC);
-  static const Color rand = Color(0xFFE5E7EB);
-  static const Color tekstDonker = Color(0xFF111827);
-  static const Color tekstGrijs = Color(0xFF6B7280);
+  static const Color groen = ThimacoKleuren.oranje;
+  static const Color rand = ThimacoKleuren.rand;
+  static const Color tekstDonker = ThimacoKleuren.antraciet;
+  static const Color tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final double breedte;
   final double? maxHoogte;
@@ -103,39 +104,35 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onPanUpdate: onVerslepen,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 10, 9),
+        padding: const EdgeInsets.fromLTRB(10, 8, 8, 7),
         decoration: const BoxDecoration(
-          color: lichtGroen,
+          color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
+          border: Border(bottom: BorderSide(color: ThimacoKleuren.rand)),
         ),
         child: Row(
           children: [
             const Icon(
+              Icons.drag_indicator,
+              size: 18,
+              color: ThimacoKleuren.tekstGrijs,
+            ),
+            const SizedBox(width: 6),
+            const Icon(
               Icons.format_color_fill_outlined,
               size: 18,
-              color: groen,
+              color: ThimacoKleuren.antraciet,
             ),
             const SizedBox(width: 8),
             const Expanded(
-              child: Text(
-                'Opvulling',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Color(0xFF064E3B),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
+              child: ThimacoSectieTitel(tekst: 'Opvulling'),
             ),
             if (onSluiten != null)
-              InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: onSluiten,
-                child: const Padding(
-                  padding: EdgeInsets.all(3),
-                  child: Icon(Icons.close_rounded, size: 18, color: groen),
-                ),
+              ThimacoIcoonActie(
+                icoon: Icons.close_rounded,
+                tooltip: 'Opvullingmenu sluiten',
+                onPressed: onSluiten,
+                grootte: 18,
               ),
           ],
         ),
@@ -230,28 +227,14 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
   Widget _actieKnoppen() {
     return Row(
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: totaalAantalVlakken > 0 ? onAllesSelecteren : null,
-            icon: const Icon(Icons.select_all, size: 17),
-            label: const Text('Alles', style: TextStyle(fontSize: 11)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: groen,
-              padding: const EdgeInsets.symmetric(vertical: 9),
-            ),
-          ),
+        ThimacoTekstActie(
+          tekst: 'Alles selecteren',
+          onPressed: totaalAantalVlakken > 0 ? onAllesSelecteren : null,
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: aantalGeselecteerdeVlakken > 0 ? onSelectieWissen : null,
-            icon: const Icon(Icons.deselect, size: 17),
-            label: const Text('Geen', style: TextStyle(fontSize: 11)),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: tekstGrijs,
-              padding: const EdgeInsets.symmetric(vertical: 9),
-            ),
-          ),
+        ThimacoTekstActie(
+          tekst: 'Selectie wissen',
+          onPressed: aantalGeselecteerdeVlakken > 0 ? onSelectieWissen : null,
         ),
       ],
     );
@@ -356,9 +339,9 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
-        color: lichtGroen,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: groen),
+        border: Border.all(color: groen, width: 1.4),
       ),
       child: Row(
         children: [
@@ -370,7 +353,7 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Color(0xFF064E3B),
+                color: tekstDonker,
                 fontSize: 12,
                 fontWeight: FontWeight.w900,
               ),
@@ -379,7 +362,7 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
           Text(
             '${gekozen.transparantiePercentage}%',
             style: const TextStyle(
-              color: Color(0xFF064E3B),
+              color: tekstDonker,
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),
@@ -398,8 +381,11 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: isGekozenGroep ? groen : rand),
-        color: isGekozenGroep ? const Color(0xFFF0FDF4) : Colors.white,
+        border: Border.all(
+          color: isGekozenGroep ? groen : rand,
+          width: isGekozenGroep ? 1.4 : 1,
+        ),
+        color: Colors.white,
       ),
       child: ExpansionTile(
         key: PageStorageKey<String>('opvulling_${groep.id}'),
@@ -411,7 +397,7 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
         title: Text(
           groep.label,
           style: TextStyle(
-            color: isGekozenGroep ? groen : tekstDonker,
+            color: tekstDonker,
             fontSize: 12,
             fontWeight: FontWeight.w900,
           ),
@@ -450,9 +436,12 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
         margin: const EdgeInsets.only(top: 5),
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
         decoration: BoxDecoration(
-          color: geselecteerd ? lichtGroen : const Color(0xFFF9FAFB),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: geselecteerd ? groen : rand),
+          border: Border.all(
+            color: geselecteerd ? groen : rand,
+            width: geselecteerd ? 1.4 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -474,7 +463,7 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: geselecteerd ? const Color(0xFF064E3B) : tekstDonker,
+                  color: tekstDonker,
                   fontSize: 12,
                   fontWeight: geselecteerd ? FontWeight.w900 : FontWeight.w700,
                 ),
@@ -590,6 +579,8 @@ class OpmetingRaamOpvullingMenu extends StatelessWidget {
       return typeVolgordeVergelijking;
     }
 
-    return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+    return eerste.naam.toLowerCase().compareTo(
+      tweede.naam.toLowerCase(),
+    );
   }
 }

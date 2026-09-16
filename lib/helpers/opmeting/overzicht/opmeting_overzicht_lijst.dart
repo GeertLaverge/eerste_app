@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TITELHOOFD-UIT-WERKGEBIED-FASE7-20260913
 // THIMACO-CONTROLE: PRIJS-VERDEELD-OVER-HERBEREKEN-BIJ-AANTALWIJZIGING-20260816
 // THIMACO-CONTROLE: PRIJSVERDELING-CORRECTIE-ALLEEN-INSTELLINGEN-EN-ALLE-POSITIES-ONDERAAN-20260816
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-DOELMATEN-20260816
@@ -19,8 +20,6 @@ import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../offerte/prijzen/offerte_prijs_verdeeld_over_service.dart';
 import '../../offerte/prijzen/offerte_prijs_verdeeld_over_template_model.dart';
-import '../project/opmeting_project_kleur_model.dart';
-import '../project/opmeting_project_titelhoofd_kaart.dart';
 import '../project/opmeting_project_titelhoofd_model.dart';
 import 'opmeting_overzicht_artikel_kaart.dart';
 import 'opmeting_overzicht_model.dart';
@@ -43,17 +42,12 @@ class OpmetingOverzichtLijst extends StatelessWidget {
     super.key,
     required this.scrollController,
     required this.scrollStorageKey,
-    required this.klantNaam,
     required this.projectTitelhoofd,
     required this.opmetingen,
     required this.verborgenFormulierTypes,
     required this.verborgenNietRekenenPositieIds,
-    required this.projectKleurMenus,
     required this.offerteController,
     required this.onTitelhoofdGewijzigd,
-    required this.onKlantLaden,
-    required this.onToggleFormulierType,
-    required this.onToggleNietRekenenPositie,
     required this.onArtikelOpenen,
     required this.onArtikelVerwijderen,
     required this.onArtikelKopieren,
@@ -68,17 +62,12 @@ class OpmetingOverzichtLijst extends StatelessWidget {
 
   final ScrollController scrollController;
   final PageStorageKey<String> scrollStorageKey;
-  final String klantNaam;
   final OpmetingProjectTitelhoofd projectTitelhoofd;
   final List<OpmetingOverzichtRaamItem> opmetingen;
   final Set<String> verborgenFormulierTypes;
   final Set<String> verborgenNietRekenenPositieIds;
-  final List<OpmetingProjectKleurSubmenu> projectKleurMenus;
   final OfferteController offerteController;
   final ValueChanged<OpmetingProjectTitelhoofd> onTitelhoofdGewijzigd;
-  final Future<void> Function() onKlantLaden;
-  final ValueChanged<String> onToggleFormulierType;
-  final ValueChanged<String> onToggleNietRekenenPositie;
   final OpmetingOverzichtArtikelActie onArtikelOpenen;
   final OpmetingOverzichtArtikelActie onArtikelVerwijderen;
   final OpmetingOverzichtArtikelActie onArtikelKopieren;
@@ -94,19 +83,9 @@ class OpmetingOverzichtLijst extends StatelessWidget {
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstGrijs = Color(0xFF6B7280);
 
-  OpmetingProjectTitelhoofd get _titelhoofdVoorPrijs {
-    if (projectTitelhoofd.klantNaam.trim().isEmpty &&
-        klantNaam.trim().isNotEmpty) {
-      return projectTitelhoofd.copyWith(klantNaam: klantNaam.trim());
-    }
-
-    return projectTitelhoofd;
-  }
-
   @override
   Widget build(BuildContext context) {
     final zichtbareItems = <_OpmetingOverzichtItemMetPositie>[];
-    final titelhoofdVoorPrijs = _titelhoofdVoorPrijs;
     final positieLabelPerId = offerteController.positiesService
         .maakBronPositieLabels(opmetingen);
     final geordendeItems = offerteController.positiesService
@@ -158,21 +137,6 @@ class OpmetingOverzichtLijst extends StatelessWidget {
       primary: false,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
       children: [
-        OpmetingProjectTitelhoofdKaart(
-          titelhoofd: titelhoofdVoorPrijs,
-          opmetingen: opmetingen,
-          verborgenFormulierTypes: verborgenFormulierTypes,
-          verborgenNietRekenenPositieIds: verborgenNietRekenenPositieIds,
-          kleurMenus: projectKleurMenus,
-          onTitelhoofdGewijzigd: onTitelhoofdGewijzigd,
-          onKlantLaden: () {
-            unawaited(onKlantLaden());
-          },
-          onToggleFormulierType: onToggleFormulierType,
-          onToggleNietRekenenPositie: onToggleNietRekenenPositie,
-        ),
-        const SizedBox(height: 14),
-
         // Geen bediening voor "Prijzen verdeeld over…" in het overzicht.
         // Deze onzichtbare helper synchroniseert uitsluitend de centrale
         // instellingen naar de projectregels die de bestaande berekening/PDF
@@ -199,7 +163,7 @@ class OpmetingOverzichtLijst extends StatelessWidget {
             ),
             child: Text(
               opmetingen.isEmpty
-                  ? 'Nog geen posities in deze fiche. Klik rechtsboven op + om een eerste opmeting toe te voegen.'
+                  ? 'Nog geen posities in deze fiche. Klik bovenaan op Toevoegen om een eerste opmeting toe te voegen.'
                   : 'Alle posities zijn tijdelijk verborgen. Klik bovenaan opnieuw op het oogje om ze terug te tonen.',
               style: const TextStyle(
                 color: _tekstGrijs,

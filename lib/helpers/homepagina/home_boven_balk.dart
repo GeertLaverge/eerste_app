@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: HOME-VOLLEDIG-GROENE-BOVENBALK-20260805
+// THIMACO-CONTROLE: HOME-WITTE-BOVENBALK-MET-NIEUW-LOGO-20260914
 import 'package:flutter/material.dart';
 
 import '../../paginas/instellingen_pagina.dart';
@@ -6,70 +6,64 @@ import '../../paginas/instellingen_pagina.dart';
 class HomeBovenBalk extends StatelessWidget {
   const HomeBovenBalk({super.key});
 
-  static const Color groen = Color(0xFF0B7A3B);
+  static const Color _antraciet = Color(0xFF22272D);
+  static const Color _rand = Color(0xFFE5E7EB);
+  static const Color _oranjeLicht = Color(0xFFFFF4ED);
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.of(context).size.width < 700;
+
     return Container(
-      height: 66,
-      padding: const EdgeInsets.symmetric(horizontal: 22),
+      height: compact ? 64 : 76,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 22),
       decoration: const BoxDecoration(
-        color: groen,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x24000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: _rand),
+        ),
       ),
       child: Row(
         children: <Widget>[
-          Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'T',
-              style: TextStyle(
-                color: groen,
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Text(
-            'THIMACO',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.5,
+          SizedBox(
+            width: compact ? 185 : 280,
+            child: Image.asset(
+              'assets/offerte/thimaco_logo.png',
+              height: compact ? 38 : 50,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
             ),
           ),
           const Spacer(),
           IconButton(
             tooltip: 'Meldingen',
-            color: Colors.white,
+            color: _antraciet,
+            hoverColor: _oranjeLicht,
+            highlightColor: _oranjeLicht,
             onPressed: () {},
-            icon: const Icon(Icons.notifications_none_rounded, size: 25),
+            icon: Icon(
+              Icons.notifications_none_rounded,
+              size: compact ? 22 : 24,
+            ),
           ),
-          const SizedBox(width: 4),
+          SizedBox(width: compact ? 0 : 4),
           IconButton(
             tooltip: 'Instellingen',
-            color: Colors.white,
+            color: _antraciet,
+            hoverColor: _oranjeLicht,
+            highlightColor: _oranjeLicht,
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const InstellingenPagina()),
+                MaterialPageRoute(
+                  builder: (_) => const InstellingenPagina(),
+                ),
               );
             },
-            icon: const Icon(Icons.settings_outlined, size: 25),
+            icon: Icon(
+              Icons.settings_outlined,
+              size: compact ? 22 : 24,
+            ),
           ),
         ],
       ),

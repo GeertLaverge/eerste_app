@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../ui/thimaco_huisstijl.dart';
+
 import '../voorzetscreen/opmeting_voorzetscreen_instellingen_model.dart';
 import 'opmeting_voorzetrolluik_instellingen_model.dart';
 import 'opmeting_voorzetrolluik_kastmaat_helper.dart';
@@ -31,11 +33,11 @@ class OpmetingVoorzetrolluikRechterkolom extends StatefulWidget {
 
 class _OpmetingVoorzetrolluikRechterkolomState
     extends State<OpmetingVoorzetrolluikRechterkolom> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekst = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _groen = ThimacoKleuren.oranje;
+  static const Color _lichtGroen = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekst = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   late final TextEditingController _positieController;
   late final TextEditingController _aantalController;
@@ -207,7 +209,7 @@ class _OpmetingVoorzetrolluikRechterkolomState
             ),
             title: const Text(
               'Kastgrootte aanpassen?',
-              style: TextStyle(color: _groen, fontWeight: FontWeight.w900),
+              style: TextStyle(color: ThimacoKleuren.antraciet, fontWeight: FontWeight.w900),
             ),
             content: Text(
               'Volgens de kasttabel is voor ${widget.model.lamelType}, '
@@ -757,24 +759,14 @@ class _OpmetingVoorzetrolluikRechterkolomState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-            color: _lichtGroen,
-            child: const Row(
-              children: <Widget>[
-                Icon(Icons.blinds_outlined, color: _groen, size: 19),
-                SizedBox(width: 8),
-                Text(
-                  'Voorzetrolluik',
-                  style: TextStyle(
-                    color: _groen,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(14, 11, 14, 7),
+            child: ThimacoSectieTitel(
+              tekst: 'Eigenschappen',
+              compact: false,
             ),
           ),
+          const Divider(height: 1, color: ThimacoKleuren.rand),
           Expanded(
             child: Scrollbar(
               controller: _scrollController,
@@ -832,33 +824,24 @@ class _OpmetingVoorzetrolluikRechterkolomState
                   _SectieKaart(
                     titel: 'Kleur kast, geleiders en onderlat',
                     children: <Widget>[
-                      RadioGroup<OpmetingVoorzetrolluikKleurbron>(
-                        groupValue: widget.model.kleurbron,
-                        onChanged: (waarde) {
-                          if (waarde == null) return;
-                          _wijzig(
-                            widget.model.copyWith(
-                              kleurbron: waarde,
-                              projectKleurWaarde:
-                                  waarde ==
-                                      OpmetingVoorzetrolluikKleurbron
-                                          .projectKleur
-                                  ? widget.projectKleur.trim()
-                                  : widget.model.projectKleurWaarde,
+                      Wrap(
+                        spacing: 9,
+                        runSpacing: 3,
+                        children: OpmetingVoorzetrolluikKleurbron.values.map((waarde) {
+                          return ThimacoTekstKeuze(
+                            tekst: waarde.label,
+                            geselecteerd: waarde == widget.model.kleurbron,
+                            onPressed: () => _wijzig(
+                              widget.model.copyWith(
+                                kleurbron: waarde,
+                                projectKleurWaarde:
+                                    waarde == OpmetingVoorzetrolluikKleurbron.projectKleur
+                                        ? widget.projectKleur.trim()
+                                        : widget.model.projectKleurWaarde,
+                              ),
                             ),
                           );
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: OpmetingVoorzetrolluikKleurbron.values
-                              .map(
-                                (waarde) =>
-                                    _EenvoudigeRadioKeuze<
-                                      OpmetingVoorzetrolluikKleurbron
-                                    >(waarde: waarde, label: waarde.label),
-                              )
-                              .toList(growable: false),
-                        ),
+                        }).toList(growable: false),
                       ),
                       const SizedBox(height: 6),
                       if (widget.model.kleurbron ==
@@ -1042,36 +1025,27 @@ class _OpmetingVoorzetrolluikRechterkolomState
     return _SectieKaart(
       titel: 'Kastmaat',
       children: <Widget>[
-        RadioGroup<bool>(
-          groupValue: widget.model.kastmaatVolgensAfmetingen,
-          onChanged: (waarde) {
-            if (waarde == true) _kiesAutomatischeKastmaat();
-          },
-          child: _EenvoudigeRadioKeuze<bool>(
-            waarde: true,
-            label: 'Volgens afmetingen · as $asDiameterMm mm',
-          ),
-        ),
-        RadioGroup<OpmetingVoorzetrolluikKastmaat>(
-          groupValue: widget.model.kastmaat,
-          onChanged: (maat) {
-            if (maat != null) _kiesHandmatigeKastmaat(maat);
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: OpmetingVoorzetrolluikKastmaat.values
-                .map(
-                  (maat) =>
-                      _EenvoudigeRadioKeuze<OpmetingVoorzetrolluikKastmaat>(
-                        waarde: maat,
-                        label: maat.label,
-                        tekstGroen:
-                            widget.model.kastmaatVolgensAfmetingen &&
-                            maat == vereisteKastmaat,
-                      ),
-                )
-                .toList(growable: false),
-          ),
+        Wrap(
+          spacing: 9,
+          runSpacing: 3,
+          children: <Widget>[
+            ThimacoTekstKeuze(
+              tekst: 'Volgens afmetingen · as $asDiameterMm mm',
+              geselecteerd: widget.model.kastmaatVolgensAfmetingen,
+              onPressed: _kiesAutomatischeKastmaat,
+            ),
+            ...OpmetingVoorzetrolluikKastmaat.values.map((maat) {
+              final automatisch =
+                  widget.model.kastmaatVolgensAfmetingen && maat == vereisteKastmaat;
+              return ThimacoTekstKeuze(
+                tekst: automatisch ? '${maat.label} · berekend' : maat.label,
+                geselecteerd:
+                    !widget.model.kastmaatVolgensAfmetingen &&
+                    maat == widget.model.kastmaat,
+                onPressed: () => _kiesHandmatigeKastmaat(maat),
+              );
+            }),
+          ],
         ),
       ],
     );
@@ -1106,23 +1080,16 @@ class _OpmetingVoorzetrolluikRechterkolomState
           ),
         ),
         const SizedBox(height: 2),
-        RadioGroup<String>(
-          groupValue: huidig,
-          onChanged: (waarde) {
-            if (waarde != null) _wijzigLamelType(waarde);
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: OpmetingVoorzetrolluikKastmaatHelper.lamelTypes
-                .map(
-                  (lamel) => _EenvoudigeRadioKeuze<String>(
-                    waarde: lamel,
-                    label: lamel,
-                    fontSize: 10.5,
-                  ),
-                )
-                .toList(growable: false),
-          ),
+        Wrap(
+          spacing: 9,
+          runSpacing: 3,
+          children: OpmetingVoorzetrolluikKastmaatHelper.lamelTypes.map((lamel) {
+            return ThimacoTekstKeuze(
+              tekst: lamel,
+              geselecteerd: lamel == huidig,
+              onPressed: () => _wijzigLamelType(lamel),
+            );
+          }).toList(growable: false),
         ),
         const SizedBox(height: 7),
         _ZoekKeuzeVeld(
@@ -1166,36 +1133,38 @@ class _OpmetingVoorzetrolluikRechterkolomState
         icon: const Icon(Icons.info_outline_rounded, size: 19),
       ),
       children: <Widget>[
-        RadioGroup<String>(
-          groupValue: geselecteerd.isEmpty ? null : geselecteerd,
-          onChanged: (code) {
-            if (code == null) return;
-            _wijzig(widget.model.copyWith(uitgangKabel: code));
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              for (var index = 0; index <= 7; index++) ...<Widget>[
-                Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: _EenvoudigeRadioKeuze<String>(
-                        waarde: 'C$index',
-                        label: 'C$index',
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (var index = 0; index <= 7; index++) ...<Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: ThimacoTekstKeuze(
+                      tekst: 'C$index',
+                      geselecteerd: geselecteerd == 'C$index',
+                      uitvullen: true,
+                      onPressed: () => _wijzig(
+                        widget.model.copyWith(uitgangKabel: 'C$index'),
                       ),
                     ),
-                    Expanded(
-                      child: _EenvoudigeRadioKeuze<String>(
-                        waarde: 'D$index',
-                        label: 'D$index',
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ThimacoTekstKeuze(
+                      tekst: 'D$index',
+                      geselecteerd: geselecteerd == 'D$index',
+                      uitvullen: true,
+                      onPressed: () => _wijzig(
+                        widget.model.copyWith(uitgangKabel: 'D$index'),
                       ),
                     ),
-                  ],
-                ),
-                if (index < 7) const SizedBox(height: 2),
-              ],
+                  ),
+                ],
+              ),
+              if (index < 7) const SizedBox(height: 2),
             ],
-          ),
+          ],
         ),
       ],
     );
@@ -1225,25 +1194,16 @@ class _OpmetingVoorzetrolluikRechterkolomState
             style: TextStyle(color: _tekstGrijs, fontSize: 11),
           )
         else
-          RadioGroup<String>(
-            groupValue: widget.model.geleiderType.trim().isEmpty
-                ? null
-                : widget.model.geleiderType,
-            onChanged: (waarde) {
-              if (waarde == null) return;
-              _wijzig(widget.model.copyWith(geleiderType: waarde));
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: geleiders
-                  .map(
-                    (waarde) => _EenvoudigeRadioKeuze<String>(
-                      waarde: waarde,
-                      label: waarde,
-                    ),
-                  )
-                  .toList(growable: false),
-            ),
+          Wrap(
+            spacing: 9,
+            runSpacing: 3,
+            children: geleiders.map((waarde) {
+              return ThimacoTekstKeuze(
+                tekst: waarde,
+                geselecteerd: waarde == widget.model.geleiderType,
+                onPressed: () => _wijzig(widget.model.copyWith(geleiderType: waarde)),
+              );
+            }).toList(growable: false),
           ),
       ],
     );
@@ -1274,16 +1234,10 @@ class _SectieKaart extends StatelessWidget {
           if (titel.trim().isNotEmpty || actie != null) ...<Widget>[
             Row(
               children: <Widget>[
-                Expanded(
-                  child: Text(
-                    titel,
-                    style: const TextStyle(
-                      color: _OpmetingVoorzetrolluikRechterkolomState._tekst,
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
+                if (titel.trim().isNotEmpty)
+                  Expanded(child: ThimacoSectieTitel(tekst: titel))
+                else
+                  const Spacer(),
                 if (actie != null) actie!,
               ],
             ),
@@ -1317,31 +1271,20 @@ class _RadioSectie<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final keuzeWidgets = keuzes
-        .map(
-          (keuze) =>
-              _EenvoudigeRadioKeuze<T>(waarde: keuze, label: labelVoor(keuze)),
-        )
-        .toList(growable: false);
     return _SectieKaart(
       titel: titel,
       actie: actie,
       children: <Widget>[
-        RadioGroup<T>(
-          groupValue: waarde,
-          onChanged: (nieuw) {
-            if (nieuw != null) onChanged(nieuw);
-          },
-          child: horizontaal
-              ? Row(
-                  children: keuzeWidgets
-                      .map((item) => Expanded(child: item))
-                      .toList(growable: false),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: keuzeWidgets,
-                ),
+        Wrap(
+          spacing: 9,
+          runSpacing: 3,
+          children: keuzes.map((keuze) {
+            return ThimacoTekstKeuze(
+              tekst: labelVoor(keuze),
+              geselecteerd: keuze == waarde,
+              onPressed: () => onChanged(keuze),
+            );
+          }).toList(growable: false),
         ),
       ],
     );
@@ -1367,89 +1310,22 @@ class _JaNeeRij extends StatelessWidget {
           child: Text(
             titel,
             style: const TextStyle(
-              color: _OpmetingVoorzetrolluikRechterkolomState._tekst,
+              color: ThimacoKleuren.antraciet,
               fontSize: 10.5,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
-        RadioGroup<bool>(
-          groupValue: waarde,
-          onChanged: (nieuw) {
-            if (nieuw != null) onChanged(nieuw);
-          },
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _KleineRadio<bool>(waarde: true, label: 'Ja'),
-              _KleineRadio<bool>(waarde: false, label: 'Nee'),
-            ],
-          ),
+        ThimacoTekstKeuze(
+          tekst: 'Ja',
+          geselecteerd: waarde,
+          onPressed: () => onChanged(true),
         ),
-      ],
-    );
-  }
-}
-
-class _KleineRadio<T> extends StatelessWidget {
-  const _KleineRadio({required this.waarde, required this.label});
-
-  final T waarde;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Radio<T>(
-          value: waarde,
-          activeColor: _OpmetingVoorzetrolluikRechterkolomState._groen,
-          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-}
-
-class _EenvoudigeRadioKeuze<T> extends StatelessWidget {
-  const _EenvoudigeRadioKeuze({
-    required this.waarde,
-    required this.label,
-    this.fontSize = 11.5,
-    this.tekstGroen = false,
-  });
-
-  final T waarde;
-  final String label;
-  final double fontSize;
-  final bool tekstGroen;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Radio<T>(
-          value: waarde,
-          activeColor: _OpmetingVoorzetrolluikRechterkolomState._groen,
-          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        ),
-        Flexible(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: tekstGroen
-                  ? _OpmetingVoorzetrolluikRechterkolomState._groen
-                  : _OpmetingVoorzetrolluikRechterkolomState._tekst,
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        const SizedBox(width: 8),
+        ThimacoTekstKeuze(
+          tekst: 'Nee',
+          geselecteerd: !waarde,
+          onPressed: () => onChanged(false),
         ),
       ],
     );

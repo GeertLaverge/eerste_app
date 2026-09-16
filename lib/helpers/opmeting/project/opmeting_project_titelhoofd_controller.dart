@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: PROJECTBESTAND-VERSIE-AUTOMATISCH-BEHOUDEN-FASE4-20260912
+// THIMACO-CONTROLE: TITELHOOFD-PER-PROJECTBESTAND-FASE2-20260912
 // THIMACO-CONTROLE: BEREKEN-STATUS-VEILIG-BEWAREN-20260810
 // THIMACO-CONTROLE: TOEBEHOREN-PROJECTKLEUR-SYNC-SCHUIFVLIEGENDEUR-20260728
 import 'dart:async';
@@ -113,7 +115,24 @@ class OpmetingProjectTitelhoofdController {
     final naamVoorBestand = nieuweKlantNaam.isNotEmpty
         ? nieuweKlantNaam
         : bestaandeKlantNaam;
+    final automatischeBestandVersie =
+        huidigTitelhoofd.veiligeBestandVersieNummer;
     final titelhoofdVoorState = titelhoofd.copyWith(
+      projectBestandId: titelhoofd.projectBestandId.trim().isNotEmpty
+          ? titelhoofd.projectBestandId
+          : huidigTitelhoofd.projectBestandId,
+      bestandsNaam: titelhoofd.bestandsNaam.trim().isNotEmpty
+          ? titelhoofd.bestandsNaam
+          : huidigTitelhoofd.bestandsNaam,
+      projectReeksId: huidigTitelhoofd.effectieveProjectReeksId,
+      bestandVersieNummer: automatischeBestandVersie,
+      aangemaaktOp: huidigTitelhoofd.aangemaaktOp.trim().isEmpty
+          ? DateTime.now().toUtc().toIso8601String()
+          : huidigTitelhoofd.aangemaaktOp,
+      offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
+        automatischeBestandVersie,
+      ),
+      projectBestandVerwijderd: false,
       gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
     );
 
@@ -140,6 +159,7 @@ class OpmetingProjectTitelhoofdController {
       bijgewerkteOpmetingen = synchroniseerProjectkleurInToebehorenPosities(
         bijgewerkteOpmetingen,
         klantNaam: naamVoorBestand,
+        projectBestandId: titelhoofdVoorState.projectBestandId,
         projectkleur: titelhoofdVoorState.ralKleurToebehoren,
       ).opmetingen;
     }
@@ -188,18 +208,24 @@ class OpmetingProjectTitelhoofdController {
   synchroniseerProjectkleurInToebehorenPosities(
     Iterable<OpmetingOverzichtRaamItem> opmetingen, {
     required String klantNaam,
+    String projectBestandId = '',
     required String projectkleur,
   }) {
     final klantSleutel = klantNaam.trim().toLowerCase();
+    final projectId = projectBestandId.trim();
     final netteProjectkleur = projectkleur.trim();
     final resultaat = <OpmetingOverzichtRaamItem>[];
     var gewijzigd = false;
 
     for (final item in opmetingen) {
-      final hoortBijActieveKlant =
-          klantSleutel.isNotEmpty &&
-          !item.isVerwijderd &&
-          item.klantNaam.trim().toLowerCase() == klantSleutel;
+      final itemProjectId = item.projectBestandId.trim().isNotEmpty
+          ? item.projectBestandId.trim()
+          : opmetingLegacyProjectBestandId(item.klantNaam);
+      final hoortBijActieveKlant = !item.isVerwijderd &&
+          (projectId.isNotEmpty
+              ? itemProjectId == projectId
+              : klantSleutel.isNotEmpty &&
+                    item.klantNaam.trim().toLowerCase() == klantSleutel);
 
       if (!hoortBijActieveKlant) {
         resultaat.add(item);
@@ -304,11 +330,13 @@ class OpmetingProjectTitelhoofdController {
   synchroniseerProjectkleurInVasteInzethorPosities(
     Iterable<OpmetingOverzichtRaamItem> opmetingen, {
     required String klantNaam,
+    String projectBestandId = '',
     required String projectkleur,
   }) {
     return synchroniseerProjectkleurInToebehorenPosities(
       opmetingen,
       klantNaam: klantNaam,
+      projectBestandId: projectBestandId,
       projectkleur: projectkleur,
     );
   }
@@ -595,14 +623,26 @@ class OpmetingProjectTitelhoofdController {
       return;
     }
 
+    final huidigTitelhoofd = leesTitelhoofd();
     final bestaand = await AppStorage.laadOpmetingProjectTitelhoofd(
       keuze.klantNaam,
+      projectBestandId: huidigTitelhoofd.projectBestandId,
     );
     final titelhoofd = keuze
         .naarTitelhoofd(bestaand: bestaand, overschrijfKlantnummer: true)
         .copyWith(
           aanspreking: keuze.aanspreking,
           klantNaam: opmetingKlantNaamZonderAanspreking(keuze.klantNaam),
+          projectBestandId: huidigTitelhoofd.projectBestandId,
+          bestandsNaam: huidigTitelhoofd.bestandsNaam,
+          projectReeksId: huidigTitelhoofd.effectieveProjectReeksId,
+          bestandVersieNummer: huidigTitelhoofd.veiligeBestandVersieNummer,
+          aangemaaktOp: huidigTitelhoofd.aangemaaktOp,
+          offerteVersie:
+              OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
+                huidigTitelhoofd.veiligeBestandVersieNummer,
+              ),
+          projectBestandVerwijderd: false,
         )
         .metWijzigingsDatum();
 

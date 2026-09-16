@@ -1,3 +1,7 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-VEILIG-GROEP-WISSEN-EN-PIJLTJES-20260914
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
+// THIMACO-CONTROLE: RAAM-TEKENPROGRAMMA-V8-UNIEKE-IMPORT-CONTROLE-20260913
+// THIMACO-CONTROLE: RAAM-TEKENPROGRAMMA-FASE6-TECHNIEK-KETEN-HERSTEL-20260913
 // THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-OPSLAG-PVC-ALU-20260812
 // THIMACO-CONTROLE: VEILIGE-POSITIE-MUTATIES-FASE1-20260810_113219
 // THIMACO-CONTROLE: OPVULLING-PATROON-TEKST-VERGELIJKING-20260805
@@ -20,6 +24,7 @@ import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_model.dar
 import '../helpers/opmeting/deurpanelen/opmeting_deurpaneel_toewijzing_storage_helper.dart';
 import '../helpers/opmeting/fotos/opmeting_foto_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_keuzemenu_model.dart';
+import '../helpers/opmeting/raam/opmeting_raam_technische_groep_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_model.dart';
 import '../helpers/opmeting/raam/opmeting_raam_kleinhout_helper.dart';
 import '../helpers/opmeting/raam/opmeting_raam_tekenvlak.dart';
@@ -29,13 +34,14 @@ import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_menu_beheer_helpe
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_maten_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_conflict_helper.dart';
 import 'package:eerste_app/helpers/opmeting/raam/opmeting_raam_keuze_selectie_helper.dart';
-import '../helpers/opmeting/raam/opmeting_raam_formulier_layout.dart';
+import '../helpers/opmeting/raam/opmeting_raam_formulier_layout_v10.dart';
 import 'package:eerste_app/helpers/opmeting/raam/overzicht/opmeting_raam_overzicht_builder.dart';
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../helpers/opmeting/kader_samenstelling/opmeting_kader_samenstelling_layout_helper.dart';
 import '../helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import '../helpers/opmeting/schuifraam/opmeting_schuifraam_model.dart';
 import '../helpers/opmeting/schuifraam/opmeting_schuifraam_samenstelling_dialog.dart';
+import '../helpers/ui/thimaco_huisstijl.dart';
 
 class OpmetingRaamPagina extends StatefulWidget {
   const OpmetingRaamPagina({
@@ -128,6 +134,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       <OpmetingRaamKleinhoutLegendaItem>[];
 
   final List<OpmetingRaamKeuzeMenu> _keuzemenus = <OpmetingRaamKeuzeMenu>[];
+  List<OpmetingRaamTechnischeGroep> _technischeGroepen =
+      <OpmetingRaamTechnischeGroep>[];
   late OpmetingKaderSamenstelling _kaderSamenstelling;
 
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
@@ -141,8 +149,11 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   bool _keuzemenusLaden = true;
   bool _keuzemenusBewaren = false;
   bool _menuBeheerOntgrendeld = false;
+  bool _toonTechnischeKeuzeVerplaatsKnoppen = false;
   bool _opvullingenOpen = false;
   bool _kleinhoutenOpen = false;
+  OpmetingRaamProgrammaRibbon _openProgrammaRibbon =
+      OpmetingRaamProgrammaRibbon.geen;
 
   List<OpmetingDeurpaneelToewijzing> _deurpaneelToewijzingen =
       const <OpmetingDeurpaneelToewijzing>[];
@@ -272,6 +283,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     _laadKeuzemenus();
+    _laadTechnischeGroepen();
 
     if (bestaandeOpmeting != null) {
       // De lijst in de overzichtspositie is de bron van waarheid. Zo kan een
@@ -630,6 +642,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     }
 
     _herstelLegendaUitTekeningData(data, metSetState: true);
+
   }
 
   void _verwerkDeurpaneelToewijzingen() {
@@ -732,6 +745,48 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         return geldigeDeurVleugelIds.contains(toewijzing.deurVleugelId);
       }),
     );
+  }
+
+  String get _raamVleugelSamenvatting {
+    final data = _overzichtTekeningData;
+
+    if (data == null) {
+      return '';
+    }
+
+    final aantallenPerType = <String, int>{};
+    final gebruikteIds = <String>{};
+
+    void voegToe(Iterable<OpmetingRaamVleugel> vleugels) {
+      for (final vleugel in vleugels) {
+        if (vleugel.isDeurVleugel ||
+            vleugel.type == OpmetingRaamVleugelType.geenVleugel ||
+            !gebruikteIds.add(vleugel.id)) {
+          continue;
+        }
+
+        final naam = vleugel.type.naam.trim();
+        if (naam.isEmpty || naam.toLowerCase() == 'geen vleugel') {
+          continue;
+        }
+
+        aantallenPerType[naam] = (aantallenPerType[naam] ?? 0) + 1;
+      }
+    }
+
+    voegToe(data.vleugels);
+
+    for (final lijst in data.vleugelsPerKader.values) {
+      voegToe(lijst);
+    }
+
+    if (aantallenPerType.isEmpty) {
+      return '';
+    }
+
+    return aantallenPerType.entries.map((entry) {
+      return entry.value > 1 ? '${entry.value}× ${entry.key}' : entry.key;
+    }).join(' • ');
   }
 
   String get _deurVleugelSamenvatting {
@@ -1210,6 +1265,325 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     return true;
   }
 
+  Future<void> _laadTechnischeGroepen() async {
+    final groepen =
+        await AppStorage.laadOpmetingRaamTechnischeGroepenVoorFormulier(
+          _formulierType,
+        );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _technischeGroepen = List<OpmetingRaamTechnischeGroep>.from(groepen)
+        ..sort((eerste, tweede) {
+          final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+          if (volgorde != 0) return volgorde;
+          return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
+        });
+    });
+  }
+
+  Future<void> _bewaarTechnischeGroepen(
+    List<OpmetingRaamTechnischeGroep> groepen,
+  ) async {
+    final genormaliseerd = List<OpmetingRaamTechnischeGroep>.generate(
+      groepen.length,
+      (index) => groepen[index].copyWith(volgorde: index),
+    );
+
+    setState(() {
+      _technischeGroepen = genormaliseerd;
+    });
+
+    await AppStorage.bewaarOpmetingRaamTechnischeGroepenVoorFormulier(
+      formulierType: _formulierType,
+      groepen: genormaliseerd,
+    );
+  }
+
+  Future<void> _voegTechnischeGroepToe() async {
+    final controller = TextEditingController();
+    String? foutmelding;
+
+    final naam = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: ThimacoKleuren.rand),
+              ),
+              title: const Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'Nieuwe technische groep',
+                    style: TextStyle(
+                      color: ThimacoKleuren.antraciet,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  SizedBox(
+                    width: 38,
+                    child: Divider(
+                      height: 1.5,
+                      thickness: 1.5,
+                      color: ThimacoKleuren.oranje,
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 420,
+                child: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.sentences,
+                  onSubmitted: (_) {
+                    final waarde = controller.text.trim();
+                    if (waarde.isEmpty) {
+                      setDialogState(() {
+                        foutmelding = 'Vul een naam in.';
+                      });
+                      return;
+                    }
+                    Navigator.pop(dialogContext, waarde);
+                  },
+                  cursorColor: ThimacoKleuren.oranje,
+                  decoration: InputDecoration(
+                    labelText: 'Naam groep',
+                    hintText: 'Bijvoorbeeld: Raam of Afwerking',
+                    errorText: foutmelding,
+                    floatingLabelStyle: const TextStyle(
+                      color: ThimacoKleuren.oranje,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: ThimacoKleuren.rand),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: ThimacoKleuren.rand),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(
+                        color: ThimacoKleuren.oranje,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                ThimacoTekstActie(
+                  tekst: 'Annuleren',
+                  onPressed: () => Navigator.pop(dialogContext),
+                ),
+                ThimacoTekstActie(
+                  tekst: 'Groep toevoegen',
+                  onPressed: () {
+                    final waarde = controller.text.trim();
+                    if (waarde.isEmpty) {
+                      setDialogState(() {
+                        foutmelding = 'Vul een naam in.';
+                      });
+                      return;
+                    }
+                    Navigator.pop(dialogContext, waarde);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+
+    if (!mounted || naam == null) {
+      return;
+    }
+
+    final sleutel = naam.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+    if (_technischeGroepen.any(
+      (groep) =>
+          groep.naam.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ') ==
+          sleutel,
+    )) {
+      _toonMelding('Deze technische groep bestaat al.', fout: true);
+      return;
+    }
+
+    final nieuweGroep = OpmetingRaamTechnischeGroep(
+      id: 'groep_${DateTime.now().microsecondsSinceEpoch}',
+      naam: naam.trim(),
+      volgorde: _technischeGroepen.length,
+      zichtbaar: true,
+    );
+
+    await _bewaarTechnischeGroepen(
+      <OpmetingRaamTechnischeGroep>[..._technischeGroepen, nieuweGroep],
+    );
+
+    if (mounted) {
+      setState(() {
+        _openProgrammaRibbon = OpmetingRaamProgrammaRibbon.technischeKeuzes;
+      });
+    }
+  }
+
+  Future<void> _wijzigTechnischeGroepZichtbaarheid(
+    String groepId,
+    bool zichtbaar,
+  ) async {
+    final nieuweGroepen = _technischeGroepen.map((groep) {
+      return groep.id == groepId ? groep.copyWith(zichtbaar: zichtbaar) : groep;
+    }).toList();
+
+    await _bewaarTechnischeGroepen(nieuweGroepen);
+
+    if (mounted && zichtbaar) {
+      setState(() {
+        _openProgrammaRibbon = OpmetingRaamProgrammaRibbon.technischeKeuzes;
+      });
+    }
+  }
+
+
+  Future<void> _verwijderTechnischeGroep(String groepId) async {
+    OpmetingRaamTechnischeGroep? groep;
+    for (final kandidaat in _technischeGroepen) {
+      if (kandidaat.id == groepId) {
+        groep = kandidaat;
+        break;
+      }
+    }
+
+    final teVerwijderenGroep = groep;
+    if (teVerwijderenGroep == null || !mounted) {
+      return;
+    }
+
+    final gekoppeldeMenus = _keuzemenus
+        .where((menu) => menu.groepId.trim() == groepId)
+        .toList();
+    final aantalKeuzes = gekoppeldeMenus.length;
+    final keuzeTekst = aantalKeuzes == 1 ? 'keuze wordt' : 'keuzes worden';
+    final verhuisTekst = aantalKeuzes == 1 ? 'verhuist' : 'verhuizen';
+
+    final magWissen = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
+          ),
+          title: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Groep verwijderen?',
+                style: TextStyle(
+                  color: ThimacoKleuren.antraciet,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 4),
+              SizedBox(
+                width: 38,
+                child: Divider(
+                  height: 1.5,
+                  thickness: 1.5,
+                  color: ThimacoKleuren.rood,
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: 460,
+            child: Text(
+              aantalKeuzes == 0
+                  ? 'De groep “${teVerwijderenGroep.naam}” wordt verwijderd. Er staan geen technische keuzes in deze groep.'
+                  : 'De groep “${teVerwijderenGroep.naam}” wordt verwijderd.\n\n'
+                        'De $aantalKeuzes technische $keuzeTekst niet verwijderd en $verhuisTekst naar “Niet ingedeeld”.\n\n'
+                        'Bestaande opmetingen, gekozen waarden en technische kenmerken blijven behouden.',
+              style: const TextStyle(
+                color: ThimacoKleuren.antraciet,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            ThimacoTekstActie(
+              tekst: 'Annuleren',
+              onPressed: () => Navigator.pop(dialogContext, false),
+            ),
+            ThimacoTekstActie(
+              tekst: 'Groep verwijderen',
+              destructief: true,
+              onPressed: () => Navigator.pop(dialogContext, true),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (magWissen != true || !mounted) {
+      return;
+    }
+
+    // Alleen de groepering wordt verwijderd. De technische menu's zelf,
+    // hun volledige keuzebomen en alle bestaande selecties blijven bestaan.
+    // Door groepId leeg te maken verschijnen deze menu's onder Niet ingedeeld.
+    final nieuweMenus = _keuzemenus.map((menu) {
+      return menu.groepId.trim() == groepId ? menu.copyWith(groepId: '') : menu;
+    }).toList();
+
+    final nieuweGroepen = _technischeGroepen
+        .where((huidigeGroep) => huidigeGroep.id != groepId)
+        .toList();
+
+    await _bewaarKeuzemenus(nieuweMenus);
+
+    if (!mounted) {
+      return;
+    }
+
+    await _bewaarTechnischeGroepen(nieuweGroepen);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _openProgrammaRibbon = OpmetingRaamProgrammaRibbon.technischeKeuzes;
+    });
+
+    _toonMelding(
+      aantalKeuzes == 0
+          ? 'De technische groep is verwijderd.'
+          : 'De groep is verwijderd. De technische keuzes staan nu bij Niet ingedeeld.',
+    );
+  }
+
   Future<void> _laadKeuzemenus() async {
     setState(() {
       _keuzemenusLaden = true;
@@ -1308,11 +1682,80 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         );
   }
 
+  OpmetingRaamKeuzeMenu _actueelKeuzemenu(OpmetingRaamKeuzeMenu menu) {
+    for (final huidigMenu in _keuzemenus) {
+      if (huidigMenu.id == menu.id) {
+        return huidigMenu;
+      }
+    }
+
+    return menu;
+  }
+
   OpmetingRaamKeuzeSelectie _selectieVoorMenu(OpmetingRaamKeuzeMenu menu) {
+    final actueelMenu = _actueelKeuzemenu(menu);
+
     return OpmetingRaamKeuzeSelectieHelper.selectieVoorMenu(
       selecties: _actieveKeuzeSelecties,
-      menu: menu,
+      menu: actueelMenu,
     );
+  }
+
+  Map<String, String> _technischeKeuzeSamenvattingVoorWeergave() {
+    final resultaat = <String, String>{};
+
+    for (final menu in _keuzemenus) {
+      final waarden = <String>[];
+      final gebruikteWaarden = <String>{};
+
+      void verwerkSelectie(OpmetingRaamKeuzeSelectie? selectie) {
+        if (selectie == null ||
+            selectie.optieId.trim().isEmpty ||
+            selectie.optieId == menu.geenOptie.id) {
+          return;
+        }
+
+        final optie = menu.zoekOptie(selectie.optieId);
+        if (optie == null || optie.isGeenKeuze) {
+          return;
+        }
+
+        final padNamen = menu
+            .padNamenVoorOptie(selectie.optieId)
+            .map((naam) => naam.trim())
+            .where((naam) => naam.isNotEmpty && naam.toLowerCase() != 'geen')
+            .toList();
+
+        if (padNamen.isNotEmpty &&
+            padNamen.first.toLowerCase() == menu.titel.trim().toLowerCase()) {
+          padNamen.removeAt(0);
+        }
+
+        var waarde = padNamen.isEmpty ? optie.naam.trim() : padNamen.join(' › ');
+        if (waarde.isEmpty) {
+          waarde = optie.naam.trim();
+        }
+
+        if (waarde.isNotEmpty && gebruikteWaarden.add(waarde)) {
+          waarden.add(waarde);
+        }
+      }
+
+      // Eerst de actieve selectie. Zo is een net gemaakte keuze onmiddellijk
+      // zichtbaar in Eigenschappen > Techniek, ook vóór andere kaderselecties
+      // een samenvatting opleveren.
+      verwerkSelectie(_actieveKeuzeSelecties[menu.id]);
+
+      for (final selecties in _keuzeSelectiesPerKader.values) {
+        verwerkSelectie(selecties[menu.id]);
+      }
+
+      if (waarden.isNotEmpty) {
+        resultaat[menu.id] = waarden.join(' • ');
+      }
+    }
+
+    return Map<String, String>.unmodifiable(resultaat);
   }
 
   List<OpmetingRaamTechnischeTekeningInstelling>
@@ -1348,22 +1791,31 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   Future<void> _kiesOptie(OpmetingRaamKeuzeMenu menu, String optieId) async {
-    final gevondenOptie = menu.zoekOptie(optieId);
+    // Gebruik altijd het actuele menu uit de paginastate. Het zwevende venster
+    // kan nog een eerder widget-object vasthouden terwijl de menulijst intussen
+    // opnieuw opgebouwd werd.
+    final actueelMenu = _actueelKeuzemenu(menu);
+    final gekozenOptie = actueelMenu.zoekOptie(optieId);
 
-    if (gevondenOptie == null) {
+    if (gekozenOptie == null) {
       return;
     }
 
-    final gekozenOptie = gevondenOptie;
-    final padIds = menu.padIdsVoorOptie(gekozenOptie.id);
+    // Leg de doelsleutel en doelmap vast vóór setState. Zo kan een rebuild of
+    // kaderselectiewijziging de keuze niet tijdens dezelfde actie naar een
+    // andere actieve map laten wijzen.
+    final doelSleutel = _actieveKeuzeSleutel;
+    final doelSelecties = _selectiesVoorKader(doelSleutel);
+    final padIds = actueelMenu.padIdsVoorOptie(gekozenOptie.id);
 
     setState(() {
-      _actieveKeuzeSelecties[menu.id] = OpmetingRaamKeuzeSelectie(
-        menuId: menu.id,
+      doelSelecties[actueelMenu.id] = OpmetingRaamKeuzeSelectie(
+        menuId: actueelMenu.id,
         optieId: gekozenOptie.id,
         padIds: padIds,
         extraWaarden: _standaardExtraWaarden(gekozenOptie),
       );
+      _openProgrammaRibbon = OpmetingRaamProgrammaRibbon.technischeKeuzes;
     });
 
     /*
@@ -1376,8 +1828,8 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     final conflicten = OpmetingRaamKeuzeConflictHelper.zoekConflicten(
       keuzemenus: _keuzemenus,
-      keuzeSelecties: _actieveKeuzeSelecties,
-      gekozenMenu: menu,
+      keuzeSelecties: doelSelecties,
+      gekozenMenu: actueelMenu,
       gekozenOptie: gekozenOptie,
     );
 
@@ -1387,7 +1839,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     await OpmetingRaamKeuzeConflictHelper.toonWaarschuwing(
       context: context,
-      gekozenMenu: menu,
+      gekozenMenu: actueelMenu,
       gekozenOptie: gekozenOptie,
       conflicten: conflicten,
     );
@@ -1417,6 +1869,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
     final nieuweMenus = await OpmetingRaamMenuBeheerHelper.voegMenuToe(
       context: context,
       keuzemenus: _keuzemenus,
+      technischeGroepen: _technischeGroepen,
     );
 
     if (nieuweMenus == null || !mounted) {
@@ -1449,6 +1902,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       keuzemenus: _keuzemenus,
       menu: menu,
       ouderSubmenuId: ouderSubmenuId,
+      technischeGroepen: _technischeGroepen,
     );
 
     if (nieuweMenus == null || !mounted) {
@@ -1468,6 +1922,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
           keuzemenus: _keuzemenus,
           menu: menu,
           ouderSubmenuId: ouderSubmenuId,
+          technischeGroepen: _technischeGroepen,
         );
 
     if (nieuweMenus == null || !mounted) {
@@ -1482,6 +1937,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       context: context,
       keuzemenus: _keuzemenus,
       menu: menu,
+      technischeGroepen: _technischeGroepen,
     );
 
     if (nieuweMenus == null || !mounted) {
@@ -1500,6 +1956,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       keuzemenus: _keuzemenus,
       menu: menu,
       item: item,
+      technischeGroepen: _technischeGroepen,
     );
 
     if (nieuweMenus == null || !mounted) {
@@ -1514,6 +1971,7 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       context: context,
       keuzemenus: _keuzemenus,
       menu: menu,
+      technischeGroepen: _technischeGroepen,
     );
 
     if (nieuweMenus == null || !mounted) {
@@ -1542,6 +2000,21 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       keuzemenus: _keuzemenus,
       menu: menu,
       richting: richting,
+    );
+
+    if (nieuweMenus == null) {
+      return;
+    }
+
+    await _bewaarKeuzemenus(nieuweMenus);
+  }
+
+  Future<void> _herordenTechnischeMenus(
+    List<String> menuIdsInVolgorde,
+  ) async {
+    final nieuweMenus = OpmetingRaamMenuBeheerHelper.herordenMenus(
+      keuzemenus: _keuzemenus,
+      menuIdsInVolgorde: menuIdsInVolgorde,
     );
 
     if (nieuweMenus == null) {
@@ -1591,49 +2064,67 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   Future<void> _vraagToevoegenAanOverzichtBijTerug() async {
     final keuze = await showDialog<String>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
           ),
-          title: const Text(
-            'Opmeting toevoegen aan overzicht?',
-            style: TextStyle(
-              color: Color(0xFF0B7A3B),
-              fontWeight: FontWeight.w900,
-            ),
+          title: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Opmeting toevoegen aan overzicht?',
+                style: TextStyle(
+                  color: ThimacoKleuren.antraciet,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 4),
+              SizedBox(
+                width: 38,
+                child: Divider(
+                  height: 1.5,
+                  thickness: 1.5,
+                  color: ThimacoKleuren.oranje,
+                ),
+              ),
+            ],
           ),
           content: const Text(
             'Deze raamopmeting is nog niet toegevoegd aan het overzicht. Wilt u deze opmeting toevoegen?',
+            style: TextStyle(color: ThimacoKleuren.antraciet),
           ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0B7A3B),
-              ),
-              onPressed: () {
-                Navigator.pop(context, 'niet_toevoegen');
-              },
-              child: const Text('Niet toevoegen'),
+          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+          actions: <Widget>[
+            ThimacoTekstActie(
+              tekst: 'Niet toevoegen',
+              destructief: true,
+              onPressed: () =>
+                  Navigator.pop(dialogContext, 'niet_toevoegen'),
             ),
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0B7A3B),
-              ),
-              onPressed: () {
-                Navigator.pop(context, 'verder_bewerken');
-              },
-              child: const Text('Verder bewerken'),
+            ThimacoTekstActie(
+              tekst: 'Verder bewerken',
+              onPressed: () =>
+                  Navigator.pop(dialogContext, 'verder_bewerken'),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0B7A3B),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: ThimacoKleuren.oranje,
                 foregroundColor: Colors.white,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
               ),
-              onPressed: () {
-                Navigator.pop(context, 'toevoegen');
-              },
-              child: const Text('Toevoegen'),
+              onPressed: () => Navigator.pop(dialogContext, 'toevoegen'),
+              icon: const Icon(Icons.check_rounded, size: 17),
+              label: const Text('Toevoegen'),
             ),
           ],
         );
@@ -1661,40 +2152,51 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   Future<void> _vraagAnnulerenZonderToevoegen() async {
     final annuleren = await showDialog<bool>(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: ThimacoKleuren.rand),
           ),
-          title: const Text(
-            'Opmeting annuleren?',
-            style: TextStyle(
-              color: Color(0xFF0B7A3B),
-              fontWeight: FontWeight.w900,
-            ),
+          title: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                'Opmeting annuleren?',
+                style: TextStyle(
+                  color: ThimacoKleuren.antraciet,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 4),
+              SizedBox(
+                width: 38,
+                child: Divider(
+                  height: 1.5,
+                  thickness: 1.5,
+                  color: ThimacoKleuren.oranje,
+                ),
+              ),
+            ],
           ),
           content: const Text(
             'Wilt u deze opmeting annuleren zonder toe te voegen?',
+            style: TextStyle(color: ThimacoKleuren.antraciet),
           ),
-          actions: [
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF0B7A3B),
-              ),
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
-              child: const Text('Verder bewerken'),
+          actionsPadding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+          actions: <Widget>[
+            ThimacoTekstActie(
+              tekst: 'Verder bewerken',
+              onPressed: () => Navigator.pop(dialogContext, false),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0B7A3B),
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                Navigator.pop(context, true);
-              },
-              child: const Text('Annuleren'),
+            ThimacoTekstActie(
+              tekst: 'Annuleren',
+              destructief: true,
+              onPressed: () => Navigator.pop(dialogContext, true),
             ),
           ],
         );
@@ -1765,12 +2267,43 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
   }
 
   void _toonMelding(String tekst, {bool fout = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final schermBreedte = MediaQuery.sizeOf(context).width;
+    final meldingBreedte = (schermBreedte - 32).clamp(240.0, 520.0).toDouble();
+    final accentKleur = fout ? ThimacoKleuren.rood : ThimacoKleuren.oranje;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
-        content: Text(tekst),
-        backgroundColor: fout
-            ? const Color(0xFFDC2626)
-            : const Color(0xFF0B7A3B),
+        behavior: SnackBarBehavior.floating,
+        width: meldingBreedte,
+        elevation: 8,
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: ThimacoKleuren.rand),
+        ),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              fout ? Icons.error_outline_rounded : Icons.check_circle_outline,
+              size: 18,
+              color: accentKleur,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                tekst,
+                style: const TextStyle(
+                  color: ThimacoKleuren.antraciet,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1788,10 +2321,21 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
 
     final technischeKaderGroepen = _technischeKaderGroepen();
 
-    return OpmetingRaamFormulierLayout(
+    // Voor de editorweergave zijn de directe legenda-callbacks de bron van
+    // waarheid. Ze worden meteen na een opvulling/kleinhoutwijziging bijgewerkt
+    // en mogen niet opnieuw overschreven worden door een mogelijk oudere
+    // overzichtssnapshot.
+    final opvullingenVoorWeergave = gekozenOpvullingen;
+    final kleinhoutenVoorWeergave = gekozenKleinhouten;
+
+    final technischeKeuzeSamenvatting =
+        _technischeKeuzeSamenvattingVoorWeergave();
+
+    return OpmetingRaamFormulierLayoutV10(
       klantNaam: widget.klantNaam,
       formulierTitel: _formulierTitel,
       toonDeurKnoppen: _isDeurFiche,
+      raamVleugelSamenvatting: _raamVleugelSamenvatting,
       deurVleugelSamenvatting: _isDeurFiche ? _deurVleugelSamenvatting : '',
       profielSamenvatting: _profielSamenvatting,
       onDeurVleugel: _openDeurVleugel,
@@ -1846,9 +2390,21 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
       notitiesController: notitiesController,
       fotos: _fotos,
       onFotosGewijzigd: _verwerkFotos,
-      gekozenOpvullingen: gekozenOpvullingen,
-      gekozenKleinhouten: gekozenKleinhouten,
+      gekozenOpvullingen: opvullingenVoorWeergave,
+      gekozenKleinhouten: kleinhoutenVoorWeergave,
       keuzemenus: _keuzemenus,
+      technischeGroepen: _technischeGroepen,
+      onNieuweTechnischeGroep: _voegTechnischeGroepToe,
+      onTechnischeGroepZichtbaarheidGewijzigd:
+          _wijzigTechnischeGroepZichtbaarheid,
+      onTechnischeGroepVerwijderen: _verwijderTechnischeGroep,
+      toonTechnischeKeuzeVerplaatsKnoppen:
+          _toonTechnischeKeuzeVerplaatsKnoppen,
+      onToonTechnischeKeuzeVerplaatsKnoppenGewijzigd: (waarde) {
+        setState(() {
+          _toonTechnischeKeuzeVerplaatsKnoppen = waarde;
+        });
+      },
       keuzemenusLaden: _keuzemenusLaden,
       keuzemenusBewaren: _keuzemenusBewaren,
       menuBeheerOntgrendeld: _menuBeheerOntgrendeld,
@@ -1883,6 +2439,14 @@ class _OpmetingRaamPaginaState extends State<OpmetingRaamPagina> {
         _verplaatsMenu(menu, 1);
       },
       onMenuVerwijderen: _verwijderMenu,
+      onMenuVolgordeGewijzigd: _herordenTechnischeMenus,
+      openRibbon: _openProgrammaRibbon,
+      onOpenRibbonGewijzigd: (ribbon) {
+        setState(() {
+          _openProgrammaRibbon = ribbon;
+        });
+      },
+      technischeKeuzeSamenvatting: technischeKeuzeSamenvatting,
     );
   }
 }

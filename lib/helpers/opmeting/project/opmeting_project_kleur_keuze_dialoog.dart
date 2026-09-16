@@ -1,6 +1,8 @@
+// THIMACO-CONTROLE: PROJECTKLEUR-DIALOOG-PROGRAMMASTIJL-FASE16-20260913
 // THIMACO-CONTROLE: LEGE-KLEURENSUBMENUS-ZICHTBAAR-20260808-1902
 import 'package:flutter/material.dart';
 
+import '../../ui/thimaco_huisstijl.dart';
 import 'opmeting_project_kleur_model.dart';
 
 Future<String?> toonOpmetingProjectKleurKeuzeDialoog({
@@ -36,11 +38,11 @@ class _OpmetingProjectKleurKeuzeDialoog extends StatefulWidget {
 
 class _OpmetingProjectKleurKeuzeDialoogState
     extends State<_OpmetingProjectKleurKeuzeDialoog> {
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
-  static const Color _rand = Color(0xFFE5E7EB);
-  static const Color _tekstDonker = Color(0xFF111827);
-  static const Color _tekstGrijs = Color(0xFF6B7280);
+  static const Color _accent = ThimacoKleuren.oranje;
+  static const Color _accentLicht = ThimacoKleuren.oranjeLicht;
+  static const Color _rand = ThimacoKleuren.rand;
+  static const Color _tekstDonker = ThimacoKleuren.antraciet;
+  static const Color _tekstGrijs = ThimacoKleuren.tekstGrijs;
 
   final TextEditingController _zoekController = TextEditingController();
   OpmetingProjectKleurSubmenu? _gekozenSubmenu;
@@ -78,7 +80,13 @@ class _OpmetingProjectKleurKeuzeDialoogState
     return Dialog(
       insetPadding: const EdgeInsets.all(22),
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      surfaceTintColor: Colors.white,
+      shadowColor: Colors.black.withValues(alpha: 0.14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: const BorderSide(color: _rand),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: 520,
@@ -104,51 +112,52 @@ class _OpmetingProjectKleurKeuzeDialoogState
     final submenu = _gekozenSubmenu;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
       decoration: const BoxDecoration(
-        color: _lichtGroen,
+        color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        border: Border(bottom: BorderSide(color: _rand)),
       ),
       child: Row(
-        children: [
-          if (submenu != null) ...[
-            IconButton(
+        children: <Widget>[
+          if (submenu != null) ...<Widget>[
+            ThimacoIcoonActie(
+              icoon: Icons.arrow_back_rounded,
               tooltip: 'Terug naar submenu’s',
-              visualDensity: VisualDensity.compact,
+              grootte: 19,
               onPressed: () {
                 setState(() {
                   _gekozenSubmenu = null;
                   _zoekController.clear();
                 });
               },
-              icon: const Icon(Icons.arrow_back_rounded, color: _groen),
             ),
-            const SizedBox(width: 2),
+            const SizedBox(width: 4),
           ] else
             Container(
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(11),
+                color: const Color(0xFFF7F8F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _rand),
               ),
-              child: const Icon(Icons.palette_outlined, color: _groen),
+              child: const Icon(
+                Icons.palette_outlined,
+                color: _tekstDonker,
+                size: 19,
+              ),
             ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  submenu?.naam ?? 'Projectkleur kiezen',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: _tekstDonker,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                  ),
+              children: <Widget>[
+                ThimacoSectieTitel(
+                  tekst: submenu?.naam ?? 'Projectkleur kiezen',
+                  compact: false,
                 ),
+                const SizedBox(height: 4),
                 Text(
                   submenu == null
                       ? 'Kies eerst een submenu.'
@@ -156,19 +165,19 @@ class _OpmetingProjectKleurKeuzeDialoogState
                   style: const TextStyle(
                     color: _tekstGrijs,
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-          IconButton(
+          ThimacoIcoonActie(
+            icoon: Icons.close_rounded,
             tooltip: 'Sluiten',
-            visualDensity: VisualDensity.compact,
+            grootte: 19,
             onPressed: () {
               Navigator.pop(context);
             },
-            icon: const Icon(Icons.close_rounded),
           ),
         ],
       ),
@@ -202,11 +211,12 @@ class _OpmetingProjectKleurKeuzeDialoogState
         return Material(
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: _rand),
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(13),
+            borderRadius: BorderRadius.circular(12),
+            hoverColor: _accentLicht.withValues(alpha: 0.55),
             onTap: () {
               setState(() {
                 _gekozenSubmenu = submenu;
@@ -214,19 +224,19 @@ class _OpmetingProjectKleurKeuzeDialoogState
               });
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               child: Row(
-                children: [
+                children: <Widget>[
                   Container(
                     width: 32,
                     height: 32,
                     decoration: BoxDecoration(
-                      color: _lichtGroen,
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFFF7F8F9),
+                      borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Icon(
                       Icons.folder_open_outlined,
-                      color: _groen,
+                      color: _tekstDonker,
                       size: 18,
                     ),
                   ),
@@ -237,7 +247,7 @@ class _OpmetingProjectKleurKeuzeDialoogState
                       style: const TextStyle(
                         color: _tekstDonker,
                         fontSize: 13.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -246,11 +256,15 @@ class _OpmetingProjectKleurKeuzeDialoogState
                     style: const TextStyle(
                       color: _tekstGrijs,
                       fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right_rounded, color: _groen),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: _tekstGrijs,
+                    size: 20,
+                  ),
                 ],
               ),
             ),
@@ -264,25 +278,31 @@ class _OpmetingProjectKleurKeuzeDialoogState
     final kleuren = _zichtbareKleuren;
 
     return Column(
-      children: [
+      children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
           child: TextField(
             controller: _zoekController,
+            cursorColor: _accent,
             decoration: InputDecoration(
               hintText: 'Zoek kleur of RAL-nummer',
               isDense: true,
               filled: true,
               fillColor: const Color(0xFFF9FAFB),
-              prefixIcon: const Icon(Icons.search_rounded, size: 19),
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 19,
+                color: _tekstDonker,
+              ),
               suffixIcon: _zoekController.text.isEmpty
                   ? null
-                  : IconButton(
+                  : ThimacoIcoonActie(
+                      icoon: Icons.close_rounded,
                       tooltip: 'Zoektekst wissen',
+                      grootte: 17,
                       onPressed: () {
                         setState(_zoekController.clear);
                       },
-                      icon: const Icon(Icons.close_rounded, size: 18),
                     ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -294,7 +314,7 @@ class _OpmetingProjectKleurKeuzeDialoogState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: _groen, width: 1.4),
+                borderSide: const BorderSide(color: _accent, width: 1.4),
               ),
             ),
             onChanged: (_) {
@@ -326,13 +346,16 @@ class _OpmetingProjectKleurKeuzeDialoogState
                         widget.huidigeWaarde.trim().toLowerCase();
 
                     return Material(
-                      color: geselecteerd ? _lichtGroen : Colors.white,
+                      color: geselecteerd ? _accentLicht : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: geselecteerd ? _groen : _rand),
+                        side: BorderSide(
+                          color: geselecteerd ? _accent : _rand,
+                        ),
                       ),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
+                        hoverColor: _accentLicht.withValues(alpha: 0.5),
                         onTap: () {
                           Navigator.pop(context, kleur.naam);
                         },
@@ -342,7 +365,7 @@ class _OpmetingProjectKleurKeuzeDialoogState
                             vertical: 11,
                           ),
                           child: Row(
-                            children: [
+                            children: <Widget>[
                               Container(
                                 width: 20,
                                 height: 20,
@@ -368,7 +391,7 @@ class _OpmetingProjectKleurKeuzeDialoogState
                               if (geselecteerd)
                                 const Icon(
                                   Icons.check_circle_rounded,
-                                  color: _groen,
+                                  color: _accent,
                                   size: 20,
                                 ),
                             ],
@@ -385,25 +408,24 @@ class _OpmetingProjectKleurKeuzeDialoogState
 
   Widget _bouwActies() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: _rand)),
       ),
       child: Row(
-        children: [
-          TextButton.icon(
+        children: <Widget>[
+          ThimacoTekstActie(
+            tekst: 'Kleur leegmaken',
             onPressed: () {
               Navigator.pop(context, '');
             },
-            icon: const Icon(Icons.backspace_outlined, size: 17),
-            label: const Text('Kleur leegmaken'),
           ),
           const Spacer(),
-          TextButton(
+          ThimacoTekstActie(
+            tekst: 'Annuleren',
             onPressed: () {
               Navigator.pop(context);
             },
-            child: const Text('Annuleren'),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
 // THIMACO-CONTROLE: HOE-UITSCHRIJVEN-OPSLAG-COMPATIBEL-20260720
 enum OpmetingRaamTechnischeMaatKeuze { vasteMaat, volledigeRaammaat }
 
@@ -1189,12 +1190,14 @@ class OpmetingRaamKeuzeMenu {
     required this.opties,
     this.items = const <OpmetingRaamKeuzeMenuItem>[],
     this.actief = true,
+    this.groepId = '',
   });
 
   final String id;
   final String titel;
   final int volgorde;
   final bool actief;
+  final String groepId;
 
   final List<OpmetingRaamKeuzeOptie> opties;
 
@@ -1204,11 +1207,13 @@ class OpmetingRaamKeuzeMenu {
     required String id,
     required String titel,
     required int volgorde,
+    String groepId = '',
   }) {
     return OpmetingRaamKeuzeMenu(
       id: id,
       titel: titel,
       volgorde: volgorde,
+      groepId: groepId,
       opties: <OpmetingRaamKeuzeOptie>[OpmetingRaamKeuzeOptie.geen(menuId: id)],
       items: const <OpmetingRaamKeuzeMenuItem>[],
     );
@@ -1448,6 +1453,7 @@ class OpmetingRaamKeuzeMenu {
     String? titel,
     int? volgorde,
     bool? actief,
+    String? groepId,
     List<OpmetingRaamKeuzeOptie>? opties,
     List<OpmetingRaamKeuzeMenuItem>? items,
   }) {
@@ -1456,6 +1462,7 @@ class OpmetingRaamKeuzeMenu {
       titel: titel ?? this.titel,
       volgorde: volgorde ?? this.volgorde,
       actief: actief ?? this.actief,
+      groepId: groepId ?? this.groepId,
       opties: opties ?? this.opties,
       items: items ?? this.items,
     );
@@ -1469,6 +1476,7 @@ class OpmetingRaamKeuzeMenu {
       'titel': titel,
       'volgorde': volgorde,
       'actief': actief,
+      'groepId': groepId,
       'opties': optiesVoorOpslag.map((optie) => optie.toJson()).toList(),
       'items': items.map((item) => item.toJson()).toList(),
     };
@@ -1506,6 +1514,7 @@ class OpmetingRaamKeuzeMenu {
       titel: json['titel']?.toString() ?? '',
       volgorde: _leesGeheelGetal(json['volgorde']),
       actief: json['actief'] != false,
+      groepId: json['groepId']?.toString().trim() ?? '',
       opties: opties,
       items: items,
     );

@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: FOTO-PREVIEW-RUSTIGE-SLUITACTIE-FASE21-20260913
+// THIMACO-CONTROLE: PROGRAMMASTIJL-POSITIE-EN-MAATTITEL-FASE12-20260913
+// THIMACO-CONTROLE: PROGRAMMASTIJL-ORANJE-PRIJSZONE-FASE9-CURRENT-20260913
 // THIMACO-CONTROLE: ALGEMENE-OPMETING-EIGEN-AANKOOP-VERKOOP-PRIJSZONE-20260817
 // THIMACO-CONTROLE: TECHNISCHE-KEUZE-DYNAMISCHE-REGELHOOGTE-20260817
 // THIMACO-CONTROLE: PRIJS-VOOR-ALLE-POSITIES-NIET-MEER-PER-ARTIKEL-20260816
@@ -28,6 +31,8 @@
 // THIMACO-CONTROLE: OVERZICHT-ARTIKEL-OMSCHRIJVING-GELIJK-OFFERTE-20260727
 // THIMACO-CONTROLE: OVERZICHT-ARTIKEL-KAART-GEDEELDE-PRIJSOPBOUW-20260721
 import 'package:flutter/material.dart';
+
+import '../../ui/thimaco_huisstijl.dart';
 
 import '../../offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
@@ -118,13 +123,10 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
   final VoidCallback? onOmhoog;
   final VoidCallback? onOmlaag;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _lichtGroen = Color(0xFFE7F6EC);
   static const Color _rand = Color(0xFFE5E7EB);
   static const Color _tekstDonker = Color(0xFF111827);
   static const Color _tekstGrijs = Color(0xFF6B7280);
   static const Color _rood = Color(0xFFDC2626);
-  static const Color _roodLicht = Color(0xFFFEF2F2);
   static const Color _roodRand = Color(0xFFFCA5A5);
 
   @override
@@ -244,30 +246,38 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: item.isNietRekenen ? _roodLicht : _lichtGroen,
-                  borderRadius: BorderRadius.circular(999),
-                  border: item.isNietRekenen
-                      ? Border.all(color: _roodRand)
-                      : null,
-                ),
-                child: Text(
-                  item.isNietRekenen
-                      ? 'NIET REKENEN'
-                      : item.isOfferteOptie
-                      ? item.isOfferteOptieOpPositie
-                            ? '$algemenePositieLabel · IN OFFERTE'
-                            : '$algemenePositieLabel · APARTE PAGINA'
-                      : algemenePositieLabel,
-                  style: TextStyle(
-                    color: item.isNietRekenen ? _rood : _groen,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w900,
+              IntrinsicWidth(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(3, 5, 3, 0),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        item.isNietRekenen
+                            ? 'NIET REKENEN'
+                            : item.isOfferteOptie
+                            ? item.isOfferteOptieOpPositie
+                                  ? '$algemenePositieLabel · IN OFFERTE'
+                                  : '$algemenePositieLabel · APARTE PAGINA'
+                            : algemenePositieLabel,
+                        style: TextStyle(
+                          color: item.isNietRekenen ? _rood : _tekstDonker,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Container(
+                        height: 1.5,
+                        decoration: BoxDecoration(
+                          color: item.isNietRekenen
+                              ? _rood.withValues(alpha: 0.78)
+                              : ThimacoKleuren.oranje.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -324,13 +334,11 @@ class OpmetingOverzichtArtikelKaart extends StatelessWidget {
                             tekst: 'Groep niet rekenen',
                             onPressed: onNietRekenenWijzigen,
                           ),
-                        IconButton(
+                        ThimacoIcoonActie(
+                          icoon: Icons.delete_outline,
                           tooltip: 'Verwijderen',
+                          destructief: true,
                           onPressed: onVerwijderen,
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Color(0xFFDC2626),
-                          ),
                         ),
                         _PositieVerplaatsKnop(
                           onOmhoog: onOmhoog,
@@ -1533,26 +1541,11 @@ class _ArtikelActieTekstKnop extends StatelessWidget {
   final String tekst;
   final VoidCallback? onPressed;
 
-  static const Color _groen = Color(0xFF0B7A3B);
-  static const Color _rand = Color(0xFFE5E7EB);
-
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _groen,
-        backgroundColor: Colors.white,
-        disabledForegroundColor: _groen.withValues(alpha: 0.45),
-        side: const BorderSide(color: _rand),
-        minimumSize: const Size(0, 40),
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-      ),
+    return ThimacoTekstActie(
+      tekst: tekst,
       onPressed: onPressed,
-      child: Text(tekst),
     );
   }
 }
@@ -1591,10 +1584,13 @@ class _OverzichtFotoMiniatuur extends StatelessWidget {
               Positioned(
                 top: 8,
                 right: 8,
-                child: IconButton.filled(
+                child: IconButton(
+                  tooltip: 'Sluiten',
+                  visualDensity: VisualDensity.compact,
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    hoverColor: ThimacoKleuren.oranje.withValues(alpha: 0.18),
+                    focusColor: ThimacoKleuren.oranje.withValues(alpha: 0.18),
                   ),
                   onPressed: () {
                     Navigator.pop(dialogContext);
@@ -1639,7 +1635,6 @@ class _PositieVerplaatsKnop extends StatelessWidget {
   final VoidCallback? onOmhoog;
   final VoidCallback? onOmlaag;
 
-  static const Color _groen = Color(0xFF0B7A3B);
   static const Color _rand = Color(0xFFE5E7EB);
 
   @override
@@ -1665,7 +1660,9 @@ class _PositieVerplaatsKnop extends StatelessWidget {
                 child: Icon(
                   Icons.keyboard_arrow_up_rounded,
                   size: 19,
-                  color: onOmhoog == null ? Colors.grey.shade300 : _groen,
+                  color: onOmhoog == null
+                      ? Colors.grey.shade300
+                      : ThimacoKleuren.antraciet,
                 ),
               ),
             ),
@@ -1681,7 +1678,9 @@ class _PositieVerplaatsKnop extends StatelessWidget {
                 child: Icon(
                   Icons.keyboard_arrow_down_rounded,
                   size: 19,
-                  color: onOmlaag == null ? Colors.grey.shade300 : _groen,
+                  color: onOmlaag == null
+                      ? Colors.grey.shade300
+                      : ThimacoKleuren.antraciet,
                 ),
               ),
             ),

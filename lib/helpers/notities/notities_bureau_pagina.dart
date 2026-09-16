@@ -1,3 +1,7 @@
+// THIMACO-CONTROLE: NOTITIES-BUREAU-GEEN-VOLLEDIGE-REBUILD-PER-TOETS-20260914
+// THIMACO-CONTROLE: NOTITIES-BUREAU-DEBOUNCE-VEILIG-BEWAREN-20260914
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '/helpers/notities/notitie_actie_model.dart';
@@ -14,16 +18,52 @@ class NotitiesBureauPagina extends StatefulWidget {
   State<NotitiesBureauPagina> createState() => _NotitiesBureauPaginaState();
 }
 
-class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
+class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina>
+    with WidgetsBindingObserver {
   final NotitieRepository _repository = NotitieRepository();
+
+  static const Duration _bewaarVertraging = Duration(milliseconds: 1000);
 
   List<NotitieModel> _notities = [];
   List<NotitieActieModel> _acties = [];
 
+  Timer? _bewaarTimer;
+  bool _heeftOnopgeslagenWijzigingen = false;
+  Future<void>? _lopendeBewaring;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _laad();
+  }
+
+  @override
+  void dispose() {
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    if (_heeftOnopgeslagenWijzigingen) {
+      /*
+       * Dispose kan niet awaiten. NotitieRepository maakt onmiddellijk
+       * een snapshot en zet deze in de seriële bewaarrij, zodat de laatste
+       * wijziging toch nog veilig kan worden weggeschreven.
+       */
+      unawaited(_repository.bewaarNotities(_notities));
+    }
+
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      unawaited(_bewaarNu());
+    }
   }
 
   Future<void> _laad() async {
@@ -38,8 +78,80 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
     });
   }
 
-  Future<void> _bewaar() async {
-    await _repository.bewaarNotities(_notities);
+  void _planBewaren({
+    bool direct = false,
+  }) {
+    _heeftOnopgeslagenWijzigingen = true;
+
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    if (direct) {
+      unawaited(_bewaarNu());
+      return;
+    }
+
+    /*
+     * Tijdens typen niet langer na iedere letter een volledige opslag starten.
+     * Pas na 1 seconde zonder nieuwe wijziging wordt de actuele toestand bewaard.
+     */
+    _bewaarTimer = Timer(_bewaarVertraging, () {
+      _bewaarTimer = null;
+      unawaited(_bewaarNu());
+    });
+  }
+
+  Future<void> _bewaarNu() async {
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    final reedsBezig = _lopendeBewaring;
+    if (reedsBezig != null) {
+      await reedsBezig;
+
+      if (_heeftOnopgeslagenWijzigingen) {
+        await _bewaarNu();
+      }
+      return;
+    }
+
+    if (!_heeftOnopgeslagenWijzigingen) {
+      return;
+    }
+
+    _heeftOnopgeslagenWijzigingen = false;
+
+    late final Future<void> bewaring;
+
+    bewaring = _repository.bewaarNotities(_notities).whenComplete(() {
+      if (identical(_lopendeBewaring, bewaring)) {
+        _lopendeBewaring = null;
+      }
+    });
+
+    _lopendeBewaring = bewaring;
+
+    try {
+      await bewaring;
+    } catch (fout, stackTrace) {
+      /*
+       * Bij een opslagfout blijft de wijziging gemarkeerd als niet veilig
+       * bewaard. Een volgende wijziging, lifecycle-flush of Home-knop probeert
+       * opnieuw.
+       */
+      _heeftOnopgeslagenWijzigingen = true;
+      debugPrint('Notities Bureau bewaren mislukt: $fout');
+      debugPrintStack(stackTrace: stackTrace);
+      return;
+    }
+
+    /*
+     * Als tijdens het bewaren verder werd getypt, is de flag intussen opnieuw
+     * true geworden. Schrijf dan meteen nog één actuele snapshot weg.
+     */
+    if (_heeftOnopgeslagenWijzigingen) {
+      await _bewaarNu();
+    }
   }
 
   Future<void> _notitieToevoegen() async {
@@ -55,12 +167,16 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
       );
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
-  Future<void> _notitieGewijzigd(NotitieModel notitie) async {
-    setState(() {});
-    await _bewaar();
+  void _notitieGewijzigd(NotitieModel notitie) {
+    /*
+     * Geen setState van de volledige pagina bij iedere letter, checkbox,
+     * actie- of detailwijziging. De betrokken regel/dag vernieuwt zichzelf.
+     * Deze callback plant uitsluitend de opslag.
+     */
+    _planBewaren();
   }
 
   Future<void> _notitieVerwijderd(NotitieModel notitie) async {
@@ -68,7 +184,7 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
       _notities.removeWhere((n) => n.id == notitie.id);
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
   Future<void> _notitieVerplaatst(
@@ -80,7 +196,7 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
       notitie.gewijzigdOp = DateTime.now();
     });
 
-    await _bewaar();
+    _planBewaren();
   }
 
   List<String> get _datumKeys {
@@ -128,6 +244,25 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
         leading: IconButton(
           icon: const Icon(Icons.home, size: 24),
           onPressed: () async {
+            /*
+             * De laatste getypte tekst moet lokaal opgeslagen zijn vóór de
+             * pagina wordt verlaten.
+             */
+            await _bewaarNu();
+
+            if (!context.mounted) return;
+
+            if (_heeftOnopgeslagenWijzigingen) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'De laatste notitiewijziging kon niet veilig worden bewaard.',
+                  ),
+                ),
+              );
+              return;
+            }
+
             await SyncNavigatieHelper.terugNaarHomeMetDownload(
               context: context,
             );
@@ -135,6 +270,14 @@ class _NotitiesBureauPaginaState extends State<NotitiesBureauPagina> {
         ),
         title: GestureDetector(
           onTap: () async {
+            /*
+             * Ook vóór een handmatige upload eerst de laatste lokale tekst
+             * veilig wegschrijven.
+             */
+            await _bewaarNu();
+
+            if (!context.mounted || _heeftOnopgeslagenWijzigingen) return;
+
             await SyncNavigatieHelper.uploadVanafPagina(context: context);
           },
           child: const Text(

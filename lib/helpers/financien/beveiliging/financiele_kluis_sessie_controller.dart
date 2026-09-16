@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-20260807
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-REDDINGSSCAN-20260916
 import 'dart:async';
 import 'dart:ui';
 
@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../opslag/financiele_noodbackup_service.dart';
 import '../opslag/financiele_opslag_service.dart';
+import '../opslag/financiele_reddingsscan_service.dart';
 import '../opslag/financiele_versleuteling_service.dart';
 import 'financiele_kluis_configuratie.dart';
 import 'financiele_toegang_service.dart';
@@ -34,6 +35,8 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       FinancieleNoodbackupService();
   final FinancieleVersleutelingService _versleutelingService =
       FinancieleVersleutelingService();
+  final FinancieleReddingsscanService _reddingsscanService =
+      FinancieleReddingsscanService();
 
   FinancieleKluisStatus _status = FinancieleKluisStatus.initialiseren;
   Uint8List? _masterKey;
@@ -340,6 +343,124 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     }
   }
 
+  Future<FinancieleReddingsHerstelResultaat> herstelVanTijdelijkeNoodbackup({
+    required String herstelcode,
+  }) async {
+    _startBewerking();
+    FinancieleHerstelResultaat? herstelResultaat;
+
+    try {
+      if (_status != FinancieleKluisStatus.nietGeactiveerd &&
+          _status != FinancieleKluisStatus.herstelNodig &&
+          _status != FinancieleKluisStatus.vergrendeld) {
+        throw const FinancieleSessieException(
+          'Een reddingsscan kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden uitgevoerd.',
+        );
+      }
+
+      // Eerst uitsluitend lezen. Alle herkenbare tijdelijke kopieën worden
+      // veiliggesteld in Documents/ThimacoHerstel voordat we proberen te
+      // ontsleutelen of iets aan de actieve financiële kluis te wijzigen.
+      final kandidaten = await _reddingsscanService.zoekEnStelVeilig();
+      if (kandidaten.isEmpty) {
+        throw const FinancieleReddingsscanException(
+          'De reddingsscan vond geen tijdelijke Thimaco-noodback-up in de lokale appmappen van deze iPad.',
+        );
+      }
+
+      FinancieleNoodbackupException? laatsteOntsleutelFout;
+
+      for (final kandidaat in kandidaten) {
+        try {
+          final bytes = await _reddingsscanService.leesVeiligeKopie(kandidaat);
+          final herstel = await _noodbackupService.herstelUitBytes(
+            bytes: bytes,
+            herstelcode: herstelcode,
+          );
+          herstelResultaat = herstel;
+
+          FinancieleKeychainHerstelTransactie? keychainTransactie;
+          var opslagVoorbereid = false;
+          var keychainGeactiveerd = false;
+
+          try {
+            keychainTransactie = await _toegangService
+                .bereidHersteldeRegistratieVoor(herstel.masterKey);
+
+            await _opslagService.schrijfVersleuteldeEnvelop(
+              herstel.kluisEnvelop,
+              behoudVorigeVersie: true,
+            );
+            opslagVoorbereid = true;
+
+            await _toegangService.voltooiHersteldeRegistratie(
+              keychainTransactie,
+            );
+            keychainGeactiveerd = true;
+
+            try {
+              await _opslagService.voltooiHerstelSchrijfbeurt();
+            } catch (_) {
+              // Geen blokkering: sleutel en actuele kluis zijn al consistent.
+            }
+          } catch (_) {
+            if (!keychainGeactiveerd && opslagVoorbereid) {
+              try {
+                await _opslagService.annuleerHerstelSchrijfbeurt();
+              } catch (_) {
+                // De .bak-versie blijft beschikbaar voor veilig herstel.
+              }
+            }
+            if (!keychainGeactiveerd && keychainTransactie != null) {
+              try {
+                await _toegangService.annuleerHersteldeRegistratie(
+                  keychainTransactie,
+                );
+              } catch (_) {
+                // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
+              }
+            }
+            rethrow;
+          }
+
+          _masterKey = Uint8List.fromList(herstel.masterKey);
+          _inhoud = Map<String, dynamic>.from(herstel.inhoud);
+          _zetStatus(FinancieleKluisStatus.ontgrendeld);
+          registreerActiviteit();
+
+          return FinancieleReddingsHerstelResultaat(
+            gevondenAantal: kandidaten.length,
+            veiligeBestandsnaam: kandidaat.veiligeBestandsnaam,
+            gewijzigdOp: kandidaat.gewijzigdOp,
+          );
+        } on FinancieleNoodbackupException catch (fout) {
+          laatsteOntsleutelFout = fout;
+          herstelResultaat = null;
+        }
+      }
+
+      final extra = laatsteOntsleutelFout == null
+          ? ''
+          : '\n\n${laatsteOntsleutelFout.bericht}';
+      throw FinancieleReddingsscanException(
+        'De reddingsscan heeft ${kandidaten.length} mogelijke noodback-up'
+        '${kandidaten.length == 1 ? '' : 's'} gevonden en veiliggesteld, '
+        'maar geen ervan kon met de papieren herstelcode worden geopend.'
+        '$extra',
+      );
+    } catch (fout) {
+      _wisGeheugen();
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      final tijdelijkeHerstelKey = herstelResultaat?.masterKey;
+      if (tijdelijkeHerstelKey != null) {
+        tijdelijkeHerstelKey.fillRange(0, tijdelijkeHerstelKey.length, 0);
+      }
+      _stopBewerking();
+    }
+  }
+
   void registreerActiviteit() {
     if (!isOntgrendeld) {
       return;
@@ -421,10 +542,23 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     if (fout is FinancieleToegangException) return fout.bericht;
     if (fout is FinancieleOpslagException) return fout.bericht;
     if (fout is FinancieleNoodbackupException) return fout.bericht;
+    if (fout is FinancieleReddingsscanException) return fout.bericht;
     if (fout is FinancieleSessieException) return fout.bericht;
 
     return 'De beveiligde financiële bewerking is niet gelukt.';
   }
+}
+
+class FinancieleReddingsHerstelResultaat {
+  const FinancieleReddingsHerstelResultaat({
+    required this.gevondenAantal,
+    required this.veiligeBestandsnaam,
+    required this.gewijzigdOp,
+  });
+
+  final int gevondenAantal;
+  final String veiligeBestandsnaam;
+  final DateTime gewijzigdOp;
 }
 
 class FinancieleSessieException implements Exception {
