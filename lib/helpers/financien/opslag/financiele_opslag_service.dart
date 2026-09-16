@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-LOKALE-OPSLAG-FASE2A-20260807
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-LOKALE-OPSLAG-FASE2A-VEILIGE-EXPORT-20260916
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -43,7 +43,10 @@ class FinancieleOpslagService {
       'herstelcodeVerifier': herstelcodeVerifier,
     };
 
-    await bewaarOntsleuteld(inhoud: inhoud, masterKey: masterKey);
+    await bewaarOntsleuteld(
+      inhoud: inhoud,
+      masterKey: masterKey,
+    );
   }
 
   Future<Map<String, dynamic>> laadOntsleuteld(Uint8List masterKey) async {
@@ -138,7 +141,10 @@ class FinancieleOpslagService {
       await _verwijderBestandZonderFout(tijdelijk);
       await _verwijderBestandZonderFout(vorigeVersie);
 
-      await tijdelijk.writeAsString(jsonEncode(envelop), flush: true);
+      await tijdelijk.writeAsString(
+        jsonEncode(envelop),
+        flush: true,
+      );
 
       if (await bestand.exists()) {
         await bestand.rename(vorigeVersie.path);
@@ -197,6 +203,92 @@ class FinancieleOpslagService {
     await _verwijderBestandZonderFout(File('${bestand.path}.tmp'));
     await _verwijderBestandZonderFout(File('${bestand.path}.bak'));
     await _verwijderBestandZonderFout(bestand);
+  }
+
+  Future<List<FinancieleRuweKluisExport>> stelRuweKluisVeiligVoorExport() async {
+    final bestand = await _bestand();
+    final kandidaten = <({File bestand, String label})>[
+      (bestand: bestand, label: _bestandsnaam),
+      (bestand: File('${bestand.path}.bak'), label: '$_bestandsnaam.bak'),
+      (bestand: File('${bestand.path}.tmp'), label: '$_bestandsnaam.tmp'),
+    ];
+
+    final aanwezige = <({File bestand, String label})>[];
+    for (final kandidaat in kandidaten) {
+      try {
+        if (await kandidaat.bestand.exists() &&
+            await kandidaat.bestand.length() > 0) {
+          aanwezige.add(kandidaat);
+        }
+      } catch (_) {
+        // Een onleesbare nevenversie mag de hoofdversie niet blokkeren.
+      }
+    }
+
+    if (aanwezige.isEmpty) {
+      throw const FinancieleOpslagException(
+        'Er werd geen lokaal versleuteld financieel kluisbestand gevonden om veilig te stellen.',
+      );
+    }
+
+    final documenten = await getApplicationDocumentsDirectory();
+    final herstelMap = Directory(
+      '${documenten.path}/ThimacoHerstel/RuweKluis_${_tijdstempel(DateTime.now().toUtc())}',
+    );
+
+    try {
+      await herstelMap.create(recursive: true);
+    } catch (_) {
+      throw const FinancieleOpslagException(
+        'De veilige herstelmap voor de lokale financiële kluis kon niet worden aangemaakt.',
+      );
+    }
+
+    final resultaat = <FinancieleRuweKluisExport>[];
+    for (final kandidaat in aanwezige) {
+      try {
+        final doel = File('${herstelMap.path}/${kandidaat.label}');
+        final bytes = await kandidaat.bestand.readAsBytes();
+        if (bytes.isEmpty) {
+          continue;
+        }
+
+        await doel.writeAsBytes(bytes, flush: true);
+        if (!await doel.exists() || await doel.length() != bytes.length) {
+          throw const FinancieleOpslagException(
+            'De controle van de veilige kopie is mislukt.',
+          );
+        }
+
+        resultaat.add(
+          FinancieleRuweKluisExport(
+            bronPad: kandidaat.bestand.path,
+            veiligPad: doel.path,
+            bestandsnaam: kandidaat.label,
+            grootte: bytes.length,
+          ),
+        );
+      } catch (_) {
+        throw const FinancieleOpslagException(
+          'De versleutelde lokale kluis werd gevonden, maar kon niet veilig worden gekopieerd. Verwijder of reset de Thimaco-app niet.',
+        );
+      }
+    }
+
+    if (resultaat.isEmpty) {
+      throw const FinancieleOpslagException(
+        'De versleutelde lokale kluis kon niet veilig worden gekopieerd. Verwijder of reset de Thimaco-app niet.',
+      );
+    }
+
+    return resultaat;
+  }
+
+  String _tijdstempel(DateTime datum) {
+    String twee(int waarde) => waarde.toString().padLeft(2, '0');
+
+    return '${datum.year}${twee(datum.month)}${twee(datum.day)}'
+        '_${twee(datum.hour)}${twee(datum.minute)}${twee(datum.second)}';
   }
 
   Map<String, dynamic> _normaliseerInhoud(Map<String, dynamic> inhoud) {
@@ -267,6 +359,20 @@ class FinancieleOpslagService {
 
     return File('${financieleMap.path}/$_bestandsnaam');
   }
+}
+
+class FinancieleRuweKluisExport {
+  const FinancieleRuweKluisExport({
+    required this.bronPad,
+    required this.veiligPad,
+    required this.bestandsnaam,
+    required this.grootte,
+  });
+
+  final String bronPad;
+  final String veiligPad;
+  final String bestandsnaam;
+  final int grootte;
 }
 
 class FinancieleOpslagException implements Exception {

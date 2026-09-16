@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-VRIJE-BESTANDSCONTROLE-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-RUWE-KLUIS-EXPORT-20260916
 import 'dart:async';
 import 'dart:ui';
 
@@ -256,6 +256,41 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       key.fillRange(0, key.length, 0);
       _stopBewerking();
       registreerActiviteit();
+    }
+  }
+
+  Future<ShareResult> exporteerRuweLokaleKluis({
+    required Rect sharePositionOrigin,
+  }) async {
+    _startBewerking();
+
+    try {
+      final exports = await _opslagService.stelRuweKluisVeiligVoorExport();
+      final bestanden = exports
+          .map(
+            (export) => XFile(
+              export.veiligPad,
+              mimeType: 'application/octet-stream',
+            ),
+          )
+          .toList(growable: false);
+
+      return await SharePlus.instance.share(
+        ShareParams(
+          title: 'Thimaco versleutelde lokale kluis veiligstellen',
+          subject: 'Versleutelde lokale financiële kluis',
+          text:
+              'Bewaar deze bestanden buiten de Thimaco-app, bijvoorbeeld in OneDrive of iCloud Drive. '
+              'Dit is een ruwe versleutelde veiligheidskopie; er wordt niets ontsleuteld of gewijzigd.',
+          files: bestanden,
+          sharePositionOrigin: sharePositionOrigin,
+        ),
+      );
+    } catch (fout) {
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      _stopBewerking();
     }
   }
 

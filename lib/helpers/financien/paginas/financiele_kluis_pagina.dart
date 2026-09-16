@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-VRIJE-BESTANDSCONTROLE-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-RUWE-KLUIS-EXPORT-20260916
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -278,6 +278,15 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           label: const Text('Kies ander bestand om te controleren'),
         ),
         const SizedBox(height: 10),
+        OutlinedButton.icon(
+          style: _secundaireKnopStijl(),
+          onPressed: _controller.bewerkingBezig
+              ? null
+              : _exporteerRuweLokaleKluis,
+          icon: const Icon(Icons.save_alt_rounded),
+          label: const Text('Bewaar versleutelde lokale kluis'),
+        ),
+        const SizedBox(height: 10),
         _bouwWaarschuwing(
           'Gebruik noodherstel alleen wanneer biometrisch ontgrendelen niet '
           'meer lukt, bijvoorbeeld nadat Face ID of Touch ID op deze iPad '
@@ -524,6 +533,87 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
       if (!mounted) return;
       _toonMelding(fout.toString(), fout: true);
     }
+  }
+
+  Future<void> _exporteerRuweLokaleKluis() async {
+    final bevestigd = await _bevestigRuweKluisExport();
+    if (bevestigd != true || !mounted) {
+      return;
+    }
+
+    try {
+      final resultaat = await _controller.exporteerRuweLokaleKluis(
+        sharePositionOrigin: _schermHerkomst(),
+      );
+      if (!mounted) return;
+
+      _toonShareResultaat(
+        resultaat,
+        succesTekst:
+            'De ruwe versleutelde kluis is aangeboden om buiten de app te bewaren. Controleer of de bestanden werkelijk in OneDrive, iCloud Drive of een andere veilige locatie staan.',
+        objectNaam: 'versleutelde kluisbestanden',
+      );
+    } catch (fout) {
+      if (!mounted) return;
+      _toonMelding(fout.toString(), fout: true);
+    }
+  }
+
+  Future<bool?> _bevestigRuweKluisExport() {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: _rand),
+          ),
+          title: const Row(
+            children: <Widget>[
+              Icon(Icons.save_alt_rounded, color: _groen),
+              SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  'Versleutelde kluis veiligstellen?',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
+          content: const SizedBox(
+            width: 500,
+            child: Text(
+              'De app maakt eerst een exacte kopie van de nog aanwezige lokale '
+              'versleutelde kluisbestanden. Er wordt niets ontsleuteld, gewist, '
+              'overschreven of opnieuw geactiveerd.\n\n'
+              'Daarna opent het iOS-deelvenster. Bewaar de bestanden buiten de '
+              'Thimaco-app, bij voorkeur in OneDrive of iCloud Drive. Deze kopie '
+              'kan later belangrijk blijven als er nog een herstelmogelijkheid '
+              'voor de oorspronkelijke sleutel wordt gevonden.',
+              style: TextStyle(color: _tekstDonker, height: 1.45),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Annuleren'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: _groen,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              icon: const Icon(Icons.save_alt_rounded),
+              label: const Text('Veiligstellen'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _herstelUitVrijGekozenBestand() async {
@@ -1177,6 +1267,7 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
   void _toonShareResultaat(
     ShareResult resultaat, {
     required String succesTekst,
+    String objectNaam = 'noodback-up',
   }) {
     switch (resultaat.status) {
       case ShareResultStatus.success:
@@ -1184,14 +1275,14 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
         break;
       case ShareResultStatus.dismissed:
         _toonMelding(
-          'Het deelvenster werd gesloten. Controleer of de noodback-up '
-          'daadwerkelijk op een veilige plaats is bewaard.',
+          'Het deelvenster werd gesloten. Controleer of $objectNaam '
+          'daadwerkelijk op een veilige plaats zijn bewaard.',
           fout: true,
         );
         break;
       case ShareResultStatus.unavailable:
         _toonMelding(
-          'Het iOS-deelvenster kon niet bevestigen of de noodback-up is bewaard. '
+          'Het iOS-deelvenster kon niet bevestigen of $objectNaam zijn bewaard. '
           'Controleer de gekozen locatie.',
           fout: true,
         );
