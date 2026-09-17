@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-EXPLICIETE-BIOMETRIE-20260807
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-BIOMETRIE-EN-VEILIGE-NIEUWE-START-20260916
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -10,8 +10,9 @@ import '../opslag/financiele_versleuteling_service.dart';
 import 'financiele_kluis_configuratie.dart';
 
 class FinancieleToegangService {
-  FinancieleToegangService({LocalAuthentication? localAuthentication})
-    : _localAuthentication = localAuthentication ?? LocalAuthentication();
+  FinancieleToegangService({
+    LocalAuthentication? localAuthentication,
+  }) : _localAuthentication = localAuthentication ?? LocalAuthentication();
 
   static const String _markerKey = 'thimaco_finance_device_marker_v1';
   static const String _legacyMasterKey = 'thimaco_finance_master_key_v1';
@@ -73,9 +74,10 @@ class FinancieleToegangService {
       );
     }
 
-    final codeGeldig = await FinancieleKluisConfiguratie.verifieerActivatieCode(
-      activatieCode,
-    );
+    final codeGeldig =
+        await FinancieleKluisConfiguratie.verifieerActivatieCode(
+          activatieCode,
+        );
     if (!codeGeldig) {
       throw const FinancieleToegangException(
         'De eigenaar-activatiecode is niet correct.',
@@ -121,9 +123,8 @@ class FinancieleToegangService {
     }
   }
 
-  Future<FinancieleKeychainHerstelTransactie> bereidHersteldeRegistratieVoor(
-    Uint8List masterKey,
-  ) async {
+  Future<FinancieleKeychainHerstelTransactie>
+  bereidHersteldeRegistratieVoor(Uint8List masterKey) async {
     await _vereisBiometrischeAuthenticatie(
       reden: 'Bevestig dat jij de financiële kluis op deze iPad herstelt.',
     );
@@ -233,6 +234,22 @@ class FinancieleToegangService {
     }
   }
 
+  Future<void> resetRegistratieVoorNieuweStart() async {
+    // De oude kluis moet vóór deze oproep al buiten de actieve opslag zijn
+    // gearchiveerd. Alleen de registratie wordt hier opnieuw vrijgemaakt.
+    await _verwijderKeyZonderFout(_masterKeyA);
+    await _verwijderKeyZonderFout(_masterKeyB);
+    await _verwijderKeyZonderFout(_legacyMasterKey);
+
+    try {
+      await _markerStorage.delete(key: _markerKey);
+    } catch (_) {
+      throw const FinancieleToegangException(
+        'De oude eigenaarregistratie kon niet volledig worden vrijgemaakt.',
+      );
+    }
+  }
+
   Future<_FinancieleRegistratieMarker?> _leesMarker() async {
     final ruweMarker = await _markerStorage.read(key: _markerKey);
     if (ruweMarker == null || ruweMarker.trim().isEmpty) {
@@ -274,7 +291,10 @@ class FinancieleToegangService {
       'actieveSleutel': actieveSlot,
     };
 
-    await _markerStorage.write(key: _markerKey, value: jsonEncode(marker));
+    await _markerStorage.write(
+      key: _markerKey,
+      value: jsonEncode(marker),
+    );
   }
 
   static String _keyNaamVoorSlot(String slot) {
@@ -290,11 +310,13 @@ class FinancieleToegangService {
     }
   }
 
-  Future<void> _vereisBiometrischeAuthenticatie({required String reden}) async {
+  Future<void> _vereisBiometrischeAuthenticatie({
+    required String reden,
+  }) async {
     try {
       final kanBiometrie = await _localAuthentication.canCheckBiometrics;
-      final beschikbareBiometrie = await _localAuthentication
-          .getAvailableBiometrics();
+      final beschikbareBiometrie =
+          await _localAuthentication.getAvailableBiometrics();
 
       if (!kanBiometrie || beschikbareBiometrie.isEmpty) {
         throw const FinancieleToegangException(

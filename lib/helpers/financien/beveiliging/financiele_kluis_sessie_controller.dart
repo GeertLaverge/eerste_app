@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-FASE2A-RUWE-KLUIS-EXPORT-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-SESSIE-HERSTELPAKKET-V2-20260916
 import 'dart:async';
 import 'dart:ui';
 
@@ -44,10 +44,12 @@ class FinancieleKluisSessieController extends ChangeNotifier {
   String _foutBericht = '';
   Timer? _sessieTimer;
   bool _bewerkingBezig = false;
+  bool _heeftLokaalHerstelpakket = false;
 
   FinancieleKluisStatus get status => _status;
   String get foutBericht => _foutBericht;
   bool get bewerkingBezig => _bewerkingBezig;
+  bool get heeftLokaalHerstelpakket => _heeftLokaalHerstelpakket;
   bool get magMenuTonen => FinancieleKluisConfiguratie.magModuleTonen;
   bool get isOntgrendeld =>
       _status == FinancieleKluisStatus.ontgrendeld &&
@@ -62,6 +64,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
   Future<void> initialiseer() async {
     _sessieTimer?.cancel();
     _wisGeheugen();
+    _heeftLokaalHerstelpakket = false;
 
     if (!FinancieleKluisConfiguratie.magModuleTonen) {
       _zetStatus(FinancieleKluisStatus.nietBeschikbaar);
@@ -77,6 +80,9 @@ class FinancieleKluisSessieController extends ChangeNotifier {
 
     try {
       final geactiveerd = await _toegangService.isGeactiveerd();
+      _heeftLokaalHerstelpakket =
+          await _opslagService.lokaalHerstelpakketBestaat();
+
       if (!geactiveerd) {
         _zetStatus(FinancieleKluisStatus.nietGeactiveerd);
         return;
@@ -104,6 +110,12 @@ class FinancieleKluisSessieController extends ChangeNotifier {
         );
       }
 
+      if (await _opslagService.bestaat()) {
+        throw const FinancieleSessieException(
+          'Er staat nog een oude lokale financiële kluis op deze iPad. Gebruik eerst “Nieuwe kluis starten” zodat die veilig wordt gearchiveerd.',
+        );
+      }
+
       final resultaat = await _toegangService.bereidActivatieVoor(
         activatieCode: activatieCode,
       );
@@ -111,19 +123,35 @@ class FinancieleKluisSessieController extends ChangeNotifier {
 
       final herstelcodeVerifier = await _versleutelingService
           .maakHerstelcodeVerifier(herstelcode: resultaat.herstelcode);
+      final sleutelVerpakking = await _versleutelingService.verpakMasterKey(
+        masterKey: resultaat.masterKey,
+        herstelcode: resultaat.herstelcode,
+      );
 
       try {
         await _opslagService.initialiseerLegeKluis(
           masterKey: resultaat.masterKey,
           herstelcodeVerifier: herstelcodeVerifier,
         );
+        await _opslagService.schrijfLokaalHerstelpakket(
+          sleutelVerpakking: sleutelVerpakking,
+        );
         await _toegangService.bewaarRegistratie(resultaat.masterKey);
       } catch (_) {
-        await _toegangService.wisRegistratie();
-        await _opslagService.wisLokaalKluisbestand();
+        try {
+          await _toegangService.wisRegistratie();
+        } catch (_) {
+          // Best effort: activatie is nog niet als geslaagd teruggegeven.
+        }
+        try {
+          await _opslagService.wisFinancieleLokaleDataVoorNieuweStart();
+        } catch (_) {
+          // De oorspronkelijke activatiefout blijft leidend.
+        }
         rethrow;
       }
 
+      _heeftLokaalHerstelpakket = true;
       _masterKey = Uint8List.fromList(resultaat.masterKey);
       _inhoud = await _opslagService.laadOntsleuteld(_masterKey!);
       _zetStatus(FinancieleKluisStatus.ontgrendeld);
@@ -168,6 +196,72 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
       rethrow;
     } finally {
+      _stopBewerking();
+    }
+  }
+
+  Future<void> herstelToegangMetPapierenCode({
+    required String herstelcode,
+  }) async {
+    _startBewerking();
+    Uint8List? tijdelijkeKey;
+    FinancieleKeychainHerstelTransactie? keychainTransactie;
+    var keychainGeactiveerd = false;
+
+    try {
+      if (_status != FinancieleKluisStatus.vergrendeld) {
+        throw const FinancieleSessieException(
+          'Herstel met de papieren code kan alleen bij een vergrendelde lokale kluis.',
+        );
+      }
+
+      final verpakking = await _opslagService.leesLokaalHerstelpakket();
+      final key = await _versleutelingService.ontpakMasterKey(
+        verpakking: verpakking,
+        herstelcode: herstelcode,
+      );
+      tijdelijkeKey = key;
+
+      final inhoud = await _opslagService.laadOntsleuteld(key);
+      final verifierRuw = inhoud['herstelcodeVerifier'];
+      if (verifierRuw is! Map ||
+          !await _versleutelingService.verifieerHerstelcode(
+            herstelcode: herstelcode,
+            verifier: Map<String, dynamic>.from(verifierRuw),
+          )) {
+        throw const FinancieleSessieException(
+          'De papieren herstelcode hoort niet bij deze financiële kluis.',
+        );
+      }
+
+      keychainTransactie = await _toegangService
+          .bereidHersteldeRegistratieVoor(key);
+      await _toegangService.voltooiHersteldeRegistratie(keychainTransactie);
+      keychainGeactiveerd = true;
+
+      _masterKey = Uint8List.fromList(key);
+      _inhoud = inhoud;
+      _heeftLokaalHerstelpakket = true;
+      _zetStatus(FinancieleKluisStatus.ontgrendeld);
+      registreerActiviteit();
+    } catch (fout) {
+      if (!keychainGeactiveerd && keychainTransactie != null) {
+        try {
+          await _toegangService.annuleerHersteldeRegistratie(
+            keychainTransactie,
+          );
+        } catch (_) {
+          // Een inactieve sleutel geeft geen toegang tot de kluis.
+        }
+      }
+      _wisGeheugen();
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      final sleutelOmTeWissen = tijdelijkeKey;
+      if (sleutelOmTeWissen != null) {
+        sleutelOmTeWissen.fillRange(0, sleutelOmTeWissen.length, 0);
+      }
       _stopBewerking();
     }
   }
@@ -222,8 +316,6 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       );
     }
 
-    // Gebruik een eigen werkkopie. Zodra iOS de deelpagina opent, kan de app
-    // inactief worden en wordt de sleutel in de sessie onmiddellijk gewist.
     final key = Uint8List.fromList(actieveKey);
     _startBewerking();
 
@@ -244,6 +336,15 @@ class FinancieleKluisSessieController extends ChangeNotifier {
           'De ingevoerde herstelcode komt niet overeen met de papieren code van deze kluis.',
         );
       }
+
+      final sleutelVerpakking = await _versleutelingService.verpakMasterKey(
+        masterKey: key,
+        herstelcode: herstelcode,
+      );
+      await _opslagService.schrijfLokaalHerstelpakket(
+        sleutelVerpakking: sleutelVerpakking,
+      );
+      _heeftLokaalHerstelpakket = true;
 
       final envelop = await _opslagService.leesVersleuteldeEnvelop();
       return await _noodbackupService.deelNoodbackup(
@@ -281,10 +382,55 @@ class FinancieleKluisSessieController extends ChangeNotifier {
           subject: 'Versleutelde lokale financiële kluis',
           text:
               'Bewaar deze bestanden buiten de Thimaco-app, bijvoorbeeld in OneDrive of iCloud Drive. '
-              'Dit is een ruwe versleutelde veiligheidskopie; er wordt niets ontsleuteld of gewijzigd.',
+              'De export kan naast de kluis ook het versleutelde lokale herstelpakket bevatten.',
           files: bestanden,
           sharePositionOrigin: sharePositionOrigin,
         ),
+      );
+    } catch (fout) {
+      _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
+      rethrow;
+    } finally {
+      _stopBewerking();
+    }
+  }
+
+  Future<FinancieleNieuweStartResultaat> maakKlaarVoorNieuweKluis() async {
+    _startBewerking();
+
+    try {
+      if (_status != FinancieleKluisStatus.vergrendeld &&
+          _status != FinancieleKluisStatus.herstelNodig) {
+        throw const FinancieleSessieException(
+          'Een nieuwe kluis kan alleen vanuit een vergrendelde of te herstellen eigenaarinstallatie worden gestart.',
+        );
+      }
+
+      final archief = await _opslagService.archiveerVoorNieuweStart();
+
+      // Pas nadat alle aanwezige financiële bestanden byte-voor-byte zijn
+      // gecontroleerd, wordt de actieve lokale opslag vrijgemaakt.
+      await _opslagService.wisFinancieleLokaleDataVoorNieuweStart();
+      try {
+        await _toegangService.resetRegistratieVoorNieuweStart();
+      } catch (_) {
+        // Wanneer de registratie niet kan worden vrijgemaakt, zetten we de
+        // gearchiveerde lokale bestanden terug en starten we geen nieuwe kluis.
+        await _opslagService.herstelActieveBestandenUitNieuweStartArchief(
+          archief,
+        );
+        rethrow;
+      }
+
+      _sessieTimer?.cancel();
+      _sessieTimer = null;
+      _wisGeheugen();
+      _heeftLokaalHerstelpakket = false;
+      _zetStatus(FinancieleKluisStatus.nietGeactiveerd);
+
+      return FinancieleNieuweStartResultaat(
+        archiefMapPad: archief.mapPad,
+        aantalBestanden: archief.bestanden.length,
       );
     } catch (fout) {
       _zetFout(_berichtVan(fout), behoudVorigeStatus: true);
@@ -299,13 +445,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     FinancieleHerstelResultaat? herstelResultaat;
 
     try {
-      if (_status != FinancieleKluisStatus.nietGeactiveerd &&
-          _status != FinancieleKluisStatus.herstelNodig &&
-          _status != FinancieleKluisStatus.vergrendeld) {
-        throw const FinancieleSessieException(
-          'Een noodback-up kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden hersteld.',
-        );
-      }
+      _controleerHerstelToegestaan();
 
       final herstel = await _noodbackupService.kiesEnHerstel(
         herstelcode: herstelcode,
@@ -315,55 +455,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       }
       herstelResultaat = herstel;
 
-      FinancieleKeychainHerstelTransactie? keychainTransactie;
-      var opslagVoorbereid = false;
-      var keychainGeactiveerd = false;
-
-      try {
-        keychainTransactie = await _toegangService
-            .bereidHersteldeRegistratieVoor(herstel.masterKey);
-
-        await _opslagService.schrijfVersleuteldeEnvelop(
-          herstel.kluisEnvelop,
-          behoudVorigeVersie: true,
-        );
-        opslagVoorbereid = true;
-
-        await _toegangService.voltooiHersteldeRegistratie(keychainTransactie);
-        keychainGeactiveerd = true;
-
-        // Opruimen is best effort. Bij een onderbreking herstelt de opslag bij
-        // de eerstvolgende ontgrendeling automatisch de passende bestandversie.
-        try {
-          await _opslagService.voltooiHerstelSchrijfbeurt();
-        } catch (_) {
-          // Geen blokkering: sleutel en actuele kluis zijn al consistent.
-        }
-      } catch (_) {
-        if (!keychainGeactiveerd && opslagVoorbereid) {
-          try {
-            await _opslagService.annuleerHerstelSchrijfbeurt();
-          } catch (_) {
-            // De .bak-versie blijft beschikbaar en wordt bij een volgende
-            // ontgrendeling automatisch opnieuw beoordeeld.
-          }
-        }
-        if (!keychainGeactiveerd && keychainTransactie != null) {
-          try {
-            await _toegangService.annuleerHersteldeRegistratie(
-              keychainTransactie,
-            );
-          } catch (_) {
-            // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
-          }
-        }
-        rethrow;
-      }
-
-      _masterKey = Uint8List.fromList(herstel.masterKey);
-      _inhoud = Map<String, dynamic>.from(herstel.inhoud);
-      _zetStatus(FinancieleKluisStatus.ontgrendeld);
-      registreerActiviteit();
+      await _pasHerstelToe(herstel, herstelcode: herstelcode);
       return true;
     } catch (fout) {
       _wisGeheugen();
@@ -385,13 +477,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     FinancieleHerstelResultaat? herstelResultaat;
 
     try {
-      if (_status != FinancieleKluisStatus.nietGeactiveerd &&
-          _status != FinancieleKluisStatus.herstelNodig &&
-          _status != FinancieleKluisStatus.vergrendeld) {
-        throw const FinancieleSessieException(
-          'Een herstelbestand kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden gecontroleerd.',
-        );
-      }
+      _controleerHerstelToegestaan();
 
       final herstel = await _noodbackupService.kiesVrijBestandEnHerstel(
         herstelcode: herstelcode,
@@ -401,52 +487,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
       }
       herstelResultaat = herstel;
 
-      FinancieleKeychainHerstelTransactie? keychainTransactie;
-      var opslagVoorbereid = false;
-      var keychainGeactiveerd = false;
-
-      try {
-        keychainTransactie = await _toegangService
-            .bereidHersteldeRegistratieVoor(herstel.masterKey);
-
-        await _opslagService.schrijfVersleuteldeEnvelop(
-          herstel.kluisEnvelop,
-          behoudVorigeVersie: true,
-        );
-        opslagVoorbereid = true;
-
-        await _toegangService.voltooiHersteldeRegistratie(keychainTransactie);
-        keychainGeactiveerd = true;
-
-        try {
-          await _opslagService.voltooiHerstelSchrijfbeurt();
-        } catch (_) {
-          // Geen blokkering: sleutel en actuele kluis zijn al consistent.
-        }
-      } catch (_) {
-        if (!keychainGeactiveerd && opslagVoorbereid) {
-          try {
-            await _opslagService.annuleerHerstelSchrijfbeurt();
-          } catch (_) {
-            // De .bak-versie blijft beschikbaar voor veilig herstel.
-          }
-        }
-        if (!keychainGeactiveerd && keychainTransactie != null) {
-          try {
-            await _toegangService.annuleerHersteldeRegistratie(
-              keychainTransactie,
-            );
-          } catch (_) {
-            // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
-          }
-        }
-        rethrow;
-      }
-
-      _masterKey = Uint8List.fromList(herstel.masterKey);
-      _inhoud = Map<String, dynamic>.from(herstel.inhoud);
-      _zetStatus(FinancieleKluisStatus.ontgrendeld);
-      registreerActiviteit();
+      await _pasHerstelToe(herstel, herstelcode: herstelcode);
       return true;
     } catch (fout) {
       _wisGeheugen();
@@ -468,17 +509,8 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     FinancieleHerstelResultaat? herstelResultaat;
 
     try {
-      if (_status != FinancieleKluisStatus.nietGeactiveerd &&
-          _status != FinancieleKluisStatus.herstelNodig &&
-          _status != FinancieleKluisStatus.vergrendeld) {
-        throw const FinancieleSessieException(
-          'Een reddingsscan kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden uitgevoerd.',
-        );
-      }
+      _controleerHerstelToegestaan();
 
-      // Eerst uitsluitend lezen. Alle herkenbare tijdelijke kopieën worden
-      // veiliggesteld in Documents/ThimacoHerstel voordat we proberen te
-      // ontsleutelen of iets aan de actieve financiële kluis te wijzigen.
       final kandidaten = await _reddingsscanService.zoekEnStelVeilig();
       if (kandidaten.isEmpty) {
         throw const FinancieleReddingsscanException(
@@ -497,54 +529,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
           );
           herstelResultaat = herstel;
 
-          FinancieleKeychainHerstelTransactie? keychainTransactie;
-          var opslagVoorbereid = false;
-          var keychainGeactiveerd = false;
-
-          try {
-            keychainTransactie = await _toegangService
-                .bereidHersteldeRegistratieVoor(herstel.masterKey);
-
-            await _opslagService.schrijfVersleuteldeEnvelop(
-              herstel.kluisEnvelop,
-              behoudVorigeVersie: true,
-            );
-            opslagVoorbereid = true;
-
-            await _toegangService.voltooiHersteldeRegistratie(
-              keychainTransactie,
-            );
-            keychainGeactiveerd = true;
-
-            try {
-              await _opslagService.voltooiHerstelSchrijfbeurt();
-            } catch (_) {
-              // Geen blokkering: sleutel en actuele kluis zijn al consistent.
-            }
-          } catch (_) {
-            if (!keychainGeactiveerd && opslagVoorbereid) {
-              try {
-                await _opslagService.annuleerHerstelSchrijfbeurt();
-              } catch (_) {
-                // De .bak-versie blijft beschikbaar voor veilig herstel.
-              }
-            }
-            if (!keychainGeactiveerd && keychainTransactie != null) {
-              try {
-                await _toegangService.annuleerHersteldeRegistratie(
-                  keychainTransactie,
-                );
-              } catch (_) {
-                // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
-              }
-            }
-            rethrow;
-          }
-
-          _masterKey = Uint8List.fromList(herstel.masterKey);
-          _inhoud = Map<String, dynamic>.from(herstel.inhoud);
-          _zetStatus(FinancieleKluisStatus.ontgrendeld);
-          registreerActiviteit();
+          await _pasHerstelToe(herstel, herstelcode: herstelcode);
 
           return FinancieleReddingsHerstelResultaat(
             gevondenAantal: kandidaten.length,
@@ -576,6 +561,89 @@ class FinancieleKluisSessieController extends ChangeNotifier {
         tijdelijkeHerstelKey.fillRange(0, tijdelijkeHerstelKey.length, 0);
       }
       _stopBewerking();
+    }
+  }
+
+  Future<void> _pasHerstelToe(
+    FinancieleHerstelResultaat herstel, {
+    required String herstelcode,
+  }) async {
+    FinancieleKeychainHerstelTransactie? keychainTransactie;
+    var opslagVoorbereid = false;
+    var pakketVoorbereid = false;
+    var keychainGeactiveerd = false;
+
+    try {
+      keychainTransactie = await _toegangService.bereidHersteldeRegistratieVoor(
+        herstel.masterKey,
+      );
+
+      await _opslagService.schrijfVersleuteldeEnvelop(
+        herstel.kluisEnvelop,
+        behoudVorigeVersie: true,
+      );
+      opslagVoorbereid = true;
+
+      final sleutelVerpakking = await _versleutelingService.verpakMasterKey(
+        masterKey: herstel.masterKey,
+        herstelcode: herstelcode,
+      );
+      await _opslagService.schrijfLokaalHerstelpakket(
+        sleutelVerpakking: sleutelVerpakking,
+        behoudVorigeVersie: true,
+      );
+      pakketVoorbereid = true;
+
+      await _toegangService.voltooiHersteldeRegistratie(keychainTransactie);
+      keychainGeactiveerd = true;
+
+      try {
+        await _opslagService.voltooiHerstelSchrijfbeurt();
+        await _opslagService.voltooiHerstelpakketSchrijfbeurt();
+      } catch (_) {
+        // De actieve kluis, sleutel en herstelverpakking zijn al consistent.
+      }
+    } catch (_) {
+      if (!keychainGeactiveerd && pakketVoorbereid) {
+        try {
+          await _opslagService.annuleerHerstelpakketSchrijfbeurt();
+        } catch (_) {
+          // De externe noodback-up blijft beschikbaar.
+        }
+      }
+      if (!keychainGeactiveerd && opslagVoorbereid) {
+        try {
+          await _opslagService.annuleerHerstelSchrijfbeurt();
+        } catch (_) {
+          // De .bak-versie blijft beschikbaar voor veilig herstel.
+        }
+      }
+      if (!keychainGeactiveerd && keychainTransactie != null) {
+        try {
+          await _toegangService.annuleerHersteldeRegistratie(
+            keychainTransactie,
+          );
+        } catch (_) {
+          // Een inactieve, niet-gemarkeerde sleutel geeft geen toegang.
+        }
+      }
+      rethrow;
+    }
+
+    _heeftLokaalHerstelpakket = true;
+    _masterKey = Uint8List.fromList(herstel.masterKey);
+    _inhoud = Map<String, dynamic>.from(herstel.inhoud);
+    _zetStatus(FinancieleKluisStatus.ontgrendeld);
+    registreerActiviteit();
+  }
+
+  void _controleerHerstelToegestaan() {
+    if (_status != FinancieleKluisStatus.nietGeactiveerd &&
+        _status != FinancieleKluisStatus.herstelNodig &&
+        _status != FinancieleKluisStatus.vergrendeld) {
+      throw const FinancieleSessieException(
+        'Een herstelactie kan alleen op een lege, vergrendelde of beschadigde eigenaarinstallatie worden uitgevoerd.',
+      );
     }
   }
 
@@ -661,6 +729,7 @@ class FinancieleKluisSessieController extends ChangeNotifier {
     if (fout is FinancieleOpslagException) return fout.bericht;
     if (fout is FinancieleNoodbackupException) return fout.bericht;
     if (fout is FinancieleReddingsscanException) return fout.bericht;
+    if (fout is FinancieleKluisCryptoException) return fout.bericht;
     if (fout is FinancieleSessieException) return fout.bericht;
 
     return 'De beveiligde financiële bewerking is niet gelukt.';
@@ -677,6 +746,16 @@ class FinancieleReddingsHerstelResultaat {
   final int gevondenAantal;
   final String veiligeBestandsnaam;
   final DateTime gewijzigdOp;
+}
+
+class FinancieleNieuweStartResultaat {
+  const FinancieleNieuweStartResultaat({
+    required this.archiefMapPad,
+    required this.aantalBestanden,
+  });
+
+  final String archiefMapPad;
+  final int aantalBestanden;
 }
 
 class FinancieleSessieException implements Exception {

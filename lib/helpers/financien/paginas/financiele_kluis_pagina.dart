@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-FASE2A-RUWE-KLUIS-EXPORT-20260916
+// THIMACO-CONTROLE: FINANCIELE-KLUIS-PAGINA-HERSTELPAKKET-V2-20260916
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -184,8 +184,9 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           titel: 'Registreer deze iPad',
           tekst:
               'Deze eigenaarbuild kan één lokale financiële kluis activeren. '
-              'Na de activatie wordt de hoofdsleutel aan de huidige biometrische '
-              'set van deze iPad gekoppeld.',
+              'Na de activatie wordt de hoofdsleutel biometrisch beveiligd én '
+              'wordt lokaal een versleuteld herstelpakket gemaakt. De papieren '
+              'herstelcode zelf wordt niet opgeslagen.',
         ),
         const SizedBox(height: 12),
         _bouwWaarschuwing(
@@ -252,6 +253,17 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           icon: const Icon(Icons.face_retouching_natural_outlined),
           label: const Text('Ontgrendel met biometrie'),
         ),
+        if (_controller.heeftLokaalHerstelpakket) ...<Widget>[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            style: _secundaireKnopStijl(),
+            onPressed: _controller.bewerkingBezig
+                ? null
+                : _herstelToegangMetPapierenCode,
+            icon: const Icon(Icons.key_rounded),
+            label: const Text('Herstel toegang met papieren code'),
+          ),
+        ],
         const SizedBox(height: 10),
         OutlinedButton.icon(
           style: _secundaireKnopStijl(),
@@ -287,11 +299,31 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
           label: const Text('Bewaar versleutelde lokale kluis'),
         ),
         const SizedBox(height: 10),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFD97706),
+            foregroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(46),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+          onPressed: _controller.bewerkingBezig ? null : _nieuweKluisStarten,
+          icon: const Icon(Icons.restart_alt_rounded),
+          label: const Text('Nieuwe kluis starten'),
+        ),
+        const SizedBox(height: 10),
         _bouwWaarschuwing(
-          'Gebruik noodherstel alleen wanneer biometrisch ontgrendelen niet '
-          'meer lukt, bijvoorbeeld nadat Face ID of Touch ID op deze iPad '
-          'werd gewijzigd. De reddingsscan leest uitsluitend lokale appmappen '
-          'en stelt een gevonden back-up eerst veilig voordat herstel start.',
+          _controller.heeftLokaalHerstelpakket
+              ? 'Bij een latere wijziging van Face ID of Touch ID kan de papieren '
+                    'herstelcode samen met het lokale herstelpakket de toegang opnieuw '
+                    'registreren. Bewaar daarnaast altijd een externe noodback-up voor '
+                    'toestelverlies of wanneer de app wordt verwijderd.'
+              : 'Deze bestaande kluis heeft nog geen lokaal herstelpakket. Bewaar de '
+                    'versleutelde lokale kluis daarom eerst buiten de app voordat je '
+                    'een nieuwe kluis start. Een nieuwe activatie krijgt de verbeterde '
+                    'herstelmethode.',
         ),
         if (_controller.foutBericht.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
@@ -375,8 +407,9 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
       final bevestigd = await _toonHerstelcode(herstelcode);
       if (bevestigd != true || !mounted) {
         _toonMelding(
-          'De kluis is geactiveerd. Maak zo snel mogelijk een noodback-up '
-          'met de genoteerde herstelcode.',
+          'De kluis is geactiveerd en het lokale herstelpakket is gemaakt. '
+          'Bewaar de papieren code zorgvuldig en maak ook een externe '
+          'noodback-up voor toestelverlies of verwijdering van de app.',
           fout: true,
         );
         return;
@@ -402,6 +435,28 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
   Future<void> _ontgrendel() async {
     try {
       await _controller.ontgrendel();
+    } catch (fout) {
+      if (!mounted) return;
+      _toonMelding(fout.toString(), fout: true);
+    }
+  }
+
+  Future<void> _herstelToegangMetPapierenCode() async {
+    final herstelcode = await _vraagHerstelcode();
+    if (herstelcode == null || !mounted) {
+      return;
+    }
+
+    try {
+      await _controller.herstelToegangMetPapierenCode(
+        herstelcode: herstelcode,
+      );
+      if (!mounted) return;
+
+      _toonMelding(
+        'De papieren herstelcode is bevestigd. De financiële sleutel is opnieuw '
+        'aan de huidige biometrie gekoppeld en de bestaande kluis is geopend.',
+      );
     } catch (fout) {
       if (!mounted) return;
       _toonMelding(fout.toString(), fout: true);
@@ -587,12 +642,12 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
             width: 500,
             child: Text(
               'De app maakt eerst een exacte kopie van de nog aanwezige lokale '
-              'versleutelde kluisbestanden. Er wordt niets ontsleuteld, gewist, '
-              'overschreven of opnieuw geactiveerd.\n\n'
+              'versleutelde kluisbestanden en, wanneer aanwezig, het lokale '
+              'herstelpakket. Er wordt niets ontsleuteld, gewist, overschreven '
+              'of opnieuw geactiveerd.\n\n'
               'Daarna opent het iOS-deelvenster. Bewaar de bestanden buiten de '
               'Thimaco-app, bij voorkeur in OneDrive of iCloud Drive. Deze kopie '
-              'kan later belangrijk blijven als er nog een herstelmogelijkheid '
-              'voor de oorspronkelijke sleutel wordt gevonden.',
+              'kan later belangrijk blijven voor controle of herstel.',
               style: TextStyle(color: _tekstDonker, height: 1.45),
             ),
           ),
@@ -611,6 +666,172 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
               label: const Text('Veiligstellen'),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Future<void> _nieuweKluisStarten() async {
+    final bevestigd = await _bevestigNieuweKluisStarten();
+    if (bevestigd != true || !mounted) {
+      return;
+    }
+
+    try {
+      final resultaat = await _controller.maakKlaarVoorNieuweKluis();
+      if (!mounted) return;
+
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: _rand),
+            ),
+            title: const Row(
+              children: <Widget>[
+                Icon(Icons.check_circle_outline_rounded, color: _groen),
+                SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    'Klaar voor nieuwe kluis',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 500,
+              child: Text(
+                'De oude lokale financiële bestanden zijn eerst intern veilig '
+                'gearchiveerd (${resultaat.aantalBestanden} bestand'
+                '${resultaat.aantalBestanden == 1 ? '' : 'en'}). Daarna is alleen '
+                'de actieve lokale registratie vrijgemaakt. De kopie die je in '
+                'OneDrive hebt bewaard, is niet gewijzigd.\n\n'
+                'Je kunt nu “Activeer deze iPad” kiezen. De nieuwe kluis krijgt '
+                'een nieuwe papieren herstelcode en een lokaal herstelpakket.',
+                style: const TextStyle(color: _tekstDonker, height: 1.45),
+              ),
+            ),
+            actions: <Widget>[
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: _groen,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (fout) {
+      if (!mounted) return;
+      _toonMelding(fout.toString(), fout: true);
+    }
+  }
+
+  Future<bool?> _bevestigNieuweKluisStarten() {
+    var externeKopieBevestigd = false;
+    var gevolgenBevestigd = false;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final magDoorgaan = externeKopieBevestigd && gevolgenBevestigd;
+
+            return AlertDialog(
+              backgroundColor: Colors.white,
+              surfaceTintColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: _rand),
+              ),
+              title: const Row(
+                children: <Widget>[
+                  Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706)),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Nieuwe financiële kluis starten?',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
+              ),
+              content: SizedBox(
+                width: 540,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'Deze stap herstelt de oude kluis niet. De app maakt eerst '
+                      'nog een gecontroleerde interne archiefkopie en maakt pas '
+                      'daarna de actieve lokale registratie vrij voor een nieuwe '
+                      'lege kluis. Bestanden die je al in OneDrive of iCloud Drive '
+                      'hebt bewaard, worden niet aangeraakt.',
+                      style: TextStyle(color: _tekstDonker, height: 1.45),
+                    ),
+                    const SizedBox(height: 12),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: _groen,
+                      value: externeKopieBevestigd,
+                      onChanged: (waarde) {
+                        setDialogState(() {
+                          externeKopieBevestigd = waarde == true;
+                        });
+                      },
+                      title: const Text(
+                        'Ik heb de oude versleutelde kluis buiten Thimaco bewaard, bijvoorbeeld in OneDrive.',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      activeColor: _groen,
+                      value: gevolgenBevestigd,
+                      onChanged: (waarde) {
+                        setDialogState(() {
+                          gevolgenBevestigd = waarde == true;
+                        });
+                      },
+                      title: const Text(
+                        'Ik begrijp dat de nieuwe activatie een lege kluis en een nieuwe papieren herstelcode maakt.',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: const Text('Annuleren'),
+                ),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: magDoorgaan
+                      ? () => Navigator.pop(dialogContext, true)
+                      : null,
+                  icon: const Icon(Icons.restart_alt_rounded),
+                  label: const Text('Oude lokale kluis archiveren en doorgaan'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -981,8 +1202,10 @@ class _FinancieleKluisPaginaState extends State<FinancieleKluisPagina>
                   children: <Widget>[
                     const Text(
                       'Schrijf deze code nu op papier en bewaar ze in een '
-                      'brandkast. De app slaat de code niet op en toont ze '
-                      'na het sluiten van dit venster nooit opnieuw.',
+                      'brandkast. De app slaat de code zelf niet op. Wel bewaart '
+                      'ze lokaal een versleuteld herstelpakket dat alleen met '
+                      'deze code kan worden geopend. De code wordt na het sluiten '
+                      'van dit venster nooit opnieuw getoond.',
                       style: TextStyle(color: _tekstDonker, height: 1.45),
                     ),
                     const SizedBox(height: 14),
