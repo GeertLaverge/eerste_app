@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETING-LOCAL-FIRST-10S-FASE1-20260917
 // THIMACO-CONTROLE: PROJECTBESTAND-DIALOGEN-RUSTIGE-PROGRAMMASTIJL-FASE17-20260913
 // THIMACO-CONTROLE: PROJECTCONTROLLER-ZONDER-OUDE-OFFERTEWERKVERSIES-20260912
 // THIMACO-CONTROLE: PROJECTOPENEN-INGEKLAPT-ZOEKEN-DATUM-VERSIES-FASE4-20260912
@@ -147,13 +148,15 @@ class OpmetingProjectBestandController {
       definitieveOpmetingen = veiligResultaat.opmetingen;
     }
 
-    final zichtbareOpmetingen = definitieveOpmetingen.where((opmeting) {
-      if (opmeting.isVerwijderd) return false;
-      final id = opmeting.projectBestandId.trim().isNotEmpty
-          ? opmeting.projectBestandId.trim()
-          : opmetingLegacyProjectBestandId(opmeting.klantNaam);
-      return id == effectiefProjectBestandId;
-    }).toList(growable: false);
+    final zichtbareOpmetingen = definitieveOpmetingen
+        .where((opmeting) {
+          if (opmeting.isVerwijderd) return false;
+          final id = opmeting.projectBestandId.trim().isNotEmpty
+              ? opmeting.projectBestandId.trim()
+              : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+          return id == effectiefProjectBestandId;
+        })
+        .toList(growable: false);
 
     if (!isMounted()) return;
 
@@ -263,7 +266,8 @@ class OpmetingProjectBestandController {
       projectReeksId: projectId,
       bestandVersieNummer: 1,
       aangemaaktOp: nu,
-      offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(1),
+      offerteVersie:
+          OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(1),
     );
     final uitKlantenfiche = keuze.klantFiche?.naarTitelhoofd(
       bestaand: basis,
@@ -284,7 +288,8 @@ class OpmetingProjectBestandController {
           projectReeksId: basis.projectReeksId,
           bestandVersieNummer: 1,
           aangemaaktOp: basis.aangemaaktOp,
-          offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(1),
+          offerteVersie:
+              OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(1),
           projectBestandVerwijderd: false,
         )
         .metWijzigingsDatum();
@@ -335,7 +340,11 @@ class OpmetingProjectBestandController {
   Future<bool> _kopieerHuidigProjectAls({
     required String nieuweNaam,
     required String actieNaam,
+    bool synchroniseerNaOpslaan = false,
   }) async {
+    await projectTitelhoofdController.bewaarOpenstaandeWijzigingenNu();
+    if (!isMounted()) return false;
+
     final huidigTitelhoofd = leesTitelhoofd();
     final klantNaam = leesKlantNaam().trim();
     final huidigProjectId = huidigTitelhoofd.projectBestandId.trim();
@@ -369,15 +378,17 @@ class OpmetingProjectBestandController {
       final gekopieerdePosities = <OpmetingOverzichtRaamItem>[];
       for (var index = 0; index < actuelePosities.length; index++) {
         final bron = actuelePosities[index];
-        final nieuweId = idMap[bron.id.trim()] ??
+        final nieuweId =
+            idMap[bron.id.trim()] ??
             'projectkopie_${basisMicro}_${index}_nieuw';
         final oudHoofdId = bron.offerteOptieHoofdpositieId.trim();
         gekopieerdePosities.add(
           bron.copyWith(
             id: nieuweId,
             projectBestandId: nieuwProjectId,
-            offerteOptieHoofdpositieId:
-                oudHoofdId.isEmpty ? '' : idMap[oudHoofdId] ?? '',
+            offerteOptieHoofdpositieId: oudHoofdId.isEmpty
+                ? ''
+                : idMap[oudHoofdId] ?? '',
             gewijzigdOp: nu,
             isVerwijderd: false,
           ),
@@ -413,15 +424,18 @@ class OpmetingProjectBestandController {
             verborgenNietRekenenPositieIds: nieuweVerborgenIds,
             offerteVersie:
                 OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
-              volgendVersieNummer,
-            ),
+                  volgendVersieNummer,
+                ),
           )
           .metWijzigingsDatum();
       await AppStorage.bewaarOpmetingProjectTitelhoofd(nieuwTitelhoofd);
 
-      await OneDriveSyncService.registreerLokaleWijziging();
-      final syncResultaat = await OneDriveSyncService().slimmeSync();
-      if (!isMounted()) return false;
+      String? syncResultaat;
+      if (synchroniseerNaOpslaan) {
+        await OneDriveSyncService.registreerLokaleWijziging();
+        syncResultaat = await OneDriveSyncService().slimmeSync();
+        if (!isMounted()) return false;
+      }
 
       artikelPrijscorrectieController.wisDoelSelecties();
       vervangProjectState(
@@ -432,11 +446,16 @@ class OpmetingProjectBestandController {
         false,
       );
 
-      final syncOk = _isSyncGeslaagd(syncResultaat);
       final label = '${nieuwTitelhoofd.bestandsNaam} V$volgendVersieNummer';
+      if (!synchroniseerNaOpslaan || syncResultaat == null) {
+        toonMelding('$actieNaam “$label” is lokaal opgeslagen.', false);
+        return true;
+      }
+
+      final syncOk = _isSyncGeslaagd(syncResultaat);
       toonMelding(
         syncOk
-            ? '$actieNaam “$label” is opgeslagen.'
+            ? '$actieNaam “$label” is opgeslagen en gesynchroniseerd.'
             : '“$label” is lokaal opgeslagen, maar synchronisatie is niet gelukt: $syncResultaat',
         !syncOk,
       );
@@ -453,14 +472,33 @@ class OpmetingProjectBestandController {
   String _normaliseerZoekTekst(String waarde) {
     var tekst = waarde.toLowerCase().trim();
     const vervangingen = <String, String>{
-      'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a', 'ã': 'a', 'å': 'a',
+      'à': 'a',
+      'á': 'a',
+      'â': 'a',
+      'ä': 'a',
+      'ã': 'a',
+      'å': 'a',
       'ç': 'c',
-      'è': 'e', 'é': 'e', 'ê': 'e', 'ë': 'e',
-      'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+      'è': 'e',
+      'é': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'ì': 'i',
+      'í': 'i',
+      'î': 'i',
+      'ï': 'i',
       'ñ': 'n',
-      'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o', 'õ': 'o',
-      'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-      'ý': 'y', 'ÿ': 'y',
+      'ò': 'o',
+      'ó': 'o',
+      'ô': 'o',
+      'ö': 'o',
+      'õ': 'o',
+      'ù': 'u',
+      'ú': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ý': 'y',
+      'ÿ': 'y',
     };
     vervangingen.forEach((van, naar) {
       tekst = tekst.replaceAll(van, naar);
@@ -501,10 +539,17 @@ class OpmetingProjectBestandController {
     if (doel.contains(zoek)) return true;
 
     final zoekWoorden = zoek.split(' ').where((deel) => deel.isNotEmpty);
-    final doelWoorden = doel.split(' ').where((deel) => deel.isNotEmpty).toList();
+    final doelWoorden = doel
+        .split(' ')
+        .where((deel) => deel.isNotEmpty)
+        .toList();
     return zoekWoorden.every((zoekWoord) {
       if (doelWoorden.any((woord) => woord.contains(zoekWoord))) return true;
-      final tolerantie = zoekWoord.length <= 4 ? 1 : zoekWoord.length <= 8 ? 2 : 3;
+      final tolerantie = zoekWoord.length <= 4
+          ? 1
+          : zoekWoord.length <= 8
+          ? 2
+          : 3;
       return doelWoorden.any(
         (woord) => _zoekAfstand(zoekWoord, woord) <= tolerantie,
       );
@@ -555,7 +600,7 @@ class OpmetingProjectBestandController {
           content: SizedBox(
             width: 440,
             child: Text(
-              'Je staat op het punt $actie. Wil je $bestandsNaam eerst opslaan en synchroniseren?',
+              'Je staat op het punt $actie. Wil je $bestandsNaam eerst lokaal opslaan?',
               style: const TextStyle(
                 color: _tekstDonker,
                 fontSize: 12.5,
@@ -584,7 +629,7 @@ class OpmetingProjectBestandController {
 
     if (keuze == null || keuze == 'annuleren') return false;
     if (keuze == 'opslaan') {
-      await opslaanBestand(toonMeldingNaOpslaan: false);
+      await bewaarBestandLokaal(toonMeldingNaOpslaan: false);
       if (!isMounted()) return false;
     }
     return true;
@@ -719,7 +764,8 @@ class OpmetingProjectBestandController {
 
   Future<List<_OpmetingProjectBestandKeuze>> _laadProjectBestandKeuzes() async {
     final resultaten = <String, _OpmetingProjectBestandKeuze>{};
-    final titelhoofden = await AppStorage.laadOpmetingProjectTitelhoofdenVoorSync();
+    final titelhoofden =
+        await AppStorage.laadOpmetingProjectTitelhoofdenVoorSync();
     final opmetingen = await AppStorage.laadOpmetingen();
 
     final aantallen = <String, int>{};
@@ -734,7 +780,8 @@ class OpmetingProjectBestandController {
 
       final kandidaat = DateTime.tryParse(opmeting.gewijzigdOp.trim());
       final bestaand = DateTime.tryParse(eersteDatum[projectId] ?? '');
-      if (kandidaat != null && (bestaand == null || kandidaat.isBefore(bestaand))) {
+      if (kandidaat != null &&
+          (bestaand == null || kandidaat.isBefore(bestaand))) {
         eersteDatum[projectId] = opmeting.gewijzigdOp.trim();
       }
     }
@@ -752,8 +799,8 @@ class OpmetingProjectBestandController {
       final aangemaaktOp = titelhoofd.aangemaaktOp.trim().isNotEmpty
           ? titelhoofd.aangemaaktOp.trim()
           : eersteDatum[projectId]?.trim().isNotEmpty == true
-              ? eersteDatum[projectId]!.trim()
-              : titelhoofd.gewijzigdOp.trim();
+          ? eersteDatum[projectId]!.trim()
+          : titelhoofd.gewijzigdOp.trim();
       resultaten[projectId] = _OpmetingProjectBestandKeuze(
         klantNaam: klantNaam,
         projectBestandId: projectId,
@@ -801,9 +848,6 @@ class OpmetingProjectBestandController {
     );
     if (!magDoorgaan || !isMounted()) return;
 
-    await OneDriveSyncService().slimmeSync();
-    if (!isMounted()) return;
-
     final bestanden = await _laadProjectBestandKeuzes();
     if (!isMounted()) return;
 
@@ -844,19 +888,21 @@ class OpmetingProjectBestandController {
     );
     if (!magDoorgaan || !isMounted()) return;
 
-    await OneDriveSyncService().slimmeSync();
-    if (!isMounted()) return;
-
     final alleBestanden = await _laadProjectBestandKeuzes();
     if (!isMounted()) return;
     final klantSleutel = opmetingKlantNaamSleutel(klantNaam);
-    final bestanden = alleBestanden.where((bestand) {
-      return opmetingKlantNaamSleutel(bestand.klantNaam) == klantSleutel &&
-          bestand.projectBestandId != huidigProjectId;
-    }).toList(growable: false);
+    final bestanden = alleBestanden
+        .where((bestand) {
+          return opmetingKlantNaamSleutel(bestand.klantNaam) == klantSleutel &&
+              bestand.projectBestandId != huidigProjectId;
+        })
+        .toList(growable: false);
 
     if (bestanden.isEmpty) {
-      toonMelding('Voor $klantNaam zijn geen andere bestanden opgeslagen.', false);
+      toonMelding(
+        'Voor $klantNaam zijn geen andere bestanden opgeslagen.',
+        false,
+      );
       return;
     }
 
@@ -873,7 +919,10 @@ class OpmetingProjectBestandController {
     );
     if (!isMounted()) return;
 
-    toonMelding('“${gekozen.bestandsNaam} V${gekozen.versieNummer}” is geopend.', false);
+    toonMelding(
+      '“${gekozen.bestandsNaam} V${gekozen.versieNummer}” is geopend.',
+      false,
+    );
   }
 
   // Tijdelijke compatibiliteit met eventuele oudere aanroepen.
@@ -960,13 +1009,16 @@ class OpmetingProjectBestandController {
         builder: (dialogContext) {
           return StatefulBuilder(
             builder: (context, setDialogState) {
-              final klantNamen = perKlant.keys
-                  .where(
-                    (klantNaam) =>
-                        _vergevingsgezindeKlantMatch(zoektekst, klantNaam),
-                  )
-                  .toList()
-                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+              final klantNamen =
+                  perKlant.keys
+                      .where(
+                        (klantNaam) =>
+                            _vergevingsgezindeKlantMatch(zoektekst, klantNaam),
+                      )
+                      .toList()
+                    ..sort(
+                      (a, b) => a.toLowerCase().compareTo(b.toLowerCase()),
+                    );
 
               return AlertDialog(
                 backgroundColor: Colors.white,
@@ -999,7 +1051,8 @@ class OpmetingProjectBestandController {
                           });
                         },
                         decoration: InputDecoration(
-                          hintText: 'Zoek klantnaam · kleine typfouten zijn toegestaan',
+                          hintText:
+                              'Zoek klantnaam · kleine typfouten zijn toegestaan',
                           prefixIcon: const Icon(
                             Icons.search_rounded,
                             color: _tekstDonker,
@@ -1015,7 +1068,10 @@ class OpmetingProjectBestandController {
                                       zoektekst = '';
                                     });
                                   },
-                                  icon: const Icon(Icons.close_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                  ),
                                 ),
                           isDense: true,
                           filled: true,
@@ -1041,30 +1097,29 @@ class OpmetingProjectBestandController {
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxHeight: 430),
                         child: klantNamen.isEmpty
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 28),
-                                    child: Text(
-                                      'Geen klant gevonden.',
-                                      style: TextStyle(
-                                        color: _tekstGrijs,
-                                        fontWeight: FontWeight.w700,
-                                      ),
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 28),
+                                  child: Text(
+                                    'Geen klant gevonden.',
+                                    style: TextStyle(
+                                      color: _tekstGrijs,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
-                                )
-                              : ListView.separated(
-                                  shrinkWrap: true,
-                                  itemCount: klantNamen.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 8),
-                                  itemBuilder: (context, index) {
-                                    final klantNaam = klantNamen[index];
-                                    final klantBestanden = List<
-                                        _OpmetingProjectBestandKeuze>.from(
-                                      perKlant[klantNaam]!,
-                                    )
-                                      ..sort((a, b) {
+                                ),
+                              )
+                            : ListView.separated(
+                                shrinkWrap: true,
+                                itemCount: klantNamen.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 8),
+                                itemBuilder: (context, index) {
+                                  final klantNaam = klantNamen[index];
+                                  final klantBestanden =
+                                      List<_OpmetingProjectBestandKeuze>.from(
+                                        perKlant[klantNaam]!,
+                                      )..sort((a, b) {
                                         final naam = a.bestandsNaam
                                             .toLowerCase()
                                             .compareTo(
@@ -1075,188 +1130,198 @@ class OpmetingProjectBestandController {
                                           b.versieNummer,
                                         );
                                       });
-                                    final isOpen = openKlanten.contains(klantNaam);
+                                  final isOpen = openKlanten.contains(
+                                    klantNaam,
+                                  );
 
-                                    DateTime? oudsteDatum;
-                                    for (final bestand in klantBestanden) {
-                                      final datum = DateTime.tryParse(
-                                        bestand.aangemaaktOp.trim(),
-                                      );
-                                      if (datum != null &&
-                                          (oudsteDatum == null ||
-                                              datum.isBefore(oudsteDatum))) {
-                                        oudsteDatum = datum;
-                                      }
+                                  DateTime? oudsteDatum;
+                                  for (final bestand in klantBestanden) {
+                                    final datum = DateTime.tryParse(
+                                      bestand.aangemaaktOp.trim(),
+                                    );
+                                    if (datum != null &&
+                                        (oudsteDatum == null ||
+                                            datum.isBefore(oudsteDatum))) {
+                                      oudsteDatum = datum;
                                     }
-                                    final klantDatum = oudsteDatum == null
-                                        ? ''
-                                        : _formatteerBestandDatum(
-                                            oudsteDatum.toIso8601String(),
-                                          );
+                                  }
+                                  final klantDatum = oudsteDatum == null
+                                      ? ''
+                                      : _formatteerBestandDatum(
+                                          oudsteDatum.toIso8601String(),
+                                        );
 
-                                    return Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(11),
-                                        border: Border.all(
-                                          color: _rand,
-                                        ),
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: <Widget>[
-                                          InkWell(
-                                            onTap: () {
-                                              setDialogState(() {
-                                                if (isOpen) {
-                                                  openKlanten.remove(klantNaam);
-                                                } else {
-                                                  openKlanten.add(klantNaam);
-                                                }
-                                              });
-                                            },
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 12,
-                                                vertical: 10,
-                                              ),
-                                              color: _achtergrond,
-                                              child: Row(
-                                                children: <Widget>[
-                                                  Icon(
-                                                    Icons.person_outline,
-                                                    color: wissen ? _rood : _tekstDonker,
-                                                    size: 18,
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Expanded(
-                                                    child: Text(
-                                                      klantNaam,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: TextStyle(
-                                                        color: wissen
-                                                            ? _rood
-                                                            : _tekstDonker,
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w900,
-                                                      ),
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(11),
+                                      border: Border.all(color: _rand),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: <Widget>[
+                                        InkWell(
+                                          onTap: () {
+                                            setDialogState(() {
+                                              if (isOpen) {
+                                                openKlanten.remove(klantNaam);
+                                              } else {
+                                                openKlanten.add(klantNaam);
+                                              }
+                                            });
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 10,
+                                            ),
+                                            color: _achtergrond,
+                                            child: Row(
+                                              children: <Widget>[
+                                                Icon(
+                                                  Icons.person_outline,
+                                                  color: wissen
+                                                      ? _rood
+                                                      : _tekstDonker,
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    klantNaam,
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: TextStyle(
+                                                      color: wissen
+                                                          ? _rood
+                                                          : _tekstDonker,
+                                                      fontSize: 13,
+                                                      fontWeight:
+                                                          FontWeight.w900,
                                                     ),
                                                   ),
-                                                  if (klantDatum.isNotEmpty) ...<Widget>[
+                                                ),
+                                                if (klantDatum
+                                                    .isNotEmpty) ...<Widget>[
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    klantDatum,
+                                                    style: const TextStyle(
+                                                      color: _tekstGrijs,
+                                                      fontSize: 10.5,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                                const SizedBox(width: 5),
+                                                Icon(
+                                                  isOpen
+                                                      ? Icons
+                                                            .expand_less_rounded
+                                                      : Icons
+                                                            .expand_more_rounded,
+                                                  color: wissen
+                                                      ? _rood
+                                                      : _tekstGrijs,
+                                                  size: 20,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        if (isOpen)
+                                          for (
+                                            var i = 0;
+                                            i < klantBestanden.length;
+                                            i++
+                                          ) ...<Widget>[
+                                            if (i > 0)
+                                              const Divider(
+                                                height: 1,
+                                                color: _rand,
+                                              ),
+                                            InkWell(
+                                              onTap: () => Navigator.pop(
+                                                dialogContext,
+                                                klantBestanden[i],
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 10,
+                                                    ),
+                                                child: Row(
+                                                  children: <Widget>[
+                                                    Icon(
+                                                      Icons
+                                                          .description_outlined,
+                                                      color: wissen
+                                                          ? _rood
+                                                          : _tekstDonker,
+                                                      size: 18,
+                                                    ),
+                                                    const SizedBox(width: 9),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: <Widget>[
+                                                          Text(
+                                                            '${klantBestanden[i].bestandsNaam}  V${klantBestanden[i].versieNummer}',
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                            style: const TextStyle(
+                                                              color:
+                                                                  _tekstDonker,
+                                                              fontSize: 12.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800,
+                                                            ),
+                                                          ),
+                                                          _bouwBestandDatumRegel(
+                                                            klantBestanden[i],
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
                                                     const SizedBox(width: 8),
                                                     Text(
-                                                      klantDatum,
+                                                      '${klantBestanden[i].aantalPosities} pos.',
                                                       style: const TextStyle(
                                                         color: _tekstGrijs,
-                                                        fontSize: 10.5,
+                                                        fontSize: 11,
                                                         fontWeight:
                                                             FontWeight.w700,
                                                       ),
                                                     ),
+                                                    const SizedBox(width: 3),
+                                                    Icon(
+                                                      Icons
+                                                          .chevron_right_rounded,
+                                                      color: wissen
+                                                          ? _rood
+                                                          : _tekstGrijs,
+                                                      size: 17,
+                                                    ),
                                                   ],
-                                                  const SizedBox(width: 5),
-                                                  Icon(
-                                                    isOpen
-                                                        ? Icons.expand_less_rounded
-                                                        : Icons.expand_more_rounded,
-                                                    color: wissen ? _rood : _tekstGrijs,
-                                                    size: 20,
-                                                  ),
-                                                ],
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          if (isOpen)
-                                            for (var i = 0;
-                                                i < klantBestanden.length;
-                                                i++) ...<Widget>[
-                                              if (i > 0)
-                                                const Divider(
-                                                  height: 1,
-                                                  color: _rand,
-                                                ),
-                                              InkWell(
-                                                onTap: () => Navigator.pop(
-                                                  dialogContext,
-                                                  klantBestanden[i],
-                                                ),
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 10,
-                                                  ),
-                                                  child: Row(
-                                                    children: <Widget>[
-                                                      Icon(
-                                                        Icons.description_outlined,
-                                                        color: wissen
-                                                            ? _rood
-                                                            : _tekstDonker,
-                                                        size: 18,
-                                                      ),
-                                                      const SizedBox(width: 9),
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: <Widget>[
-                                                            Text(
-                                                              '${klantBestanden[i].bestandsNaam}  V${klantBestanden[i].versieNummer}',
-                                                              maxLines: 1,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style:
-                                                                  const TextStyle(
-                                                                color:
-                                                                    _tekstDonker,
-                                                                fontSize: 12.5,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w800,
-                                                              ),
-                                                            ),
-                                                            _bouwBestandDatumRegel(
-                                                              klantBestanden[i],
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        '${klantBestanden[i].aantalPosities} pos.',
-                                                        style: const TextStyle(
-                                                          color: _tekstGrijs,
-                                                          fontSize: 11,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 3),
-                                                      Icon(
-                                                        Icons.chevron_right_rounded,
-                                                        color: wissen
-                                                            ? _rood
-                                                            : _tekstGrijs,
-                                                        size: 17,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                                          ],
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
@@ -1346,7 +1411,11 @@ class OpmetingProjectBestandController {
                     ),
                     child: Row(
                       children: <Widget>[
-                        const Icon(Icons.person_outline, color: _tekstDonker, size: 17),
+                        const Icon(
+                          Icons.person_outline,
+                          color: _tekstDonker,
+                          size: 17,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -1358,7 +1427,11 @@ class OpmetingProjectBestandController {
                             ),
                           ),
                         ),
-                        const Icon(Icons.lock_outline, color: _tekstGrijs, size: 15),
+                        const Icon(
+                          Icons.lock_outline,
+                          color: _tekstGrijs,
+                          size: 15,
+                        ),
                       ],
                     ),
                   ),
@@ -1422,21 +1495,27 @@ class OpmetingProjectBestandController {
       return;
     }
 
-    await OneDriveSyncService().slimmeSync();
-    if (!isMounted()) return;
-
     final alleBestanden = await _laadProjectBestandKeuzes();
     if (!isMounted()) return;
     final klantSleutel = opmetingKlantNaamSleutel(klantNaam);
-    final bestanden = alleBestanden.where((bestand) {
-      return opmetingKlantNaamSleutel(bestand.klantNaam) == klantSleutel;
-    }).toList(growable: false)
-      ..sort((a, b) => a.bestandsNaam.toLowerCase().compareTo(
-        b.bestandsNaam.toLowerCase(),
-      ));
+    final bestanden =
+        alleBestanden
+            .where((bestand) {
+              return opmetingKlantNaamSleutel(bestand.klantNaam) ==
+                  klantSleutel;
+            })
+            .toList(growable: false)
+          ..sort(
+            (a, b) => a.bestandsNaam.toLowerCase().compareTo(
+              b.bestandsNaam.toLowerCase(),
+            ),
+          );
 
     if (bestanden.isEmpty) {
-      toonMelding('Voor $klantNaam zijn geen opgeslagen bestanden gevonden.', true);
+      toonMelding(
+        'Voor $klantNaam zijn geen opgeslagen bestanden gevonden.',
+        true,
+      );
       return;
     }
 
@@ -1492,7 +1571,10 @@ class OpmetingProjectBestandController {
                 shrinkWrap: true,
                 children: <Widget>[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
+                    ),
                     decoration: BoxDecoration(
                       color: _achtergrond,
                       borderRadius: BorderRadius.circular(10),
@@ -1500,7 +1582,11 @@ class OpmetingProjectBestandController {
                     ),
                     child: Row(
                       children: <Widget>[
-                        const Icon(Icons.person_outline, color: _tekstDonker, size: 18),
+                        const Icon(
+                          Icons.person_outline,
+                          color: _tekstDonker,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -1524,7 +1610,10 @@ class OpmetingProjectBestandController {
                         _WisProjectActie.bestand(bestand),
                       ),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 9,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(10),
@@ -1532,7 +1621,11 @@ class OpmetingProjectBestandController {
                         ),
                         child: Row(
                           children: <Widget>[
-                            const Icon(Icons.description_outlined, color: _rood, size: 17),
+                            const Icon(
+                              Icons.description_outlined,
+                              color: _rood,
+                              size: 17,
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1555,7 +1648,11 @@ class OpmetingProjectBestandController {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(Icons.delete_outline_rounded, color: _rood, size: 18),
+                            const Icon(
+                              Icons.delete_outline_rounded,
+                              color: _rood,
+                              size: 18,
+                            ),
                           ],
                         ),
                       ),
@@ -1570,7 +1667,10 @@ class OpmetingProjectBestandController {
                       const _WisProjectActie.alleBestanden(),
                     ),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF7F7),
                         borderRadius: BorderRadius.circular(10),
@@ -1578,7 +1678,11 @@ class OpmetingProjectBestandController {
                       ),
                       child: Row(
                         children: <Widget>[
-                          const Icon(Icons.delete_forever_outlined, color: _rood, size: 19),
+                          const Icon(
+                            Icons.delete_forever_outlined,
+                            color: _rood,
+                            size: 19,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1712,7 +1816,9 @@ class OpmetingProjectBestandController {
     if (bestanden.isEmpty) return;
     zetLaden(true);
 
-    final projectIds = bestanden.map((bestand) => bestand.projectBestandId).toSet();
+    final projectIds = bestanden
+        .map((bestand) => bestand.projectBestandId)
+        .toSet();
     final alleOpmetingen = await AppStorage.laadOpmetingenVoorSync();
     final idsTeWissen = <String>{
       for (final opmeting in alleOpmetingen)
@@ -1735,13 +1841,11 @@ class OpmetingProjectBestandController {
         projectBestandId: bestand.projectBestandId,
       );
       await AppStorage.bewaarOpmetingProjectTitelhoofd(
-        titelhoofd.copyWith(projectBestandVerwijderd: true).metWijzigingsDatum(),
+        titelhoofd
+            .copyWith(projectBestandVerwijderd: true)
+            .metWijzigingsDatum(),
       );
     }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-    final syncResultaat = await OneDriveSyncService().slimmeSync();
-    if (!isMounted()) return;
 
     final huidigProjectId = leesTitelhoofd().projectBestandId.trim();
     if (wisHeleKlant || projectIds.contains(huidigProjectId)) {
@@ -1761,17 +1865,16 @@ class OpmetingProjectBestandController {
     }
 
     if (!isMounted()) return;
-    final syncOk = _isSyncGeslaagd(syncResultaat);
     final melding = wisHeleKlant
-        ? 'Alle bestanden van ${bestanden.first.klantNaam} zijn gewist.'
-        : '“${bestanden.first.bestandsNaam} V${bestanden.first.versieNummer}” is gewist.';
-    toonMelding(
-      syncOk ? '$melding Synchronisatie uitgevoerd.' : '$melding Synchronisatie is niet gelukt: $syncResultaat',
-      !syncOk,
-    );
+        ? 'Alle bestanden van ${bestanden.first.klantNaam} zijn lokaal gewist.'
+        : '“${bestanden.first.bestandsNaam} V${bestanden.first.versieNummer}” is lokaal gewist.';
+    toonMelding(melding, false);
   }
 
-  Future<bool> opslaanBestand({bool toonMeldingNaOpslaan = true}) async {
+  Future<bool> bewaarBestandLokaal({bool toonMeldingNaOpslaan = false}) async {
+    await projectTitelhoofdController.bewaarOpenstaandeWijzigingenNu();
+    if (!isMounted()) return false;
+
     final titelhoofd = leesTitelhoofd();
     final klantNaam = leesKlantNaam().trim();
     final projectId = titelhoofd.projectBestandId.trim();
@@ -1784,20 +1887,37 @@ class OpmetingProjectBestandController {
     }
 
     await AppStorage.bewaarOpmetingProjectTitelhoofd(
-      titelhoofd.copyWith(
-        klantNaam: klantNaam,
-        projectReeksId: titelhoofd.effectieveProjectReeksId,
-        bestandVersieNummer: titelhoofd.veiligeBestandVersieNummer,
-        aangemaaktOp: titelhoofd.aangemaaktOp.trim().isEmpty
-            ? DateTime.now().toUtc().toIso8601String()
-            : titelhoofd.aangemaaktOp,
-        offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
-          titelhoofd.veiligeBestandVersieNummer,
-        ),
-        projectBestandVerwijderd: false,
-      ).metWijzigingsDatum(),
+      titelhoofd
+          .copyWith(
+            klantNaam: klantNaam,
+            projectReeksId: titelhoofd.effectieveProjectReeksId,
+            bestandVersieNummer: titelhoofd.veiligeBestandVersieNummer,
+            aangemaaktOp: titelhoofd.aangemaaktOp.trim().isEmpty
+                ? DateTime.now().toUtc().toIso8601String()
+                : titelhoofd.aangemaaktOp,
+            offerteVersie:
+                OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
+                  titelhoofd.veiligeBestandVersieNummer,
+                ),
+            projectBestandVerwijderd: false,
+          )
+          .metWijzigingsDatum(),
     );
 
+    if (toonMeldingNaOpslaan && isMounted()) {
+      final naam = titelhoofd.bestandsNaam.trim().isEmpty
+          ? 'Opmeetbestand'
+          : '“${titelhoofd.bestandsNaam.trim()} V${titelhoofd.veiligeBestandVersieNummer}”';
+      toonMelding('$naam lokaal opgeslagen.', false);
+    }
+    return true;
+  }
+
+  Future<bool> opslaanBestand({bool toonMeldingNaOpslaan = true}) async {
+    final lokaalOpgeslagen = await bewaarBestandLokaal();
+    if (!lokaalOpgeslagen || !isMounted()) return false;
+
+    final titelhoofd = leesTitelhoofd();
     await OneDriveSyncService.registreerLokaleWijziging();
     final syncResultaat = await OneDriveSyncService().slimmeSync();
     if (!isMounted()) return false;
@@ -1837,6 +1957,7 @@ class OpmetingProjectBestandController {
     await _kopieerHuidigProjectAls(
       nieuweNaam: nieuweNaam,
       actieNaam: 'Opslaan als',
+      synchroniseerNaOpslaan: true,
     );
   }
 
@@ -1851,13 +1972,12 @@ class OpmetingProjectBestandController {
     if (!isMounted() || !huidigeContext.mounted) return;
 
     if (_heeftOpenProject) {
-      await opslaanBestand(toonMeldingNaOpslaan: false);
+      await bewaarBestandLokaal(toonMeldingNaOpslaan: false);
       if (!isMounted() || !huidigeContext.mounted) return;
     }
 
     await Navigator.of(huidigeContext).maybePop();
   }
-
 }
 
 class _NieuweOpmetingKlantResultaat {
@@ -2413,7 +2533,11 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      const Icon(Icons.person_outline, color: _tekstDonker, size: 17),
+                      const Icon(
+                        Icons.person_outline,
+                        color: _tekstDonker,
+                        size: 17,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -2477,10 +2601,7 @@ class _KlantNaamDialogState extends State<_KlantNaamDialog> {
               Navigator.of(context).pop();
             },
           ),
-          ThimacoTekstActie(
-            tekst: 'Aanmaken',
-            onPressed: _aanmaken,
-          ),
+          ThimacoTekstActie(tekst: 'Aanmaken', onPressed: _aanmaken),
         ],
       ),
     );

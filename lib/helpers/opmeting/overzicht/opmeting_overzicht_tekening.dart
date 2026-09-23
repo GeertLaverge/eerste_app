@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OVERZICHT-TECHNISCHE-TEKENINGEN-BUITENMAAT-FIT-20260922
 // THIMACO-CONTROLE: OVERZICHT-MAATVOERING-VRIJE-RUIMTE-20260722
 // THIMACO-CONTROLE: DEURPANEEL-LOKAAL-KADER-ANKER-20260722
 // THIMACO-CONTROLE: OVERZICHT-MAATVOERING-GELIJK-INZETHOR-20260720
@@ -33,8 +34,46 @@ class OpmetingOverzichtTekening extends CustomPainter {
     final data = item.tekeningData;
 
     final bronTekeningGrootte = _bronTekeningGrootte(item);
+
+    // Bepaal eerst de echte zichtbare inhoud. Technische tekenvlakken mogen
+    // buiten de raammaat liggen (bv. een rolluikkast boven het raam) en
+    // moeten dus mee opgenomen worden in de schaal van de overzichtfiche.
+    final inhoudBoundsPainter = OpmetingRaamTekenvlakPainter(
+      breedteMm: item.raammaatBreedteMm,
+      hoogteMm: item.raammaatHoogteMm,
+      geselecteerdeLijn: null,
+      previewPunt: null,
+      tStijlen: data.tStijlen,
+      tStijlenPerKader: data.tStijlenPerKader,
+      vleugels: data.vleugels,
+      vleugelsPerKader: data.vleugelsPerKader,
+      vulvlakken: data.vulvlakken,
+      vulvlakkenPerKader: data.vulvlakkenPerKader,
+      vullingToewijzingen: data.vullingToewijzingen,
+      vullingToewijzingenPerKader: data.vullingToewijzingenPerKader,
+      geselecteerdeVulvlakIds: const <String>{},
+      geselecteerdeVulvlakIdsPerKader: const <String, Set<String>>{},
+      kleinhouten: data.kleinhouten,
+      kleinhoutenPerKader: data.kleinhoutenPerKader,
+      geselecteerdeKleinhoutVlakIds: const <String>{},
+      geselecteerdeKleinhoutVlakIdsPerKader: const <String, Set<String>>{},
+      technischeTekeningen: data.technischeTekeningen,
+      technischeTekeningenPerKader: data.technischeTekeningenPerKader,
+      technischeTekeningenPerKaderGroep: data.technischeTekeningenPerKaderGroep,
+      technischeKaderGroepen: data.technischeKaderGroepen,
+      geselecteerdeKaderIds: const <String>{},
+      kaderSamenstelling: item.kaderSamenstelling,
+      actiefKaderId: '__overzicht_geen_actief_kader__',
+      schuifraamSamenstelling: data.schuifraamSamenstelling,
+      toonAchtergrondRaster: false,
+    );
+
+    final inhoudBounds = inhoudBoundsPainter.berekenInhoudBounds(
+      bronTekeningGrootte,
+    );
+
     final virtueleGrootte = _virtueleTekeningGrootte(
-      bronTekeningGrootte: bronTekeningGrootte,
+      bronTekeningGrootte: inhoudBounds.size,
       beschikbareGrootte: size,
     );
     final schaal = math.min(
@@ -83,6 +122,10 @@ class OpmetingOverzichtTekening extends CustomPainter {
     canvas.save();
     canvas.translate(dx, dy);
     canvas.scale(schaal);
+
+    // Verplaats de oorspronkelijke bron zodat ook negatieve buitenmarges
+    // (technische tekeningen boven/links) binnen het overzicht terechtkomen.
+    canvas.translate(-inhoudBounds.left, -inhoudBounds.top);
 
     basisPainter.paint(canvas, bronTekeningGrootte);
 

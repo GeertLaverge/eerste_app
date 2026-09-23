@@ -1,6 +1,5 @@
  import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../sync/onedrive_auth_service.dart';
@@ -144,7 +143,7 @@ class ThimacoWebsiteService {
   static String get basisUrl {
     const viaDefine = String.fromEnvironment('THIMACO_WEBSITE_URL');
     if (viaDefine.trim().isNotEmpty) return viaDefine.trim();
-    return kDebugMode ? 'http://localhost:3000' : _releaseBasisUrl;
+    return _releaseBasisUrl;
   }
 
   Uri _beheerUri({Map<String, String>? query}) {

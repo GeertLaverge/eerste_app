@@ -1,0 +1,26 @@
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\offerte_handtekening_dialog.dart  REGEL 261  TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\mail\offerte_mail_verzend_dialog.dart  REGEL 751  TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\mail\offerte_mail_verzend_dialog.dart  REGEL 803  TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\mail\offerte_mail_verzend_dialog.dart  REGEL 811  TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\mail\offerte_mail_verzend_dialog.dart  REGEL 1238  TextFormField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\prijzen\offerte_artikel_korting_kaart.dart  REGEL 312  child: TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\prijzen\offerte_artikel_toepassen_op_dialog.dart  REGEL 526  child: TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\offerte\prijzen\offerte_prijs_verdeeld_over_toepassen_dialog.dart  REGEL 450  child: TextFormField(
+C:\ThimacoApp\eerste_app\lib\helpers\opmeting\overzicht\opmeting_overzicht_artikel_prijs_layout.dart  REGEL 332  return TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\opmeting\overzicht\opmeting_overzicht_prijs_per_positie.dart  REGEL 1365  return TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\opmeting\overzicht\opmeting_overzicht_prijs_per_positie.dart  REGEL 1602  return TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\opmeting\overzicht\opmeting_overzicht_prijs_per_positie.dart  REGEL 1699  return TextField(
+C:\ThimacoApp\eerste_app\lib\helpers\opmeting\overzicht\opmeting_overzicht_prijs_voor_alle_posities.dart  REGEL 1273  return TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_mail\offerte_mail_teksten_pagina.dart  REGEL 733  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_mail\offerte_mail_teksten_pagina.dart  REGEL 743  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_mail\offerte_mail_teksten_pagina.dart  REGEL 751  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_per_artikel_pagina.dart  REGEL 283  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_per_artikel_pagina.dart  REGEL 372  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_technische_keuzes_pagina.dart  REGEL 754  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_technische_keuzes_pagina.dart  REGEL 1233  return TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_verdeeld_over_pagina.dart  REGEL 324  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_verdeeld_over_pagina.dart  REGEL 374  child: TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_verdeeld_over_pagina.dart  REGEL 395  child: TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_verdeeld_over_pagina.dart  REGEL 419  child: TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_voor_alle_posities_pagina.dart  REGEL 294  TextField(
+C:\ThimacoApp\eerste_app\lib\paginas\instellingen\offerte_prijzen\offerte_prijs_voor_alle_posities_pagina.dart  REGEL 383  TextField(

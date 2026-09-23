@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETING-LOCAL-FIRST-10S-FASE1-20260917
 // THIMACO-CONTROLE: PROJECTBESTAND-VERSIE-AUTOMATISCH-BEHOUDEN-FASE4-20260912
 // THIMACO-CONTROLE: TITELHOOFD-PER-PROJECTBESTAND-FASE2-20260912
 // THIMACO-CONTROLE: BEREKEN-STATUS-VEILIG-BEWAREN-20260810
@@ -7,7 +8,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
-import '../../sync/onedrive_sync_service.dart';
 import '../overzicht/opmeting_overzicht_model.dart';
 import '../toebehoren/vaste_inzethor/opmeting_vaste_inzethor_model.dart';
 import '../toebehoren/schuifvliegendeur/opmeting_schuifvliegendeur_technische_regels_helpers.dart';
@@ -47,6 +47,22 @@ class OpmetingProjectTitelhoofdController {
   void dispose() {
     _bewaarTimer?.cancel();
     _bewaarBasisTitelhoofd = null;
+  }
+
+  Future<void> bewaarOpenstaandeWijzigingenNu() async {
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+
+    final basis = _bewaarBasisTitelhoofd;
+    if (basis == null) {
+      return;
+    }
+
+    _bewaarBasisTitelhoofd = null;
+    await _bewaarTitelhoofdOpAchtergrond(
+      basis: basis,
+      gewijzigd: leesTitelhoofd(),
+    );
   }
 
   String normaliseerKlantNaam(String waarde) {
@@ -129,15 +145,16 @@ class OpmetingProjectTitelhoofdController {
       aangemaaktOp: huidigTitelhoofd.aangemaaktOp.trim().isEmpty
           ? DateTime.now().toUtc().toIso8601String()
           : huidigTitelhoofd.aangemaaktOp,
-      offerteVersie: OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
-        automatischeBestandVersie,
-      ),
+      offerteVersie:
+          OpmetingProjectTitelhoofd.offerteVersieVoorBestandVersieNummer(
+            automatischeBestandVersie,
+          ),
       projectBestandVerwijderd: false,
       gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
     );
 
     // Vanaf de eerste nog niet opgeslagen UI-wijziging bewaren we één basis.
-    // Als binnen 700 ms meerdere velden wijzigen, bevat de uiteindelijke save
+    // Als binnen 10 seconden meerdere velden wijzigen, bevat de uiteindelijke save
     // zo alle wijzigingen sinds die basis in plaats van alleen de laatste.
     _bewaarBasisTitelhoofd ??= huidigTitelhoofd;
 
@@ -173,7 +190,7 @@ class OpmetingProjectTitelhoofdController {
     _bewaarTimer?.cancel();
 
     if (berekeningGewijzigd && naamVoorBestand.isNotEmpty) {
-      // Een expliciete wijziging van "Bereken" mag niet 700 ms wachten. Bewaar
+      // Een expliciete wijziging van "Bereken" mag niet 10 seconden wachten. Bewaar
       // ze onmiddellijk, samen met eventueel nog openstaande titelwijzigingen.
       // Er loopt bewust geen tweede vertraagde save met dezelfde oude snapshot.
       final basisVoorBewaren = _bewaarBasisTitelhoofd ?? huidigTitelhoofd;
@@ -187,7 +204,7 @@ class OpmetingProjectTitelhoofdController {
       );
     } else {
       final basisVoorBewaren = _bewaarBasisTitelhoofd ?? huidigTitelhoofd;
-      _bewaarTimer = Timer(const Duration(milliseconds: 700), () {
+      _bewaarTimer = Timer(const Duration(seconds: 10), () {
         final basis = _bewaarBasisTitelhoofd ?? basisVoorBewaren;
         _bewaarBasisTitelhoofd = null;
         unawaited(
@@ -221,7 +238,8 @@ class OpmetingProjectTitelhoofdController {
       final itemProjectId = item.projectBestandId.trim().isNotEmpty
           ? item.projectBestandId.trim()
           : opmetingLegacyProjectBestandId(item.klantNaam);
-      final hoortBijActieveKlant = !item.isVerwijderd &&
+      final hoortBijActieveKlant =
+          !item.isVerwijderd &&
           (projectId.isNotEmpty
               ? itemProjectId == projectId
               : klantSleutel.isNotEmpty &&
@@ -507,8 +525,6 @@ class OpmetingProjectTitelhoofdController {
     }
 
     await AppStorage.bewaarOpmetingenVoorSync(resultaat);
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
   }
 
   Future<void> _bewaarTitelhoofdDirect({
@@ -561,8 +577,6 @@ class OpmetingProjectTitelhoofdController {
 
       if (gewijzigd) {
         await AppStorage.bewaarOpmetingenVoorSync(bijgewerkteOpmetingen);
-        await OneDriveSyncService.registreerLokaleWijziging();
-        OneDriveSyncService().uploadBackupOpAchtergrond();
       }
     }
   }

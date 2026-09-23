@@ -1,0 +1,393 @@
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3130:      return <OpmetingOverzichtRaamItem>[];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3131:    }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3132:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3133:    return compute(_decodeOpmetingenWorker, jsonString);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3134:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3135:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3136:  static Future<String> _encodeOpmetingenAchtergrond(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3137:    List<OpmetingOverzichtRaamItem> opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3138:  ) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3139:    return compute(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3140:      _encodeOpmetingenWorker,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3141:      List<OpmetingOverzichtRaamItem>.from(opmetingen),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3142:    );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3143:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3144:
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3145:  static Future<T> muteerOpmetingenAtomair<T>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3146:    FutureOr<AppStorageOpmetingMutatieResultaat<T>> Function(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3147:      List<OpmetingOverzichtRaamItem> actueleOpmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3148:    )
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3149:    mutatie,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3150:  ) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3151:    final completer = Completer<T>();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3152:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3153:    _opmetingenWachtrij = _opmetingenWachtrij.then((_) async {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3154:      try {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3155:        final prefs = await openBox();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3156:        final actueel = await _decodeOpmetingenAchtergrond(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3157:          prefs.getString(_opmetingenKey),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3158:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3159:        _onthoudOpmetingMomentopnames(actueel);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3160:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3161:        final mutatieResultaat = await mutatie(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3162:          List<OpmetingOverzichtRaamItem>.from(actueel),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3163:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3164:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3165:        if (mutatieResultaat.gewijzigd) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3166:          final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3167:            mutatieResultaat.opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3168:          );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3169:          final gecodeerdeOpmetingen = await _encodeOpmetingenAchtergrond(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3170:            nieuweLijst,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3171:          );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3172:          await prefs.setString(_opmetingenKey, gecodeerdeOpmetingen);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3173:          _onthoudOpmetingMomentopnames(nieuweLijst);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3174:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3175:          if (mutatieResultaat.startSync) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3176:            await _syncBackup();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3177:          }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3178:        }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3179:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3180:        completer.complete(mutatieResultaat.resultaat);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3181:      } catch (fout, stackTrace) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3182:        completer.completeError(fout, stackTrace);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3183:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3184:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3185:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3186:    return completer.future;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3187:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3188:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3189:  static Future<List<OpmetingOverzichtRaamItem>>
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3190:  laadOpmetingenVoorSync() async {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3191:    // Een lezer krijgt nooit een toestand van vóór een reeds gestarte mutatie.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3192:    await _opmetingenWachtrij;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3193:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3194:    final prefs = await openBox();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3195:    final opmetingen = await _decodeOpmetingenAchtergrond(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3196:      prefs.getString(_opmetingenKey),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3197:    );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3198:    _onthoudOpmetingMomentopnames(opmetingen);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3199:    return opmetingen;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3200:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3201:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3202:  static Future<List<OpmetingOverzichtRaamItem>> laadOpmetingen() async {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3203:    final alleOpmetingen = await laadOpmetingenVoorSync();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3204:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3205:    // Volgorde bewust behouden zoals opgeslagen.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3206:    // Daardoor blijft Pos 1 bovenaan staan en komt elke nieuwe positie onderaan.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3207:    return alleOpmetingen.where((opmeting) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3208:      return !opmeting.isVerwijderd;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3209:    }).toList();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3210:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3211:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3212:  /// Veilige lijstsave voor bestaande aanroepers die nog een volledige lijst
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3213:  /// aanleveren. Nieuwere records die ondertussen in de opslag zijn gekomen
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3214:  /// worden nooit verwijderd door een oudere snapshot.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3215:  static Future<void> bewaarOpmetingen(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3216:    List<OpmetingOverzichtRaamItem> opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3217:  ) async {
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3218:    await muteerOpmetingenAtomair<void>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3219:      final samengevoegd = _voegOpmetingLijstenVeiligSamen(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3220:        actueel: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3221:        inkomend: opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3222:        inkomendWintBijGelijkeDatum: true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3223:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3224:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3225:      final gewijzigd = !_opmetingLijstenGelijk(actueel, samengevoegd);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3226:      return AppStorageOpmetingMutatieResultaat<void>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3227:        resultaat: null,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3228:        opmetingen: samengevoegd,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3229:        gewijzigd: gewijzigd,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3230:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3231:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3232:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3233:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3234:  /// Sync-variant: merge de aangeleverde syncmomentopname nog één keer met de
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3235:  /// allernieuwste lokale opslag binnen dezelfde atomaire lock. Zo kan een
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3236:  /// lokale invoer die tijdens een OneDrive-download ontstond niet verdwijnen.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3237:  static Future<void> bewaarOpmetingenVoorSync(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3238:    List<OpmetingOverzichtRaamItem> opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3239:  ) async {
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3240:    await muteerOpmetingenAtomair<void>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3241:      final samengevoegd = _voegOpmetingLijstenVeiligSamen(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3242:        actueel: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3243:        inkomend: opmetingen,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3244:        inkomendWintBijGelijkeDatum: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3245:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3246:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3247:      return AppStorageOpmetingMutatieResultaat<void>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3248:        resultaat: null,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3249:        opmetingen: samengevoegd,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3250:        gewijzigd: !_opmetingLijstenGelijk(actueel, samengevoegd),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3251:        startSync: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3252:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3253:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3254:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3255:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3256:  static Future<OpmetingOverzichtRaamItem> voegOpmetingToe(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3257:    OpmetingOverzichtRaamItem opmeting,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3258:  ) {
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3259:    return muteerOpmetingenAtomair<OpmetingOverzichtRaamItem>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3260:      var id = opmeting.id.trim();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3261:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3262:      if (id.isEmpty || actueel.any((bestaand) => bestaand.id == id)) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3263:        final basis = DateTime.now().microsecondsSinceEpoch.toString();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3264:        id = basis;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3265:        var teller = 2;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3266:        while (actueel.any((bestaand) => bestaand.id == id)) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3267:          id = '${basis}_$teller';
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3268:          teller++;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3269:        }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3270:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3271:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3272:      final projectBestandId = opmeting.projectBestandId.trim().isNotEmpty
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3273:          ? opmeting.projectBestandId.trim()
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3274:          : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3275:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3276:      final opmetingVoorOpslag = opmeting.copyWith(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3277:        id: id,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3278:        projectBestandId: projectBestandId,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3279:        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3280:        isVerwijderd: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3281:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3282:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3283:      final resultaat = List<OpmetingOverzichtRaamItem>.from(actueel)
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3284:        ..add(opmetingVoorOpslag);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3285:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3286:      return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3287:        resultaat: opmetingVoorOpslag,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3288:        opmetingen: resultaat,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3289:        gewijzigd: true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3290:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3291:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3292:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3293:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3294:  static Future<OpmetingOverzichtRaamItem> werkOpmetingBij(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3295:    OpmetingOverzichtRaamItem opmeting,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3296:  ) {
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3297:    return muteerOpmetingenAtomair<OpmetingOverzichtRaamItem>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3298:      final id = opmeting.id.trim();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3299:      if (id.isEmpty) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3300:        throw StateError('Een bestaande opmeting kan niet zonder ID bewaren.');
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3301:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3302:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3303:      final index = actueel.indexWhere((bestaand) => bestaand.id == id);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3304:      if (index < 0) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3305:        // Een oude, reeds verwijderde fiche mag niet stil opnieuw aangemaakt
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3306:        // worden. Alleen echte nieuwe fiches horen via [voegOpmetingToe] te lopen.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3307:        throw StateError('Positie $id bestaat niet meer in de opslag.');
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3308:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3309:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3310:      final huidige = actueel[index];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3311:      final opmetingMetProject = opmeting.projectBestandId.trim().isNotEmpty
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3312:          ? opmeting
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3313:          : opmeting.copyWith(projectBestandId: huidige.projectBestandId);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3314:      final basis = _zoekOpmetingBasisMomentopname(opmetingMetProject);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3315:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3316:      OpmetingOverzichtRaamItem kandidaat;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3317:      if (basis != null) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3318:        kandidaat = _driewegSamenvoegenPositie(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3319:          basis: basis,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3320:          gewijzigd: opmetingMetProject,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3321:          actueel: huidige,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3322:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3323:      } else if (opmetingMetProject.gewijzigdOp.trim() ==
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3324:          huidige.gewijzigdOp.trim()) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3325:        kandidaat = opmetingMetProject;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3326:      } else {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3327:        final inkomendeDatum = DateTime.tryParse(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3328:          opmetingMetProject.gewijzigdOp,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3329:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3330:        final huidigeDatum = DateTime.tryParse(huidige.gewijzigdOp);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3331:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3332:        // Zonder bekende basisversie krijgt een aantoonbaar nieuwere invoer
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3333:        // voorrang. Een oudere onbekende snapshot mag nooit nieuwere gegevens
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3334:        // terug overschrijven.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3335:        kandidaat =
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3336:            inkomendeDatum != null &&
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3337:                (huidigeDatum == null || inkomendeDatum.isAfter(huidigeDatum))
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3338:            ? opmetingMetProject
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3339:            : huidige;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3340:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3341:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3342:      kandidaat = kandidaat.copyWith(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3343:        id: huidige.id,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3344:        isVerwijderd: huidige.isVerwijderd,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3345:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3346:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3347:      if (_positieInhoudGelijk(huidige, kandidaat)) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3348:        return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3349:          resultaat: huidige,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3350:          opmetingen: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3351:          gewijzigd: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3352:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3353:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3354:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3355:      final bijgewerkt = kandidaat.copyWith(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3356:        gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3357:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3358:      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(actueel);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3359:      nieuweLijst[index] = bijgewerkt;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3360:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3361:      return AppStorageOpmetingMutatieResultaat<OpmetingOverzichtRaamItem>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3362:        resultaat: bijgewerkt,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3363:        opmetingen: nieuweLijst,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3364:        gewijzigd: true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3365:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3366:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3367:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3368:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3369:  static Future<bool> verplaatsOpmetingBinnenKlant({
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3370:    required String klantNaam,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3371:    required String opmetingId,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3372:    required int richting,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3373:  }) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3374:    if (richting != -1 && richting != 1) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3375:      return Future<bool>.value(false);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3376:    }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3377:
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3378:    return muteerOpmetingenAtomair<bool>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3379:      final klantSleutel = klantNaam.trim().toLowerCase();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3380:      final klantIndices = <int>[];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3381:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3382:      for (var index = 0; index < actueel.length; index++) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3383:        final opmeting = actueel[index];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3384:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3385:        if (opmeting.isVerwijderd) continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3386:        if (opmeting.klantNaam.trim().toLowerCase() != klantSleutel) continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3387:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3388:        klantIndices.add(index);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3389:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3390:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3391:      final huidigePositie = klantIndices.indexWhere(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3392:        (index) => actueel[index].id == opmetingId,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3393:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3394:      if (huidigePositie < 0) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3395:        return AppStorageOpmetingMutatieResultaat<bool>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3396:          resultaat: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3397:          opmetingen: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3398:          gewijzigd: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3399:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3400:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3401:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3402:      final nieuwePositie = huidigePositie + richting;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3403:      if (nieuwePositie < 0 || nieuwePositie >= klantIndices.length) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3404:        return AppStorageOpmetingMutatieResultaat<bool>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3405:          resultaat: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3406:          opmetingen: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3407:          gewijzigd: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3408:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3409:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3410:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3411:      final huidigeIndex = klantIndices[huidigePositie];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3412:      final nieuweIndex = klantIndices[nieuwePositie];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3413:      final nu = DateTime.now().toUtc().toIso8601String();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3414:      final huidige = actueel[huidigeIndex];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3415:      final andere = actueel[nieuweIndex];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3416:      final nieuweLijst = List<OpmetingOverzichtRaamItem>.from(actueel);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3417:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3418:      nieuweLijst[huidigeIndex] = andere.copyWith(gewijzigdOp: nu);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3419:      nieuweLijst[nieuweIndex] = huidige.copyWith(gewijzigdOp: nu);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3420:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3421:      return AppStorageOpmetingMutatieResultaat<bool>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3422:        resultaat: true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3423:        opmetingen: nieuweLijst,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3424:        gewijzigd: true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3425:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3426:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3427:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3428:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3429:  static Future<void> verwijderOpmeting(String id) async {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3430:    await verwijderOpmetingen(<String>{id});
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3431:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3432:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3433:  static Future<int> verwijderOpmetingen(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3434:    Iterable<String> ids, {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3435:    bool startSync = true,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3436:  }) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3437:    final teWissen = ids
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3438:        .map((id) => id.trim())
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3439:        .where((id) => id.isNotEmpty)
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3440:        .toSet();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3441:
+> C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3442:    return muteerOpmetingenAtomair<int>((actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3443:      if (teWissen.isEmpty) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3444:        return AppStorageOpmetingMutatieResultaat<int>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3445:          resultaat: 0,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3446:          opmetingen: actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3447:          gewijzigd: false,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3448:        );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3449:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3450:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3451:      final nu = DateTime.now().toUtc().toIso8601String();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3452:      var aantal = 0;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3453:      final nieuweLijst = <OpmetingOverzichtRaamItem>[];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3454:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3455:      for (final opmeting in actueel) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3456:        if (!teWissen.contains(opmeting.id) || opmeting.isVerwijderd) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3457:          nieuweLijst.add(opmeting);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3458:          continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3459:        }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3460:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3461:        aantal++;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3462:        nieuweLijst.add(opmeting.copyWith(isVerwijderd: true, gewijzigdOp: nu));
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3463:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3464:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3465:      return AppStorageOpmetingMutatieResultaat<int>(
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3466:        resultaat: aantal,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3467:        opmetingen: nieuweLijst,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3468:        gewijzigd: aantal > 0,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3469:        startSync: startSync,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3470:      );
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3471:    });
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3472:  }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3473:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3474:  static List<OpmetingOverzichtRaamItem> _voegOpmetingLijstenVeiligSamen({
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3475:    required List<OpmetingOverzichtRaamItem> actueel,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3476:    required List<OpmetingOverzichtRaamItem> inkomend,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3477:    required bool inkomendWintBijGelijkeDatum,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3478:  }) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3479:    final actuelePerId = <String, OpmetingOverzichtRaamItem>{
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3480:      for (final item in actueel)
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3481:        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3482:    };
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3483:    final inkomendePerId = <String, OpmetingOverzichtRaamItem>{
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3484:      for (final item in inkomend)
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3485:        if (item.id.trim().isNotEmpty) item.id.trim(): item,
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3486:    };
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3487:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3488:    final winnaarPerId = <String, OpmetingOverzichtRaamItem>{};
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3489:    final nu = DateTime.now().toUtc().toIso8601String();
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3490:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3491:    for (final id in <String>{...actuelePerId.keys, ...inkomendePerId.keys}) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3492:      final huidig = actuelePerId[id];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3493:      final kandidaat = inkomendePerId[id];
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3494:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3495:      if (huidig == null) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3496:        if (kandidaat == null) continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3497:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3498:        // Als deze versie eerder door dit proces geladen werd maar intussen
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3499:        // volledig uit de opslag verdwenen is, is dit een oude momentopname.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3500:        // Die mag een verwijderd record niet opnieuw aanmaken.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3501:        final bekendeBasis = _zoekOpmetingBasisMomentopname(kandidaat);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3502:        if (bekendeBasis == null) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3503:          winnaarPerId[id] = kandidaat;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3504:        }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3505:        continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3506:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3507:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3508:      if (kandidaat == null) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3509:        // Ontbreken in een aangeleverde volledige lijst is nooit voldoende om
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3510:        // een positie te verwijderen. Verwijderen gebeurt altijd via tombstones.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3511:        winnaarPerId[id] = huidig;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3512:        continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3513:      }
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3514:
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3515:      final basis = _zoekOpmetingBasisMomentopname(kandidaat);
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3516:      if (basis != null) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3517:        if (_positieInhoudGelijk(basis, kandidaat)) {
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3518:          // De aanroeper heeft dit record zelf niet gewijzigd. Bewaar dus
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3519:          // altijd wat ondertussen werkelijk in de opslag staat.
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3520:          winnaarPerId[id] = huidig;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3521:          continue;
+  C:\ThimacoApp\eerste_app\lib\helpers\app_storage.dart:3522:        }

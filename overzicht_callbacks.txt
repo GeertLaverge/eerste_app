@@ -1,0 +1,73 @@
+        break;
+
+      case OfferteArtikelOpenType.algemeneOpmeting:
+        await _openAlgemeneOpmeting();
+        break;
+
+      case OfferteArtikelOpenType.sektionalePoort:
+        await _openSektionalePoort();
+        break;
+
+      case OfferteArtikelOpenType.veluxDakraam:
+        await _openVeluxDakraam();
+        break;
+    }
+  }
+
+  String _titelBovenbalk() {
+    final klant = _naamWeergave(_klantNaam.trim());
+    final bestand = _zinWeergave(_projectTitelhoofd.bestandsNaam.trim());
+    final versie = _projectTitelhoofd.veiligeBestandVersieNummer;
+    if (klant.isNotEmpty && bestand.isNotEmpty) {
+      return '$klant · $bestand V$versie';
+    }
+    if (klant.isNotEmpty) return klant;
+    return 'Opmetingen';
+  }
+
+  String _naamWeergave(String waarde) {
+    if (waarde.isEmpty) return '';
+    return waarde
+        .split(RegExp(r'\s+'))
+        .where((deel) => deel.isNotEmpty)
+        .map((deel) {
+          if (deel.length <= 4 && deel == deel.toUpperCase()) return deel;
+          return '${deel[0].toUpperCase()}${deel.substring(1)}';
+        })
+        .join(' ');
+  }
+
+  String _zinWeergave(String waarde) {
+    if (waarde.isEmpty) return '';
+    return '${waarde[0].toUpperCase()}${waarde.substring(1)}';
+  }
+
+  Widget _bouwGeenBestandGeopend() {
+    return const SizedBox.expand();
+  }
+
+  Widget _bouwOverzichtslijst() {
+    return OpmetingOverzichtLijst(
+      scrollController: _overzichtScrollController,
+      scrollStorageKey: PageStorageKey<String>(
+        'opmeting-overzicht-${_projectTitelhoofd.projectBestandId.trim()}',
+      ),
+      projectTitelhoofd: _projectTitelhoofd,
+      opmetingen: _raamOpmetingen,
+      verborgenFormulierTypes: _verborgenFormulierTypes,
+      verborgenNietRekenenPositieIds: _verborgenNietRekenenPositieIds,
+      offerteController: _offerteController,
+      onTitelhoofdGewijzigd: _projectTitelhoofdController.verwerkWijziging,
+      onArtikelOpenen: _bewerkRaamopmeting,
+      onArtikelVerwijderen: _verwijderRaamopmeting,
+      onArtikelKopieren: _kopieerRaamopmeting,
+      onArtikelOptieWijzigen: _wisselRaamopmetingOptie,
+      onArtikelNietRekenenWijzigen: _wisselRaamopmetingNietRekenen,
+      onPrijsGewijzigd: _wijzigArtikelPrijs,
+      onWinstmargeGewijzigd: _wijzigArtikelWinstmarge,
+      onKortingGewijzigd: _wijzigArtikelKorting,
+      onPrijsPerPositieRegelsGewijzigd: _wijzigPrijsPerPositieRegels,
+      onArtikelVerplaatsen: _verplaatsRaamopmeting,
+    );
+  }
+}

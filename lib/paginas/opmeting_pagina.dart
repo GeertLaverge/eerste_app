@@ -1,3 +1,5 @@
+// THIMACO-CONTROLE: OVERZICHT-PRIJS-LOCAL-FIRST-10S-20260922
+// THIMACO-CONTROLE: OPMETING-LOCAL-FIRST-10S-FASE1-20260917
 // THIMACO-CONTROLE: PROGRAMMASTIJL-VALIDATIEDIALOOG-FASE14-20260913
 // THIMACO-CONTROLE: ZWEVENDE-PANELEN-RUSTIGE-PROGRAMMASTIJL-FASE13-20260913
 // THIMACO-CONTROLE: PROGRAMMAWERKGEBIED-ZWEVENDE-PANELEN-FASE7-20260913
@@ -43,7 +45,6 @@ import '../helpers/offerte/opmeting_pdf_preview_pagina.dart';
 import 'offerte_prijs_overzicht_pagina.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_koppeling_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijs_data_model.dart';
-import '../helpers/offerte/prijzen/offerte_artikel_prijs_mutatie_service.dart';
 import '../helpers/offerte/prijzen/offerte_artikel_prijscorrectie_controller.dart';
 import '../helpers/offerte/prijzen/offerte_prijsinstellingen_controller.dart';
 import '../helpers/sync/onedrive_klantdocument_service.dart';
@@ -79,8 +80,6 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
   String _klantNaam = '';
   bool _laden = false;
-
-  int _veiligePrijsHerberekenGeneratie = 0;
 
   final ScrollController _overzichtScrollController = ScrollController(
     keepScrollOffset: true,
@@ -456,13 +455,15 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       return;
     }
 
-    final zichtbareOpmetingen = veiligResultaat.opmetingen.where((opmeting) {
-      if (opmeting.isVerwijderd) return false;
-      final id = opmeting.projectBestandId.trim().isNotEmpty
-          ? opmeting.projectBestandId.trim()
-          : opmetingLegacyProjectBestandId(opmeting.klantNaam);
-      return id == projectBestandId;
-    }).toList(growable: false);
+    final zichtbareOpmetingen = veiligResultaat.opmetingen
+        .where((opmeting) {
+          if (opmeting.isVerwijderd) return false;
+          final id = opmeting.projectBestandId.trim().isNotEmpty
+              ? opmeting.projectBestandId.trim()
+              : opmetingLegacyProjectBestandId(opmeting.klantNaam);
+          return id == projectBestandId;
+        })
+        .toList(growable: false);
 
     setState(() {
       _raamOpmetingen
@@ -525,74 +526,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
   Future<void> _wijzigArtikelPrijs(
     OpmetingOverzichtRaamItem item,
     double prijs,
-  ) async {
-    final positieId = item.id.trim();
-    if (positieId.isEmpty) {
-      return;
-    }
-
-    OpmetingVeiligeMutatieResultaat veiligResultaat;
-
-    try {
-      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
-        positieId: positieId,
-        wijziging: (actueel) {
-          final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(
-            actueel,
-          );
-
-          if (adapter == null) {
-            return actueel;
-          }
-
-          // De nieuwe prijs wordt op de nieuwste opgeslagen positie gezet.
-          return adapter.schrijfPrijsPerStuk(
-            artikel: actueel,
-            prijsPerStukExclBtw: prijs,
-          );
-        },
-      );
-    } catch (fout) {
-      if (mounted) {
-        _toonMelding(
-          'Eenheidsprijs bewaren is niet gelukt.\n$fout',
-          fout: true,
-        );
-      }
-      return;
-    }
-
-    if (!veiligResultaat.gewijzigd || !mounted) {
-      return;
-    }
-
-    // Lokaal eveneens slechts deze ene positie vervangen.
-    final lokaal = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
-    final index = lokaal.indexWhere(
-      (opmeting) => opmeting.id == veiligResultaat.positie.id,
-    );
-
-    if (index >= 0) {
-      lokaal[index] = veiligResultaat.positie;
-
-      setState(() {
-        _raamOpmetingen
-          ..clear()
-          ..addAll(lokaal);
-      });
-    }
-
-    // Debounce behouden zonder een oudere positielijst vast te houden.
-    final generatie = ++_veiligePrijsHerberekenGeneratie;
-    await Future<void>.delayed(const Duration(milliseconds: 450));
-
-    if (!mounted || generatie != _veiligePrijsHerberekenGeneratie) {
-      return;
-    }
-
-    await _herberekenPrijsMomentopnamesNaPrijswijziging(
-      klantNaam: veiligResultaat.positie.klantNaam,
-    );
+  ) {
+    return _artikelPrijscorrectieController.wijzigArtikelPrijs(item, prijs);
   }
 
   Future<void> _wijzigPrijsPerPositieRegels(
@@ -600,52 +535,37 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
     List<OffertePrijsPerPositieRegelModel> prijsregels,
   ) async {
     final positieId = item.id.trim();
-    if (positieId.isEmpty) {
-      return;
-    }
-
-    OpmetingVeiligeMutatieResultaat veiligResultaat;
-
-    try {
-      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
-        positieId: positieId,
-        wijziging: (actueel) {
-          return OfferteArtikelPrijsKoppelingService.schrijfPrijsPerPositieRegels(
-            artikel: actueel,
-            prijsregels: prijsregels,
-          );
-        },
-      );
-    } catch (fout) {
-      if (mounted) {
-        _toonMelding(
-          'Prijs per positie bewaren is niet gelukt.\n$fout',
-          fout: true,
-        );
-      }
-      return;
-    }
-
-    if (!veiligResultaat.gewijzigd || !mounted) {
+    if (positieId.isEmpty || !mounted) {
       return;
     }
 
     final lokaal = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
     final index = lokaal.indexWhere(
-      (opmeting) => opmeting.id == veiligResultaat.positie.id,
+      (opmeting) => opmeting.id.trim() == positieId,
     );
-
     if (index < 0) {
       return;
     }
 
-    lokaal[index] = veiligResultaat.positie;
+    final actueel = lokaal[index];
+    final bijgewerkt =
+        OfferteArtikelPrijsKoppelingService.schrijfPrijsPerPositieRegels(
+          artikel: actueel,
+          prijsregels: prijsregels,
+        );
 
+    lokaal[index] = bijgewerkt;
+
+    // Eerst onmiddellijk geheugen + UI. De gebruiker wacht niet op AppStorage.
     setState(() {
       _raamOpmetingen
         ..clear()
         ..addAll(lokaal);
     });
+
+    _artikelPrijscorrectieController.planBewarenArtikelIds(<String>{
+      positieId,
+    }, klantNaam: bijgewerkt.klantNaam);
   }
 
   Future<void> _wijzigArtikelWinstmarge(
@@ -813,11 +733,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
             children: <Widget>[
               const Row(
                 children: <Widget>[
-                  Icon(
-                    Icons.warning_amber_rounded,
-                    color: _accent,
-                    size: 20,
-                  ),
+                  Icon(Icons.warning_amber_rounded, color: _accent, size: 20),
                   SizedBox(width: 9),
                   Expanded(
                     child: Text(
@@ -1020,7 +936,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       _projectTitelhoofd = titelhoofd;
     });
 
-    await _projectBestandController.opslaanBestand(toonMeldingNaOpslaan: false);
+    await _projectBestandController.bewaarBestandLokaal(
+      toonMeldingNaOpslaan: false,
+    );
 
     if (!mounted) return;
 
@@ -1086,7 +1004,9 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       _projectTitelhoofd = titelhoofd;
     });
 
-    await _projectBestandController.opslaanBestand(toonMeldingNaOpslaan: false);
+    await _projectBestandController.bewaarBestandLokaal(
+      toonMeldingNaOpslaan: false,
+    );
 
     if (!mounted) return;
 
@@ -1185,9 +1105,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
 
     final standaardPositie = Offset(
       math.max(12.0, (constraints.maxWidth - breedte) / 2).toDouble(),
-      math
-          .max(70.0, 70 + (constraints.maxHeight - 70 - hoogte) / 2)
-          .toDouble(),
+      math.max(70.0, 70 + (constraints.maxHeight - 70 - hoogte) / 2).toDouble(),
     );
     final positie = _begrensPaneelPositie(
       _projectPaneelPosities[paneel] ?? standaardPositie,
@@ -1196,7 +1114,8 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       hoogte: hoogte,
     );
 
-    final paneelTitelhoofd = _projectTitelhoofd.klantNaam.trim().isEmpty &&
+    final paneelTitelhoofd =
+        _projectTitelhoofd.klantNaam.trim().isEmpty &&
             _klantNaam.trim().isNotEmpty
         ? _projectTitelhoofd.copyWith(klantNaam: _klantNaam.trim())
         : _projectTitelhoofd;
@@ -1342,10 +1261,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
         .max(marge, constraints.maxWidth - breedte - marge)
         .toDouble();
     final maxY = math
-        .max(
-          bovenbalkOndergrens,
-          constraints.maxHeight - hoogte - marge,
-        )
+        .max(bovenbalkOndergrens, constraints.maxHeight - hoogte - marge)
         .toDouble();
 
     return Offset(
@@ -1377,9 +1293,21 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       OpmetingProjectPaneel.klantgegevens => Icons.person_outline_rounded,
       OpmetingProjectPaneel.projectkleur => Icons.palette_outlined,
       OpmetingProjectPaneel.inhoudFiche => Icons.format_list_bulleted_rounded,
-      OpmetingProjectPaneel.offerteInstellingen =>
-        Icons.receipt_long_outlined,
+      OpmetingProjectPaneel.offerteInstellingen => Icons.receipt_long_outlined,
     };
+  }
+
+  Future<bool> _opslaanBestandMetOpenstaandePrijsinvoer({
+    bool toonMeldingNaOpslaan = true,
+  }) async {
+    await _artikelPrijscorrectieController.bewaarOpenstaandeWijzigingenNu();
+    if (!mounted) {
+      return false;
+    }
+
+    return _projectBestandController.opslaanBestand(
+      toonMeldingNaOpslaan: toonMeldingNaOpslaan,
+    );
   }
 
   Widget _bouwBovenbalk() {
@@ -1397,7 +1325,7 @@ class _OpmetingPaginaState extends State<OpmetingPagina> {
       onNieuweVariant: _projectBestandController.nieuweVariant,
       onOpenHuidigProjectBestand:
           _projectBestandController.openHuidigProjectBestand,
-      onOpslaanBestand: _projectBestandController.opslaanBestand,
+      onOpslaanBestand: _opslaanBestandMetOpenstaandePrijsinvoer,
       onOpslaanAlsBestand: _projectBestandController.opslaanAlsBestand,
       onWisBestand: _projectBestandController.wisBestand,
       onEindeOpmeting: _projectBestandController.eindeOpmeting,

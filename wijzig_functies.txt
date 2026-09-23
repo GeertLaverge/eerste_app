@@ -1,0 +1,148 @@
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:523:    int richting,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:524:  ) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:525:    return _positieBeheerController.verplaatsPositie(item, richting);
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:526:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:527:
+> C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:528:  Future<void> _wijzigArtikelPrijs(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:529:    OpmetingOverzichtRaamItem item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:530:    double prijs,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:531:  ) async {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:532:    final positieId = item.id.trim();
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:533:    if (positieId.isEmpty) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:534:      return;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:535:    }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:536:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:537:    OpmetingVeiligeMutatieResultaat veiligResultaat;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:538:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:539:    try {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:540:      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:541:        positieId: positieId,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:542:        wijziging: (actueel) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:543:          final adapter = OfferteArtikelPrijsMutatieService.adapterVoor(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:544:            actueel,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:545:          );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:546:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:547:          if (adapter == null) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:548:            return actueel;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:549:          }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:550:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:551:          // De nieuwe prijs wordt op de nieuwste opgeslagen positie gezet.
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:552:          return adapter.schrijfPrijsPerStuk(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:553:            artikel: actueel,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:554:            prijsPerStukExclBtw: prijs,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:555:          );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:556:        },
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:557:      );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:558:    } catch (fout) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:559:      if (mounted) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:560:        _toonMelding(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:561:          'Eenheidsprijs bewaren is niet gelukt.\n$fout',
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:562:          fout: true,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:563:        );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:564:      }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:565:      return;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:566:    }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:567:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:568:    if (!veiligResultaat.gewijzigd || !mounted) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:596:    await _herberekenPrijsMomentopnamesNaPrijswijziging(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:597:      klantNaam: veiligResultaat.positie.klantNaam,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:598:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:599:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:600:
+> C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:601:  Future<void> _wijzigPrijsPerPositieRegels(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:602:    OpmetingOverzichtRaamItem item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:603:    List<OffertePrijsPerPositieRegelModel> prijsregels,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:604:  ) async {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:605:    final positieId = item.id.trim();
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:606:    if (positieId.isEmpty) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:607:      return;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:608:    }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:609:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:610:    OpmetingVeiligeMutatieResultaat veiligResultaat;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:611:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:612:    try {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:613:      veiligResultaat = await OpmetingVeiligeMutatieService.wijzigPositie(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:614:        positieId: positieId,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:615:        wijziging: (actueel) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:616:          return OfferteArtikelPrijsKoppelingService.schrijfPrijsPerPositieRegels(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:617:            artikel: actueel,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:618:            prijsregels: prijsregels,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:619:          );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:620:        },
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:621:      );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:622:    } catch (fout) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:623:      if (mounted) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:624:        _toonMelding(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:625:          'Prijs per positie bewaren is niet gelukt.\n$fout',
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:626:          fout: true,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:627:        );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:628:      }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:629:      return;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:630:    }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:631:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:632:    if (!veiligResultaat.gewijzigd || !mounted) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:633:      return;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:634:    }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:635:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:636:    final lokaal = List<OpmetingOverzichtRaamItem>.from(_raamOpmetingen);
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:637:    final index = lokaal.indexWhere(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:638:      (opmeting) => opmeting.id == veiligResultaat.positie.id,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:639:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:640:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:641:    if (index < 0) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:649:        ..clear()
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:650:        ..addAll(lokaal);
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:651:    });
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:652:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:653:
+> C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:654:  Future<void> _wijzigArtikelWinstmarge(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:655:    OpmetingOverzichtRaamItem item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:656:    double percentage,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:657:  ) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:658:    return _artikelPrijscorrectieController.wijzigArtikelWinstmarge(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:659:      item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:660:      percentage,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:661:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:662:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:663:
+> C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:664:  Future<void> _wijzigArtikelKorting(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:665:    OpmetingOverzichtRaamItem item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:666:    double percentage,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:667:  ) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:668:    return _artikelPrijscorrectieController.wijzigArtikelKorting(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:669:      item,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:670:      percentage,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:671:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:672:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:673:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:674:  List<OpmetingOverzichtRaamItem> _selecteerOndersteundeOffertePosities(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:675:    Iterable<OpmetingOverzichtRaamItem> posities,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:676:  ) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:677:    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:678:      posities.where((positie) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:679:        if (positie.isVerwijderd || positie.isNietRekenen) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:680:          return false;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:681:        }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:682:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:683:        return positie.algemeneOpmetingData != null ||
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:684:            positie.vliegendeurData != null ||
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:685:            OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:686:      }),
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:687:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:688:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:689:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:690:  List<OpmetingOverzichtRaamItem> _selecteerOndersteundeOpmetingPosities(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:691:    Iterable<OpmetingOverzichtRaamItem> posities,
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:692:  ) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:693:    return List<OpmetingOverzichtRaamItem>.unmodifiable(
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:694:      posities.where((positie) {
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:695:        if (positie.isVerwijderd) return false;
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:696:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:697:        return positie.algemeneOpmetingData != null ||
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:698:            positie.vliegendeurData != null ||
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:699:            OfferteArtikelPrijsKoppelingService.isOndersteundArtikel(positie);
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:700:      }),
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:701:    );
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:702:  }
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:703:
+  C:\ThimacoApp\eerste_app\lib\paginas\opmeting_pagina.dart:704:  void _toggleFormulierTypeZichtbaarheid(String typeKey) {

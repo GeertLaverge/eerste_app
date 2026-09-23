@@ -1,4 +1,4 @@
-// THIMACO-CONTROLE: OPVULLING-VERVANGEN-HERKOPPELEN-ZONDER-OUDE-RESTEN-20260805
+// THIMACO-CONTROLE: DEURVLEUGEL-TSTIJL-OPVULLING-VLAK-PER-VLAK-20260922
 import 'package:flutter/material.dart';
 
 import 'opmeting_raam_model.dart';
@@ -139,13 +139,64 @@ class OpmetingRaamVullingHelper {
 
       final werkvlakId = _deurVleugelWerkvlakId(deurVleugel);
 
-      resultaat.add(
-        OpmetingRaamVulvlak(
-          id: _maakVlakId(werkvlakId: werkvlakId, index: 0),
-          werkvlakId: werkvlakId,
-          vlak: deurVlak,
-        ),
+      /*
+       * THIMACO-FIX 2026-09-22
+       *
+       * Een T-stijl die IN een deurvleugel wordt toegevoegd, wordt door het
+       * tekenvlak opgeslagen met werkvlakId:
+       *
+       *   deurvleugel_<vleugelId>
+       *
+       * De opvulling gebruikte tot nu toe één volledig deurvlak met:
+       *
+       *   deurvleugel_<vleugelId>_binnen
+       *
+       * Daardoor werd de interne T-stijl genegeerd en bleef de volledige
+       * deurvleugel één selecteerbaar opvulvlak.
+       *
+       * We zoeken hier bewust zowel de actuele deurvleugel-id als de oudere
+       * '_binnen'-variant. Daarna delen we het binnenvlak van de deur op met
+       * exact dezelfde vlakhelper als bij gewone vleugels.
+       */
+      final deurVleugelId = deurVleugel.id.trim().isEmpty
+          ? 'deurvleugel'
+          : deurVleugel.id.trim();
+
+      final tStijlWerkvlakId = 'deurvleugel_$deurVleugelId';
+
+      final interneTStijlen = tStijlen.where((stijl) {
+        return stijl.werkvlakId == tStijlWerkvlakId ||
+            stijl.werkvlakId == werkvlakId;
+      }).toList();
+
+      final deurVlakken = OpmetingRaamVlakHelper.bepaalVlakken(
+        binnenKader: deurVlak,
+        buitenKader: buitenKader,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
+        tStijlen: interneTStijlen,
       );
+
+      if (deurVlakken.isEmpty) {
+        resultaat.add(
+          OpmetingRaamVulvlak(
+            id: _maakVlakId(werkvlakId: werkvlakId, index: 0),
+            werkvlakId: werkvlakId,
+            vlak: deurVlak,
+          ),
+        );
+        continue;
+      }
+
+      for (var index = 0; index < deurVlakken.length; index++) {
+        resultaat.add(
+          OpmetingRaamVulvlak(
+            id: _maakVlakId(werkvlakId: werkvlakId, index: index),
+            werkvlakId: werkvlakId,
+            vlak: deurVlakken[index],
+          ),
+        );
+      }
     }
 
     final normaleVleugels = vleugels

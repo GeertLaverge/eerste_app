@@ -1,10 +1,10 @@
+// THIMACO-CONTROLE: OVERZICHT-PRIJS-LOCAL-FIRST-10S-20260922
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
 import '../../app_storage.dart';
 import '../../opmeting/overzicht/opmeting_overzicht_model.dart';
-import '../../sync/onedrive_sync_service.dart';
 import '../offerte_controller.dart';
 import 'offerte_artikel_prijs_koppeling_service.dart';
 import 'offerte_artikel_prijs_mutatie_service.dart';
@@ -33,10 +33,89 @@ class OfferteArtikelPrijscorrectieController {
   final Set<String> _winstmargeDoelArtikelIds = <String>{};
   final Set<String> _kortingDoelArtikelIds = <String>{};
 
-  Timer? _prijsHerberekenTimer;
+  // THIMACO-CONTROLE: OVERZICHT-PRIJS-LOCAL-FIRST-10S-20260922
+  Timer? _bewaarTimer;
+  final Set<String> _openstaandeArtikelIds = <String>{};
+  String _klantVoorHerberekening = '';
+  bool _herberekenNaBewaren = false;
 
   void dispose() {
-    _prijsHerberekenTimer?.cancel();
+    _bewaarTimer?.cancel();
+
+    // Een pagina mag niet verdwijnen met nog niet lokaal bewaarde prijsinvoer.
+    // De laatste in-memory waarden worden nog veilig naar AppStorage gestuurd.
+    if (_openstaandeArtikelIds.isNotEmpty) {
+      unawaited(_bewaarOpenstaandeWijzigingen());
+    }
+  }
+
+  void planBewarenArtikelIds(
+    Iterable<String> artikelIds, {
+    String klantNaam = '',
+    bool herberekenNaBewaren = false,
+  }) {
+    for (final id in artikelIds) {
+      final netteId = id.trim();
+      if (netteId.isNotEmpty) {
+        _openstaandeArtikelIds.add(netteId);
+      }
+    }
+
+    if (klantNaam.trim().isNotEmpty) {
+      _klantVoorHerberekening = klantNaam.trim();
+    }
+    _herberekenNaBewaren = _herberekenNaBewaren || herberekenNaBewaren;
+
+    _bewaarTimer?.cancel();
+    _bewaarTimer = Timer(const Duration(seconds: 10), () {
+      unawaited(_bewaarOpenstaandeWijzigingen());
+    });
+  }
+
+  Future<void> bewaarOpenstaandeWijzigingenNu() async {
+    _bewaarTimer?.cancel();
+    _bewaarTimer = null;
+    await _bewaarOpenstaandeWijzigingen();
+  }
+
+  Future<void> _bewaarOpenstaandeWijzigingen() async {
+    if (_openstaandeArtikelIds.isEmpty) {
+      return;
+    }
+
+    final ids = Set<String>.from(_openstaandeArtikelIds);
+    _openstaandeArtikelIds.removeAll(ids);
+
+    final klantNaam = _klantVoorHerberekening;
+    final moetHerberekenen = _herberekenNaBewaren;
+    _klantVoorHerberekening = '';
+    _herberekenNaBewaren = false;
+
+    // Belangrijk: lees pas NU de nieuwste in-memory artikelen. Zo kan een
+    // oudere debounce-snapshot nooit recentere invoer terug overschrijven.
+    final nieuwsteArtikelen = List<OpmetingOverzichtRaamItem>.from(
+      leesArtikelen(),
+    );
+
+    try {
+      for (final artikel in nieuwsteArtikelen) {
+        if (ids.contains(artikel.id.trim())) {
+          await AppStorage.werkOpmetingBij(artikel);
+        }
+      }
+
+      if (moetHerberekenen && klantNaam.isNotEmpty && isMounted()) {
+        await herberekenPrijsMomentopnames(klantNaam);
+      }
+    } catch (_) {
+      // Bij een tijdelijke opslagfout blijven de betrokken IDs openstaan en
+      // probeert de volgende wijziging/save opnieuw. De UI blijft responsief.
+      _openstaandeArtikelIds.addAll(ids);
+      if (klantNaam.isNotEmpty) {
+        _klantVoorHerberekening = klantNaam;
+      }
+      _herberekenNaBewaren = _herberekenNaBewaren || moetHerberekenen;
+    }
   }
 
   void wisDoelSelecties() {
@@ -63,28 +142,17 @@ class OfferteArtikelPrijscorrectieController {
       return;
     }
 
+    // Eerst uitsluitend het in-memory model/UI aanpassen. Geen schijf- of
+    // OneDrive-werk in de typelus.
     if (resultaat.lijstGewijzigd && isMounted()) {
       vervangArtikelen(resultaat.artikelen);
     }
 
-    for (final bijgewerkt in resultaat.gewijzigdeArtikelen) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-
-    // Iedere wijziging aan een artikelprijs kan de aankooplimiet beïnvloeden.
-    // Daarom herberekenen we voor ieder ondersteund artikeltype.
-    final bijgewerkt = resultaat.gewijzigdeArtikelen.first;
-
-    _prijsHerberekenTimer?.cancel();
-    _prijsHerberekenTimer = Timer(const Duration(milliseconds: 450), () {
-      unawaited(herberekenPrijsMomentopnames(bijgewerkt.klantNaam));
-    });
-
-    // De ingegeven artikelprijs moet ook naar OneDrive worden doorgestuurd,
-    // zelfs wanneer de limietcontrole geen verdeelde prijsregels wijzigt.
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    planBewarenArtikelIds(
+      resultaat.gewijzigdeArtikelen.map((artikel) => artikel.id),
+      klantNaam: resultaat.gewijzigdeArtikelen.first.klantNaam,
+      herberekenNaBewaren: true,
+    );
   }
 
   Future<void> wijzigArtikelKorting(
@@ -313,12 +381,13 @@ class OfferteArtikelPrijscorrectieController {
       vervangArtikelen(resultaat.artikelen);
     }
 
-    for (final bijgewerkt in resultaat.gewijzigdeArtikelen) {
-      await AppStorage.werkOpmetingBij(bijgewerkt);
-    }
-
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    // De correctie staat nu onmiddellijk in het in-memory model. Bewaren
+    // gebeurt pas na 10 seconden rust, buiten de typelus.
+    planBewarenArtikelIds(
+      resultaat.gewijzigdeArtikelen.map((artikel) => artikel.id),
+      klantNaam: resultaat.gewijzigdeArtikelen.first.klantNaam,
+      herberekenNaBewaren: true,
+    );
   }
 
   Set<String> _prijsCorrectieDoelSet({required bool isKorting}) {

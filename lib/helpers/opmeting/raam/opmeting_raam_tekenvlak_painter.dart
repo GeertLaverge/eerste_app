@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-TEKENINGEN-BUITEN-CANVAS-FIT-20260922
 // THIMACO-CONTROLE: OFFERTE-MAATVOERING-LICHTGRIJS-20260726
 // THIMACO-CONTROLE: VASTE-MAATVOERING-AFSTANDEN-20260722
 import 'package:flutter/material.dart';
@@ -279,6 +280,190 @@ class OpmetingRaamTekenvlakPainter extends CustomPainter {
     }
 
     return samenstelling;
+  }
+
+  /// Geeft de volledige zichtbare inhoud van deze tekening terug in dezelfde
+  /// broncoordinaten als [size].
+  ///
+  /// Het gewone raam blijft binnen 0..size. Technische tekenvlakken mogen
+  /// bewust buiten de raammaat liggen (bv. een rolluikkast boven het raam).
+  /// Die buitenliggende delen werden vroeger niet meegenomen wanneer de
+  /// editor of de overzichtfiche de tekening passend schaalde. Daardoor
+  /// konden ze bovenaan over de technische-keuzetegels lopen of in het
+  /// overzicht verkeerd terechtkomen.
+  ///
+  /// Deze berekening verandert geen enkele opgeslagen raamcoördinaat. Ze
+  /// levert alleen de extra zichtbare begrenzing zodat de volledige tekening
+  /// als één geheel kan worden geschaald.
+  Rect berekenInhoudBounds(Size size) {
+    if (size.width <= 0 ||
+        size.height <= 0 ||
+        !size.width.isFinite ||
+        !size.height.isFinite) {
+      return Rect.fromLTWH(
+        0,
+        0,
+        size.width.isFinite && size.width > 0 ? size.width : 1,
+        size.height.isFinite && size.height > 0 ? size.height : 1,
+      );
+    }
+
+    var resultaat = Rect.fromLTWH(0, 0, size.width, size.height);
+
+    void voegRechthoekToe(Rect rechthoek) {
+      if (!rechthoek.left.isFinite ||
+          !rechthoek.top.isFinite ||
+          !rechthoek.right.isFinite ||
+          !rechthoek.bottom.isFinite ||
+          rechthoek.width <= 0 ||
+          rechthoek.height <= 0) {
+        return;
+      }
+
+      // Een kleine veiligheidsmarge voorkomt dat rand/tekst exact tegen de
+      // uiterste grens wordt afgesneden.
+      resultaat = resultaat.expandToInclude(rechthoek.inflate(2.0));
+    }
+
+    void voegLayoutToe(
+      OpmetingRaamTechnischeLayout layout, {
+      Rect? bronRect,
+      Rect? doelRect,
+    }) {
+      for (final vlak in layout.technischeVlakken) {
+        var rechthoek = vlak.rechthoek;
+
+        if (bronRect != null && doelRect != null) {
+          rechthoek = _transformeerRectNaarDoel(
+            rechthoek: rechthoek,
+            bron: bronRect,
+            doel: doelRect,
+          );
+        }
+
+        voegRechthoekToe(rechthoek);
+      }
+    }
+
+    final effectieveSamenstelling = _effectieveSamenstelling();
+
+    if (effectieveSamenstelling == null) {
+      final basisBuiten = OpmetingRaamKaderHelper.buitenKader(
+        size: size,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
+      );
+
+      final layout = OpmetingRaamTechnischeLayoutHelper.bereken(
+        totaleMaatRect: basisBuiten,
+        breedteMm: breedteMm,
+        hoogteMm: hoogteMm,
+        technischeTekeningen: technischeTekeningen,
+      );
+
+      voegLayoutToe(layout);
+      return resultaat;
+    }
+
+    final samenstellingLayout =
+        OpmetingKaderSamenstellingTekenHelper.berekenWeergave(
+          tekenGebied: Rect.zero,
+          samenstelling: effectieveSamenstelling,
+        ).layout;
+
+    final samenstellingWeergave =
+        OpmetingKaderSamenstellingTekenHelper.berekenWeergave(
+          tekenGebied: OpmetingRaamKaderHelper.buitenKader(
+            size: size,
+            breedteMm: samenstellingLayout.breedteMm,
+            hoogteMm: samenstellingLayout.hoogteMm,
+          ),
+          samenstelling: effectieveSamenstelling,
+        );
+
+    final technischeGroepen = _berekenTechnischeGroepWeergaves(
+      weergave: samenstellingWeergave,
+    );
+
+    final technischeGroepPerKaderId =
+        <String, _OpmetingRaamTechnischeKaderGroepWeergave>{};
+
+    for (final groep in technischeGroepen) {
+      voegLayoutToe(groep.layout);
+
+      for (final kaderId in groep.kaderIds) {
+        technischeGroepPerKaderId[kaderId] = groep;
+      }
+    }
+
+    final actieveId = actiefKaderId ?? effectieveSamenstelling.actiefKaderId;
+
+    for (final kader in samenstellingWeergave.layout.kaders) {
+      final origineleRect = samenstellingWeergave.rectVoorKaderId(kader.id);
+
+      if (origineleRect == null ||
+          origineleRect.width <= 0 ||
+          origineleRect.height <= 0) {
+        continue;
+      }
+
+      final groepWeergave = technischeGroepPerKaderId[kader.id];
+      final doelRect = groepWeergave == null
+          ? origineleRect
+          : _pasKaderRectAanVolgensGroepLayout(
+              kaderRect: origineleRect,
+              groepWeergave: groepWeergave,
+            );
+
+      final kaderTechnischeTekeningen = kader.id == actieveId
+          ? technischeTekeningenPerKader[kader.id] ?? technischeTekeningen
+          : technischeTekeningenPerKader[kader.id] ??
+                const <OpmetingRaamTechnischeTekeningInstelling>[];
+
+      if (kaderTechnischeTekeningen.isEmpty) {
+        continue;
+      }
+
+      final bronBuiten = OpmetingRaamKaderHelper.buitenKader(
+        size: size,
+        breedteMm: kader.breedteMm,
+        hoogteMm: kader.hoogteMm,
+      );
+
+      final layout = OpmetingRaamTechnischeLayoutHelper.bereken(
+        totaleMaatRect: bronBuiten,
+        breedteMm: kader.breedteMm,
+        hoogteMm: kader.hoogteMm,
+        technischeTekeningen: kaderTechnischeTekeningen,
+      );
+
+      voegLayoutToe(layout, bronRect: bronBuiten, doelRect: doelRect);
+    }
+
+    return resultaat;
+  }
+
+  Rect _transformeerRectNaarDoel({
+    required Rect rechthoek,
+    required Rect bron,
+    required Rect doel,
+  }) {
+    if (bron.width <= 0 ||
+        bron.height <= 0 ||
+        doel.width <= 0 ||
+        doel.height <= 0) {
+      return rechthoek;
+    }
+
+    final schaalX = doel.width / bron.width;
+    final schaalY = doel.height / bron.height;
+
+    return Rect.fromLTRB(
+      doel.left + (rechthoek.left - bron.left) * schaalX,
+      doel.top + (rechthoek.top - bron.top) * schaalY,
+      doel.left + (rechthoek.right - bron.left) * schaalX,
+      doel.top + (rechthoek.bottom - bron.top) * schaalY,
+    );
   }
 
   void _tekenKaderSamenstellingMetActiefRaam({

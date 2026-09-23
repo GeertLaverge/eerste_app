@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-TEKENINGEN-BINNEN-EDITOR-VLAK-20260922
 // THIMACO-CONTROLE: SUBMENU-SELECTIESTIJL-FASE2-20260914
 // THIMACO-CONTROLE: DEURVLEUGEL-MENU-PROGRAMMASTIJL-FASE1-20260914
 // THIMACO-CONTROLE: OPVULLING-PER-KADER-OVERZICHT-ACTUEEL-20260817
@@ -49,6 +50,7 @@ import 'opmeting_raam_kleinhout_helper.dart';
 import 'opmeting_raam_tekenvlak_weergave_status_helper.dart';
 import 'opmeting_raam_vulvlak_berekening_helper.dart';
 import 'opmeting_raam_tekenvlak_tekenlaag.dart';
+import 'opmeting_raam_tekenvlak_painter.dart';
 import 'opmeting_raam_tekenvlak_overzicht_data_helper.dart';
 import 'opmeting_raam_tekenvlak_schaal_data_helper.dart';
 import 'opmeting_raam_snackbar_helper.dart';
@@ -5130,10 +5132,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Container(
-                        height: 1,
-                        color: ThimacoKleuren.rand,
-                      ),
+                      child: Container(height: 1, color: ThimacoKleuren.rand),
                     ),
                   ],
                 ),
@@ -5217,7 +5216,8 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
                                     Icon(
                                       geselecteerd
                                           ? Icons.check_circle_rounded
-                                          : Icons.radio_button_unchecked_rounded,
+                                          : Icons
+                                                .radio_button_unchecked_rounded,
                                       size: 15,
                                       color: geselecteerd
                                           ? ThimacoKleuren.oranje
@@ -5820,10 +5820,7 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
           ),
           title: const Row(
             children: [
-              Icon(
-                Icons.delete_outline_rounded,
-                color: ThimacoKleuren.rood,
-              ),
+              Icon(Icons.delete_outline_rounded, color: ThimacoKleuren.rood),
               SizedBox(width: 10),
               Expanded(
                 child: ThimacoSectieTitel(
@@ -6379,8 +6376,44 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
       );
     }
 
+    final inhoudBoundsPainter = OpmetingRaamTekenvlakPainter(
+      breedteMm: widget.breedteMm,
+      hoogteMm: widget.hoogteMm,
+      geselecteerdeLijn: _geselecteerdeLijn,
+      previewPunt: preview,
+      tStijlen: _tStijlen,
+      tStijlenPerKader: tStijlenPerKaderVoorWeergave,
+      vleugels: _vleugels,
+      vleugelsPerKader: vleugelsPerKaderVoorWeergave,
+      vulvlakken: vulvlakken,
+      vulvlakkenPerKader: vulvlakkenPerKaderVoorWeergave,
+      vullingToewijzingen: _vullingToewijzingen,
+      vullingToewijzingenPerKader: vullingToewijzingenPerKaderVoorWeergave,
+      geselecteerdeVulvlakIds: _geselecteerdeVulvlakIds,
+      geselecteerdeVulvlakIdsPerKader:
+          geselecteerdeVulvlakIdsPerKaderVoorWeergave,
+      kleinhouten: _kleinhouten,
+      kleinhoutenPerKader: kleinhoutenPerKaderVoorWeergave,
+      geselecteerdeKleinhoutVlakIds: _geselecteerdeKleinhoutVlakIds,
+      geselecteerdeKleinhoutVlakIdsPerKader:
+          geselecteerdeKleinhoutVlakIdsPerKaderVoorWeergave,
+      technischeTekeningen: widget.technischeTekeningen,
+      technischeTekeningenPerKader: widget.technischeTekeningenPerKader,
+      technischeTekeningenPerKaderGroep:
+          widget.technischeTekeningenPerKaderGroep,
+      technischeKaderGroepen: widget.technischeKaderGroepen,
+      geselecteerdeKaderIds: Set<String>.unmodifiable(_geselecteerdeKaderIds),
+      kaderSamenstelling: widget.kaderSamenstelling,
+      actiefKaderId: _actiefKaderIdVoorWeergave,
+      schuifraamSamenstelling: widget.schuifraamSamenstelling,
+      toonAchtergrondRaster: false,
+    );
+
+    final inhoudBounds = inhoudBoundsPainter.berekenInhoudBounds(modelGrootte);
+
     final modelTekening = Stack(
       fit: StackFit.expand,
+      clipBehavior: Clip.none,
       children: [
         OpmetingRaamTekenvlakTekenlaag(
           breedteMm: widget.breedteMm,
@@ -6459,9 +6492,20 @@ class _OpmetingRaamTekenvlakState extends State<OpmetingRaamTekenvlak> {
           fit: BoxFit.contain,
           alignment: Alignment.center,
           child: SizedBox(
-            width: modelGrootte.width,
-            height: modelGrootte.height,
-            child: modelTekening,
+            width: inhoudBounds.width,
+            height: inhoudBounds.height,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: -inhoudBounds.left,
+                  top: -inhoudBounds.top,
+                  width: modelGrootte.width,
+                  height: modelGrootte.height,
+                  child: modelTekening,
+                ),
+              ],
+            ),
           ),
         ),
       ),
