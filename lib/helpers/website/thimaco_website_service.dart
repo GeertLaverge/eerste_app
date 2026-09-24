@@ -1,4 +1,4 @@
- import 'dart:convert';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
@@ -35,7 +35,8 @@ class WebsiteShowroomBooking {
     return WebsiteShowroomBooking(
       id: json['id']?.toString() ?? '',
       reference: json['reference']?.toString() ?? '',
-      datum: DateTime.tryParse(json['booking_date']?.toString() ?? '') ??
+      datum:
+          DateTime.tryParse(json['booking_date']?.toString() ?? '') ??
           DateTime(2000),
       startTijd: _tijdZonderSeconden(json['start_time']?.toString() ?? ''),
       eindTijd: _tijdZonderSeconden(json['end_time']?.toString() ?? ''),
@@ -77,7 +78,8 @@ class WebsiteShowroomBlock {
   factory WebsiteShowroomBlock.fromJson(Map<String, dynamic> json) {
     return WebsiteShowroomBlock(
       id: json['id']?.toString() ?? '',
-      datum: DateTime.tryParse(json['block_date']?.toString() ?? '') ??
+      datum:
+          DateTime.tryParse(json['block_date']?.toString() ?? '') ??
           DateTime(2000),
       startMinuut: int.tryParse(json['start_minute']?.toString() ?? '') ?? 0,
       eindMinuut: int.tryParse(json['end_minute']?.toString() ?? '') ?? 0,
@@ -111,9 +113,11 @@ class WebsiteBericht {
       id: json['id']?.toString() ?? '',
       type: json['type']?.toString() ?? 'Mededeling',
       tekst: json['message']?.toString() ?? '',
-      vanaf: DateTime.tryParse(json['starts_at']?.toString() ?? '')?.toLocal() ??
+      vanaf:
+          DateTime.tryParse(json['starts_at']?.toString() ?? '')?.toLocal() ??
           DateTime.now(),
-      tot: DateTime.tryParse(json['ends_at']?.toString() ?? '')?.toLocal() ??
+      tot:
+          DateTime.tryParse(json['ends_at']?.toString() ?? '')?.toLocal() ??
           DateTime.now().add(const Duration(days: 1)),
       actief: json['active'] == true,
     );
@@ -134,11 +138,11 @@ class WebsiteShowroomData {
 
 class ThimacoWebsiteService {
   ThimacoWebsiteService({OneDriveAuthService? authService})
-      : _authService = authService ?? OneDriveAuthService();
+    : _authService = authService ?? OneDriveAuthService();
 
   final OneDriveAuthService _authService;
 
-  static const String _releaseBasisUrl = 'https://thimaco.be';
+  static const String _releaseBasisUrl = 'https://www.thimaco.be';
 
   static String get basisUrl {
     const viaDefine = String.fromEnvironment('THIMACO_WEBSITE_URL');
@@ -147,8 +151,9 @@ class ThimacoWebsiteService {
   }
 
   Uri _beheerUri({Map<String, String>? query}) {
-    return Uri.parse('$basisUrl/api/thimaco-app/website-beheer')
-        .replace(queryParameters: query);
+    return Uri.parse(
+      '$basisUrl/api/thimaco-app/website-beheer',
+    ).replace(queryParameters: query);
   }
 
   Future<WebsiteShowroomData> laadMaand(DateTime maand) async {
@@ -169,16 +174,18 @@ class ThimacoWebsiteService {
 
     final bookings = (data['bookings'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
-        .map((json) => WebsiteShowroomBooking.fromJson(
-              Map<String, dynamic>.from(json),
-            ))
+        .map(
+          (json) =>
+              WebsiteShowroomBooking.fromJson(Map<String, dynamic>.from(json)),
+        )
         .toList(growable: false);
 
     final blocks = (data['blocks'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map>()
-        .map((json) => WebsiteShowroomBlock.fromJson(
-              Map<String, dynamic>.from(json),
-            ))
+        .map(
+          (json) =>
+              WebsiteShowroomBlock.fromJson(Map<String, dynamic>.from(json)),
+        )
         .toList(growable: false);
 
     WebsiteBericht? bericht;
@@ -269,10 +276,7 @@ class ThimacoWebsiteService {
     final response = await _request(
       method: 'POST',
       uri: _beheerUri(),
-      jsonBody: <String, dynamic>{
-        'action': 'delete_block',
-        'id': id,
-      },
+      jsonBody: <String, dynamic>{'action': 'delete_block', 'id': id},
     );
 
     _decodeMap(response);
@@ -290,10 +294,7 @@ class ThimacoWebsiteService {
     final response = await _request(
       method: 'POST',
       uri: _beheerUri(),
-      jsonBody: <String, dynamic>{
-        'action': 'cancel_booking',
-        'id': bookingId,
-      },
+      jsonBody: <String, dynamic>{'action': 'cancel_booking', 'id': bookingId},
     );
 
     _decodeMap(response);
@@ -306,9 +307,7 @@ class ThimacoWebsiteService {
     final berichtId = id.trim();
 
     if (berichtId.isEmpty) {
-      throw const WebsiteServiceException(
-        'Websitebericht-ID ontbreekt.',
-      );
+      throw const WebsiteServiceException('Websitebericht-ID ontbreekt.');
     }
 
     final response = await _request(
@@ -330,9 +329,7 @@ class ThimacoWebsiteService {
       );
     }
 
-    return WebsiteBericht.fromJson(
-      Map<String, dynamic>.from(announcement),
-    );
+    return WebsiteBericht.fromJson(Map<String, dynamic>.from(announcement));
   }
 
   Future<void> verwijderWebsiteBericht(String id) async {
@@ -385,9 +382,7 @@ class ThimacoWebsiteService {
       );
     }
 
-    return WebsiteBericht.fromJson(
-      Map<String, dynamic>.from(announcement),
-    );
+    return WebsiteBericht.fromJson(Map<String, dynamic>.from(announcement));
   }
 
   Future<http.Response> _request({
@@ -450,7 +445,9 @@ class ThimacoWebsiteService {
       case 'POST':
         return http.post(uri, headers: headers, body: body);
       default:
-        throw WebsiteServiceException('Niet ondersteunde HTTP-methode: $method');
+        throw WebsiteServiceException(
+          'Niet ondersteunde HTTP-methode: $method',
+        );
     }
   }
 
