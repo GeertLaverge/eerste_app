@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: AGENDA-SNELLE-MODULE-SYNC-20260923
 // THIMACO-CONTROLE: MODULE-DELTA-SYNC-LOCAL-FIRST-20260914
 // THIMACO-CONTROLE: SYNC-PERFORMANCE-WORKER-ISOLATES-FASE2-20260914
 // THIMACO-CONTROLE: SYNC-PERFORMANCE-ETAG-DEBOUNCE-20260914
@@ -58,9 +59,7 @@ class OneDriveSyncService {
     final data = jsonDecode(jsonString) as Map<String, dynamic>;
     return data.map((datumKey, lijst) {
       final items = (lijst as List<dynamic>)
-          .map(
-            (item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)),
-          )
+          .map((item) => AgendaItem.fromJson(Map<String, dynamic>.from(item)))
           .toList();
       return MapEntry(datumKey, items);
     });
@@ -68,10 +67,7 @@ class OneDriveSyncService {
 
   static String _encodeAgendaWorker(Map<String, List<AgendaItem>> data) {
     final jsonMap = data.map((datumKey, items) {
-      return MapEntry(
-        datumKey,
-        items.map((item) => item.toJson()).toList(),
-      );
+      return MapEntry(datumKey, items.map((item) => item.toJson()).toList());
     });
     return jsonEncode(jsonMap);
   }
@@ -114,9 +110,7 @@ class OneDriveSyncService {
   static String _encodeOpmetingenWorker(
     List<OpmetingOverzichtRaamItem> opmetingen,
   ) {
-    return jsonEncode(
-      opmetingen.map((opmeting) => opmeting.toJson()).toList(),
-    );
+    return jsonEncode(opmetingen.map((opmeting) => opmeting.toJson()).toList());
   }
 
   static Map<String, List<AgendaItem>> _mergeAgendaWorker(
@@ -156,13 +150,10 @@ class OneDriveSyncService {
   static Future<String> _encodeAgendaAchtergrond(
     Map<String, List<AgendaItem>> data,
   ) {
-    return compute(
-      _encodeAgendaWorker,
-      <String, List<AgendaItem>>{
-        for (final entry in data.entries)
-          entry.key: List<AgendaItem>.from(entry.value),
-      },
-    );
+    return compute(_encodeAgendaWorker, <String, List<AgendaItem>>{
+      for (final entry in data.entries)
+        entry.key: List<AgendaItem>.from(entry.value),
+    });
   }
 
   static Future<List<KlantenficheModel>> _decodeKlantenAchtergrond(
@@ -177,8 +168,9 @@ class OneDriveSyncService {
     return compute(_encodeKlantenWorker, List<KlantenficheModel>.from(fiches));
   }
 
-  static Future<List<OpmetingOverzichtRaamItem>>
-  _decodeOpmetingenAchtergrond(String? jsonString) {
+  static Future<List<OpmetingOverzichtRaamItem>> _decodeOpmetingenAchtergrond(
+    String? jsonString,
+  ) {
     return compute(_decodeOpmetingenWorker, jsonString ?? '');
   }
 
@@ -195,30 +187,30 @@ class OneDriveSyncService {
     Map<String, List<AgendaItem>> lokaal,
     Map<String, List<AgendaItem>> cloud,
   ) {
-    return compute(
-      _mergeAgendaWorker,
-      <Map<String, List<AgendaItem>>>[lokaal, cloud],
-    );
+    return compute(_mergeAgendaWorker, <Map<String, List<AgendaItem>>>[
+      lokaal,
+      cloud,
+    ]);
   }
 
   static Future<List<KlantenficheModel>> _mergeKlantenAchtergrond(
     List<KlantenficheModel> lokaal,
     List<KlantenficheModel> cloud,
   ) {
-    return compute(
-      _mergeKlantenWorker,
-      <List<KlantenficheModel>>[lokaal, cloud],
-    );
+    return compute(_mergeKlantenWorker, <List<KlantenficheModel>>[
+      lokaal,
+      cloud,
+    ]);
   }
 
   static Future<List<OpmetingOverzichtRaamItem>> _mergeOpmetingenAchtergrond(
     List<OpmetingOverzichtRaamItem> lokaal,
     List<OpmetingOverzichtRaamItem> cloud,
   ) {
-    return compute(
-      _mergeOpmetingenWorker,
-      <List<OpmetingOverzichtRaamItem>>[lokaal, cloud],
-    );
+    return compute(_mergeOpmetingenWorker, <List<OpmetingOverzichtRaamItem>>[
+      lokaal,
+      cloud,
+    ]);
   }
 
   /// Geeft Flutter tussen grotere syncfasen expliciet een framekans.
@@ -353,7 +345,6 @@ class OneDriveSyncService {
 
   static const String _magazijnDataKey = 'thimaco_magazijn_data';
 
-
   // --------------------------------------------------------------------------
   // LOCAL-FIRST MODULE-DELTA SYNC
   // --------------------------------------------------------------------------
@@ -386,9 +377,7 @@ class OneDriveSyncService {
   // lopen daarom door één centrale wachtrij.
   static Future<void> _syncWachtrij = Future<void>.value();
 
-  static Future<T> _voerSyncGeserialiseerdUit<T>(
-    Future<T> Function() taak,
-  ) {
+  static Future<T> _voerSyncGeserialiseerdUit<T>(Future<T> Function() taak) {
     final completer = Completer<T>();
 
     _syncWachtrij = _syncWachtrij.then((_) async {
@@ -449,9 +438,7 @@ class OneDriveSyncService {
 
       try {
         resultaat = await _voerSyncGeserialiseerdUit(
-          () => _uploadBackupZonderVergrendeling(
-            uploadFotos: uploadFotos,
-          ),
+          () => _uploadBackupZonderVergrendeling(uploadFotos: uploadFotos),
         );
       } finally {
         _backupBezig = false;
@@ -944,7 +931,9 @@ class OneDriveSyncService {
 
       final agendaJson = await _encodeAgendaAchtergrond(mergedAgenda);
       final klantenJson = await _encodeKlantenAchtergrond(mergedKlanten);
-      final opmetingenJson = await _encodeOpmetingenAchtergrond(mergedOpmetingen);
+      final opmetingenJson = await _encodeOpmetingenAchtergrond(
+        mergedOpmetingen,
+      );
       await _geefUiTijd();
 
       final backup = <String, dynamic>{
@@ -1732,7 +1721,6 @@ class OneDriveSyncService {
     await registreerLokaleWijziging();
   }
 
-
   Future<String> downloadBackup({bool downloadFotos = true}) async {
     final token = await OneDriveAuthService().loginInteractief();
 
@@ -2469,7 +2457,6 @@ class OneDriveSyncService {
     }
   }
 
-
   String _moduleBestandsnaam(String module) {
     return 'thimaco_sync_${module.trim().toLowerCase()}.json';
   }
@@ -2659,8 +2646,7 @@ class OneDriveSyncService {
   }) async {
     final huidigeHash = _lokaleModuleHash(module: module, prefs: prefs);
     final bewaardeHash = prefs.getString(_moduleHashKey(module)) ?? '';
-    final lokaalGewijzigd =
-        bewaardeHash.isEmpty || bewaardeHash != huidigeHash;
+    final lokaalGewijzigd = bewaardeHash.isEmpty || bewaardeHash != huidigeHash;
 
     final remoteInfo = await _moduleInfoMetToken(token: token, module: module);
     if (remoteInfo.fout) {
@@ -2672,7 +2658,8 @@ class OneDriveSyncService {
     }
 
     final bewaardeEtag = prefs.getString(_moduleEtagKey(module)) ?? '';
-    final remoteGewijzigd = remoteInfo.gevonden &&
+    final remoteGewijzigd =
+        remoteInfo.gevonden &&
         (bewaardeEtag.isEmpty || remoteInfo.etag != bewaardeEtag);
 
     if (!lokaalGewijzigd && !remoteGewijzigd && remoteInfo.gevonden) {
@@ -2749,7 +2736,10 @@ class OneDriveSyncService {
       );
 
       if (nieuweEtag.isEmpty) {
-        final naUpload = await _moduleInfoMetToken(token: token, module: module);
+        final naUpload = await _moduleInfoMetToken(
+          token: token,
+          module: module,
+        );
         if (!naUpload.fout && naUpload.gevonden) {
           nieuweEtag = naUpload.etag;
         }
@@ -2816,8 +2806,9 @@ class OneDriveSyncService {
       'dagtaakTemplates': AppStorage.encodeJsonMapLijstVoorSync(
         mergedTemplates.records,
       ),
-      'dagtaakTemplatesSyncMeta':
-          SyncMergeService.encodeJsonRecordMetadata(mergedTemplates.metadata),
+      'dagtaakTemplatesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
+        mergedTemplates.metadata,
+      ),
     };
   }
 
@@ -2896,12 +2887,15 @@ class OneDriveSyncService {
       'module': 'notities',
       'moduleDatum': moduleDatum,
       'notities': AppStorage.encodeJsonMapLijstVoorSync(mergedNotities.records),
-      'notitiesSyncMeta':
-          SyncMergeService.encodeJsonRecordMetadata(mergedNotities.metadata),
-      'notitieActies':
-          AppStorage.encodeJsonMapLijstVoorSync(mergedActies.records),
-      'notitieActiesSyncMeta':
-          SyncMergeService.encodeJsonRecordMetadata(mergedActies.metadata),
+      'notitiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
+        mergedNotities.metadata,
+      ),
+      'notitieActies': AppStorage.encodeJsonMapLijstVoorSync(
+        mergedActies.records,
+      ),
+      'notitieActiesSyncMeta': SyncMergeService.encodeJsonRecordMetadata(
+        mergedActies.metadata,
+      ),
     };
   }
 
@@ -2996,6 +2990,49 @@ class OneDriveSyncService {
     return resultaat.startsWith('IMPORT_OK');
   }
 
+  /// Snelle synchronisatie uitsluitend voor de agenda.
+  ///
+  /// Deze methode gebruikt hetzelfde hash/ETag-mechanisme als de Home-sync,
+  /// maar raakt geen klanten, notities, opmetingen of magazijn aan. Daardoor
+  /// kan de Agenda tijdens gebruik frequent controleren zonder de zware
+  /// algemene synchronisatie te starten.
+  Future<String> syncAgendaSnel() {
+    return _voerSyncGeserialiseerdUit(() async {
+      final token = await OneDriveAuthService().tokenSilent();
+      if (token.startsWith('FOUT')) {
+        laatsteSyncActie = 'Snelle agenda-sync overgeslagen: geen silent token';
+        return 'SYNC_AGENDA_GEEN_ONEDRIVE_LOGIN';
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      try {
+        final uitkomst = await _syncEenModule(
+          token: token,
+          prefs: prefs,
+          module: 'agenda',
+        );
+
+        if (!uitkomst.gelukt) {
+          laatsteSyncActie = 'Snelle agenda-sync mislukt: ${uitkomst.melding}';
+          return 'SYNC_AGENDA_FOUT: ${uitkomst.melding}';
+        }
+
+        if (uitkomst.remoteToegepast) {
+          laatsteSyncActie =
+              'Snelle agenda-sync: wijziging van ander toestel toegepast';
+          return 'IMPORT_OK_AGENDA';
+        }
+
+        laatsteSyncActie = 'Snelle agenda-sync uitgevoerd';
+        return 'SYNC_AGENDA_OK';
+      } catch (e) {
+        laatsteSyncActie = 'Snelle agenda-sync fout: $e';
+        return 'SYNC_AGENDA_EXCEPTION: $e';
+      }
+    });
+  }
+
   /// Synchroniseert alleen de operationele modules die lokaal of in OneDrive
   /// veranderd zijn. Dit is de standaard sync op Home.
   ///
@@ -3040,8 +3077,7 @@ class OneDriveSyncService {
             fouten.add('$module: ${uitkomst.melding}');
           }
 
-          remoteToegepast =
-              remoteToegepast || uitkomst.remoteToegepast;
+          remoteToegepast = remoteToegepast || uitkomst.remoteToegepast;
 
           // Tussen modules krijgt Flutter steeds een framekans.
           await _geefUiTijd();
@@ -3288,9 +3324,7 @@ class OneDriveSyncService {
     return prefs.getString(_backupDatumKey);
   }
 
-  Future<_OneDriveBackupInfo?> _oneDriveBackupInfoMetToken(
-    String token,
-  ) async {
+  Future<_OneDriveBackupInfo?> _oneDriveBackupInfoMetToken(String token) async {
     if (token.startsWith('FOUT')) {
       return null;
     }
@@ -3318,10 +3352,7 @@ class OneDriveSyncService {
       data['lastModifiedDateTime']?.toString() ?? '',
     );
 
-    return _OneDriveBackupInfo(
-      etag: etag,
-      gewijzigdOp: gewijzigdOp,
-    );
+    return _OneDriveBackupInfo(etag: etag, gewijzigdOp: gewijzigdOp);
   }
 
   Future<void> _bewaarOneDriveEtagNaUpload({

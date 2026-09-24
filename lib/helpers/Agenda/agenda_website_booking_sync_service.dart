@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../app_storage.dart';
 import '../website/thimaco_website_service.dart';
 import 'agenda_item.dart';
 import 'agenda_repository.dart';
@@ -37,14 +38,19 @@ class AgendaWebsiteBookingSyncService {
 
     var itemsPerDag = await AgendaRepository.laadItems();
 
-    final bestaandeExternIds = itemsPerDag.values
+    // Ook verwijderde websiteafspraken (tombstones) meetellen.
+    // Zo wordt een bewust verwijderde websiteboeking nooit opnieuw
+    // als nieuwe afspraak geïmporteerd.
+    final alleItemsVoorSync = await AppStorage.laadAgendaItemsNieuwVoorSync();
+
+    final bestaandeExternIds = alleItemsVoorSync.values
         .expand((items) => items)
         .where((item) => item.isWebsiteShowroomAfspraak)
         .map((item) => item.externId.trim())
         .where((id) => id.isNotEmpty)
         .toSet();
 
-    final bestaandeIds = itemsPerDag.values
+    final bestaandeIds = alleItemsVoorSync.values
         .expand((items) => items)
         .map((item) => item.id.trim())
         .where((id) => id.isNotEmpty)

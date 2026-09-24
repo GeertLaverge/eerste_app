@@ -136,7 +136,6 @@ class AppStorage {
   static const String _opmetingSchuifraamKeuzemenusAluKey =
       'opmeting_schuifraam_keuzemenus_alu';
 
-
   static const String _opmetingRaamTechnischeGroepenKey =
       'opmeting_raam_technische_groepen';
 
@@ -237,7 +236,7 @@ class AppStorage {
      * wijziging die vlak vóór een crash gebeurde bij de volgende Home/opstart
      * alsnog wordt ontdekt.
      */
-    unawaited(OneDriveSyncService.registreerLokaleWijziging());
+    await OneDriveSyncService.registreerLokaleWijziging();
   }
 
   static List<Map<String, dynamic>> decodeJsonMapLijstVoorSync(
@@ -274,9 +273,7 @@ class AppStorage {
     return decodeJsonMapLijstVoorSync(jsonString);
   }
 
-  static String _encodeJsonMapLijstWorker(
-    List<Map<String, dynamic>> records,
-  ) {
+  static String _encodeJsonMapLijstWorker(List<Map<String, dynamic>> records) {
     return encodeJsonMapLijstVoorSync(records);
   }
 
@@ -500,17 +497,13 @@ class AppStorage {
   static Future<String> _encodeAgendaItemsAchtergrond(
     Map<String, List<AgendaItem>> itemsPerDag,
   ) {
-    return compute(
-      _encodeAgendaItemsWorker,
-      <String, List<AgendaItem>>{
-        for (final entry in itemsPerDag.entries)
-          entry.key: List<AgendaItem>.from(entry.value),
-      },
-    );
+    return compute(_encodeAgendaItemsWorker, <String, List<AgendaItem>>{
+      for (final entry in itemsPerDag.entries)
+        entry.key: List<AgendaItem>.from(entry.value),
+    });
   }
 
-  static Future<Map<String, List<AgendaItem>>>
-  laadAgendaItemsNieuwVoorSync() {
+  static Future<Map<String, List<AgendaItem>>> laadAgendaItemsNieuwVoorSync() {
     return _voerAgendaActieGeserialiseerdUit(() async {
       final prefs = await openBox();
 
@@ -965,20 +958,23 @@ class AppStorage {
         return <OpmetingRaamTechnischeGroep>[];
       }
 
-      final groepen = decoded
-          .whereType<Map>()
-          .map(
-            (item) => OpmetingRaamTechnischeGroep.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .where((groep) => groep.id.isNotEmpty && groep.naam.isNotEmpty)
-          .toList()
-        ..sort((eerste, tweede) {
-          final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
-          if (volgorde != 0) return volgorde;
-          return eerste.naam.toLowerCase().compareTo(tweede.naam.toLowerCase());
-        });
+      final groepen =
+          decoded
+              .whereType<Map>()
+              .map(
+                (item) => OpmetingRaamTechnischeGroep.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .where((groep) => groep.id.isNotEmpty && groep.naam.isNotEmpty)
+              .toList()
+            ..sort((eerste, tweede) {
+              final volgorde = eerste.volgorde.compareTo(tweede.volgorde);
+              if (volgorde != 0) return volgorde;
+              return eerste.naam.toLowerCase().compareTo(
+                tweede.naam.toLowerCase(),
+              );
+            });
 
       return List<OpmetingRaamTechnischeGroep>.unmodifiable(groepen);
     } catch (_) {
@@ -1999,7 +1995,8 @@ class AppStorage {
       bestandsNaam: OpmetingProjectTitelhoofd.standaardBestaandBestandsNaam,
     );
 
-    final sleutel = gevondenSleutel ??
+    final sleutel =
+        gevondenSleutel ??
         opmetingProjectBestandOpslagSleutel(
           projectBestandId: titelhoofd.projectBestandId,
           klantNaam: titelhoofd.klantNaam,
@@ -3124,8 +3121,9 @@ class AppStorage {
     return encodeOpmetingenVoorSync(opmetingen);
   }
 
-  static Future<List<OpmetingOverzichtRaamItem>>
-  _decodeOpmetingenAchtergrond(String? jsonString) async {
+  static Future<List<OpmetingOverzichtRaamItem>> _decodeOpmetingenAchtergrond(
+    String? jsonString,
+  ) async {
     if (jsonString == null || jsonString.isEmpty) {
       return <OpmetingOverzichtRaamItem>[];
     }

@@ -1,21 +1,42 @@
+import 'dart:async';
+
 import 'package:eerste_app/helpers/app_storage.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_bewerk_service.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_toevoeg_service.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_verplaats_service.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_sleep_service.dart';
+import 'package:eerste_app/helpers/sync/onedrive_sync_service.dart';
 
 import 'agenda_website_sync_service.dart';
 
 class AgendaRepository {
+  static Timer? _snelleAgendaSyncTimer;
+
   static Future<Map<String, List<AgendaItem>>> laadItems() async {
     return AppStorage.laadAgendaItemsNieuw();
   }
 
-  static Future<void> bewaarItems(
+  static Future<Map<String, List<AgendaItem>>> bewaarItems(
     Map<String, List<AgendaItem>> itemsPerDag,
   ) async {
     await AppStorage.bewaarAgendaItemsNieuw(itemsPerDag);
+    _planSnelleAgendaSync();
+
+    // AppStorage voert vóór de fysieke save nog een veilige merge uit met
+    // de meest recente lokale agenda. Geef daarom altijd precies de versie
+    // terug die werkelijk is opgeslagen en zichtbaar hoort te zijn.
+    return laadItems();
+  }
+
+  static void _planSnelleAgendaSync() {
+    // Meerdere snelle mutaties (bv. websiteboekingen importeren) worden
+    // samengenomen tot één lichte agenda-module-sync.
+    _snelleAgendaSyncTimer?.cancel();
+    _snelleAgendaSyncTimer = Timer(const Duration(milliseconds: 350), () {
+      _snelleAgendaSyncTimer = null;
+      unawaited(OneDriveSyncService().syncAgendaSnel());
+    });
   }
 
   static Future<Map<String, List<AgendaItem>>> voegToe({
@@ -27,9 +48,7 @@ class AgendaRepository {
     // ook als sleutel voor de websiteblokkering gebruikt kan worden.
     final itemMetId = item.id.trim().isNotEmpty
         ? item
-        : item.copyWith(
-            id: DateTime.now().microsecondsSinceEpoch.toString(),
-          );
+        : item.copyWith(id: DateTime.now().microsecondsSinceEpoch.toString());
 
     final nieuw = AgendaToevoegService.voegItemToe(
       dag: dag,
@@ -37,18 +56,16 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
-    // Eerst lokaal veilig bewaren.
-    await bewaarItems(nieuw);
+    // Eerst lokaal veilig bewaren. De UI kan daarna onmiddellijk vernieuwen.
+    final opgeslagen = await bewaarItems(nieuw);
 
-    // Daarna website-sync afwachten.
-    // Een tijdelijke website-/internetfout wordt in de sync-service zelf
-    // opgevangen en kan de lokale agenda-opslag dus nooit terugdraaien.
-    await AgendaWebsiteSyncService.synchroniseerAfspraak(
-      dag: dag,
-      item: itemMetId,
+    // Websiteblokkering gebeurt bewust op de achtergrond. Een trage website-
+    // verbinding mag de lokale agenda niet langer zichtbaar ophouden.
+    unawaited(
+      AgendaWebsiteSyncService.synchroniseerAfspraak(dag: dag, item: itemMetId),
     );
 
-    return nieuw;
+    return opgeslagen;
   }
 
   static Future<Map<String, List<AgendaItem>>> bewerk({
@@ -64,21 +81,23 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
-    await bewaarItems(nieuw);
+    final opgeslagen = await bewaarItems(nieuw);
 
     final opgeslagenItem = _zoekItem(
-      itemsPerDag: nieuw,
+      itemsPerDag: opgeslagen,
       id: oudItem.id,
       alternatief: nieuwItem,
     );
 
-    await AgendaWebsiteSyncService.synchroniseerBewerking(
-      dag: dag,
-      oudItem: oudItem,
-      nieuwItem: opgeslagenItem,
+    unawaited(
+      AgendaWebsiteSyncService.synchroniseerBewerking(
+        dag: dag,
+        oudItem: oudItem,
+        nieuwItem: opgeslagenItem,
+      ),
     );
 
-    return nieuw;
+    return opgeslagen;
   }
 
   static Future<Map<String, List<AgendaItem>>> verwijder({
@@ -92,16 +111,14 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
-    // Eerst de verwijdering veilig lokaal bewaren.
-    await bewaarItems(nieuw);
+    // Eerst de verwijdering veilig lokaal bewaren en meteen de werkelijk
+    // opgeslagen zichtbare agenda teruglezen.
+    final opgeslagen = await bewaarItems(nieuw);
 
-    // Daarna wachten tot dezelfde afspraak ook van de website verwijderd is.
-    await AgendaWebsiteSyncService.verwijderAfspraak(
-      dag: dag,
-      item: item,
-    );
+    // Websiteblokkering mag op de achtergrond verdwijnen.
+    unawaited(AgendaWebsiteSyncService.verwijderAfspraak(dag: dag, item: item));
 
-    return nieuw;
+    return opgeslagen;
   }
 
   static Future<Map<String, List<AgendaItem>>> verplaats({
@@ -117,15 +134,17 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
-    await bewaarItems(nieuw);
+    final opgeslagen = await bewaarItems(nieuw);
 
-    await AgendaWebsiteSyncService.synchroniseerVerplaatsing(
-      oudeDag: oudeDag,
-      nieuweDag: nieuweDag,
-      item: item,
+    unawaited(
+      AgendaWebsiteSyncService.synchroniseerVerplaatsing(
+        oudeDag: oudeDag,
+        nieuweDag: nieuweDag,
+        item: item,
+      ),
     );
 
-    return nieuw;
+    return opgeslagen;
   }
 
   static Future<Map<String, List<AgendaItem>>> kopieer({
@@ -145,9 +164,9 @@ class AgendaRepository {
       itemsPerDag: itemsPerDag,
     );
 
-    await bewaarItems(nieuw);
+    final opgeslagen = await bewaarItems(nieuw);
 
-    final kopie = nieuw.values
+    final kopie = opgeslagen.values
         .expand((items) => items)
         .where(
           (item) =>
@@ -156,19 +175,18 @@ class AgendaRepository {
               !item.isVerwijderd,
         )
         .cast<AgendaItem?>()
-        .firstWhere(
-          (item) => item != null,
-          orElse: () => null,
-        );
+        .firstWhere((item) => item != null, orElse: () => null);
 
     if (kopie != null) {
-      await AgendaWebsiteSyncService.synchroniseerAfspraak(
-        dag: nieuweDag,
-        item: kopie,
+      unawaited(
+        AgendaWebsiteSyncService.synchroniseerAfspraak(
+          dag: nieuweDag,
+          item: kopie,
+        ),
       );
     }
 
-    return nieuw;
+    return opgeslagen;
   }
 
   static AgendaItem _zoekItem({

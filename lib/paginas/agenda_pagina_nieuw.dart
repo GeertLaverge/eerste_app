@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: AGENDA-SNELLE-MODULE-SYNC-20260923
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -32,6 +33,7 @@ import '../helpers/Agenda/agenda_melding_service.dart';
 import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_klant_planning_drop_service.dart';
 import '../helpers/Agenda/agenda_klant_fiche_open_helper.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
 import '../helpers/website/thimaco_website_service.dart';
 import 'jaar_planning_pagina_nieuw.dart';
@@ -63,6 +65,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
   bool _agendaNogmaalsHerladenNaSync = false;
   bool _websiteBoekingenSynchroniseren = false;
   bool _websiteBoekingenNogmaalsSynchroniseren = false;
+  Timer? _snelleAgendaSyncTimer;
+  bool _snelleAgendaSyncBezig = false;
 
   @override
   void initState() {
@@ -79,6 +83,8 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
       unawaited(_synchroniseerWebsiteBoekingenVoorZichtbareMaanden());
 
+      _startSnelleAgendaSync();
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         scrollNaarVandaag();
       });
@@ -87,6 +93,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
   @override
   void dispose() {
+    _snelleAgendaSyncTimer?.cancel();
+    _snelleAgendaSyncTimer = null;
+
     SyncNavigatieHelper.downloadVersie.removeListener(
       _verwerkAchtergrondDownload,
     );
@@ -94,6 +103,51 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
     agendaScroll.dispose();
 
     super.dispose();
+  }
+
+  void _startSnelleAgendaSync() {
+    _snelleAgendaSyncTimer?.cancel();
+
+    // Meteen één lichte agenda-sync bij openen. Daarna controleren we alleen
+    // zolang deze Agenda-route werkelijk zichtbaar is.
+    unawaited(_voerSnelleAgendaSyncUit());
+
+    _snelleAgendaSyncTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      unawaited(_voerSnelleAgendaSyncUit());
+    });
+  }
+
+  Future<void> _voerSnelleAgendaSyncUit() async {
+    if (!mounted || _snelleAgendaSyncBezig) {
+      return;
+    }
+
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) {
+      return;
+    }
+
+    _snelleAgendaSyncBezig = true;
+
+    try {
+      final resultaat = await OneDriveSyncService().syncAgendaSnel();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (resultaat.startsWith('IMPORT_OK_AGENDA')) {
+        await _herlaadAgendaNaAchtergrondSync();
+      }
+    } catch (error) {
+      debugPrint('AgendaPaginaNieuw: snelle agenda-sync mislukt: $error');
+    } finally {
+      _snelleAgendaSyncBezig = false;
+    }
   }
 
   void _verwerkAchtergrondDownload() {
@@ -482,9 +536,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       if (externId.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text(
-              'Deze websiteafspraak heeft geen geldig booking-ID.',
-            ),
+            content: Text('Deze websiteafspraak heeft geen geldig booking-ID.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -503,9 +555,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Afspraak kon niet verwijderd worden: $error',
-            ),
+            content: Text('Afspraak kon niet verwijderd worden: $error'),
             backgroundColor: Colors.red,
           ),
         );
@@ -513,10 +563,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
         return;
       }
 
-      await AgendaMeldingService.verwijderMelding(
-        dag: dag,
-        item: item,
-      );
+      await AgendaMeldingService.verwijderMelding(dag: dag, item: item);
 
       final nieuweItems = await AgendaRepository.verwijder(
         dag: dag,
@@ -531,10 +578,7 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
       setState(() {
         agendaItems = Map<String, List<AgendaItem>>.from(
           nieuweItems.map(
-            (key, value) => MapEntry(
-              key,
-              List<AgendaItem>.from(value),
-            ),
+            (key, value) => MapEntry(key, List<AgendaItem>.from(value)),
           ),
         );
       });
@@ -869,21 +913,61 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                 controller: agendaScroll,
                 padding: const EdgeInsets.fromLTRB(8, 8, 8, 20),
                 children: zichtbareMaanden().map((maand) {
-                  return AgendaMaandBlok(
-                    maand: maand,
-                    geselecteerdeDag: selectie.geselecteerdeDag,
-                    itemsPerDag: zichtbareItems,
-                    weergave: agendaWeergave,
-                    onDagKlik: selecteerDag,
-                    onItemTap: openItem,
-                    onItemSleep: (dag, item) async {},
-                    onItemDrop: (nieuweDag, item, oudeDag) async {
-                      if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
-                        oudeDag,
-                      )) {
+                  return KeyedSubtree(
+                    key: ValueKey<String>(
+                      'agenda-maand-${maand.year}-${maand.month}-${identityHashCode(agendaItems)}',
+                    ),
+                    child: AgendaMaandBlok(
+                      maand: maand,
+                      geselecteerdeDag: selectie.geselecteerdeDag,
+                      itemsPerDag: zichtbareItems,
+                      weergave: agendaWeergave,
+                      onDagKlik: selecteerDag,
+                      onItemTap: openItem,
+                      onItemSleep: (dag, item) async {},
+                      onItemDrop: (nieuweDag, item, oudeDag) async {
+                        if (AgendaKlantPlanningDropService.isNieuweKlantPlanning(
+                          oudeDag,
+                        )) {
+                          final nieuweItems =
+                              await AgendaKlantPlanningDropService.verwerk(
+                                context: context,
+                                nieuweDag: nieuweDag,
+                                item: item,
+                                itemsPerDag: agendaItems,
+                              );
+
+                          if (nieuweItems == null) {
+                            return;
+                          }
+
+                          if (!mounted) {
+                            return;
+                          }
+                          if (!context.mounted) {
+                            return;
+                          }
+
+                          setState(() {
+                            agendaItems = nieuweItems;
+
+                            selectie = selectie.kiesDag(nieuweDag);
+                          });
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Klant ingepland.'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+
+                          return;
+                        }
+
                         final nieuweItems =
-                            await AgendaKlantPlanningDropService.verwerk(
+                            await AgendaSleepAfhandeling.verwerkDrop(
                               context: context,
+                              oudeDag: oudeDag,
                               nieuweDag: nieuweDag,
                               item: item,
                               itemsPerDag: agendaItems,
@@ -892,6 +976,16 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
                         if (nieuweItems == null) {
                           return;
                         }
+
+                        await AgendaMeldingService.verwijderMelding(
+                          dag: oudeDag,
+                          item: item,
+                        );
+
+                        await AgendaMeldingService.planMelding(
+                          dag: nieuweDag,
+                          item: item,
+                        );
 
                         if (!mounted) {
                           return;
@@ -908,57 +1002,12 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
 
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Klant ingepland.'),
+                            content: Text('Agenda aangepast.'),
                             backgroundColor: Colors.green,
                           ),
                         );
-
-                        return;
-                      }
-
-                      final nieuweItems =
-                          await AgendaSleepAfhandeling.verwerkDrop(
-                            context: context,
-                            oudeDag: oudeDag,
-                            nieuweDag: nieuweDag,
-                            item: item,
-                            itemsPerDag: agendaItems,
-                          );
-
-                      if (nieuweItems == null) {
-                        return;
-                      }
-
-                      await AgendaMeldingService.verwijderMelding(
-                        dag: oudeDag,
-                        item: item,
-                      );
-
-                      await AgendaMeldingService.planMelding(
-                        dag: nieuweDag,
-                        item: item,
-                      );
-
-                      if (!mounted) {
-                        return;
-                      }
-                      if (!context.mounted) {
-                        return;
-                      }
-
-                      setState(() {
-                        agendaItems = nieuweItems;
-
-                        selectie = selectie.kiesDag(nieuweDag);
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Agenda aangepast.'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    },
+                      },
+                    ),
                   );
                 }).toList(),
               ),
@@ -966,7 +1015,9 @@ class _AgendaPaginaNieuwState extends State<AgendaPaginaNieuw> {
           ),
           if (agendaWeergave == AgendaWeergaveType.symbolen)
             AgendaDagDetail(
-              key: ValueKey(selectie.geselecteerdeDag),
+              key: ValueKey<String>(
+                'agenda-dag-${AgendaDatumHelper.datumKey(selectie.geselecteerdeDag)}-${identityHashCode(agendaItems)}',
+              ),
               dag: selectie.geselecteerdeDag,
               items: itemsVanGeselecteerdeDag(zichtbareItems),
               onItemTap: (item) {
