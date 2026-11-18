@@ -189,6 +189,7 @@ class ThimacoIphoneNotitiesBureauState
   Future<void> bewaarVoorVerzending() => _bewaarVoorVerzending();
 
   Future<void> _bewaarVoorVerzending() async {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (_bezig || _aanmelden) return;
     final naam = _klant.text.trim();
     final tekst = _notitie.text.trim();
@@ -420,6 +421,7 @@ class ThimacoIphoneNotitiesBureauState
                         const SizedBox(height: 7),
                         TextField(
                           controller: _klant,
+                          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
                           decoration: _decoratie('Naam van de klant'),
@@ -431,6 +433,7 @@ class ThimacoIphoneNotitiesBureauState
                         const SizedBox(height: 7),
                         TextField(
                           controller: _notitie,
+                          onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                           minLines: 7,
                           maxLines: 14,
                           keyboardType: TextInputType.multiline,
