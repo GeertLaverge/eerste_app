@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VERLOF-WEBSITE-BLOKKERINGEN-20261105
 import 'package:flutter/foundation.dart';
 
 import '../website/thimaco_website_service.dart';
@@ -6,10 +7,22 @@ import 'agenda_item.dart';
 class AgendaWebsiteSyncService {
   static final ThimacoWebsiteService _websiteService = ThimacoWebsiteService();
 
-  static bool _isLokaleBlauweAfspraak(AgendaItem item) {
-    return item.type.trim().toLowerCase() == 'afspraak' &&
-        !item.isWebsiteShowroomAfspraak &&
-        !item.isVerwijderd;
+  /// Zowel blauwe afspraken als verlof blokkeren de boekbare tijd.
+  /// Bij verlof kan de gebruiker expliciet de toonzaal open laten.
+  static bool _blokkeertWebsite(AgendaItem item) {
+    if (item.isVerwijderd || item.isWebsiteShowroomAfspraak) {
+      return false;
+    }
+    final type = item.type.trim().toLowerCase();
+    if (type == 'afspraak') return true;
+    if (type == 'verlof') return !item.toonzaalTochOpen;
+    return false;
+  }
+
+  static bool _isWebsiteRelevant(AgendaItem item) {
+    final type = item.type.trim().toLowerCase();
+    return (type == 'afspraak' || type == 'verlof') &&
+        !item.isWebsiteShowroomAfspraak;
   }
 
   static String _datumKey(DateTime datum) {
@@ -69,7 +82,7 @@ class AgendaWebsiteSyncService {
     required DateTime dag,
     required AgendaItem item,
   }) async {
-    if (!_isLokaleBlauweAfspraak(item)) {
+    if (!_blokkeertWebsite(item)) {
       return;
     }
 
@@ -102,8 +115,7 @@ class AgendaWebsiteSyncService {
     required DateTime dag,
     required AgendaItem item,
   }) async {
-    if (item.type.trim().toLowerCase() != 'afspraak' ||
-        item.isWebsiteShowroomAfspraak) {
+    if (!_isWebsiteRelevant(item)) {
       return;
     }
 
@@ -125,8 +137,8 @@ class AgendaWebsiteSyncService {
     required AgendaItem oudItem,
     required AgendaItem nieuwItem,
   }) async {
-    final oudWasBlauw = _isLokaleBlauweAfspraak(oudItem);
-    final nieuwIsBlauw = _isLokaleBlauweAfspraak(nieuwItem);
+    final oudWasBlauw = _blokkeertWebsite(oudItem);
+    final nieuwIsBlauw = _blokkeertWebsite(nieuwItem);
 
     if (oudWasBlauw) {
       final oudeId = _websiteAgendaItemId(dag, oudItem);
@@ -147,7 +159,11 @@ class AgendaWebsiteSyncService {
     required DateTime nieuweDag,
     required AgendaItem item,
   }) async {
-    if (!_isLokaleBlauweAfspraak(item)) {
+    if (!_blokkeertWebsite(item)) {
+      // Een open-toonzaal-verlof mag geen oude blokkering achterlaten.
+      if (_isWebsiteRelevant(item)) {
+        await verwijderAfspraak(dag: oudeDag, item: item);
+      }
       return;
     }
 

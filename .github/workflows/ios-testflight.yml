@@ -51,6 +51,11 @@ jobs:
           BUILD_TYPE="${{ inputs.build_type }}"
           BUILD_NUMBER="${{ inputs.build_number }}"
 
+          if [[ "$BUILD_TYPE" != "normaal" ]]; then
+            echo "::error::Deze afzonderlijke iPhone-branch ondersteunt uitsluitend normale builds."
+            exit 1
+          fi
+
           if [[ ! "$BUILD_NUMBER" =~ ^[0-9]+$ ]]; then
             echo "::error::Het buildnummer moet uitsluitend uit cijfers bestaan."
             exit 1
@@ -72,8 +77,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - name: Controleer compacte iPhone entrypoint
+        shell: bash
+        run: |
+          test -f lib/main_iphone.dart
+          test -f lib/mobiel/thimaco_iphone_magazijn.dart
+          grep -q 'ThimacoIphoneApp' lib/main_iphone.dart
+
+      - name: Analyze alleen de compacte iPhone
+        run: flutter analyze lib/main_iphone.dart --no-fatal-infos --no-fatal-warnings
 
       - name: Create App Store Connect API key
         run: |
@@ -123,30 +135,9 @@ jobs:
           flutter build ios \
             --release \
             --no-codesign \
+            --target=lib/main_iphone.dart \
             --build-number="${{ inputs.build_number }}"
-
-      # Financiële eigenaarbuild: altijd handmatig gestart.
-      # EVEN buildnummers zijn gereserveerd voor eigenaarbuilds.
-      # Alleen de SHA-256-hash staat in GitHub; de papieren activatiecode nooit.
-      # TIJDELIJK VOOR LOKALE WEBSITE/SHOWROOM-TEST OP IPAD:
-      # deze eigenaarbuild wijst naar de Next.js-server op de nieuwe laptop.
-      - name: Build financial owner iOS manually
-        if: ${{ inputs.build_type == 'eigenaar' }}
-        env:
-          THIMACO_FINANCE_ACTIVATION_SHA256: ${{ secrets.THIMACO_FINANCE_ACTIVATION_SHA256 }}
-        run: |
-          if [[ ! "$THIMACO_FINANCE_ACTIVATION_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
-            echo "::error::GitHub Secret THIMACO_FINANCE_ACTIVATION_SHA256 ontbreekt of is geen geldige SHA-256-hash."
-            exit 1
-          fi
-
-          flutter build ios \
-            --release \
-            --no-codesign \
-            --build-number="${{ inputs.build_number }}" \
-            --dart-define=THIMACO_FINANCE_OWNER_BUILD=true \
-            --dart-define=THIMACO_FINANCE_ACTIVATION_SHA256="$THIMACO_FINANCE_ACTIVATION_SHA256" \
-            --dart-define=THIMACO_WEBSITE_URL="https://thimaco-website.vercel.app"
+          grep -F 'FLUTTER_TARGET=lib/main_iphone.dart' ios/Flutter/Generated.xcconfig
 
       - name: Archive signed iOS app
         run: |
@@ -157,7 +148,8 @@ jobs:
             -archivePath build/ios/archive/Runner.xcarchive \
             DEVELOPMENT_TEAM=D788LU8M3B \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            FLUTTER_TARGET=lib/main_iphone.dart
 
       - name: Check archive entitlements
         run: |
@@ -190,7 +182,7 @@ jobs:
         if: ${{ inputs.build_type == 'normaal' }}
         uses: actions/upload-artifact@v4
         with:
-          name: thimaco-ios-ipa
+          name: thimaco-iphone-compact-ipa
           path: build/ios/ipa/*.ipa
           retention-days: 7
 
@@ -202,26 +194,16 @@ jobs:
             --apiKey "${{ secrets.APPSTORE_KEY_ID }}" \
             --apiIssuer "${{ secrets.APPSTORE_ISSUER_ID }}"
 
-      - name: Build summary
+      - name: Samenvatting compacte iPhone TestFlight
         if: always()
+        shell: bash
         run: |
-          if [[ "${{ inputs.build_type }}" == "eigenaar" ]]; then
-            {
-              echo "### Financiële eigenaarbuild"
-              echo ""
-              echo "- Handmatig opgebouwd"
-              echo "- Buildnummer: ${{ inputs.build_number }}"
-              echo "- EVEN buildnummer = eigenaarbuild"
-              echo "- Geen eigenaar-IPA als GitHub-artifact bewaard"
-              echo "- Na verwerking in TestFlight uitsluitend aan de privé-eigenaargroep toevoegen"
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo "### Gewone Thimaco-build"
-              echo ""
-              echo "- Handmatig opgebouwd"
-              echo "- Buildnummer: ${{ inputs.build_number }}"
-              echo "- ONEVEN buildnummer = normale build"
-              echo "- Financiële kluis niet zichtbaar"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "### Thimaco compacte iPhone-app"
+            echo ""
+            echo "- Entry point: lib/main_iphone.dart"
+            echo "- Alleen normale iPhone-build, geen financiele eigenaarbuild"
+            echo "- Buildnummer: ${{ inputs.build_number }}"
+            echo "- Bestaande bundle-ID: be.thimaco.app"
+            echo "- Deze build vervangt de bestaande TestFlight-variant bij installatie"
+          } >> "$GITHUB_STEP_SUMMARY"

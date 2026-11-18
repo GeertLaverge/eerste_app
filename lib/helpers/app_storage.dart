@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: OPMETING-QUEUE-JSON-PROFIEL-20261105
 // THIMACO-CONTROLE: LOCAL-FIRST-GEEN-SYNC-TIJDENS-WERKEN-20260914
 // THIMACO-CONTROLE: SYNC-PERFORMANCE-ISOLATE-FASE2-20260914
 // THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
@@ -26,6 +27,9 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'opmeting/opmetingen_bestand_opslag_stub.dart'
+    if (dart.library.io) 'opmeting/opmetingen_bestand_opslag_io.dart';
 
 import 'Agenda/agenda_dagtaak_template.dart';
 import 'Agenda/agenda_item.dart';
@@ -221,8 +225,29 @@ class AppStorage {
 
   static const String _opmetingenKey = 'thimaco_opmetingen';
 
+  // Windows bewaart de grote opmeetlijst apart. De migratie is eenmalig,
+  // controleert beide kopieen en laat de oude SharedPreferences-waarde intact
+  // als er iets fout loopt. Andere platformen blijven exact zoals voordien.
+  static Future<void>? _opmetingenMigratie;
+  static bool _opmetingenMigratieMislukt = false;
+
   static Future<SharedPreferences> openBox() async {
-    return SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
+    if (OpmetingenBestandOpslag.actief && !_opmetingenMigratieMislukt) {
+      _opmetingenMigratie ??= OpmetingenBestandOpslag.migreer(
+        prefs,
+        _opmetingenKey,
+      );
+      try {
+        await _opmetingenMigratie;
+      } catch (e) {
+        _opmetingenMigratieMislukt = true;
+        // Bij een fout gebruiken we de originele SharedPreferences-data.
+        // Geen opmetingen wissen of automatisch opnieuw proberen.
+        debugPrint('[THIMACO-OPSLAG] Migratie overgeslagen: $e');
+      }
+    }
+    return prefs;
   }
 
   static Future<void> _syncBackup() async {
@@ -3015,10 +3040,66 @@ class AppStorage {
   // OPMETINGEN - ALGEMENE OPSLAG
   // ------------------------------------------------------------
 
+  // Op Windows veroorzaakt de grote opmeet-JSON anders een volledige rewrite
+  // van alle SharedPreferences bij ELKE agenda- of magazijnwijziging.
+  // Het bestand wordt atomair opgeslagen met een vorige versie als vangnet.
+  static String? _opmetingenCacheBestandVersie;
+
+  static Future<String?> _leesOpmetingenJson(SharedPreferences prefs) async {
+    if (!OpmetingenBestandOpslag.actief) {
+      return prefs.getString(_opmetingenKey);
+    }
+    // Als de eenmalige migratie niet lukte, blijft de originele opslag leidend.
+    final legacy = prefs.getString(_opmetingenKey);
+    if (legacy != null) return legacy;
+
+    final versie = await OpmetingenBestandOpslag.versie();
+    if (versie != null &&
+        _opmetingenCacheJson != null &&
+        _opmetingenCacheBestandVersie == versie) {
+      return _opmetingenCacheJson;
+    }
+    final gelezen = await OpmetingenBestandOpslag.lees();
+    _opmetingenCacheBestandVersie = await OpmetingenBestandOpslag.versie();
+    return gelezen;
+  }
+
+  static Future<void> _bewaarOpmetingenJson(
+    SharedPreferences prefs,
+    String jsonTekst,
+  ) async {
+    if (!OpmetingenBestandOpslag.actief ||
+        prefs.containsKey(_opmetingenKey)) {
+      // Fallback bij een niet-afgeronde migratie of op niet-Windows platforms.
+      await prefs.setString(_opmetingenKey, jsonTekst);
+      return;
+    }
+    await OpmetingenBestandOpslag.schrijf(jsonTekst);
+    _opmetingenCacheBestandVersie = await OpmetingenBestandOpslag.versie();
+  }
+
+  /// Alleen voor de lokale wijzigingsdetectie van de OneDrive-module.
+  /// Op Windows hashen we de kleine bestandsversie, NIET 131 miljoen tekens.
+  static Future<String> opmetingenOpslagVersieVoorSync() async {
+    final prefs = await openBox();
+    if (!OpmetingenBestandOpslag.actief ||
+        prefs.containsKey(_opmetingenKey)) {
+      return prefs.getString(_opmetingenKey) ?? '';
+    }
+    return await OpmetingenBestandOpslag.versie() ?? '';
+  }
+
   // Alle wijzigingen aan de positielijst lopen door exact dezelfde wachtrij.
   // Daardoor kan geen fiche, prijsberekening, kopieeractie of sync nog tussen
   // het lezen en schrijven van een andere opmetingsmutatie terechtkomen.
   static Future<void> _opmetingenWachtrij = Future<void>.value();
+
+  // THIMACO-CONTROLE: OPMETING-GROTE-JSON-CACHE-20261106
+  // 72 MB JSON opnieuw decoderen bij iedere terugkeer is onnodig. De cache
+  // gebruikt exact de inhoud uit SharedPreferences als geldigheidscontrole.
+  // Schrijven en OneDrive-merges verlopen via muteerOpmetingenAtomair.
+  static String? _opmetingenCacheJson;
+  static List<OpmetingOverzichtRaamItem>? _opmetingenCache;
 
   // Houd enkele geladen basisversies bij. Oudere gespecialiseerde fiches geven
   // bij bewaren nog hun oorspronkelijke [gewijzigdOp] mee. Daarmee kan
@@ -3140,6 +3221,24 @@ class AppStorage {
     );
   }
 
+  // Werkt ook als een externe sync de opgeslagen waarde verandert: dan
+  // verschilt de JSON-inhoud en wordt de cache volledig opnieuw opgebouwd.
+  // Elke aanroeper krijgt een eigen lijst, zodat sorteren of verwijderen
+  // nooit rechtstreeks op de cache-lijst gebeurt.
+  static Future<List<OpmetingOverzichtRaamItem>> _laadOpmetingenMetCache(
+    String? jsonString,
+  ) async {
+    final cache = _opmetingenCache;
+    if (cache != null && _opmetingenCacheJson == jsonString) {
+      return List<OpmetingOverzichtRaamItem>.from(cache);
+    }
+
+    final geladen = await _decodeOpmetingenAchtergrond(jsonString);
+    _opmetingenCacheJson = jsonString;
+    _opmetingenCache = List<OpmetingOverzichtRaamItem>.unmodifiable(geladen);
+    return List<OpmetingOverzichtRaamItem>.from(geladen);
+  }
+
   static Future<T> muteerOpmetingenAtomair<T>(
     FutureOr<AppStorageOpmetingMutatieResultaat<T>> Function(
       List<OpmetingOverzichtRaamItem> actueleOpmetingen,
@@ -3151,8 +3250,8 @@ class AppStorage {
     _opmetingenWachtrij = _opmetingenWachtrij.then((_) async {
       try {
         final prefs = await openBox();
-        final actueel = await _decodeOpmetingenAchtergrond(
-          prefs.getString(_opmetingenKey),
+        final actueel = await _laadOpmetingenMetCache(
+          await _leesOpmetingenJson(prefs),
         );
         _onthoudOpmetingMomentopnames(actueel);
 
@@ -3167,7 +3266,11 @@ class AppStorage {
           final gecodeerdeOpmetingen = await _encodeOpmetingenAchtergrond(
             nieuweLijst,
           );
-          await prefs.setString(_opmetingenKey, gecodeerdeOpmetingen);
+          await _bewaarOpmetingenJson(prefs, gecodeerdeOpmetingen);
+          // Pas na een geslaagde persistente opslag verversen we de cache.
+          _opmetingenCacheJson = gecodeerdeOpmetingen;
+          _opmetingenCache =
+              List<OpmetingOverzichtRaamItem>.unmodifiable(nieuweLijst);
           _onthoudOpmetingMomentopnames(nieuweLijst);
 
           if (mutatieResultaat.startSync) {
@@ -3186,13 +3289,26 @@ class AppStorage {
 
   static Future<List<OpmetingOverzichtRaamItem>>
   laadOpmetingenVoorSync() async {
+    final prestatie = Stopwatch()..start();
     // Een lezer krijgt nooit een toestand van vóór een reeds gestarte mutatie.
     await _opmetingenWachtrij;
+    if (kDebugMode) {
+      debugPrint('[THIMACO-OPMETING] opslagwachtrij: '
+          '${prestatie.elapsedMilliseconds} ms');
+    }
 
     final prefs = await openBox();
-    final opmetingen = await _decodeOpmetingenAchtergrond(
-      prefs.getString(_opmetingenKey),
-    );
+    final jsonString = await _leesOpmetingenJson(prefs);
+    final uitCache = _opmetingenCache != null &&
+        _opmetingenCacheJson == jsonString;
+    final startDecoderen = prestatie.elapsedMilliseconds;
+    final opmetingen = await _laadOpmetingenMetCache(jsonString);
+    if (kDebugMode) {
+      debugPrint('[THIMACO-OPMETING] JSON ${uitCache ? 'cache' : 'decode'}: '
+          '${prestatie.elapsedMilliseconds - startDecoderen} ms, '
+          '${jsonString?.length ?? 0} tekens, '
+          '${opmetingen.length} posities');
+    }
     _onthoudOpmetingMomentopnames(opmetingen);
     return opmetingen;
   }

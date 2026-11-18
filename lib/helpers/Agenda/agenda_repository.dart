@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:eerste_app/helpers/app_storage.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_bewerk_service.dart';
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
@@ -14,19 +16,35 @@ class AgendaRepository {
   static Timer? _snelleAgendaSyncTimer;
 
   static Future<Map<String, List<AgendaItem>>> laadItems() async {
-    return AppStorage.laadAgendaItemsNieuw();
+    final prestatie = Stopwatch()..start();
+    try {
+      return await AppStorage.laadAgendaItemsNieuw();
+    } finally {
+      if (kDebugMode) {
+        debugPrint('[THIMACO-METING] agenda/lokaal-laden: '
+            '${prestatie.elapsedMilliseconds} ms');
+      }
+    }
   }
 
   static Future<Map<String, List<AgendaItem>>> bewaarItems(
     Map<String, List<AgendaItem>> itemsPerDag,
   ) async {
-    await AppStorage.bewaarAgendaItemsNieuw(itemsPerDag);
-    _planSnelleAgendaSync();
+    final prestatie = Stopwatch()..start();
+    try {
+      await AppStorage.bewaarAgendaItemsNieuw(itemsPerDag);
+      _planSnelleAgendaSync();
 
-    // AppStorage voert vóór de fysieke save nog een veilige merge uit met
-    // de meest recente lokale agenda. Geef daarom altijd precies de versie
-    // terug die werkelijk is opgeslagen en zichtbaar hoort te zijn.
-    return laadItems();
+      // AppStorage voert vóór de fysieke save nog een veilige merge uit met
+      // de meest recente lokale agenda. Geef daarom altijd precies de versie
+      // terug die werkelijk is opgeslagen en zichtbaar hoort te zijn.
+      return await laadItems();
+    } finally {
+      if (kDebugMode) {
+        debugPrint('[THIMACO-METING] agenda/lokaal-opslaan-plus-herladen: '
+            '${prestatie.elapsedMilliseconds} ms');
+      }
+    }
   }
 
   static void _planSnelleAgendaSync() {

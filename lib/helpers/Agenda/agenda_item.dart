@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: VERLOF-TOONZAAL-OPEN-OPSLAG-20261105
 class AgendaItem {
   const AgendaItem({
     this.id = '',
@@ -30,6 +31,7 @@ class AgendaItem {
     this.homeDatum = '',
     this.heeftOverlap = false,
     this.afspraakSoort = 'algemeen',
+    this.toonzaalTochOpen = false,
     this.bron = 'app',
     this.externId = '',
   });
@@ -85,6 +87,9 @@ class AgendaItem {
   /// `algemeen` = gewone blauwe afspraak.
   /// `showroom` = afspraak in de toonzaal.
   final String afspraakSoort;
+
+  /// Verlof blokkeert de toonzaal, tenzij deze uitzondering actief is.
+  final bool toonzaalTochOpen;
 
   /// Herkomst van het agenda-item.
   /// Handmatige/bestaande items gebruiken `app`.
@@ -178,6 +183,7 @@ class AgendaItem {
     String? homeDatum,
     bool? heeftOverlap,
     String? afspraakSoort,
+    bool? toonzaalTochOpen,
     String? bron,
     String? externId,
   }) {
@@ -220,6 +226,7 @@ class AgendaItem {
       homeDatum: homeDatum ?? this.homeDatum,
       heeftOverlap: heeftOverlap ?? this.heeftOverlap,
       afspraakSoort: afspraakSoort ?? this.afspraakSoort,
+      toonzaalTochOpen: toonzaalTochOpen ?? this.toonzaalTochOpen,
       bron: bron ?? this.bron,
       externId: externId ?? this.externId,
     );
@@ -286,6 +293,7 @@ class AgendaItem {
       'homeDatum': homeDatum,
       'heeftOverlap': heeftOverlap,
       'afspraakSoort': afspraakSoort,
+      'toonzaalTochOpen': toonzaalTochOpen,
       'bron': bron,
       'externId': externId,
     };
@@ -373,6 +381,7 @@ class AgendaItem {
         const <String>['afspraakSoort', 'appointmentType'],
         standaardWaarde: 'algemeen',
       ),
+      toonzaalTochOpen: _leesBool(json['toonzaalTochOpen']),
       bron: _leesTekst(
         json,
         const <String>['bron', 'source'],

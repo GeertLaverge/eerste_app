@@ -29,9 +29,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'onedrive_auth_service.dart';
 
-import '/helpers/Agenda/agenda_item.dart';
-import '/helpers/klanten/fiche/klantenfiche_model.dart';
-import '/helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
+import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
+import 'package:eerste_app/helpers/klanten/fiche/klantenfiche_model.dart';
+import 'package:eerste_app/helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'sync_merge_service.dart';
 import '../app_storage.dart';
 
@@ -1483,6 +1483,7 @@ class OneDriveSyncService {
         'leveranciers': <dynamic>[],
         'artikelen': <dynamic>[],
         'mutaties': <dynamic>[],
+        'bestellingen': <dynamic>[],
         'eenheden': <String>['stuk', 'doos', 'koker', 'rol', 'meter'],
       });
     }
@@ -1512,6 +1513,13 @@ class OneDriveSyncService {
           return (tweedeDatum ?? DateTime.fromMillisecondsSinceEpoch(0))
               .compareTo(eersteDatum ?? DateTime.fromMillisecondsSinceEpoch(0));
         });
+
+    // Besteld / onderweg is een echte centrale tabel en mag bij sync
+    // niet worden weggelaten. Oude bestanden zonder deze sleutel blijven geldig.
+    final bestellingen = mergeRecords(
+      lokaal: leesRecords(lokaal, 'bestellingen'),
+      cloud: leesRecords(cloud, 'bestellingen'),
+    );
 
     final eenheden = <String>{};
 
@@ -1543,6 +1551,7 @@ class OneDriveSyncService {
       'leveranciers': leveranciers,
       'artikelen': artikelen,
       'mutaties': mutaties.take(2000).toList(growable: false),
+      'bestellingen': bestellingen,
       'eenheden': gesorteerdeEenheden,
     });
   }
@@ -2479,10 +2488,10 @@ class OneDriveSyncService {
     return hash.toRadixString(16).padLeft(16, '0');
   }
 
-  String _moduleBronString({
+  Future<String> _moduleBronString({
     required String module,
     required SharedPreferences prefs,
-  }) {
+  }) async {
     String waarde(String key) => prefs.getString(key) ?? '';
 
     switch (module) {
@@ -2503,7 +2512,7 @@ class OneDriveSyncService {
         ].join('\u001f');
       case 'opmetingen':
         return <String>[
-          waarde('thimaco_opmetingen'),
+          await AppStorage.opmetingenOpslagVersieVoorSync(),
           waarde('thimaco_opmeting_project_titelhoofden'),
         ].join('\u001f');
       case 'magazijn':
@@ -2513,11 +2522,11 @@ class OneDriveSyncService {
     }
   }
 
-  String _lokaleModuleHash({
+  Future<String> _lokaleModuleHash({
     required String module,
     required SharedPreferences prefs,
-  }) {
-    return _stabieleHash(_moduleBronString(module: module, prefs: prefs));
+  }) async {
+    return _stabieleHash(await _moduleBronString(module: module, prefs: prefs));
   }
 
   Future<_OneDriveModuleInfo> _moduleInfoMetToken({
@@ -2606,6 +2615,7 @@ class OneDriveSyncService {
     required String token,
     required String module,
     required Map<String, dynamic> data,
+    String? verwachteEtag,
   }) async {
     final bestand = Uri.encodeComponent(_moduleBestandsnaam(module));
     final url =
@@ -2617,6 +2627,10 @@ class OneDriveSyncService {
       headers: {
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
+        // Alleen bij opmetingen op Windows: geen wijzigingen van een ander
+        // toestel overschrijven tussen de ETag-controle en de upload.
+        if (verwachteEtag != null && verwachteEtag.isNotEmpty)
+          'If-Match': verwachteEtag,
       },
       body: inhoud,
     );
@@ -2644,11 +2658,25 @@ class OneDriveSyncService {
     required SharedPreferences prefs,
     required String module,
   }) async {
-    final huidigeHash = _lokaleModuleHash(module: module, prefs: prefs);
+    // Extra meting alleen in debug, zonder klantinhoud of tokens te loggen.
+    // Alle tijden zijn cumulatief vanaf de start van deze module.
+    final opmetingMeting = module == 'opmetingen' && kDebugMode
+        ? (Stopwatch()..start())
+        : null;
+    void meetOpmeting(String stap) {
+      if (opmetingMeting != null) {
+        debugPrint('[THIMACO-METING] opmetingen-sync/$stap: '
+            '${opmetingMeting.elapsedMilliseconds} ms');
+      }
+    }
+
+    final huidigeHash = await _lokaleModuleHash(module: module, prefs: prefs);
+    meetOpmeting('lokale-hash');
     final bewaardeHash = prefs.getString(_moduleHashKey(module)) ?? '';
     final lokaalGewijzigd = bewaardeHash.isEmpty || bewaardeHash != huidigeHash;
 
     final remoteInfo = await _moduleInfoMetToken(token: token, module: module);
+    meetOpmeting('remote-info');
     if (remoteInfo.fout) {
       return _ModuleSyncUitkomst(
         gelukt: false,
@@ -2662,7 +2690,24 @@ class OneDriveSyncService {
         remoteInfo.gevonden &&
         (bewaardeEtag.isEmpty || remoteInfo.etag != bewaardeEtag);
 
+    // FASE 2E: bij een bekende, ongewijzigde OneDrive-versie is de lokale
+    // opmeetlijst al de laatst gesynchroniseerde basis plus eigen wijzigingen.
+    // Download/merge zijn dan onnodig. Dit pad is bewust alleen voor Windows,
+    // met een opgeslagen ETag EN een opgeslagen lokale hash.
+    final opmetingenAlleenLokaal = module == 'opmetingen' &&
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.windows &&
+        lokaalGewijzigd && !remoteGewijzigd && remoteInfo.gevonden &&
+        bewaardeHash.isNotEmpty && bewaardeEtag.isNotEmpty &&
+        remoteInfo.etag.isNotEmpty;
+
+    if (opmetingMeting != null) {
+      debugPrint('[THIMACO-METING] opmetingen-sync/status: '
+          'lokaalGewijzigd=$lokaalGewijzigd '
+          'remoteGewijzigd=$remoteGewijzigd '
+          'remoteGevonden=${remoteInfo.gevonden}');
+    }
     if (!lokaalGewijzigd && !remoteGewijzigd && remoteInfo.gevonden) {
+      meetOpmeting('ongewijzigd');
       return const _ModuleSyncUitkomst(
         gelukt: true,
         remoteToegepast: false,
@@ -2671,8 +2716,15 @@ class OneDriveSyncService {
     }
 
     Map<String, dynamic> cloudData = <String, dynamic>{};
-    if (remoteInfo.gevonden && (lokaalGewijzigd || remoteGewijzigd)) {
+    if (remoteInfo.gevonden &&
+        (lokaalGewijzigd || remoteGewijzigd) &&
+        !opmetingenAlleenLokaal) {
       cloudData = await _downloadModuleData(token: token, module: module);
+    }
+    if (opmetingenAlleenLokaal) {
+      meetOpmeting('download-overgeslagen-etag-ongewijzigd');
+    } else {
+      meetOpmeting('download');
     }
 
     final remoteToegepast = remoteInfo.gevonden && remoteGewijzigd;
@@ -2702,10 +2754,12 @@ class OneDriveSyncService {
         );
         break;
       case 'opmetingen':
-        mergedData = await _mergeOpmetingenModule(
-          cloudData: cloudData,
-          moduleDatum: nu,
-        );
+        mergedData = opmetingenAlleenLokaal
+            ? await _bouwLokaleOpmetingenModule(moduleDatum: nu)
+            : await _mergeOpmetingenModule(
+                cloudData: cloudData,
+                moduleDatum: nu,
+              );
         break;
       case 'magazijn':
         mergedData = await _mergeMagazijnModule(
@@ -2722,6 +2776,22 @@ class OneDriveSyncService {
           melding: 'module overgeslagen',
         );
     }
+    meetOpmeting(opmetingenAlleenLokaal
+        ? 'lokale-payload-zonder-merge'
+        : 'merge-en-lokale-opslag');
+
+    // Tijdens het opbouwen van de grote payload kan iemand verder werken.
+    // Als de lokale versie intussen veranderde, NIET de oude snapshot uploaden.
+    // De volgende achtergrondronde pakt de recentste gegevens op.
+    if (opmetingenAlleenLokaal &&
+        await _lokaleModuleHash(module: module, prefs: prefs) != huidigeHash) {
+      meetOpmeting('lokale-wijziging-tijdens-opbouw-herprobeer');
+      return const _ModuleSyncUitkomst(
+        gelukt: false,
+        remoteToegepast: false,
+        melding: 'OPMETINGEN_LOKAAL_GEWIJZIGD_TIJDENS_OPBOUW; volgende sync opnieuw',
+      );
+    }
 
     String nieuweEtag = remoteInfo.etag;
 
@@ -2733,6 +2803,13 @@ class OneDriveSyncService {
         token: token,
         module: module,
         data: mergedData,
+        // Bij een ETag-race geeft OneDrive 412: de volgende sync moet dan
+        // opnieuw downloaden/mergen, zonder de andere PC te overschrijven.
+        verwachteEtag: module == 'opmetingen' && !kIsWeb &&
+                defaultTargetPlatform == TargetPlatform.windows &&
+                remoteInfo.gevonden && remoteInfo.etag.isNotEmpty
+            ? remoteInfo.etag
+            : null,
       );
 
       if (nieuweEtag.isEmpty) {
@@ -2746,12 +2823,19 @@ class OneDriveSyncService {
       }
     }
 
-    final nieuweHash = _lokaleModuleHash(module: module, prefs: prefs);
+    meetOpmeting('upload');
+    // Op het snelle pad bewaren we de hash van de GEUPLOADDE snapshot, niet
+    // van een wijziging die eventueel tijdens de upload gemaakt werd.
+    // Zo blijft die latere wijziging openstaan voor de volgende sync.
+    final nieuweHash = opmetingenAlleenLokaal
+        ? huidigeHash
+        : await _lokaleModuleHash(module: module, prefs: prefs);
     await prefs.setString(_moduleHashKey(module), nieuweHash);
 
     if (nieuweEtag.isNotEmpty) {
       await prefs.setString(_moduleEtagKey(module), nieuweEtag);
     }
+    meetOpmeting('gereed');
 
     return _ModuleSyncUitkomst(
       gelukt: true,
@@ -2899,6 +2983,24 @@ class OneDriveSyncService {
     };
   }
 
+  /// FASE 2E: alleen gebruikt wanneer de bekende remote ETag ongewijzigd is.
+  /// Geen download en geen herschrijven van het lokale opmeetbestand.
+  Future<Map<String, dynamic>> _bouwLokaleOpmetingenModule({
+    required String moduleDatum,
+  }) async {
+    final lokaal = await AppStorage.laadOpmetingenVoorSync();
+    final titelhoofden =
+        await AppStorage.laadOpmetingProjectTitelhoofdenVoorSync();
+    return <String, dynamic>{
+      'schema': 1,
+      'module': 'opmetingen',
+      'moduleDatum': moduleDatum,
+      'opmetingen': await _encodeOpmetingenAchtergrond(lokaal),
+      'opmetingProjectTitelhoofden':
+          AppStorage.encodeOpmetingProjectTitelhoofdenVoorSync(titelhoofden),
+    };
+  }
+
   Future<Map<String, dynamic>> _mergeOpmetingenModule({
     required Map<String, dynamic> cloudData,
     required String moduleDatum,
@@ -2997,6 +3099,7 @@ class OneDriveSyncService {
   /// kan de Agenda tijdens gebruik frequent controleren zonder de zware
   /// algemene synchronisatie te starten.
   Future<String> syncAgendaSnel() {
+    final prestatie = Stopwatch()..start();
     return _voerSyncGeserialiseerdUit(() async {
       final token = await OneDriveAuthService().tokenSilent();
       if (token.startsWith('FOUT')) {
@@ -3030,6 +3133,11 @@ class OneDriveSyncService {
         laatsteSyncActie = 'Snelle agenda-sync fout: $e';
         return 'SYNC_AGENDA_EXCEPTION: $e';
       }
+    }).whenComplete(() {
+      if (kDebugMode) {
+        debugPrint('[THIMACO-METING] sync-agenda-snel: '
+            '${prestatie.elapsedMilliseconds} ms');
+      }
     });
   }
 
@@ -3056,6 +3164,7 @@ class OneDriveSyncService {
       // Overgangsbeveiliging: zolang een oudere iPad/pc nog alleen de volledige
       // backup schrijft, halen we die uitsluitend binnen wanneer de ETag echt
       // veranderd is. Daarna worden de operationele modules weer bijgewerkt.
+      final legacyMeting = Stopwatch()..start();
       try {
         remoteToegepast = await _pasLegacyBackupToeIndienGewijzigd(
           token: token,
@@ -3063,9 +3172,15 @@ class OneDriveSyncService {
         );
       } catch (e) {
         fouten.add('legacy: $e');
+      } finally {
+        if (kDebugMode) {
+          debugPrint('[THIMACO-METING] sync-module/legacy: '
+              '${legacyMeting.elapsedMilliseconds} ms');
+        }
       }
 
       for (final module in _deltaModules) {
+        final moduleMeting = Stopwatch()..start();
         try {
           final uitkomst = await _syncEenModule(
             token: token,
@@ -3083,6 +3198,11 @@ class OneDriveSyncService {
           await _geefUiTijd();
         } catch (e) {
           fouten.add('$module: $e');
+        } finally {
+          if (kDebugMode) {
+            debugPrint('[THIMACO-METING] sync-module/$module: '
+                '${moduleMeting.elapsedMilliseconds} ms');
+          }
         }
       }
 

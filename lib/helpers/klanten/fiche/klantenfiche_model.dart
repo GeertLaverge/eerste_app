@@ -178,11 +178,14 @@ class KlantenficheModel {
   final String updatedAt;
   final String deletedAt;
 
+  final String aanspreking;
   final String naam;
   final String klantNr;
+  final String contactpersoon;
 
   final String straatnaam;
   final String huisNr;
+  final String busNr;
   final String gemeente;
   final String postcode;
 
@@ -220,9 +223,12 @@ class KlantenficheModel {
   KlantenficheModel({
     required this.id,
     required this.naam,
+    this.aanspreking = '',
     this.klantNr = '',
+    this.contactpersoon = '',
     this.straatnaam = '',
     this.huisNr = '',
+    this.busNr = '',
     this.gemeente = '',
     this.postcode = '',
     this.gsm = '',
@@ -259,10 +265,13 @@ class KlantenficheModel {
       'id': id,
       'updatedAt': updatedAt,
       'deletedAt': deletedAt,
+      'aanspreking': aanspreking,
       'naam': naam,
       'klantNr': klantNr,
+      'contactpersoon': contactpersoon,
       'straatnaam': straatnaam,
       'huisNr': huisNr,
+      'busNr': busNr,
       'gemeente': gemeente,
       'postcode': postcode,
       'gsm': gsm,
@@ -296,10 +305,21 @@ class KlantenficheModel {
   factory KlantenficheModel.fromJson(Map<String, dynamic> json) {
     return KlantenficheModel(
       id: json['id'] ?? '',
+      aanspreking:
+          json['aanspreking']?.toString() ??
+          json['aanhef']?.toString() ??
+          json['salutation']?.toString() ??
+          '',
       naam: json['naam'] ?? '',
       klantNr: json['klantNr'] ?? '',
+      contactpersoon: json['contactpersoon']?.toString() ?? '',
       straatnaam: json['straatnaam'] ?? '',
       huisNr: json['huisNr'] ?? '',
+      busNr:
+          json['busNr']?.toString() ??
+          json['busNummer']?.toString() ??
+          json['busnummer']?.toString() ??
+          '',
       gemeente: json['gemeente'] ?? '',
       postcode: json['postcode'] ?? '',
       gsm: json['gsm'] ?? '',

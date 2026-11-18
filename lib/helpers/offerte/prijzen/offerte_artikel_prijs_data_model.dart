@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-KOPPELEN-PRIJS-PER-POSITIE-20261024
 // THIMACO-BESTAND-VERSIE: 2026-08-18 14:46
 // THIMACO-CONTROLE: PRIJS-EENHEID-2-STER-H-NORMALISEREN-20260818-1446
 // THIMACO-CONTROLE: ANALYZERFIX-ROND-HOEVEELHEID-PRIJS-PER-POSITIE-20260815
@@ -98,6 +99,8 @@ class OffertePrijsPerPositieRegelModel {
     this.eenheidsPrijsExclBtw = 0,
     double winstPercentage = 0,
     this.offerteWeergave = OffertePrijsPerPositieWeergave.uit,
+    this.technischeKoppelingSleutel = '',
+    this.technischeKoppelNummer = 0,
   }) : winstPercentage = type == OffertePrijsPerPositieType.verkoop
            ? 0
            : winstPercentage;
@@ -110,6 +113,12 @@ class OffertePrijsPerPositieRegelModel {
   final double eenheidsPrijsExclBtw;
   final double winstPercentage;
   final OffertePrijsPerPositieWeergave offerteWeergave;
+  final String technischeKoppelingSleutel;
+  final int technischeKoppelNummer;
+
+  bool get isTechnischGekoppeld =>
+      technischeKoppelingSleutel.trim().isNotEmpty &&
+      technischeKoppelNummer > 0;
 
   bool get isAankoop => type.isAankoop;
   bool get isVerkoop => type.isVerkoop;
@@ -158,6 +167,7 @@ class OffertePrijsPerPositieRegelModel {
     final factor = switch (sleutel) {
       '1xb' => breedteMeter,
       '1xh' => hoogteMeter,
+      '1xhen1xb' => hoogteMeter + breedteMeter,
       '2xb' => 2.0 * breedteMeter,
       '2xh' => 2.0 * hoogteMeter,
       '2xhen1xb' => (2.0 * hoogteMeter) + breedteMeter,
@@ -236,6 +246,8 @@ class OffertePrijsPerPositieRegelModel {
     double? eenheidsPrijsExclBtw,
     double? winstPercentage,
     OffertePrijsPerPositieWeergave? offerteWeergave,
+    String? technischeKoppelingSleutel,
+    int? technischeKoppelNummer,
   }) {
     final nieuwType = type ?? this.type;
     final nieuweWinst = nieuwType.isVerkoop
@@ -251,11 +263,19 @@ class OffertePrijsPerPositieRegelModel {
       eenheidsPrijsExclBtw: eenheidsPrijsExclBtw ?? this.eenheidsPrijsExclBtw,
       winstPercentage: nieuweWinst,
       offerteWeergave: offerteWeergave ?? this.offerteWeergave,
+      technischeKoppelingSleutel:
+          technischeKoppelingSleutel ?? this.technischeKoppelingSleutel,
+      technischeKoppelNummer:
+          technischeKoppelNummer ?? this.technischeKoppelNummer,
     );
   }
 
   OffertePrijsPerPositieRegelModel kopieMetNieuwId(String nieuwId) {
-    return copyWith(id: nieuwId);
+    return copyWith(
+      id: nieuwId,
+      technischeKoppelingSleutel: '',
+      technischeKoppelNummer: 0,
+    );
   }
 
   Map<String, dynamic> toJson() {
@@ -268,6 +288,10 @@ class OffertePrijsPerPositieRegelModel {
       'eenheidsPrijsExclBtw': veiligeEenheidsPrijsExclBtw,
       'winstPercentage': veiligWinstPercentage,
       'offerteWeergave': offerteWeergave.jsonWaarde,
+      if (technischeKoppelingSleutel.trim().isNotEmpty)
+        'technischeKoppelingSleutel': technischeKoppelingSleutel.trim(),
+      if (technischeKoppelNummer > 0)
+        'technischeKoppelNummer': technischeKoppelNummer,
     };
   }
 
@@ -287,7 +311,21 @@ class OffertePrijsPerPositieRegelModel {
       offerteWeergave: OffertePrijsPerPositieWeergave.fromJson(
         json['offerteWeergave'],
       ),
+      technischeKoppelingSleutel:
+          json['technischeKoppelingSleutel']?.toString().trim() ?? '',
+      technischeKoppelNummer:
+          _leesRegelInt(json['technischeKoppelNummer']),
     );
+  }
+
+  static int _leesRegelInt(Object? waarde) {
+    if (waarde is int) return waarde > 0 ? waarde : 0;
+    if (waarde is num) {
+      final getal = waarde.toInt();
+      return getal > 0 ? getal : 0;
+    }
+    final gelezen = int.tryParse(waarde?.toString().trim() ?? '');
+    return gelezen != null && gelezen > 0 ? gelezen : 0;
   }
 
   static String _leesRegelEenheid(Object? waarde) {
@@ -357,6 +395,7 @@ class OfferteArtikelPrijsDataModel {
         const <OfferteToegepastePrijsregelModel>[],
     this.technischePrijsSignatuur = '',
     this.prijsPerPositieRegels = const <OffertePrijsPerPositieRegelModel>[],
+    this.leveranciersKortingPercentage = 0,
     this.artikelKortingPercentage = 0,
     this.artikelWinstmargePercentage = 0,
   });
@@ -368,11 +407,14 @@ class OfferteArtikelPrijsDataModel {
   /// Lokale prijsregels die uitsluitend bij deze offertepositie horen.
   final List<OffertePrijsPerPositieRegelModel> prijsPerPositieRegels;
 
+  /// Korting die Thimaco van de leverancier krijgt op de basisprijs.
+  final double leveranciersKortingPercentage;
   final double artikelKortingPercentage;
   final double artikelWinstmargePercentage;
 
   bool get heeftPrijsPerStuk => prijsPerStukExclBtw > 0.0;
   bool get heeftPrijsPerPositieRegels => prijsPerPositieRegels.isNotEmpty;
+  bool get heeftLeveranciersKorting => leveranciersKortingPercentage > 0.0;
   bool get heeftArtikelKorting => artikelKortingPercentage > 0.0;
   bool get heeftArtikelWinstmarge => artikelWinstmargePercentage > 0.0;
 
@@ -389,6 +431,7 @@ class OfferteArtikelPrijsDataModel {
         toegepasteTechnischePrijsregels.isEmpty &&
         technischePrijsSignatuur.isEmpty &&
         prijsPerPositieRegels.isEmpty &&
+        leveranciersKortingPercentage <= 0.0 &&
         artikelKortingPercentage <= 0.0 &&
         artikelWinstmargePercentage <= 0.0;
   }
@@ -398,6 +441,7 @@ class OfferteArtikelPrijsDataModel {
     List<OfferteToegepastePrijsregelModel>? toegepasteTechnischePrijsregels,
     String? technischePrijsSignatuur,
     List<OffertePrijsPerPositieRegelModel>? prijsPerPositieRegels,
+    double? leveranciersKortingPercentage,
     double? artikelKortingPercentage,
     double? artikelWinstmargePercentage,
   }) {
@@ -410,6 +454,8 @@ class OfferteArtikelPrijsDataModel {
           technischePrijsSignatuur ?? this.technischePrijsSignatuur,
       prijsPerPositieRegels:
           prijsPerPositieRegels ?? this.prijsPerPositieRegels,
+      leveranciersKortingPercentage:
+          leveranciersKortingPercentage ?? this.leveranciersKortingPercentage,
       artikelKortingPercentage:
           artikelKortingPercentage ?? this.artikelKortingPercentage,
       artikelWinstmargePercentage:
@@ -427,6 +473,7 @@ class OfferteArtikelPrijsDataModel {
       'prijsPerPositieRegels': prijsPerPositieRegels
           .map((regel) => regel.toJson())
           .toList(),
+      'leveranciersKortingPercentage': leveranciersKortingPercentage,
       'artikelKortingPercentage': artikelKortingPercentage,
       'artikelWinstmargePercentage': artikelWinstmargePercentage,
     };
@@ -444,6 +491,9 @@ class OfferteArtikelPrijsDataModel {
       prijsPerPositieRegels: _leesLijst(
         json['prijsPerPositieRegels'],
         OffertePrijsPerPositieRegelModel.fromJson,
+      ),
+      leveranciersKortingPercentage: _leesDouble(
+        json['leveranciersKortingPercentage'],
       ),
       artikelKortingPercentage: _leesDouble(json['artikelKortingPercentage']),
       artikelWinstmargePercentage: _leesDouble(

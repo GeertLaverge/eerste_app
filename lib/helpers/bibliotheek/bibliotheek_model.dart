@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: BIBLIOTHEEK-PLAATSERS-MARKERING-20261108
 // THIMACO-CONTROLE: ALGEMENE-BIBLIOTHEEK-MODEL-20260802
 
 class BibliotheekData {
@@ -181,6 +182,7 @@ class BibliotheekFolder {
     required this.klanten,
     this.formulierKoppelingen = const <BibliotheekFormulierKoppeling>[],
     required this.gewijzigdOp,
+    this.voorPlaatsers = false,
   });
 
   final String id;
@@ -192,6 +194,8 @@ class BibliotheekFolder {
   final List<BibliotheekKlantKoppeling> klanten;
   final List<BibliotheekFormulierKoppeling> formulierKoppelingen;
   final String gewijzigdOp;
+  /// Alleen selectie voor latere bibliotheek in de plaatsers-app.
+  final bool voorPlaatsers;
 
   bool get heeftPdf => onedriveItemId.trim().isNotEmpty;
 
@@ -205,6 +209,7 @@ class BibliotheekFolder {
     List<BibliotheekKlantKoppeling>? klanten,
     List<BibliotheekFormulierKoppeling>? formulierKoppelingen,
     String? gewijzigdOp,
+    bool? voorPlaatsers,
   }) {
     return BibliotheekFolder(
       id: id ?? this.id,
@@ -220,6 +225,7 @@ class BibliotheekFolder {
         formulierKoppelingen ?? this.formulierKoppelingen,
       ),
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
+      voorPlaatsers: voorPlaatsers ?? this.voorPlaatsers,
     );
   }
 
@@ -231,6 +237,7 @@ class BibliotheekFolder {
     String? webUrl,
     List<BibliotheekKlantKoppeling>? klanten,
     List<BibliotheekFormulierKoppeling>? formulierKoppelingen,
+    bool? voorPlaatsers,
   }) {
     return copyWith(
       naam: naam,
@@ -240,6 +247,7 @@ class BibliotheekFolder {
       webUrl: webUrl,
       klanten: klanten,
       formulierKoppelingen: formulierKoppelingen,
+      voorPlaatsers: voorPlaatsers,
       gewijzigdOp: DateTime.now().toUtc().toIso8601String(),
     );
   }
@@ -257,6 +265,7 @@ class BibliotheekFolder {
           .map((koppeling) => koppeling.toJson())
           .toList(growable: false),
       'gewijzigdOp': gewijzigdOp,
+      'voorPlaatsers': voorPlaatsers,
     };
   }
 
@@ -294,6 +303,7 @@ class BibliotheekFolder {
                 .toList(growable: false)
           : const <BibliotheekFormulierKoppeling>[],
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
+      voorPlaatsers: json['voorPlaatsers'] == true,
     );
   }
 }

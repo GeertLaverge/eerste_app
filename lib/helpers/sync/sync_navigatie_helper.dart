@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../homepagina/home_werkbladen_scope.dart';
 import 'onedrive_auth_service.dart';
 import 'onedrive_sync_service.dart';
 
@@ -103,13 +104,28 @@ class SyncNavigatieHelper {
       return Future<void>.value();
     }
 
+    final werkblad = ThimacoWerkbladenScope.maybeOf(context);
+    if (werkblad != null) {
+      return werkblad.naarDashboard();
+    }
+
     unawaited(
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil<void>('/', (route) => false),
+      Navigator.of(context).pushNamedAndRemoveUntil<void>('/', (route) => false),
     );
 
     return Future<void>.value();
+  }
+
+  /// Terugknop voor modules die zowel los als in een werkblad kunnen draaien.
+  static Future<void> terugOfDashboard({required BuildContext context}) async {
+    if (!context.mounted) return;
+    final werkblad = ThimacoWerkbladenScope.maybeOf(context);
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      await navigator.maybePop();
+    } else if (werkblad != null) {
+      await werkblad.naarDashboard();
+    }
   }
 
   /// Opent de gekozen pagina onmiddellijk.

@@ -2,6 +2,8 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../sync/onedrive_sync_service.dart';
@@ -29,10 +31,18 @@ class MagazijnRepository {
   }
 
   Future<void> bewaar(MagazijnData data) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(opslagKey, jsonEncode(data.toJson()));
-    await OneDriveSyncService.registreerLokaleWijziging();
-    OneDriveSyncService().uploadBackupOpAchtergrond();
+    final prestatie = Stopwatch()..start();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(opslagKey, jsonEncode(data.toJson()));
+      await OneDriveSyncService.registreerLokaleWijziging();
+      OneDriveSyncService().uploadBackupOpAchtergrond();
+    } finally {
+      if (kDebugMode) {
+        debugPrint('[THIMACO-METING] magazijn/lokaal-opslaan: '
+            '${prestatie.elapsedMilliseconds} ms');
+      }
+    }
   }
 
   Future<MagazijnData> wijzigVoorraad({

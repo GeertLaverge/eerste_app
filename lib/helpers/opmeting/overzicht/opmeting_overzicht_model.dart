@@ -1,3 +1,4 @@
+// THIMACO-CONTROLE: TECHNISCHE-REGELS-VERSLEEPBAAR-OVERZICHT-20261027
 // THIMACO-CONTROLE: PROJECTBESTAND-ID-IN-POSITIES-FASE1-20260912
 // THIMACO-CONTROLE: TABLET-BINNEN-BUITEN-JSON-OPSLAG-20260812
 // THIMACO-CONTROLE: BUITENJALOEZIE-OVERZICHT-LABEL-FASE-4-20260803
@@ -12,6 +13,7 @@
 import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
 import '../algemene_opmeting/opmeting_algemene_opmeting_model.dart';
 import '../deurpanelen/opmeting_deurpaneel_toewijzing_model.dart';
+import '../raam/opmeting_deur_center_model.dart';
 import '../fotos/opmeting_foto_model.dart';
 import '../kader_samenstelling/opmeting_kader_samenstelling_model.dart';
 import '../raam/opmeting_raam_kleinhout_model.dart';
@@ -119,6 +121,7 @@ class OpmetingOverzichtTekeningData {
         const <String, List<OpmetingRaamTechnischeTekeningInstelling>>{},
     this.technischeKaderGroepen = const <String, Set<String>>{},
     this.schuifraamSamenstelling,
+    this.deurCenter,
   });
 
   final double tekenvlakBreedtePx;
@@ -151,6 +154,7 @@ class OpmetingOverzichtTekeningData {
   technischeTekeningenPerKaderGroep;
   final Map<String, Set<String>> technischeKaderGroepen;
   final OpmetingSchuifraamSamenstelling? schuifraamSamenstelling;
+  final OpmetingDeurCenter? deurCenter;
 
   factory OpmetingOverzichtTekeningData.leeg() {
     return const OpmetingOverzichtTekeningData();
@@ -178,6 +182,8 @@ class OpmetingOverzichtTekeningData {
     Map<String, Set<String>>? technischeKaderGroepen,
     OpmetingSchuifraamSamenstelling? schuifraamSamenstelling,
     bool wisSchuifraamSamenstelling = false,
+    OpmetingDeurCenter? deurCenter,
+    bool wisDeurCenter = false,
   }) {
     return OpmetingOverzichtTekeningData(
       tekenvlakBreedtePx: tekenvlakBreedtePx ?? this.tekenvlakBreedtePx,
@@ -204,6 +210,7 @@ class OpmetingOverzichtTekeningData {
       schuifraamSamenstelling: wisSchuifraamSamenstelling
           ? null
           : schuifraamSamenstelling ?? this.schuifraamSamenstelling,
+      deurCenter: wisDeurCenter ? null : deurCenter ?? this.deurCenter,
     );
   }
 
@@ -226,6 +233,7 @@ class OpmetingOverzichtTekeningData {
       technischeTekeningenPerKaderGroep,
       technischeKaderGroepen,
       schuifraamSamenstelling?.toJson(),
+      deurCenter?.toJson(),
     ].join('|');
   }
 
@@ -276,6 +284,7 @@ class OpmetingOverzichtTekeningData {
       }),
       if (schuifraamSamenstelling != null)
         'schuifraamSamenstelling': schuifraamSamenstelling!.toJson(),
+      if (deurCenter != null) 'deurCenter': deurCenter!.toJson(),
     };
   }
 
@@ -330,6 +339,10 @@ class OpmetingOverzichtTekeningData {
       schuifraamSamenstelling: _leesSchuifraamSamenstelling(
         json['schuifraamSamenstelling'],
       ),
+      deurCenter: json['deurCenter'] is Map
+          ? OpmetingDeurCenter.fromJson(
+              Map<String, dynamic>.from(json['deurCenter'] as Map))
+          : null,
     );
   }
 }
@@ -361,6 +374,8 @@ class OpmetingOverzichtRaamItem {
     required this.titel,
     required this.klantNaam,
     this.projectBestandId = '',
+    this.positie = '',
+    this.uWaardeWm2K = 0,
     required this.dagmaatBreedteMm,
     required this.dagmaatHoogteMm,
     required this.raammaatBreedteMm,
@@ -378,6 +393,7 @@ class OpmetingOverzichtRaamItem {
     this.gekopieerdVanPositieId = '',
     this.tekeningData = const OpmetingOverzichtTekeningData(),
     this.technischeRegels = const <OpmetingOverzichtTechnischeRegel>[],
+    this.technischeRegelVolgorde = const <String>[],
     this.technischeContainers = const <OpmetingOverzichtTechnischeContainer>[],
     this.keuzeSelectiesPerKader =
         const <String, Map<String, OpmetingRaamKeuzeSelectie>>{},
@@ -402,6 +418,8 @@ class OpmetingOverzichtRaamItem {
   final String titel;
   final String klantNaam;
   final String projectBestandId;
+  final String positie;
+  final double uWaardeWm2K;
   final String formulierType;
   final String gewijzigdOp;
   final bool isVerwijderd;
@@ -443,6 +461,7 @@ class OpmetingOverzichtRaamItem {
   final OpmetingKaderSamenstelling kaderSamenstelling;
   final OpmetingOverzichtTekeningData tekeningData;
   final List<OpmetingOverzichtTechnischeRegel> technischeRegels;
+  final List<String> technischeRegelVolgorde;
   final List<OpmetingOverzichtTechnischeContainer> technischeContainers;
   final Map<String, Map<String, OpmetingRaamKeuzeSelectie>>
   keuzeSelectiesPerKader;
@@ -645,6 +664,8 @@ class OpmetingOverzichtRaamItem {
     String? titel,
     String? klantNaam,
     String? projectBestandId,
+    String? positie,
+    double? uWaardeWm2K,
     String? formulierType,
     String? gewijzigdOp,
     bool? isVerwijderd,
@@ -662,6 +683,7 @@ class OpmetingOverzichtRaamItem {
     OpmetingKaderSamenstelling? kaderSamenstelling,
     OpmetingOverzichtTekeningData? tekeningData,
     List<OpmetingOverzichtTechnischeRegel>? technischeRegels,
+    List<String>? technischeRegelVolgorde,
     List<OpmetingOverzichtTechnischeContainer>? technischeContainers,
     Map<String, Map<String, OpmetingRaamKeuzeSelectie>>? keuzeSelectiesPerKader,
     List<OpmetingDeurpaneelToewijzing>? deurpaneelToewijzingen,
@@ -685,6 +707,8 @@ class OpmetingOverzichtRaamItem {
       titel: titel ?? this.titel,
       klantNaam: klantNaam ?? this.klantNaam,
       projectBestandId: projectBestandId ?? this.projectBestandId,
+      positie: positie ?? this.positie,
+      uWaardeWm2K: uWaardeWm2K ?? this.uWaardeWm2K,
       formulierType: formulierType ?? this.formulierType,
       gewijzigdOp: gewijzigdOp ?? this.gewijzigdOp,
       isVerwijderd: isVerwijderd ?? this.isVerwijderd,
@@ -705,6 +729,8 @@ class OpmetingOverzichtRaamItem {
       kaderSamenstelling: kaderSamenstelling ?? this.kaderSamenstelling,
       tekeningData: tekeningData ?? this.tekeningData,
       technischeRegels: technischeRegels ?? this.technischeRegels,
+      technischeRegelVolgorde:
+          technischeRegelVolgorde ?? this.technischeRegelVolgorde,
       technischeContainers: technischeContainers ?? this.technischeContainers,
       keuzeSelectiesPerKader:
           keuzeSelectiesPerKader ?? this.keuzeSelectiesPerKader,
@@ -741,6 +767,8 @@ class OpmetingOverzichtRaamItem {
       'titel': titel,
       'klantNaam': klantNaam,
       'projectBestandId': projectBestandId,
+      'positie': positie,
+      'uWaardeWm2K': uWaardeWm2K,
       'formulierType': formulierType,
       'gewijzigdOp': gewijzigdOp,
       'isVerwijderd': isVerwijderd,
@@ -760,6 +788,7 @@ class OpmetingOverzichtRaamItem {
       'technischeRegels': technischeRegels
           .map((regel) => regel.toJson())
           .toList(),
+      'technischeRegelVolgorde': technischeRegelVolgorde,
       'technischeContainers': technischeContainers
           .map((container) => container.toJson())
           .toList(),
@@ -827,6 +856,8 @@ class OpmetingOverzichtRaamItem {
           json['projectBestandId']?.toString() ??
           json['projectId']?.toString() ??
           '',
+      positie: json['positie']?.toString() ?? '',
+      uWaardeWm2K: _leesDouble(json['uWaardeWm2K']),
       formulierType: json['formulierType']?.toString() ?? 'pvcRaam',
       gewijzigdOp: json['gewijzigdOp']?.toString() ?? '',
       isVerwijderd: json['isVerwijderd'] == true,
@@ -864,6 +895,9 @@ class OpmetingOverzichtRaamItem {
       technischeRegels: _leesLijst(
         json['technischeRegels'],
         OpmetingOverzichtTechnischeRegel.fromJson,
+      ),
+      technischeRegelVolgorde: _leesStringLijst(
+        json['technischeRegelVolgorde'],
       ),
       technischeContainers: _leesLijst(
         json['technischeContainers'],
@@ -953,6 +987,17 @@ List<T> _leesLijst<T>(
   return waarde.whereType<Map>().map((item) {
     return maker(Map<String, dynamic>.from(item));
   }).toList();
+}
+
+List<String> _leesStringLijst(Object? waarde) {
+  if (waarde is! List) {
+    return <String>[];
+  }
+
+  return waarde
+      .map((item) => item.toString().trim())
+      .where((item) => item.isNotEmpty)
+      .toList(growable: false);
 }
 
 Map<String, List<T>> _leesMapLijst<T>(

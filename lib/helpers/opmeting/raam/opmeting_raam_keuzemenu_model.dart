@@ -1,3 +1,6 @@
+// THIMACO-CONTROLE: TECHNISCHE-KEUZE-PRIJSREGELS-EN-AUTOMATISCH-KOPPELEN-20261028
+import '../../offerte/prijzen/offerte_artikel_prijs_data_model.dart';
+
 // THIMACO-CONTROLE: TECHNISCHE-KEUZES-GROEPEN-FASE10-20260913
 // THIMACO-CONTROLE: HOE-UITSCHRIJVEN-OPSLAG-COMPATIBEL-20260720
 enum OpmetingRaamTechnischeMaatKeuze { vasteMaat, volledigeRaammaat }
@@ -581,6 +584,8 @@ class OpmetingRaamKeuzeOptie {
     this.technischeTekeningen =
         const <OpmetingRaamTechnischeTekeningInstelling>[],
     this.nietCombineerbaarMet = const <OpmetingRaamNietCombineerbareKeuze>[],
+    this.prijsRegels = const <OffertePrijsPerPositieRegelModel>[],
+    this.automatischPrijsKoppelen = false,
     this.actief = true,
   }) : _technischeTekening = technischeTekening;
 
@@ -610,6 +615,16 @@ class OpmetingRaamKeuzeOptie {
   final List<OpmetingRaamTechnischeTekeningInstelling> technischeTekeningen;
 
   final List<OpmetingRaamNietCombineerbareKeuze> nietCombineerbaarMet;
+
+  /// Prijsregels die als sjabloon rechtstreeks bij deze technische keuze horen.
+  ///
+  /// Ze gebruiken exact hetzelfde model en dezelfde eenheden als Prijs per
+  /// positie. De werkelijke maatberekening gebeurt pas op de offertepositie.
+  final List<OffertePrijsPerPositieRegelModel> prijsRegels;
+
+  /// Wanneer waar worden [prijsRegels] automatisch als lokale prijs-per-
+  /// positieregels aangemaakt zodra deze technische keuze geselecteerd is.
+  final bool automatischPrijsKoppelen;
 
   final bool actief;
 
@@ -647,6 +662,8 @@ class OpmetingRaamKeuzeOptie {
       technischeTekening: null,
       technischeTekeningen: const <OpmetingRaamTechnischeTekeningInstelling>[],
       nietCombineerbaarMet: const <OpmetingRaamNietCombineerbareKeuze>[],
+      prijsRegels: const <OffertePrijsPerPositieRegelModel>[],
+      automatischPrijsKoppelen: false,
     );
   }
 
@@ -660,6 +677,8 @@ class OpmetingRaamKeuzeOptie {
     Object? technischeTekening = _technischeTekeningOngewijzigd,
     List<OpmetingRaamTechnischeTekeningInstelling>? technischeTekeningen,
     List<OpmetingRaamNietCombineerbareKeuze>? nietCombineerbaarMet,
+    List<OffertePrijsPerPositieRegelModel>? prijsRegels,
+    bool? automatischPrijsKoppelen,
     bool? actief,
   }) {
     final enkeleTekeningAangepast = !identical(
@@ -713,6 +732,9 @@ class OpmetingRaamKeuzeOptie {
       technischeTekening: nieuweEnkeleTekening,
       technischeTekeningen: nieuweTechnischeTekeningen,
       nietCombineerbaarMet: nietCombineerbaarMet ?? this.nietCombineerbaarMet,
+      prijsRegels: prijsRegels ?? this.prijsRegels,
+      automatischPrijsKoppelen:
+          automatischPrijsKoppelen ?? this.automatischPrijsKoppelen,
       actief: actief ?? this.actief,
     );
   }
@@ -740,6 +762,8 @@ class OpmetingRaamKeuzeOptie {
           .where((koppeling) => koppeling.isGeldig)
           .map((koppeling) => koppeling.toJson())
           .toList(),
+      'prijsRegels': prijsRegels.map((regel) => regel.toJson()).toList(),
+      'automatischPrijsKoppelen': automatischPrijsKoppelen,
       'actief': actief,
     };
   }
@@ -820,6 +844,20 @@ class OpmetingRaamKeuzeOptie {
       }
     }
 
+    final prijsRegels = <OffertePrijsPerPositieRegelModel>[];
+    final ruwePrijsRegels = json['prijsRegels'];
+    if (ruwePrijsRegels is List) {
+      for (final ruweRegel in ruwePrijsRegels) {
+        if (ruweRegel is! Map) {
+          continue;
+        }
+        final regel = OffertePrijsPerPositieRegelModel.fromJson(
+          Map<String, dynamic>.from(ruweRegel),
+        );
+        prijsRegels.add(regel);
+      }
+    }
+
     return OpmetingRaamKeuzeOptie(
       id: json['id']?.toString() ?? '',
       naam: json['naam']?.toString() ?? '',
@@ -844,6 +882,10 @@ class OpmetingRaamKeuzeOptie {
           List<OpmetingRaamNietCombineerbareKeuze>.unmodifiable(
             nietCombineerbaarMet,
           ),
+      prijsRegels: List<OffertePrijsPerPositieRegelModel>.unmodifiable(
+        prijsRegels,
+      ),
+      automatischPrijsKoppelen: json['automatischPrijsKoppelen'] == true,
       actief: json['actief'] != false,
     );
   }
@@ -1430,6 +1472,8 @@ class OpmetingRaamKeuzeMenu {
             technischeTekeningen:
                 const <OpmetingRaamTechnischeTekeningInstelling>[],
             nietCombineerbaarMet: const <OpmetingRaamNietCombineerbareKeuze>[],
+            prijsRegels: const <OffertePrijsPerPositieRegelModel>[],
+            automatischPrijsKoppelen: false,
             actief: true,
           ),
         );

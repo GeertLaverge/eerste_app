@@ -4,6 +4,7 @@ class NotitieModel {
     required this.datumKey,
     required this.titel,
     this.detail = '',
+    this.iphoneFotoBestanden = const <String>[],
     this.actieId = '',
     this.afgewerkt = false,
     DateTime? aangemaaktOp,
@@ -16,6 +17,7 @@ class NotitieModel {
   String datumKey;
   String titel;
   String detail;
+  final List<String> iphoneFotoBestanden;
   String actieId;
 
   bool afgewerkt;
@@ -29,6 +31,7 @@ class NotitieModel {
       'datumKey': datumKey,
       'titel': titel,
       'detail': detail,
+      'iphoneFotoBestanden': iphoneFotoBestanden,
       'actieId': actieId,
       'afgewerkt': afgewerkt,
       'aangemaaktOp': aangemaaktOp.toIso8601String(),
@@ -42,6 +45,9 @@ class NotitieModel {
       datumKey: json['datumKey'] ?? '',
       titel: json['titel'] ?? '',
       detail: json['detail'] ?? '',
+      iphoneFotoBestanden: json['iphoneFotoBestanden'] is List
+          ? (json['iphoneFotoBestanden'] as List).whereType<String>().toList()
+          : const <String>[],
       actieId: json['actieId'] ?? '',
       afgewerkt: json['afgewerkt'] ?? false,
       aangemaaktOp: DateTime.tryParse(json['aangemaaktOp'] ?? ''),

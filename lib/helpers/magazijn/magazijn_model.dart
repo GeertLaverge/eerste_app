@@ -297,29 +297,94 @@ class MagazijnVoorraadMutatie {
   }
 }
 
+// THIMACO-CONTROLE: MAGAZIJN-BESTELD-ONDERWEG-20261103
+/// Bestelling blijft open totdat ontvangen aantal het bestelde aantal bereikt.
+/// Bestellen verandert nooit de fysieke voorraad.
+class MagazijnBestelling {
+  const MagazijnBestelling({
+    required this.id,
+    required this.artikelId,
+    required this.leverancierId,
+    required this.aantal,
+    required this.besteldOp,
+    this.ontvangenAantal = 0,
+    this.ontvangenOp,
+  });
+
+  final String id;
+  final String artikelId;
+  final String leverancierId;
+  final int aantal;
+  final DateTime besteldOp;
+  final int ontvangenAantal;
+  final DateTime? ontvangenOp;
+
+  int get onderweg => (aantal - ontvangenAantal).clamp(0, 999999).toInt();
+  bool get isOpen => onderweg > 0;
+
+  MagazijnBestelling copyWith({int? ontvangenAantal, DateTime? ontvangenOp}) =>
+      MagazijnBestelling(
+        id: id,
+        artikelId: artikelId,
+        leverancierId: leverancierId,
+        aantal: aantal,
+        besteldOp: besteldOp,
+        ontvangenAantal: ontvangenAantal ?? this.ontvangenAantal,
+        ontvangenOp: ontvangenOp ?? this.ontvangenOp,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'artikelId': artikelId,
+        'leverancierId': leverancierId,
+        'aantal': aantal,
+        'besteldOp': besteldOp.toIso8601String(),
+        'ontvangenAantal': ontvangenAantal,
+        'ontvangenOp': ontvangenOp?.toIso8601String(),
+      };
+
+  factory MagazijnBestelling.fromJson(Map<String, dynamic> json) {
+    int leesInt(Object? value) =>
+        value is num ? value.toInt() : int.tryParse(value?.toString() ?? '') ?? 0;
+    return MagazijnBestelling(
+      id: json['id']?.toString() ?? '',
+      artikelId: json['artikelId']?.toString() ?? '',
+      leverancierId: json['leverancierId']?.toString() ?? '',
+      aantal: leesInt(json['aantal']),
+      besteldOp: DateTime.tryParse(json['besteldOp']?.toString() ?? '') ?? DateTime.now(),
+      ontvangenAantal: leesInt(json['ontvangenAantal']),
+      ontvangenOp: DateTime.tryParse(json['ontvangenOp']?.toString() ?? ''),
+    );
+  }
+}
+
 class MagazijnData {
   const MagazijnData({
     this.leveranciers = const <MagazijnLeverancier>[],
     this.artikelen = const <MagazijnArtikel>[],
     this.mutaties = const <MagazijnVoorraadMutatie>[],
+    this.bestellingen = const <MagazijnBestelling>[],
     this.eenheden = const <String>['stuk', 'doos', 'koker', 'rol', 'meter'],
   });
 
   final List<MagazijnLeverancier> leveranciers;
   final List<MagazijnArtikel> artikelen;
   final List<MagazijnVoorraadMutatie> mutaties;
+  final List<MagazijnBestelling> bestellingen;
   final List<String> eenheden;
 
   MagazijnData copyWith({
     List<MagazijnLeverancier>? leveranciers,
     List<MagazijnArtikel>? artikelen,
     List<MagazijnVoorraadMutatie>? mutaties,
+    List<MagazijnBestelling>? bestellingen,
     List<String>? eenheden,
   }) {
     return MagazijnData(
       leveranciers: leveranciers ?? this.leveranciers,
       artikelen: artikelen ?? this.artikelen,
       mutaties: mutaties ?? this.mutaties,
+      bestellingen: bestellingen ?? this.bestellingen,
       eenheden: eenheden ?? this.eenheden,
     );
   }
@@ -330,6 +395,7 @@ class MagazijnData {
         .toList(growable: false),
     'artikelen': artikelen.map((item) => item.toJson()).toList(growable: false),
     'mutaties': mutaties.map((item) => item.toJson()).toList(growable: false),
+    'bestellingen': bestellingen.map((item) => item.toJson()).toList(growable: false),
     'eenheden': eenheden,
   };
 
@@ -353,6 +419,10 @@ class MagazijnData {
           .map(
             (item) => MagazijnArtikel.fromJson(Map<String, dynamic>.from(item)),
           )
+          .toList(growable: false),
+      bestellingen: (json['bestellingen'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((item) => MagazijnBestelling.fromJson(Map<String, dynamic>.from(item)))
           .toList(growable: false),
       mutaties: (json['mutaties'] as List<dynamic>? ?? const [])
           .whereType<Map>()

@@ -12,7 +12,7 @@
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 
 	<key>CFBundleDisplayName</key>
-	<string>Eerste App</string>
+	<string>Thimaco</string>
 
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -66,7 +66,7 @@
 <string>Thimaco gebruikt het lokale netwerk om tijdens tests verbinding te maken met de Thimaco-website op deze computer.</string>
 
 	<key>NSCameraUsageDescription</key>
-	<string>Thimaco gebruikt de camera om foto's te nemen voor werfinstructies en klantendossiers.</string>
+	<string>Thimaco gebruikt de camera voor QR-codes van magazijnartikelen en fotos bij klantnotities.</string>
 
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID beschermt de vertrouwelijke financiële gegevens van Thimaco.</string>

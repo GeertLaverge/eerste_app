@@ -22,7 +22,7 @@ dependencies:
   # iOS/macOS: msal_auth.
   # Windows: OAuth 2.0 Authorization Code + PKCE met bestaande dependencies
   # (http, url_launcher, flutter_secure_storage en cryptography).
-  msal_auth: ^3.5.1
+  msal_auth: ^3.5.3
   http: ^1.3.0
 
   # SMTP mail
@@ -65,7 +65,4 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
-    - "assets/data/zipcodes_num_nl_2025 (1).csv"
-    - assets/deurpanelen/dxf/
-    - assets/offerte/
+    - assets/offerte/thimaco_logo.png
