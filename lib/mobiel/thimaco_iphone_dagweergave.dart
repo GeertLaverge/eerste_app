@@ -13,7 +13,10 @@ class ThimacoIphoneDagweergave extends StatefulWidget {
     super.key,
     required this.beginDag,
     required this.itemsVoor,
-    required this.voegAfspraakToe,
+    required this.wijzigTijd,
+    required this.verplaatsAfspraak,
+    required this.registreerVerversing,
+    required this.dagGewijzigd,
     required this.herlaad,
     required this.verwijderAfspraak,
     this.geselecteerd,
@@ -21,7 +24,10 @@ class ThimacoIphoneDagweergave extends StatefulWidget {
 
   final DateTime beginDag;
   final List<AgendaItem> Function(DateTime dag) itemsVoor;
-  final Future<void> Function(DateTime dag) voegAfspraakToe;
+  final Future<bool> Function(DateTime, AgendaItem) wijzigTijd;
+  final Future<bool> Function(DateTime, AgendaItem, DateTime, int?) verplaatsAfspraak;
+  final ValueChanged<VoidCallback> registreerVerversing;
+  final ValueChanged<DateTime> dagGewijzigd;
   final Future<void> Function() herlaad;
   final Future<bool> Function(DateTime dag, AgendaItem item) verwijderAfspraak;
   final AgendaItem? geselecteerd;
@@ -53,6 +59,7 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
   @override
   void initState() {
     super.initState();
+    widget.registreerVerversing(() { if (mounted) setState(() {}); });
     _basis = DateTime(widget.beginDag.year, widget.beginDag.month, widget.beginDag.day);
     _dag = _basis;
     _paginaController = PageController(initialPage: _midden);
@@ -118,9 +125,12 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
     );
   }
 
-  Future<void> _nieuweAfspraak() async {
-    await widget.voegAfspraakToe(_dag);
-    if (mounted) setState(() {});
+  Future<void> _verplaats(AgendaItem item, DateTime dag, int? begin) async {
+    final gelukt = await widget.verplaatsAfspraak(_dag, item, dag, begin);
+    if (mounted && gelukt) {
+      if (dag != _dag) _kiesDag(dag);
+      setState(() {});
+    }
   }
 
   Future<void> _ververs() async {
@@ -151,6 +161,15 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
                       color: _donker, fontSize: 19,
                       fontWeight: FontWeight.w800,
                     ))),
+                if (item.type == 'afspraak' && !item.isWebsiteShowroomAfspraak)
+                  IconButton(
+                    tooltip: 'Tijd aanpassen',
+                    icon: const Icon(Icons.schedule_rounded, color: _oranje),
+                    onPressed: () async {
+                      Navigator.of(sheetContext).pop();
+                      await widget.wijzigTijd(_dag, item);
+                    },
+                  ),
                 if (item.type == 'afspraak' && !item.isWebsiteShowroomAfspraak)
                   IconButton(
                     tooltip: 'Afspraak wissen',
@@ -210,7 +229,10 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
         datum.month == _dag.month && datum.day == _dag.day;
     final vandaag = _isVandaag(datum);
     return Expanded(
-      child: InkWell(
+      child: DragTarget<AgendaItem>(
+        onWillAcceptWithDetails: (_) => !actief,
+        onAcceptWithDetails: (details) => _verplaats(details.data, datum, null),
+        builder: (context, kandidaten, _) => InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: () => _kiesDag(datum),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -238,6 +260,7 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
             color: actief ? _oranje : Colors.transparent,
           ),
         ]),
+      ),
       ),
     );
   }
@@ -281,18 +304,6 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
               onPressed: _ververs,
               icon: const Icon(Icons.refresh_rounded, color: _donker),
             ),
-            IconButton(
-              tooltip: 'Afspraak toevoegen',
-              onPressed: _nieuweAfspraak,
-              style: IconButton.styleFrom(
-                backgroundColor: _oranje, foregroundColor: Colors.white,
-                fixedSize: const Size(32, 32),
-                minimumSize: const Size(32, 32),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: EdgeInsets.zero,
-              ),
-              icon: const Icon(Icons.add_rounded, size: 18),
-            ),
           ]),
         ),
         _dagenBalk(),
@@ -300,6 +311,7 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
           controller: _paginaController,
           onPageChanged: (index) {
             setState(() => _dag = _dagOpOffset(index - _midden));
+            widget.dagGewijzigd(_dag);
           },
           itemBuilder: (context, index) {
             final datum = _dagOpOffset(index - _midden);
@@ -308,6 +320,7 @@ class _ThimacoIphoneDagweergaveState extends State<ThimacoIphoneDagweergave> {
               dag: datum,
               items: widget.itemsVoor(datum),
               toonDetails: _toonDetails,
+              verplaatsNaarUur: (item, begin) => _verplaats(item, datum, begin),
             );
           },
         )),
@@ -338,11 +351,13 @@ class _DagTijdlijn extends StatefulWidget {
     required this.dag,
     required this.items,
     required this.toonDetails,
+    required this.verplaatsNaarUur,
   });
 
   final DateTime dag;
   final List<AgendaItem> items;
   final ValueChanged<AgendaItem> toonDetails;
+  final void Function(AgendaItem, int) verplaatsNaarUur;
 
   @override
   State<_DagTijdlijn> createState() => _DagTijdlijnState();
@@ -440,6 +455,21 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
           ? const Color(0xFF2563EB)
           : AgendaKleurService.kleur(item.type);
 
+  Widget _sleepbareKaart(AgendaItem item, {bool heleDag = false}) {
+    final kaart = _afspraakKaart(item, heleDag: heleDag);
+    if (item.type != 'afspraak' || item.isWebsiteShowroomAfspraak) return kaart;
+    return LongPressDraggable<AgendaItem>(
+      data: item,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: Material(
+        color: Colors.white,
+        elevation: 4,
+        child: Padding(padding: const EdgeInsets.all(7), child: Text(item.titel)),
+      ),
+      child: kaart,
+    );
+  }
+
   Widget _afspraakKaart(AgendaItem item, {bool heleDag = false}) {
     final kleur = _kleur(item);
     final naam = item.naamKlant.trim().isNotEmpty
@@ -514,7 +544,7 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
               for (final item in dagvullend)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: _afspraakKaart(item, heleDag: true),
+                  child: _sleepbareKaart(item, heleDag: true),
                 ),
             ],
           ),
@@ -526,7 +556,16 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
             final beschikbareBreedte = math.max(25.0, constraints.maxWidth - _tijdBreedte - 9);
             return SizedBox(
               height: _totaalHoogte + 14,
-              child: Stack(children: [
+              child: DragTarget<AgendaItem>(
+                onAcceptWithDetails: (details) {
+                  final box = context.findRenderObject() as RenderBox?;
+                  if (box == null) return;
+                  final y = box.globalToLocal(details.offset).dy;
+                  final minuten = ((y * 60 / _uurHoogte / 5).round() * 5)
+                      .clamp(0, 1435).toInt();
+                  widget.verplaatsNaarUur(details.data, minuten);
+                },
+                builder: (_, kandidaten, __) => Stack(children: [
                 for (var uur = 0; uur < 24; uur++)
                   Positioned(
                     left: 0, right: 0, top: uur * _uurHoogte,
@@ -566,7 +605,7 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                             _startMin(vak.item)) * _uurHoogte / 60,
                       ),
                     ),
-                    child: _afspraakKaart(vak.item),
+                    child: _sleepbareKaart(vak.item),
                   ),
                 if (vandaag)
                   Positioned(
@@ -581,7 +620,8 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                       )),
                     ]),
                   ),
-              ]),
+                ]),
+              ),
             );
           }),
         ),

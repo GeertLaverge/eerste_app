@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../helpers/Agenda/agenda_datum_helper.dart';
+import '../helpers/app_storage.dart';
 import '../helpers/Agenda/agenda_item.dart';
 import '../helpers/Agenda/agenda_kleur_service.dart';
 import '../helpers/Agenda/agenda_repository.dart';
@@ -40,7 +41,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
 
   // Mobiele filter is onafhankelijk van de filters in de Windows-app.
   // Bij openen staan uitsluitend blauwe afspraken en verlof aan.
-  static const Set<String> _standaardFilters = {'blauw', 'verlof'};
+  static const Set<String> _standaardFilters = {'blauw', 'verlof', 'showroom'};
   static const List<(String, String, Color)> _filterKeuzes = [
     ('blauw', 'Blauwe afspraken', Color(0xFF2563EB)),
     ('verlof', 'Verlof', Color(0xFFE24A4A)),
@@ -62,6 +63,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
   Future<void>? _lopendeSync;
   String? _fout;
   int _laatsteDownloadVersie = 0;
+  VoidCallback? _verversDag;
   List<GlobalKey> _weekSleutels = [];
   bool _eersteScroll = true;
   double _horizontaleSleep = 0;
@@ -87,7 +89,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
     super.dispose();
   }
 
-  Future<void> synchroniseer({bool handmatig = false}) async {
+  Future<void> synchroniseer({bool handmatig = false, bool naWijziging = false}) async {
     if (_bewaren || !mounted) return;
     final lopend = _lopendeSync;
     if (lopend != null) {
@@ -95,7 +97,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       if (!handmatig || !mounted || _bewaren) return;
       if (_lopendeSync != null) return;
     }
-    final taak = _synchroniseer(handmatig: handmatig);
+    final taak = _synchroniseer(handmatig: handmatig, naWijziging: naWijziging);
     _lopendeSync = taak;
     try {
       await taak;
@@ -104,7 +106,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
     }
   }
 
-  Future<void> _synchroniseer({required bool handmatig}) async {
+  Future<void> _synchroniseer({required bool handmatig, required bool naWijziging}) async {
     final sync = OneDriveSyncService();
     try {
       var resultaat = await sync.syncAgendaSnel();
@@ -118,14 +120,17 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       if (!mounted) return;
       if (resultaat == 'IMPORT_OK_AGENDA' || resultaat == 'SYNC_AGENDA_OK') {
         await _herlaad();
-        if (handmatig && mounted) _syncMelding('Agenda gesynchroniseerd.');
-      } else if (handmatig) {
+        _verversDag?.call();
+        if ((handmatig || naWijziging) && mounted) _syncMelding('Agenda gesynchroniseerd.');
+      } else if (handmatig || naWijziging) {
         _syncMelding(resultaat == 'SYNC_AGENDA_GEEN_ONEDRIVE_LOGIN'
             ? 'Meld je aan bij Microsoft om de bureauagenda te synchroniseren.'
-            : 'Agenda synchroniseren mislukt. Probeer opnieuw.');
+            : naWijziging
+                ? 'Lokaal bewaard. Synchronisatie met bureau nog niet gelukt.'
+                : 'Agenda synchroniseren mislukt. Probeer opnieuw.');
       }
     } catch (_) {
-      if (handmatig && mounted) {
+      if ((handmatig || naWijziging) && mounted) {
         _syncMelding('Agenda synchroniseren mislukt. Probeer opnieuw.');
       }
     }
@@ -299,6 +304,117 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
         ]),
       );
 
+  bool _verplaatsbaar(AgendaItem item) =>
+      item.type == 'afspraak' && !item.isWebsiteShowroomAfspraak;
+
+  Future<bool> _wijzigTijd(DateTime dag, AgendaItem item) async {
+    final start = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: item.startUur ?? 9, minute: item.startMinuut ?? 0),
+      helpText: 'Nieuw beginuur',
+    );
+    if (!mounted || start == null) return false;
+    final begin = start.hour * 60 + start.minute;
+    final voorgesteld = (begin + 60).clamp(0, 1439).toInt();
+    final eind = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: voorgesteld ~/ 60, minute: voorgesteld % 60),
+      helpText: 'Nieuw einduur',
+    );
+    if (!mounted || eind == null) return false;
+    return _verplaatsAfspraak(dag, item, dag, begin, eind.hour * 60 + eind.minute);
+  }
+
+  Future<bool> _verplaatsAfspraak(
+    DateTime van, AgendaItem item, DateTime naar, int? begin, [int? einde],
+  ) async {
+    if (!_verplaatsbaar(item) || _bewaren || !mounted) return false;
+    setState(() => _bewaren = true);
+    var gewijzigd = false;
+    try {
+      await _lopendeSync;
+      if (!mounted) return false;
+      final actueel = await AppStorage.laadAgendaItemsNieuwVoorSync();
+      final bron = AgendaDatumHelper.datumKey(van);
+      final doel = AgendaDatumHelper.datumKey(naar);
+      final lijst = actueel[bron] ?? <AgendaItem>[];
+      final index = lijst.indexWhere((a) => a.id == item.id && !a.isVerwijderd);
+      if (index < 0 || lijst[index].updatedAt != item.updatedAt) {
+        _syncMelding('Deze afspraak is gewijzigd. Vernieuw de agenda.');
+        return false;
+      }
+      final huidig = lijst[index];
+      final gegevens = huidig.toJson();
+      if (begin != null) {
+        final oudBegin = (huidig.startUur ?? 9) * 60 + (huidig.startMinuut ?? 0);
+        final oudEinde = (huidig.eindUur ?? 10) * 60 + (huidig.eindMinuut ?? 0);
+        final stop = einde ?? (begin + (oudEinde - oudBegin).clamp(5, 1439))
+            .clamp(0, 1439).toInt();
+        if (stop <= begin) {
+          _syncMelding('Het einduur moet na het beginuur liggen.');
+          return false;
+        }
+        gegevens.addAll({
+          'volledigeDag': false,
+          'startUur': begin ~/ 60,
+          'startMinuut': begin % 60,
+          'eindUur': stop ~/ 60,
+          'eindMinuut': stop % 60,
+        });
+      }
+      gegevens['updatedAt'] = DateTime.now().toUtc().toIso8601String();
+      final verplaatst = AgendaItem.fromJson(gegevens);
+      actueel[bron] = [...lijst]..removeAt(index);
+      final overlap = AgendaToevoegService.kanItemToevoegen(
+        dag: naar, nieuwItem: verplaatst, itemsPerDag: actueel,
+      );
+      if (!mounted) return false;
+      if (overlap != null && overlap.isNotEmpty) {
+        final akkoord = await showDialog<bool>(
+          context: context,
+          builder: (dialoog) => AlertDialog(
+            title: const Text('Mogelijke overlap'),
+            content: Text(overlap),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialoog, false),
+                child: const Text('Annuleren')),
+              TextButton(onPressed: () => Navigator.pop(dialoog, true),
+                child: const Text('Toch bewaren')),
+            ],
+          ),
+        );
+        if (!mounted || akkoord != true) return false;
+      }
+      actueel[doel] = [...?actueel[doel], verplaatst];
+      await AppStorage.bewaarAgendaItemsNieuw(actueel);
+      gewijzigd = true;
+      await _herlaad();
+      _verversDag?.call();
+      return true;
+    } catch (fout) {
+      if (mounted) _syncMelding('Afspraak aanpassen mislukt: $fout');
+      return false;
+    } finally {
+      if (mounted) {
+        setState(() => _bewaren = false);
+        if (gewijzigd) unawaited(synchroniseer(naWijziging: true));
+      }
+    }
+  }
+
+  Widget _sleepbareTegel(AgendaItem item, DateTime dag) {
+    final tegel = _afspraakTegel(item, dag);
+    if (!_verplaatsbaar(item)) return tegel;
+    return LongPressDraggable<({DateTime dag, AgendaItem item})>(
+      data: (dag: dag, item: item),
+      feedback: Material(
+        color: Colors.white, elevation: 4,
+        child: Padding(padding: const EdgeInsets.all(8), child: Text(_tegelTitel(item))),
+      ),
+      child: tegel,
+    );
+  }
+
   Widget _afspraakTegel(AgendaItem item, DateTime dag) {
     final kleur = _itemKleur(item);
     final achtergrond = Color.lerp(Colors.white, kleur, 0.21)!;
@@ -359,7 +475,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
     final geselecteerd = _zelfdeDag(datum, _dag);
     final weekend = datum.weekday >= 6;
     final accent = vandaag ? _oranje : (geselecteerd ? _donker : Colors.transparent);
-    return Padding(
+    final kolom = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -393,7 +509,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
             ),
           ),
           for (final item in afspraken.take(_maxTegelsPerDag))
-            _afspraakTegel(item, datum),
+            _sleepbareTegel(item, datum),
           if (afspraken.length > _maxTegelsPerDag)
             InkWell(
               onTap: () => _toonDag(datum),
@@ -408,6 +524,18 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
               ),
             ),
         ],
+      ),
+    );
+    return DragTarget<({DateTime dag, AgendaItem item})>(
+      onWillAcceptWithDetails: (details) => !_zelfdeDag(details.data.dag, datum),
+      onAcceptWithDetails: (details) {
+        _verplaatsAfspraak(details.data.dag, details.data.item, datum, null);
+      },
+      builder: (context, kandidaten, _) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: kandidaten.isEmpty ? Colors.transparent : const Color(0xFFFFEEE5),
+        ),
+        child: kolom,
       ),
     );
   }
@@ -443,12 +571,16 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
           beginDag: dag,
           geselecteerd: geselecteerd,
           itemsVoor: _itemsVoor,
-          voegAfspraakToe: (gekozenDag) => _nieuweAfspraak(voorDag: gekozenDag),
+          wijzigTijd: _wijzigTijd,
+          verplaatsAfspraak: _verplaatsAfspraak,
+          registreerVerversing: (actie) => _verversDag = actie,
+          dagGewijzigd: (datum) => _dag = datum,
           herlaad: _herlaad,
           verwijderAfspraak: _verwijderAfspraak,
         ),
       ),
     );
+    _verversDag = null;
     if (mounted) unawaited(_herlaad());
   }
 
@@ -673,7 +805,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
     } finally {
       if (mounted) {
         setState(() => _bewaren = false);
-        if (gewijzigd) unawaited(synchroniseer());
+        if (gewijzigd) unawaited(synchroniseer(naWijziging: true));
       }
     }
   }
@@ -718,7 +850,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
     } finally {
       if (mounted) {
         setState(() => _bewaren = false);
-        if (gewijzigd) unawaited(synchroniseer());
+        if (gewijzigd) unawaited(synchroniseer(naWijziging: true));
       }
     }
   }
@@ -728,7 +860,9 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
   void openFilters() { _openFilters(); }
   void zoekAfspraken() { _zoek(); }
   void voegAfspraakToe() {
-    if (!_bewaren) _nieuweAfspraak();
+    if (!_bewaren) {
+      unawaited(_nieuweAfspraak().then((_) => _verversDag?.call()));
+    }
   }
 
   @override

@@ -318,7 +318,7 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
               _kopCirkel(
                 icon: Icons.add_rounded,
                 tooltip: 'Nieuwe blauwe afspraak',
-                actie: () => _agendaActie(() => _agendaSleutel.currentState?.voegAfspraakToe()),
+                actie: () => _agendaSleutel.currentState?.voegAfspraakToe(),
                 oranje: true,
               ),
             ],
@@ -433,19 +433,14 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          _kaart(
-            child: const Row(
-              children: [
-                Icon(Icons.cloud_off_outlined, color: Color(0xFF66717D)),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Microsoft-aanmelding voor bureaunotities: zie Notities Bureau',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
+          Align(
+            alignment: Alignment.centerRight,
+            child: IconButton(
+              tooltip: 'Aanmelden bij Microsoft',
+              iconSize: 17,
+              color: const Color(0xFF66717D),
+              icon: const Icon(Icons.login_rounded),
+              onPressed: () => _notitiesKey.currentState?.aanmeldenMicrosoft(),
             ),
           ),
         ],

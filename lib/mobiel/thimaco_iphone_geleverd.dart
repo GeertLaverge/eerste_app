@@ -105,8 +105,8 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
     final klant = _klantZoeken.text.trim().toLowerCase();
     final leverancier = _leverancierZoeken.text.trim().toLowerCase();
     final artikelen = _regels.where((regel) =>
-        regel.klant.toLowerCase().contains(klant) &&
-        regel.leverancier.toLowerCase().contains(leverancier));
+        regel.klant.toLowerCase().startsWith(klant) &&
+        regel.leverancier.toLowerCase().startsWith(leverancier));
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -142,6 +142,13 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
               visualDensity: VisualDensity.compact,
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
               title: Text(regel.artikel, maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text(
+                klant.isEmpty && leverancier.isNotEmpty
+                    ? regel.klant
+                    : leverancier.isEmpty && klant.isNotEmpty
+                        ? regel.leverancier
+                        : '${regel.klant} · ${regel.leverancier}',
+              ),
               trailing: Tooltip(
                 message: _gekozen.contains(regel) ? 'Geleverd' : 'Markeer als geleverd',
                 child: CircleAvatar(

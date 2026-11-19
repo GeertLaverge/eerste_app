@@ -81,7 +81,7 @@ class ThimacoIphoneNotitiesBureauState
   int _aantalNogTeVerzenden(List<Map<String, dynamic>> records) =>
       records.where((r) => r['status'] != 'aangeboden_aan_bureau').length;
 
-  Future<void> _aanmeldenMicrosoft() async {
+  Future<void> aanmeldenMicrosoft() async {
     if (_aanmelden || _bezig) return;
     setState(() => _aanmelden = true);
     try {
@@ -442,7 +442,7 @@ class ThimacoIphoneNotitiesBureauState
                           maxLines: 14,
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.sentences,
-                          decoration: _decoratie('Wat moet er op bureau gebeuren?'),
+                          decoration: _decoratie('Notitie voor de klant hier invullen'),
                         ),
                         const SizedBox(height: 20),
                         Row(
@@ -521,11 +521,6 @@ class ThimacoIphoneNotitiesBureauState
                   ],
                   const SizedBox(height: 12),
                   Wrap(spacing: 8, runSpacing: 8, children: [
-                    TextButton.icon(
-                      onPressed: _aanmelden || _bezig ? null : _aanmeldenMicrosoft,
-                      icon: const Icon(Icons.login_rounded, size: 17),
-                      label: const Text('Aanmelden Microsoft'),
-                    ),
                     if (_concepten > 0)
                       TextButton.icon(
                         onPressed: _bezig || _aanmelden ? null : _verzendWachtrijOpnieuw,
@@ -533,31 +528,7 @@ class ThimacoIphoneNotitiesBureauState
                         label: Text('Wachtrij versturen ($_concepten)'),
                       ),
                   ]),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: _rand),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.cloud_off_outlined,
-                            color: _grijs, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'De oranje V bewaart eerst lokaal en biedt daarna via Microsoft '
-                            'de notitie met foto\'s aan in OneDrive. '
-                            'Openstaande wachtrij: $_concepten. Controleer de ontvangst op bureau.',
-                            style: const TextStyle(color: _grijs, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+
                 ],
               ),
             ),

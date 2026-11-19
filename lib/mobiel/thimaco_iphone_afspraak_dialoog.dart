@@ -148,10 +148,8 @@ class _ThimacoIphoneAfspraakDialoogState
       _fout = null;
       if (begin) {
         _start = gekozen;
-        if (_minuten(_eind) <= _minuten(_start)) {
-          final eindMinuten = (_minuten(_start) + 60).clamp(0, 1435).toInt();
-          _eind = TimeOfDay(hour: eindMinuten ~/ 60, minute: eindMinuten % 60);
-        }
+        final eindMinuten = (_minuten(_start) + 60).clamp(0, 1435).toInt();
+        _eind = TimeOfDay(hour: eindMinuten ~/ 60, minute: eindMinuten % 60);
       } else {
         _eind = gekozen;
       }
@@ -193,7 +191,7 @@ class _ThimacoIphoneAfspraakDialoogState
       setState(() => _fout = 'De eindtijd moet na de starttijd liggen.');
       return;
     }
-    Navigator.of(context).pop(AgendaItem(
+    final afspraak = AgendaItem(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       titel: klantnaam,
       naamKlant: klantnaam,
@@ -207,7 +205,11 @@ class _ThimacoIphoneAfspraakDialoogState
       startMinuut: _heleDag ? null : _start.minute,
       eindUur: _heleDag ? null : _eind.hour,
       eindMinuut: _heleDag ? null : _eind.minute,
-    ));
+    );
+    Navigator.of(context).pop(AgendaItem.fromJson({
+      ...afspraak.toJson(),
+      'updatedAt': DateTime.now().toUtc().toIso8601String(),
+    }));
   }
 
   Widget _keuzeSchakelaar(String label, bool gekozen, VoidCallback actie) =>

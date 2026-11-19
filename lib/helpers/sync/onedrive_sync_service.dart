@@ -31,6 +31,7 @@ import 'onedrive_auth_service.dart';
 
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
 import 'package:eerste_app/helpers/klanten/fiche/klantenfiche_model.dart';
+import 'package:eerste_app/helpers/klanten/fiche/klantenfiche_repository.dart';
 import 'package:eerste_app/helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'sync_merge_service.dart';
 import '../app_storage.dart';
@@ -2805,8 +2806,10 @@ class OneDriveSyncService {
         data: mergedData,
         // Bij een ETag-race geeft OneDrive 412: de volgende sync moet dan
         // opnieuw downloaden/mergen, zonder de andere PC te overschrijven.
-        verwachteEtag: module == 'opmetingen' && !kIsWeb &&
-                defaultTargetPlatform == TargetPlatform.windows &&
+        verwachteEtag: (module == 'agenda' || module == 'klanten' ||
+                module == 'magazijn' ||
+                (module == 'opmetingen' && !kIsWeb &&
+                    defaultTargetPlatform == TargetPlatform.windows)) &&
                 remoteInfo.gevonden && remoteInfo.etag.isNotEmpty
             ? remoteInfo.etag
             : null,
@@ -2827,9 +2830,18 @@ class OneDriveSyncService {
     // Op het snelle pad bewaren we de hash van de GEUPLOADDE snapshot, niet
     // van een wijziging die eventueel tijdens de upload gemaakt werd.
     // Zo blijft die latere wijziging openstaan voor de volgende sync.
-    final nieuweHash = opmetingenAlleenLokaal
-        ? huidigeHash
-        : await _lokaleModuleHash(module: module, prefs: prefs);
+    final nieuweHash = switch (module) {
+      'agenda' => _stabieleHash(<String>[
+        mergedData['agendaItems'] as String,
+        prefs.getString(_dagtaakTemplatesKey) ?? '',
+        prefs.getString(_dagtaakTemplatesSyncMetaKey) ?? '',
+      ].join('\u001f')),
+      'klanten' => _stabieleHash(mergedData['klantenFiches'] as String),
+      'magazijn' => _stabieleHash(mergedData['magazijnData'] as String),
+      _ => opmetingenAlleenLokaal
+          ? huidigeHash
+          : await _lokaleModuleHash(module: module, prefs: prefs),
+    };
     await prefs.setString(_moduleHashKey(module), nieuweHash);
 
     if (nieuweEtag.isNotEmpty) {
@@ -2914,6 +2926,8 @@ class OneDriveSyncService {
     await AppStorage.bewaarKlantenFichesVoorSync(
       merged.map((fiche) => fiche.toJson()).toList(growable: false),
     );
+
+    KlantenficheRepository.maakCacheOngeldig();
 
     return <String, dynamic>{
       'schema': 1,
