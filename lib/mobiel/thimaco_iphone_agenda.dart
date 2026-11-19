@@ -7,6 +7,8 @@ import '../helpers/Agenda/agenda_item.dart';
 import '../helpers/Agenda/agenda_kleur_service.dart';
 import '../helpers/Agenda/agenda_repository.dart';
 import '../helpers/Agenda/agenda_toevoeg_service.dart';
+import '../helpers/sync/onedrive_auth_service.dart';
+import '../helpers/sync/onedrive_sync_service.dart';
 import '../helpers/sync/sync_navigatie_helper.dart';
 import 'thimaco_iphone_afspraak_dialoog.dart';
 import 'thimaco_iphone_dagweergave.dart';
@@ -57,6 +59,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
   Map<String, List<AgendaItem>> _items = {};
   bool _laden = true;
   bool _bewaren = false;
+  Future<void>? _lopendeSync;
   String? _fout;
   int _laatsteDownloadVersie = 0;
   List<GlobalKey> _weekSleutels = [];
@@ -82,6 +85,56 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
   void dispose() {
     SyncNavigatieHelper.downloadVersie.removeListener(_naDownload);
     super.dispose();
+  }
+
+  Future<void> synchroniseer({bool handmatig = false}) async {
+    if (_bewaren || !mounted) return;
+    final lopend = _lopendeSync;
+    if (lopend != null) {
+      await lopend;
+      if (!handmatig || !mounted || _bewaren) return;
+      if (_lopendeSync != null) return;
+    }
+    final taak = _synchroniseer(handmatig: handmatig);
+    _lopendeSync = taak;
+    try {
+      await taak;
+    } finally {
+      if (identical(_lopendeSync, taak)) _lopendeSync = null;
+    }
+  }
+
+  Future<void> _synchroniseer({required bool handmatig}) async {
+    final sync = OneDriveSyncService();
+    try {
+      var resultaat = await sync.syncAgendaSnel();
+      if (handmatig && mounted &&
+          resultaat == 'SYNC_AGENDA_GEEN_ONEDRIVE_LOGIN') {
+        final login = await OneDriveAuthService().loginInteractief();
+        if (login.isNotEmpty && !login.startsWith('FOUT')) {
+          resultaat = await sync.syncAgendaSnel();
+        }
+      }
+      if (!mounted) return;
+      if (resultaat == 'IMPORT_OK_AGENDA' || resultaat == 'SYNC_AGENDA_OK') {
+        await _herlaad();
+        if (handmatig && mounted) _syncMelding('Agenda gesynchroniseerd.');
+      } else if (handmatig) {
+        _syncMelding(resultaat == 'SYNC_AGENDA_GEEN_ONEDRIVE_LOGIN'
+            ? 'Meld je aan bij Microsoft om de bureauagenda te synchroniseren.'
+            : 'Agenda synchroniseren mislukt. Probeer opnieuw.');
+      }
+    } catch (_) {
+      if (handmatig && mounted) {
+        _syncMelding('Agenda synchroniseren mislukt. Probeer opnieuw.');
+      }
+    }
+  }
+
+  void _syncMelding(String melding) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(melding)),
+    );
   }
 
   void _naDownload() {
@@ -582,8 +635,12 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
         ],
       ),
     );
-    if (bevestigd != true || !mounted) return false;
+    if (bevestigd != true || !mounted || _bewaren) return false;
+    setState(() => _bewaren = true);
+    var gewijzigd = false;
     try {
+      await _lopendeSync;
+      if (!mounted) return false;
       final actueel = await AgendaRepository.laadItems();
       final sleutel = AgendaDatumHelper.datumKey(dag);
       final bestaat = (actueel[sleutel] ?? const <AgendaItem>[])
@@ -600,6 +657,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
         dag: dag, item: item, itemsPerDag: actueel,
       );
       if (!mounted) return false;
+      gewijzigd = true;
       setState(() => _items = opgeslagen);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Afspraak verwijderd uit de Thimaco-agenda.'),
@@ -612,6 +670,11 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
         ));
       }
       return false;
+    } finally {
+      if (mounted) {
+        setState(() => _bewaren = false);
+        if (gewijzigd) unawaited(synchroniseer());
+      }
     }
   }
 
@@ -622,9 +685,12 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       barrierDismissible: false,
       builder: (_) => ThimacoIphoneAfspraakDialoog(datum: datum),
     );
-    if (resultaat == null || !mounted) return;
+    if (resultaat == null || !mounted || _bewaren) return;
     setState(() => _bewaren = true);
+    var gewijzigd = false;
     try {
+      await _lopendeSync;
+      if (!mounted) return;
       // Altijd kort voor opslaan opnieuw laden: geen oude maandcache terugschrijven.
       final actueel = await AgendaRepository.laadItems();
       final melding = AgendaToevoegService.kanItemToevoegen(
@@ -642,6 +708,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       final opgeslagen = await AgendaRepository.voegToe(
         dag: datum, item: resultaat, itemsPerDag: actueel);
       if (!mounted) return;
+      gewijzigd = true;
       setState(() => _items = opgeslagen);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Afspraak opgeslagen in de Thimaco-agenda.')));
@@ -649,7 +716,10 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Opslaan mislukt: $e')));
     } finally {
-      if (mounted) setState(() => _bewaren = false);
+      if (mounted) {
+        setState(() => _bewaren = false);
+        if (gewijzigd) unawaited(synchroniseer());
+      }
     }
   }
 

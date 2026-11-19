@@ -113,6 +113,9 @@ class ThimacoIphoneMagazijnState extends State<ThimacoIphoneMagazijn> {
     _kiesArtikel(artikel);
   }
 
+  bool get heeftOnbevestigdeWijzigingen => _verschil != 0;
+  bool get bevestigingBezig => _opslaan;
+
   Future<void> bevestig() async {
     if (_laden || _opslaan) return;
     final artikel = _artikel;

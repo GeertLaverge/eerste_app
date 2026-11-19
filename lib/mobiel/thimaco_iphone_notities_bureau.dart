@@ -186,6 +186,10 @@ class ThimacoIphoneNotitiesBureauState
 
   // Aangeroepen door de centrale zwarte titelbalk, zodat de V op dezelfde
   // positie staat als alle andere titelacties.
+  bool get heeftOnbevestigdeWijzigingen =>
+      _klant.text.isNotEmpty || _notitie.text.isNotEmpty || _fotos.isNotEmpty;
+  bool get bevestigingBezig => _bezig || _aanmelden;
+
   Future<void> bewaarVoorVerzending() => _bewaarVoorVerzending();
 
   Future<void> _bewaarVoorVerzending() async {

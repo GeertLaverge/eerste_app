@@ -1,5 +1,7 @@
 // THIMACO iPhone V12 - magazijnacties in zwarte balk
 import 'thimaco_iphone_agenda.dart';
+import 'thimaco_iphone_bibliotheek.dart';
+import 'thimaco_iphone_geleverd.dart';
 import 'thimaco_iphone_notities_bureau.dart';
 import 'thimaco_iphone_magazijn.dart';
 import 'package:flutter/material.dart';
@@ -58,9 +60,78 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
     _Onderdeel('Notities Plaatsers', Icons.send_outlined, 'Berichten sturen'),
     _Onderdeel('Magazijn', Icons.qr_code_scanner_rounded, 'QR / voorraad + en −'),
     _Onderdeel('Bibliotheek', Icons.folder_open_outlined, 'Fiches en PDF'),
+    _Onderdeel('Geleverd', Icons.inventory_2_outlined, 'Bestelde artikelen'),
   ];
 
   int _pagina = -1;
+  bool _dashboardBezig = false;
+
+  bool get _heeftOnbevestigdeWijzigingen => switch (_pagina) {
+    1 => _notitiesKey.currentState?.heeftOnbevestigdeWijzigingen ?? false,
+    3 => _magazijnKey.currentState?.heeftOnbevestigdeWijzigingen ?? false,
+    5 => _geleverdKey.currentState?.heeftOnbevestigdeWijzigingen ?? false,
+    _ => false,
+  };
+
+  bool get _bevestigingBezig => switch (_pagina) {
+    1 => _notitiesKey.currentState?.bevestigingBezig ?? false,
+    3 => _magazijnKey.currentState?.bevestigingBezig ?? false,
+    5 => _geleverdKey.currentState?.bevestigingBezig ?? false,
+    _ => false,
+  };
+
+  Future<void> _naarDashboard() async {
+    if (_pagina == -1 || _dashboardBezig) return;
+    if (_bevestigingBezig) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Wacht tot de bevestiging klaar is.')),
+      );
+      return;
+    }
+    _dashboardBezig = true;
+    FocusManager.instance.primaryFocus?.unfocus();
+    try {
+      if (_heeftOnbevestigdeWijzigingen) {
+        final bevestig = await showDialog<bool>(
+          context: context,
+          builder: (dialoogContext) => AlertDialog(
+            title: const Text('Onbevestigde wijzigingen'),
+            content: const Text(
+              'Bevestig je wijzigingen om terug te keren naar het dashboard.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialoogContext).pop(false),
+                child: const Text('Op pagina blijven'),
+              ),
+              _kopCirkel(
+                icon: Icons.check_rounded,
+                tooltip: 'Bevestigen en naar dashboard',
+                actie: () => Navigator.of(dialoogContext).pop(true),
+                oranje: true,
+              ),
+            ],
+          ),
+        );
+        if (!mounted || bevestig != true) return;
+        switch (_pagina) {
+          case 1:
+            await _notitiesKey.currentState?.bewaarVoorVerzending();
+            break;
+          case 3:
+            await _magazijnKey.currentState?.bevestig();
+            break;
+          case 5:
+            await _geleverdKey.currentState?.bevestig();
+            break;
+        }
+        if (!mounted || _heeftOnbevestigdeWijzigingen) return;
+      }
+      if (mounted) _openPagina(-1);
+    } finally {
+      _dashboardBezig = false;
+    }
+  }
   // De agenda heeft zijn eigen Navigator BINNEN het gedeelde scherm.
   // Zo blijven de zwarte bovenbalk en ondernavigatie ook in de dagagenda staan.
   final GlobalKey<NavigatorState> _agendaNavigator = GlobalKey<NavigatorState>();
@@ -68,6 +139,8 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
       GlobalKey<ThimacoIphoneAgendaState>();
   final GlobalKey<ThimacoIphoneNotitiesBureauState> _notitiesKey =
       GlobalKey<ThimacoIphoneNotitiesBureauState>();
+  final _bibliotheekKey = GlobalKey<ThimacoIphoneBibliotheekState>();
+  final _geleverdKey = GlobalKey<ThimacoIphoneGeleverdState>();
   final GlobalKey<ThimacoIphoneMagazijnState> _magazijnKey =
       GlobalKey<ThimacoIphoneMagazijnState>();
 
@@ -78,6 +151,23 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
       _agendaNavigator.currentState?.popUntil((route) => route.isFirst);
     }
     if (index != _pagina) setState(() => _pagina = index);
+    if (index == 4 || index == 5) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _pagina != index) return;
+        if (index == 4) {
+          _bibliotheekKey.currentState?.vernieuw();
+        } else if (!_heeftOnbevestigdeWijzigingen) {
+          _geleverdKey.currentState?.vernieuw();
+        }
+      });
+    }
+    if (index == 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pagina == 0) {
+          _agendaSleutel.currentState?.synchroniseer();
+        }
+      });
+    }
   }
 
   Widget _agendaBinnenNavigatie() => Navigator(
@@ -208,6 +298,12 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
             ),
             if (_pagina == 0) ...[
               _kopCirkel(
+                icon: Icons.refresh_rounded,
+                tooltip: 'Agenda synchroniseren',
+                actie: () => _agendaSleutel.currentState?.synchroniseer(handmatig: true),
+              ),
+              const SizedBox(width: 5),
+              _kopCirkel(
                 icon: Icons.filter_list_rounded,
                 tooltip: 'Agenda filteren',
                 actie: () => _agendaActie(() => _agendaSleutel.currentState?.openFilters()),
@@ -240,6 +336,25 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
                 oranje: true,
               ),
             ],
+            if (_pagina == 4 || _pagina == 5)
+              _kopCirkel(
+                icon: Icons.refresh_rounded,
+                tooltip: 'Bureaugegevens vernieuwen',
+                actie: () {
+                  if (_pagina == 4) {
+                    _bibliotheekKey.currentState?.vernieuw(aanmelden: true);
+                  } else {
+                    _geleverdKey.currentState?.vernieuw(aanmelden: true);
+                  }
+                },
+              ),
+            if (_pagina == 5)
+              _kopCirkel(
+                icon: Icons.check_rounded,
+                tooltip: 'Selectie bevestigen',
+                actie: () => _geleverdKey.currentState?.bevestig(),
+                oranje: true,
+              ),
             if (_pagina == 1)
               Tooltip(
                 message: 'Notitie en foto’s aanbieden aan bureau via OneDrive',
@@ -279,6 +394,7 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
                     runSpacing: 10,
                     children: [
                       for (var index = 0; index < _modules.length; index++)
+                        if (index != 2) // Notities Plaatsers voorlopig verborgen.
                         SizedBox(
                           width: breedte,
                           child: InkWell(
@@ -383,59 +499,32 @@ class _MobieleHoofdpaginaState extends State<_MobieleHoofdpagina> {
                   ThimacoIphoneNotitiesBureau(key: _notitiesKey),
                   _module(2),
                   ThimacoIphoneMagazijn(key: _magazijnKey),
-                  _module(4),
+                  ThimacoIphoneBibliotheek(key: _bibliotheekKey),
+                  ThimacoIphoneGeleverd(key: _geleverdKey),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: _pagina < 0 ? null : SafeArea(
         top: false,
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
             border: Border(top: BorderSide(color: _rand)),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _navigatieKnop(Icons.home_outlined, 'Start', -1),
-              _navigatieKnop(Icons.calendar_today_outlined, 'Agenda', 0),
-              _navigatieKnop(Icons.edit_note_rounded, 'Notities', 1),
-              _navigatieKnop(Icons.qr_code_scanner_rounded, 'Magazijn', 3),
-              _navigatieKnop(Icons.folder_open_outlined, 'Bib.', 4),
-            ],
+          alignment: Alignment.center,
+          height: 44,
+          child: TextButton.icon(
+            onPressed: _naarDashboard,
+            icon: const Icon(Icons.home_outlined, size: 17),
+            label: const Text('Dashboard'),
+            style: TextButton.styleFrom(
+              foregroundColor: _zwart,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navigatieKnop(IconData icoon, String tekst, int index) {
-    final actief = _pagina == index;
-    return InkWell(
-      onTap: () => _openPagina(index),
-      borderRadius: BorderRadius.circular(9),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icoon, color: actief ? _oranje : _zwart, size: 21),
-            const SizedBox(height: 3),
-            Text(tekst,
-                style: TextStyle(
-                    color: actief ? _oranje : _zwart,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700)),
-            const SizedBox(height: 3),
-            Container(
-                height: 2,
-                width: 18,
-                color: actief ? _oranje : Colors.transparent),
-          ],
         ),
       ),
     );
