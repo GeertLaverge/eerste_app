@@ -326,7 +326,7 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
   }
 
   Future<bool> _verplaatsAfspraak(
-    DateTime van, AgendaItem item, DateTime naar, int? begin, [int? einde],
+    DateTime van, AgendaItem item, DateTime naar, int? begin, [int? einde]
   ) async {
     if (!_verplaatsbaar(item) || _bewaren || !mounted) return false;
     setState(() => _bewaren = true);

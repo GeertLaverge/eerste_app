@@ -31,7 +31,6 @@ import 'onedrive_auth_service.dart';
 
 import 'package:eerste_app/helpers/Agenda/agenda_item.dart';
 import 'package:eerste_app/helpers/klanten/fiche/klantenfiche_model.dart';
-import 'package:eerste_app/helpers/klanten/fiche/klantenfiche_repository.dart';
 import 'package:eerste_app/helpers/opmeting/overzicht/opmeting_overzicht_model.dart';
 import 'sync_merge_service.dart';
 import '../app_storage.dart';
@@ -2926,8 +2925,6 @@ class OneDriveSyncService {
     await AppStorage.bewaarKlantenFichesVoorSync(
       merged.map((fiche) => fiche.toJson()).toList(growable: false),
     );
-
-    KlantenficheRepository.maakCacheOngeldig();
 
     return <String, dynamic>{
       'schema': 1,
