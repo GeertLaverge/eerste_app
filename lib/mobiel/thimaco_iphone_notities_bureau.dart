@@ -7,6 +7,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -165,6 +166,26 @@ class ThimacoIphoneNotitiesBureauState
       await File(keuze.path).copy(doel.path);
       if (!mounted) return;
       setState(() => _fotos.add(doel));
+    } on PlatformException catch (fout) {
+      if (!mounted) return;
+      if (fout.code == 'camera_access_denied' ||
+          fout.code == 'camera_access_restricted') {
+        await showDialog<void>(
+          context: context,
+          builder: (dialoog) => AlertDialog(
+            title: const Text('Camera toegang'),
+            content: const Text(
+              'Zet camera aan voor Thimaco bij Instellingen → Privacy en beveiliging → Camera. Probeer daarna opnieuw een foto te nemen.',
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(dialoog).pop(),
+                child: const Text('OK')),
+            ],
+          ),
+        );
+      } else {
+        _melding('Foto nemen mislukt: $fout');
+      }
     } catch (fout) {
       if (mounted) _melding('Foto nemen mislukt: $fout');
     }

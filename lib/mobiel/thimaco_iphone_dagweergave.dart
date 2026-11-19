@@ -455,12 +455,29 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
           ? const Color(0xFF2563EB)
           : AgendaKleurService.kleur(item.type);
 
+  final _tijdlijnSleutel = GlobalKey();
+  int? _sleepMinuten;
+
+  int? _tijdOpPositie(Offset positie) {
+    final box = _tijdlijnSleutel.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) return null;
+    final y = box.globalToLocal(positie).dy;
+    return ((y * 60 / _uurHoogte / 5).round() * 5).clamp(0, 1435).toInt();
+  }
+
+  void _toonSleeptijd(int? minuten) {
+    if (mounted && _sleepMinuten != minuten) {
+      setState(() => _sleepMinuten = minuten);
+    }
+  }
+
   Widget _sleepbareKaart(AgendaItem item, {bool heleDag = false}) {
     final kaart = _afspraakKaart(item, heleDag: heleDag);
     if (item.type != 'afspraak' || item.isWebsiteShowroomAfspraak) return kaart;
     return LongPressDraggable<AgendaItem>(
       data: item,
       dragAnchorStrategy: pointerDragAnchorStrategy,
+      onDragEnd: (_) => _toonSleeptijd(null),
       feedback: Material(
         color: Colors.white,
         elevation: 4,
@@ -556,14 +573,14 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
             final beschikbareBreedte = math.max(25.0, constraints.maxWidth - _tijdBreedte - 9);
             return SizedBox(
               height: _totaalHoogte + 14,
+              key: _tijdlijnSleutel,
               child: DragTarget<AgendaItem>(
+                onMove: (details) => _toonSleeptijd(_tijdOpPositie(details.offset)),
+                onLeave: (_) => _toonSleeptijd(null),
                 onAcceptWithDetails: (details) {
-                  final box = context.findRenderObject() as RenderBox?;
-                  if (box == null) return;
-                  final y = box.globalToLocal(details.offset).dy;
-                  final minuten = ((y * 60 / _uurHoogte / 5).round() * 5)
-                      .clamp(0, 1435).toInt();
-                  widget.verplaatsNaarUur(details.data, minuten);
+                  final minuten = _tijdOpPositie(details.offset);
+                  _toonSleeptijd(null);
+                  if (minuten != null) widget.verplaatsNaarUur(details.data, minuten);
                 },
                 builder: (_, kandidaten, __) => Stack(children: [
                 for (var uur = 0; uur < 24; uur++)
@@ -606,6 +623,28 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                       ),
                     ),
                     child: _sleepbareKaart(vak.item),
+                  ),
+                if (_sleepMinuten case final int minuten)
+                  Positioned(
+                    left: 4, right: 0, top: minuten * _uurHoogte / 60,
+                    child: IgnorePointer(
+                      child: Row(children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: _oranje, borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Text(
+                              '${(minuten ~/ 60).toString().padLeft(2, '0')}:${(minuten % 60).toString().padLeft(2, '0')}',
+                              style: const TextStyle(color: Colors.white, fontSize: 11,
+                                fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider(height: 2, thickness: 2, color: _oranje)),
+                      ]),
+                    ),
                   ),
                 if (vandaag)
                   Positioned(

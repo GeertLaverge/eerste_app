@@ -359,6 +359,18 @@ class _QrScannerSchermState extends State<_QrScannerScherm> {
       backgroundColor: const Color(0xFF20252B),
     ),
     body: MobileScanner(
+      errorBuilder: (context, fout) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            fout.errorCode == MobileScannerErrorCode.permissionDenied
+                ? 'Zet camera aan voor Thimaco bij Instellingen → Privacy en beveiliging → Camera. Open daarna de QR-scanner opnieuw.'
+                : 'Camera kon niet worden gestart. Sluit de scanner en probeer opnieuw.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ),
+      ),
       onDetect: (capture) {
         if (_afgehandeld || capture.barcodes.isEmpty) return;
         final waarde = capture.barcodes.first.rawValue;

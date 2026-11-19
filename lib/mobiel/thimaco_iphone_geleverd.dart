@@ -100,13 +100,20 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
     );
   }
 
+  bool _pastBijZoekterm(String naam, String zoekterm) {
+    final woorden = naam.toLowerCase().split(RegExp(r'[^\p{L}\p{N}]+', unicode: true));
+    return zoekterm.split(RegExp(r'\s+')).every(
+      (term) => woorden.any((woord) => woord.startsWith(term)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final klant = _klantZoeken.text.trim().toLowerCase();
     final leverancier = _leverancierZoeken.text.trim().toLowerCase();
     final artikelen = _regels.where((regel) =>
-        regel.klant.toLowerCase().startsWith(klant) &&
-        regel.leverancier.toLowerCase().startsWith(leverancier));
+        _pastBijZoekterm(regel.klant, klant) &&
+        _pastBijZoekterm(regel.leverancier, leverancier));
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,

@@ -308,18 +308,20 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       item.type == 'afspraak' && !item.isWebsiteShowroomAfspraak;
 
   Future<bool> _wijzigTijd(DateTime dag, AgendaItem item) async {
-    final start = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: item.startUur ?? 9, minute: item.startMinuut ?? 0),
-      helpText: 'Nieuw beginuur',
+    final start = await toonThimacoAgendaKlok(
+      context,
+      TimeOfDay(hour: item.startUur ?? 9, minute: item.startMinuut ?? 0),
+      'Nieuw beginuur',
     );
     if (!mounted || start == null) return false;
     final begin = start.hour * 60 + start.minute;
-    final voorgesteld = (begin + 60).clamp(0, 1439).toInt();
-    final eind = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: voorgesteld ~/ 60, minute: voorgesteld % 60),
-      helpText: 'Nieuw einduur',
+    final oudBegin = (item.startUur ?? 9) * 60 + (item.startMinuut ?? 0);
+    final oudEinde = (item.eindUur ?? 10) * 60 + (item.eindMinuut ?? 0);
+    final eindMinuten = (begin + (oudEinde - oudBegin).clamp(5, 1435))
+        .clamp(0, 1435).toInt();
+    final eind = await toonThimacoAgendaKlok(
+      context, TimeOfDay(hour: eindMinuten ~/ 60, minute: eindMinuten % 60),
+      'Nieuw einduur',
     );
     if (!mounted || eind == null) return false;
     return _verplaatsAfspraak(dag, item, dag, begin, eind.hour * 60 + eind.minute);
@@ -387,7 +389,14 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       }
       actueel[doel] = [...?actueel[doel], verplaatst];
       await AppStorage.bewaarAgendaItemsNieuw(actueel);
-      gewijzigd = true;
+      final bewaard = await AppStorage.laadAgendaItemsNieuwVoorSync();
+      gewijzigd = (bewaard[doel] ?? const <AgendaItem>[]).any(
+        (a) => a.syncId == verplaatst.syncId && a.updatedAt == verplaatst.updatedAt,
+      );
+      if (!gewijzigd) {
+        if (mounted) _syncMelding('Afspraak kon niet worden verplaatst. Vernieuw de agenda.');
+        return false;
+      }
       await _herlaad();
       _verversDag?.call();
       return true;

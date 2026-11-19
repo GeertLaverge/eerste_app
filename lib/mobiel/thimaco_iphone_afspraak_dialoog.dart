@@ -76,70 +76,9 @@ class _ThimacoIphoneAfspraakDialoogState
         icon: Icon(icoon, size: 22),
       );
 
-  Future<TimeOfDay?> _scrollKlok(TimeOfDay huidige, String titel) async {
-    var gekozen = huidige;
-    return showModalBottomSheet<TimeOfDay>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        top: false,
-        child: Center(
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 450),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text(titel,
-                          style: const TextStyle(
-                            color: _donker,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 18,
-                          ))),
-                      _cirkel(Icons.check_rounded, 'Tijd kiezen',
-                          () => Navigator.of(sheetContext).pop(gekozen)),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: 224,
-                  child: CupertinoTheme(
-                    data: const CupertinoThemeData(
-                      brightness: Brightness.light,
-                      primaryColor: _oranje,
-                    ),
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.time,
-                      use24hFormat: true,
-                      minuteInterval: 5,
-                      initialDateTime: DateTime(
-                        2026, 1, 1, huidige.hour, huidige.minute,
-                      ),
-                      onDateTimeChanged: (tijd) {
-                        gekozen = TimeOfDay(hour: tijd.hour, minute: tijd.minute);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<void> _kiesTijd({required bool begin}) async {
-    final gekozen = await _scrollKlok(
+    final gekozen = await toonThimacoAgendaKlok(
+      context,
       begin ? _start : _eind,
       begin ? 'Starttijd' : 'Eindtijd',
     );
@@ -387,3 +326,75 @@ class _ThimacoIphoneAfspraakDialoogState
     );
   }
 }
+
+Future<TimeOfDay?> toonThimacoAgendaKlok(
+  BuildContext context, TimeOfDay huidige, String titel,
+) {
+    const _oranje = Color(0xFFF15A24);
+    const _donker = Color(0xFF20252B);
+    var gekozen = TimeOfDay(hour: huidige.hour, minute: huidige.minute ~/ 5 * 5);
+    return showModalBottomSheet<TimeOfDay>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 450),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(titel,
+                          style: const TextStyle(
+                            color: _donker,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ))),
+                      IconButton(
+                        tooltip: 'Tijd kiezen',
+                        onPressed: () => Navigator.of(sheetContext).pop(gekozen),
+                        style: IconButton.styleFrom(
+                          backgroundColor: _oranje, foregroundColor: Colors.white,
+                        ),
+                        icon: const Icon(Icons.check_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 224,
+                  child: CupertinoTheme(
+                    data: const CupertinoThemeData(
+                      brightness: Brightness.light,
+                      primaryColor: _oranje,
+                    ),
+                    child: CupertinoDatePicker(
+                      mode: CupertinoDatePickerMode.time,
+                      use24hFormat: true,
+                      minuteInterval: 5,
+                      initialDateTime: DateTime(
+                        2026, 1, 1, gekozen.hour, gekozen.minute,
+                      ),
+                      onDateTimeChanged: (tijd) {
+                        gekozen = TimeOfDay(hour: tijd.hour, minute: tijd.minute);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
