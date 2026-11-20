@@ -14,7 +14,8 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
   static const _rand = Color(0xFFE5E7EB);
   final _bron = ThimacoIphoneBureaugegevens();
   final _klantZoeken = TextEditingController();
-  final _leverancierZoeken = TextEditingController();
+  String? _gekozenKlant;
+  String? _gekozenLeverancier;
   final _gekozen = <LeveringRegel>{};
   List<LeveringRegel> _regels = const [];
   bool _laden = false;
@@ -54,7 +55,6 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
   @override
   void dispose() {
     _klantZoeken.dispose();
-    _leverancierZoeken.dispose();
     super.dispose();
   }
 
@@ -86,34 +86,34 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
     if (bevestigd && mounted) await vernieuw();
   }
 
-  Widget _zoekveld(String label, TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      onChanged: (_) => setState(() {}),
-      onTapOutside: (_) => FocusScope.of(context).unfocus(),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.search),
-        border: const OutlineInputBorder(),
-        isDense: true,
-      ),
-    );
+  List<String> _namen(Iterable<String> waarden) {
+    final namen = waarden.map((naam) => naam.trim())
+        .where((naam) => naam.isNotEmpty).toSet().toList();
+    return namen..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
   }
 
-  bool _pastBijZoekterm(String naam, String zoekterm) {
-    final woorden = naam.toLowerCase().split(RegExp(r'[^\p{L}\p{N}]+', unicode: true));
-    return zoekterm.split(RegExp(r'\s+')).every(
-      (term) => woorden.any((woord) => woord.startsWith(term)),
-    );
+  bool _pastBijKlant(LeveringRegel regel, String zoekterm) {
+    final naam = regel.klant.trim();
+    return _gekozenKlant != null
+        ? naam == _gekozenKlant
+        : naam.toLowerCase().contains(zoekterm);
   }
 
   @override
   Widget build(BuildContext context) {
     final klant = _klantZoeken.text.trim().toLowerCase();
-    final leverancier = _leverancierZoeken.text.trim().toLowerCase();
-    final artikelen = _regels.where((regel) =>
-        _pastBijZoekterm(regel.klant, klant) &&
-        _pastBijZoekterm(regel.leverancier, leverancier));
+    final leveranciers = _namen(_regels
+        .where((regel) => _gekozenKlant == null || _pastBijKlant(regel, klant))
+        .map((regel) => regel.leverancier));
+    final leverancier = leveranciers.contains(_gekozenLeverancier)
+        ? _gekozenLeverancier!
+        : '';
+    final regelsBijLeverancier = _regels.where((regel) =>
+        leverancier.isEmpty || regel.leverancier.trim() == leverancier);
+    final artikelen = regelsBijLeverancier.where((regel) => _pastBijKlant(regel, klant));
+    final klanten = klant.isNotEmpty && _gekozenKlant == null
+        ? _namen(artikelen.map((regel) => regel.klant))
+        : const <String>[];
 
     return ListView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -131,9 +131,70 @@ class ThimacoIphoneGeleverdState extends State<ThimacoIphoneGeleverd> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                _zoekveld('Klantnaam', _klantZoeken),
+                TextField(
+                  controller: _klantZoeken,
+                  onChanged: (_) => setState(() => _gekozenKlant = null),
+                  onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                  decoration: InputDecoration(
+                    labelText: 'Klantnaam',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: klant.isEmpty ? null : IconButton(
+                      tooltip: 'Klantfilter wissen',
+                      icon: const Icon(Icons.clear),
+                      onPressed: () => setState(() {
+                        _klantZoeken.clear();
+                        _gekozenKlant = null;
+                      }),
+                    ),
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+                for (final naam in klanten)
+                  ListTile(
+                    dense: true,
+                    title: Text(naam),
+                    onTap: () {
+                      setState(() {
+                        _gekozenKlant = naam;
+                        _klantZoeken.value = TextEditingValue(
+                          text: naam,
+                          selection: TextSelection.collapsed(offset: naam.length),
+                        );
+                      });
+                      FocusScope.of(context).unfocus();
+                    },
+                  ),
                 const SizedBox(height: 8),
-                _zoekveld('Leverancier', _leverancierZoeken),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Leverancier',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: leverancier,
+                      isExpanded: true,
+                      isDense: true,
+                      items: [
+                        const DropdownMenuItem(
+                          value: '',
+                          child: Text('Alle leveranciers'),
+                        ),
+                        for (final naam in leveranciers)
+                          DropdownMenuItem(
+                            value: naam,
+                            child: Text(naam, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: leveranciers.isEmpty ? null : (naam) {
+                        FocusScope.of(context).unfocus();
+                        setState(() => _gekozenLeverancier = naam);
+                      },
+                    ),
+                  ),
+                ),
               ],
             ),
           ),

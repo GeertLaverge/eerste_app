@@ -32,6 +32,16 @@ class _ThimacoIphoneAfspraakDialoogState
 
   final TextEditingController _klant = TextEditingController();
   final TextEditingController _notities = TextEditingController();
+  final _straat = TextEditingController();
+  final _nummer = TextEditingController();
+  final _bus = TextEditingController();
+  final _gemeente = TextEditingController();
+  final _postcode = TextEditingController();
+  final _gsm = TextEditingController();
+  final _gsm2 = TextEditingController();
+  final _email = TextEditingController();
+  String _aanspreking = '';
+
   late TimeOfDay _start;
   late TimeOfDay _eind;
   int _waarschuwing = 0;
@@ -54,6 +64,14 @@ class _ThimacoIphoneAfspraakDialoogState
   void dispose() {
     _klant.dispose();
     _notities.dispose();
+    _straat.dispose();
+    _nummer.dispose();
+    _bus.dispose();
+    _gemeente.dispose();
+    _postcode.dispose();
+    _gsm.dispose();
+    _gsm2.dispose();
+    _email.dispose();
     super.dispose();
   }
 
@@ -134,6 +152,15 @@ class _ThimacoIphoneAfspraakDialoogState
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       titel: klantnaam,
       naamKlant: klantnaam,
+      aanspreking: _aanspreking,
+      straatnaam: _straat.text.trim(),
+      huisNr: _nummer.text.trim(),
+      busNr: _bus.text.trim(),
+      gemeente: _gemeente.text.trim(),
+      postcode: _postcode.text.trim(),
+      gsm: _gsm.text.trim(),
+      gsm2: _gsm2.text.trim(),
+      email: _email.text.trim(),
       type: 'afspraak',
       afspraakSoort: _showroom ? 'showroom' : 'algemeen',
       bron: 'app',
@@ -151,6 +178,70 @@ class _ThimacoIphoneAfspraakDialoogState
     }));
   }
 
+
+  Widget _contactVeld(
+    String label,
+    TextEditingController controller, {
+    TextInputType toetsenbord = TextInputType.text,
+    TextCapitalization hoofdletters = TextCapitalization.none,
+  }) =>
+      TextField(
+        controller: controller,
+        keyboardType: toetsenbord,
+        textCapitalization: hoofdletters,
+        textInputAction: TextInputAction.next,
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: const OutlineInputBorder(),
+        ),
+      );
+
+  Widget _klantgegevens() => ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        initiallyExpanded: false,
+        title: const Text('Klantgegevens', style: TextStyle(fontSize: 14)),
+        collapsedIconColor: _oranje,
+        iconColor: _oranje,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: _aanspreking,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Aanspreking klant',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('Geen aanspreking')),
+              for (final keuze in AgendaItem.aansprekingKeuzes)
+                if (keuze.isNotEmpty)
+                  DropdownMenuItem(value: keuze, child: Text(keuze)),
+            ],
+            onChanged: (waarde) => _aanspreking = waarde ?? '',
+          ),
+          const SizedBox(height: 8),
+          _contactVeld('Straat', _straat, hoofdletters: TextCapitalization.words),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: _contactVeld('Nr.', _nummer)),
+            const SizedBox(width: 8),
+            Expanded(child: _contactVeld('Bus', _bus)),
+          ]),
+          const SizedBox(height: 8),
+          _contactVeld('Gemeente', _gemeente,
+              hoofdletters: TextCapitalization.words),
+          const SizedBox(height: 8),
+          _contactVeld('Postcode', _postcode),
+          const SizedBox(height: 8),
+          _contactVeld('Gsm 1', _gsm, toetsenbord: TextInputType.phone),
+          const SizedBox(height: 8),
+          _contactVeld('Gsm 2', _gsm2, toetsenbord: TextInputType.phone),
+          const SizedBox(height: 8),
+          _contactVeld('E-mailadres', _email,
+              toetsenbord: TextInputType.emailAddress),
+        ],
+      );
   Widget _keuzeSchakelaar(String label, bool gekozen, VoidCallback actie) =>
       InkWell(
         onTap: actie,
@@ -227,6 +318,7 @@ class _ThimacoIphoneAfspraakDialoogState
                       ),
                     ),
                     const SizedBox(height: 14),
+                    _klantgegevens(),
                     if (!_heleDag) ...[
                       _tijdRegel('Starttijd', _start, begin: true),
                       const SizedBox(height: 9),
