@@ -391,7 +391,12 @@ class ThimacoIphoneAgendaState extends State<ThimacoIphoneAgenda> {
       await AppStorage.bewaarAgendaItemsNieuw(actueel);
       final bewaard = await AppStorage.laadAgendaItemsNieuwVoorSync();
       gewijzigd = (bewaard[doel] ?? const <AgendaItem>[]).any(
-        (a) => a.syncId == verplaatst.syncId && a.updatedAt == verplaatst.updatedAt,
+        (a) => a.syncId == verplaatst.syncId &&
+            a.updatedAt == verplaatst.updatedAt &&
+            a.startUur == verplaatst.startUur &&
+            a.startMinuut == verplaatst.startMinuut &&
+            a.eindUur == verplaatst.eindUur &&
+            a.eindMinuut == verplaatst.eindMinuut,
       );
       if (!gewijzigd) {
         if (mounted) _syncMelding('Afspraak kon niet worden verplaatst. Vernieuw de agenda.');

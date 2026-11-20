@@ -578,7 +578,7 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                 onMove: (details) => _toonSleeptijd(_tijdOpPositie(details.offset)),
                 onLeave: (_) => _toonSleeptijd(null),
                 onAcceptWithDetails: (details) {
-                  final minuten = _tijdOpPositie(details.offset);
+                  final minuten = _sleepMinuten;
                   _toonSleeptijd(null);
                   if (minuten != null) widget.verplaatsNaarUur(details.data, minuten);
                 },
@@ -628,7 +628,11 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                   Positioned(
                     left: 4, right: 0, top: minuten * _uurHoogte / 60,
                     child: IgnorePointer(
-                      child: Row(children: [
+                      child: Stack(children: [
+                        const Positioned(
+                          left: 0, right: 0, top: 0,
+                          child: SizedBox(height: 2, child: ColoredBox(color: _oranje)),
+                        ),
                         DecoratedBox(
                           decoration: BoxDecoration(
                             color: _oranje, borderRadius: BorderRadius.circular(4),
@@ -642,7 +646,6 @@ class _DagTijdlijnState extends State<_DagTijdlijn> {
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(height: 2, thickness: 2, color: _oranje)),
                       ]),
                     ),
                   ),
